@@ -32,13 +32,15 @@ use core_external\external_function_parameters;
 use core_external\external_multiple_structure;
 use core_external\external_single_structure;
 use core_external\external_value;
+use local_coursegen\local\service\import_permissions;
 use moodle_exception;
 
 /**
  * Lists the courses inside a category tree that the current user may import into.
  *
  * Importing replaces the target through a copy, so a course is offered only
- * when the user may both back it up and restore it (design #9539 §7-§8).
+ * when the user holds the full import capability set on it (import_permissions),
+ * the same set the import itself requires (design #9539 §7-§8).
  * The feature is gated by the enableimportexisting setting as a second line
  * of defence behind the UI, which hides the option when the setting is off.
  *
@@ -102,10 +104,10 @@ class search_target_courses extends external_api {
             if ($needle !== '' && !self::matches($course, $needle)) {
                 continue;
             }
-            $coursecontext = \context_course::instance($course->id);
-            if (!has_all_capabilities(['moodle/backup:backupcourse', 'moodle/restore:restorecourse'], $coursecontext)) {
+            if (!import_permissions::can_import_into($course)) {
                 continue;
             }
+            $coursecontext = \context_course::instance($course->id);
             $fullname = format_string($course->fullname, true, ['context' => $coursecontext]);
             $courses[] = [
                 'id' => (int) $course->id,

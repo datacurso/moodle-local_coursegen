@@ -19,7 +19,7 @@
 | Visibilidad del original | **Se oculta** al renombrarlo (`visible = 0`, patrón de `course_change_visibility()`); el rollback restaura la visibilidad previa junto con los nombres |
 | Selector de destino | Un `<select>` «Crear como curso nuevo / Importar en un curso existente», **primer campo del panel**, antes del nombre del curso |
 | Campos en modo importar | Se ocultan **nombre completo, nombre corto y categoría del curso nuevo**: la copia toma los nombres del original. Solo quedan categoría y curso de destino |
-| Permisos | Cubiertos por el rol «Profesor Creador de curso IA» (§7) |
+| Permisos | Cubiertos por el rol «Profesor Creador de curso IA» (§7). Las seis capacidades sobre el destino viven en `import_permissions`; la opción solo se ofrece a quien puede importar en al menos un curso (`is_offered`) y la búsqueda de destinos filtra con el mismo conjunto |
 | Ejecución | Ajuste `importexecution`: `adhoc` (por defecto) ejecuta copia + importación en una **tarea adhoc** con sondeo de estado; `sync` lo ejecuta todo en la misma petición de `create_course`, sin cron, sujeto a los límites de tiempo del cliente y del servidor web (§8). La generación del staging es síncrona en ambos |
 | Activación | **Ajuste de administrador**, desactivado por defecto; apagado, el flujo no cambia |
 | Ruta | **Larga** (copia + staging + importación con reemplazo). La ruta corta de la §5 queda descartada por el ticket de implementación |
@@ -210,7 +210,17 @@ arquetipo Gestor (`lib/db/access.php:233-242` y `359-368`) y que **hay que añad
 | `moodle/backup:userinfo` | **nueva**: incluir los datos de usuario en la copia de seguridad del destino; se comprueba sobre el contexto del curso de destino |
 | `moodle/restore:userinfo` | **nueva**: restaurar esos datos en la copia; el motor la comprueba sobre el contexto de la copia (`backup/util/checks/restore_check.class.php:121`), que hereda de la categoría del destino, así que basta asignar el rol en Sistema o en esa categoría |
 
-Si la función se ofreciera a otro rol, comprobar las diez. La ruta corta de la §5 necesita solo
+Si la función se ofreciera a otro rol, comprobar las diez. Las seis que se exigen sobre el destino viven en una sola
+clase, `local_coursegen\local\service\import_permissions`: `COURSE_CAPABILITIES` sobre el contexto del curso
+(`moodle/backup:backupcourse`, `moodle/restore:restorecourse`, `moodle/course:visibility`, `moodle/backup:userinfo`) y
+`CATEGORY_CAPABILITIES` sobre el de su categoría (`moodle/course:create`, `moodle/restore:userinfo`). Ese conjunto alimenta
+tres puntos: la página solo ofrece la opción de importar cuando el ajuste está activado **y** el usuario tiene el conjunto
+completo en al menos un curso (`is_offered` → `can_import_anywhere`: una consulta de los cursos donde tiene
+`moodle/backup:userinfo`, tope de 500 candidatos, comprobación curso a curso hasta el primero que cumpla; el administrador
+pasa directamente); la búsqueda de destinos filtra con el mismo conjunto (`can_import_into`, §8); y el web service y el
+servicio lo exigen sobre el destino concreto (`require_for_target`, en el orden de siempre). `moodle/backup:backuptargetimport`
+sobre el staging no forma parte del conjunto: el staging no existe hasta que corre `import_into_existing`, que la exige allí.
+La ruta corta de la §5 necesita solo
 `moodle/course:create` y las del flujo actual. Sin las dos nuevas, el web service rechaza la importación
 antes de generar el staging (`required_capability_exception` en `require_import_target`) e `import_into_existing` vuelve
 a exigirlas antes de escribir nada, corra en la tarea adhoc o en la propia petición. `error_import_users_required` queda para el caso en que, aun con las
@@ -248,9 +258,9 @@ vaciada y parcialmente poblada. Es exactamente por lo que la copia existe: se bo
 original no se ha tocado. Hay que registrar `copiaid` en la sesión del plugin desde el momento en que
 se crea, para poder borrarla aunque falle el propio proceso.
 
-**Permisos sobre el destino.** El listado de cursos destino se filtra **curso a curso** por
-`moodle/backup:backupcourse` y `moodle/restore:restorecourse` (hay que poder copiarlo y restaurarlo;
-`search_target_courses.php:106`), no por categoría.
+**Permisos sobre el destino.** El listado de cursos destino se filtra **curso a curso** por el conjunto
+completo de `import_permissions` (`can_import_into`, `search_target_courses.php:107`: las cuatro del curso y las dos de su
+categoría, las mismas que exige la importación), no por categoría; así solo se ofrecen destinos que el servidor aceptará.
 
 **Tiempo de ejecución.** Dos backups, dos restauraciones y la generación superan el tope de 180 s del
 cliente (`CREATE_COURSE_TIMEOUT_MS`, `course-create.js:320`). Por eso la ejecución por defecto de la ruta

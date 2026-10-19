@@ -33,10 +33,9 @@ use local_coursegen\local\service\ai_course_api_service;
 use local_coursegen\local\service\course_import_service;
 use local_coursegen\local\service\course_session_service;
 use local_coursegen\local\service\create_course_service;
+use local_coursegen\local\service\import_permissions;
 use local_coursegen\task\import_generated_course_task;
 use moodle_exception;
-use context_coursecat;
-use context_course;
 use context_system;
 use invalid_parameter_exception;
 
@@ -213,9 +212,10 @@ class create_course extends external_api {
     /**
      * Validate the import target and require the permissions the import needs on it.
      *
-     * Mirrors the checks course_import_service performs before touching anything,
-     * except moodle/backup:backuptargetimport on the staging course, which does
-     * not exist yet; the service checks it when the task runs.
+     * Delegates to import_permissions, the set course_import_service checks
+     * before touching anything, except moodle/backup:backuptargetimport on the
+     * staging course, which does not exist yet; the service checks it when the
+     * task runs.
      *
      * @param int $targetcourseid Existing course chosen by the user.
      * @return \stdClass Target course record.
@@ -237,16 +237,7 @@ class create_course extends external_api {
             throw new moodle_exception('error_import_target_invalid', 'local_coursegen');
         }
 
-        $targetcontext = context_course::instance($target->id);
-        require_capability('moodle/backup:backupcourse', $targetcontext);
-        require_capability('moodle/restore:restorecourse', $targetcontext);
-        require_capability('moodle/course:create', context_coursecat::instance($target->category));
-        // The import hides the original course, so the acting user must be allowed to change its visibility.
-        require_capability('moodle/course:visibility', $targetcontext);
-        // The copy carries the user data of the original: backup side on the target, restore side on
-        // the copy, which does not exist yet and inherits its permissions from the target's category.
-        require_capability('moodle/backup:userinfo', $targetcontext);
-        require_capability('moodle/restore:userinfo', context_coursecat::instance($target->category));
+        import_permissions::require_for_target($target);
 
         return $target;
     }

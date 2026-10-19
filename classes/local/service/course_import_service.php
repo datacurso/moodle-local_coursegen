@@ -206,6 +206,9 @@ class course_import_service {
     /**
      * Require every capability the import needs, before any write happens.
      *
+     * The target set is import_permissions; moodle/backup:backuptargetimport
+     * is checked here on the staging course, which only exists at this point.
+     *
      * @param \stdClass $target Target course record.
      * @param \stdClass $staging Staging course record.
      * @param int $userid Acting user.
@@ -213,17 +216,8 @@ class course_import_service {
      * @throws \required_capability_exception
      */
     private static function require_import_capabilities(\stdClass $target, \stdClass $staging, int $userid): void {
-        $targetcontext = \context_course::instance($target->id);
-        require_capability('moodle/backup:backupcourse', $targetcontext, $userid);
-        require_capability('moodle/restore:restorecourse', $targetcontext, $userid);
-        require_capability('moodle/course:create', \context_coursecat::instance($target->category), $userid);
+        import_permissions::require_for_target($target, $userid);
         require_capability('moodle/backup:backuptargetimport', \context_course::instance($staging->id), $userid);
-        // The original is hidden once the copy takes its place.
-        require_capability('moodle/course:visibility', $targetcontext, $userid);
-        // The copy carries the user data of the original; the restore engine
-        // checks the restore side on the copy, which inherits from the category.
-        require_capability('moodle/backup:userinfo', $targetcontext, $userid);
-        require_capability('moodle/restore:userinfo', \context_coursecat::instance($target->category), $userid);
     }
 
     /**

@@ -11,6 +11,11 @@
 - **Import execution mode**  
   The new administrator setting *Import execution* (`local_coursegen/importexecution`, shown only while importing into an existing course is enabled, default *In the background (cron task)*) chooses where the import runs once the staging course is materialised. *In the background* keeps queuing the adhoc task that cron runs, with the confirmation view polling the session state until it finishes, so large courses are safe from request time limits. *In the foreground (same request)* runs the copy and the import inside the `local_coursegen_create_course` request, so no cron is needed, but the request must finish within the web server and browser time limits. The external function now also returns `importstate` (`queued`, `done` or `failed`; empty when no import) and `copycourseid` (the course that replaced the target, only when a foreground import succeeded), and the confirmation view renders the completed or failed import card straight away instead of polling when the state is already terminal.
 
+## Changed
+
+- **Import option offered only to users who can complete it**  
+  The *Import into an existing course* selector is rendered only when the setting is on and the user holds the full import capability set (`moodle/backup:backupcourse`, `moodle/restore:restorecourse`, `moodle/course:visibility` and `moodle/backup:userinfo` on the course; `moodle/course:create` and `moodle/restore:userinfo` on its category) on at least one course, instead of to every user who can open the page. The target course search applies the same set, so it only lists courses the import will accept, and the web service and the import task keep checking it on the chosen target. The set lives in the new `import_permissions` service class.
+
 ## Fixed
 
 - **Optional web service parameters declared with a default**  

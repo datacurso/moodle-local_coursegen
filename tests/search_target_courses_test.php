@@ -24,8 +24,8 @@ use local_coursegen\external\search_target_courses;
  *
  * The service lists the courses a user may import an AI-generated course
  * into: courses inside the requested category tree on which the user holds
- * both backup and restore capabilities, because copying the target is what
- * the import path requires.
+ * the full import capability set (import_permissions), so the list only
+ * offers courses the import will accept.
  *
  * @package    local_coursegen
  * @category   test
@@ -43,13 +43,13 @@ final class search_target_courses_test extends \advanced_testcase {
     /** @var \core_course_category Category B, outside the user's reach. */
     private \core_course_category $categoryb;
 
-    /** @var \stdClass Course in A, both backup and restore granted. */
+    /** @var \stdClass Course in A, full import set granted. */
     private \stdClass $coursealpha;
 
-    /** @var \stdClass Course in A, both backup and restore granted. */
+    /** @var \stdClass Course in A, full import set granted. */
     private \stdClass $coursebeta;
 
-    /** @var \stdClass Course in A1, both backup and restore granted. */
+    /** @var \stdClass Course in A1, full import set granted. */
     private \stdClass $coursegamma;
 
     /** @var \stdClass Course in A, restore granted but backup missing. */
@@ -58,7 +58,10 @@ final class search_target_courses_test extends \advanced_testcase {
     /** @var \stdClass Course in A, backup granted but restore missing. */
     private \stdClass $coursenorestore;
 
-    /** @var \stdClass Course in B, both backup and restore granted. */
+    /** @var \stdClass Course in A, backup and restore granted but moodle/backup:userinfo missing. */
+    private \stdClass $coursenouserinfo;
+
+    /** @var \stdClass Course in B, full import set granted. */
     private \stdClass $coursedelta;
 
     /** @var \stdClass The user under test. */
@@ -104,6 +107,11 @@ final class search_target_courses_test extends \advanced_testcase {
             'fullname' => 'No Restore Course',
             'shortname' => 'NORESTORE',
         ]);
+        $this->coursenouserinfo = $generator->create_course([
+            'category' => $this->categorya->id,
+            'fullname' => 'No Userinfo Course',
+            'shortname' => 'NOUSERINFO',
+        ]);
         $this->coursedelta = $generator->create_course([
             'category' => $this->categoryb->id,
             'fullname' => 'Delta Physics',
@@ -120,6 +128,7 @@ final class search_target_courses_test extends \advanced_testcase {
         $this->grant_in_course($this->user->id, (int) $this->coursegamma->id, true, true);
         $this->grant_in_course($this->user->id, (int) $this->coursenobackup->id, false, true);
         $this->grant_in_course($this->user->id, (int) $this->coursenorestore->id, true, false);
+        $this->grant_in_course($this->user->id, (int) $this->coursenouserinfo->id, true, true, false);
         $this->grant_in_course($this->user->id, (int) $this->coursedelta->id, true, true);
     }
 
@@ -137,7 +146,7 @@ final class search_target_courses_test extends \advanced_testcase {
     }
 
     /**
-     * Give the user moodle/course:create in one category only.
+     * Give the user the category side of the import set (course:create, restore:userinfo) in one category only.
      *
      * @param int $userid User id.
      * @param int $categoryid Category where the user may create courses.
@@ -147,26 +156,34 @@ final class search_target_courses_test extends \advanced_testcase {
         $categorycontext = \context_coursecat::instance($categoryid);
         $roleid = $this->getDataGenerator()->create_role(['shortname' => 'catcoursecreator' . $userid]);
         assign_capability('moodle/course:create', CAP_ALLOW, $roleid, $categorycontext->id, true);
+        assign_capability('moodle/restore:userinfo', CAP_ALLOW, $roleid, $categorycontext->id, true);
         role_assign($roleid, $userid, $categorycontext->id);
     }
 
     /**
-     * Assign a per-course custom role granting the requested copy capabilities.
+     * Assign a per-course custom role granting the requested course-side import capabilities.
+     *
+     * moodle/course:visibility is always granted; the three flags leave one capability out each.
      *
      * @param int $userid User id.
      * @param int $courseid Course id.
      * @param bool $backup Whether to grant moodle/backup:backupcourse.
      * @param bool $restore Whether to grant moodle/restore:restorecourse.
+     * @param bool $userinfo Whether to grant moodle/backup:userinfo.
      * @return void
      */
-    private function grant_in_course(int $userid, int $courseid, bool $backup, bool $restore): void {
+    private function grant_in_course(int $userid, int $courseid, bool $backup, bool $restore, bool $userinfo = true): void {
         $coursecontext = \context_course::instance($courseid);
         $roleid = $this->getDataGenerator()->create_role(['shortname' => 'copier' . $courseid]);
+        assign_capability('moodle/course:visibility', CAP_ALLOW, $roleid, $coursecontext->id, true);
         if ($backup) {
             assign_capability('moodle/backup:backupcourse', CAP_ALLOW, $roleid, $coursecontext->id, true);
         }
         if ($restore) {
             assign_capability('moodle/restore:restorecourse', CAP_ALLOW, $roleid, $coursecontext->id, true);
+        }
+        if ($userinfo) {
+            assign_capability('moodle/backup:userinfo', CAP_ALLOW, $roleid, $coursecontext->id, true);
         }
         role_assign($roleid, $userid, $coursecontext->id);
     }
@@ -253,6 +270,19 @@ final class search_target_courses_test extends \advanced_testcase {
             [(int) $this->coursealpha->id, (int) $this->coursebeta->id, (int) $this->coursegamma->id],
             $ids
         );
+    }
+
+    /**
+     * Backup and restore alone are not enough: a course where the user lacks
+     * moodle/backup:userinfo is excluded, because the import would reject it.
+     */
+    public function test_excludes_courses_missing_backup_userinfo(): void {
+        $this->setUser($this->user);
+
+        $ids = $this->returned_ids((int) $this->categorya->id);
+
+        $this->assertNotContains((int) $this->coursenouserinfo->id, $ids, 'Course without backup:userinfo must be excluded');
+        $this->assertContains((int) $this->coursealpha->id, $ids, 'Course with the full set must be listed');
     }
 
     /**

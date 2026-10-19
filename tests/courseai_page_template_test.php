@@ -16,11 +16,15 @@
 
 namespace local_coursegen;
 
+use local_coursegen\local\service\import_permissions;
+
 /**
  * Rendering tests for the course AI page template (import-into-existing-course panel).
  *
  * aicoursecreation.php renders local_coursegen/courseai_page with an
- * importexistingenabled flag taken from the enableimportexisting setting.
+ * importexistingenabled flag computed by import_permissions::is_offered():
+ * the enableimportexisting setting on and the user able to import into at
+ * least one course.
  * Rendering the template server-side with that flag checks the markup
  * contract the review-panel JavaScript and the Behat feature rely on
  * (ticket #9539).
@@ -88,6 +92,51 @@ final class courseai_page_template_test extends \advanced_testcase {
         // The existing new-course fields are untouched by the flag.
         $this->assertStringContainsString('id="reviewCategory"', $html);
         $this->assertStringContainsString('id="reviewShortname"', $html);
+    }
+
+    /**
+     * aicoursecreation.php feeds the flag from import_permissions::is_offered(): with the setting
+     * on, a user who may open the page (createcoursewithai) but cannot complete an import in any
+     * course gets the panel without the target-mode select; a user holding the full capability
+     * set on a course gets it (ticket #9539).
+     *
+     * @return void
+     */
+    public function test_target_mode_select_is_offered_only_to_users_who_can_import(): void {
+        $this->resetAfterTest();
+        set_config('enableimportexisting', 1, 'local_coursegen');
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course();
+        $systemcontext = \context_system::instance();
+
+        $pageonly = $generator->create_user();
+        $roleid = $generator->create_role(['shortname' => 'pageonly']);
+        assign_capability('local/coursegen:createcoursewithai', CAP_ALLOW, $roleid, $systemcontext->id, true);
+        assign_capability('moodle/course:create', CAP_ALLOW, $roleid, $systemcontext->id, true);
+        role_assign($roleid, $pageonly->id, $systemcontext->id);
+
+        $importer = $generator->create_user();
+        $roleid = $generator->create_role(['shortname' => 'importer']);
+        foreach (array_merge(
+            ['local/coursegen:createcoursewithai'],
+            import_permissions::COURSE_CAPABILITIES,
+            import_permissions::CATEGORY_CAPABILITIES
+        ) as $capability) {
+            assign_capability($capability, CAP_ALLOW, $roleid, $systemcontext->id, true);
+        }
+        role_assign($roleid, $importer->id, $systemcontext->id);
+
+        $this->setUser($pageonly);
+        $html = $this->render(import_permissions::is_offered($pageonly->id));
+        $this->assertStringContainsString('data-import-existing-enabled="0"', $html);
+        $this->assertStringNotContainsString('id="targetMode"', $html);
+        $this->assertStringNotContainsString('id="importTargetFields"', $html);
+
+        $this->setUser($importer);
+        $html = $this->render(import_permissions::is_offered($importer->id));
+        $this->assertStringContainsString('data-import-existing-enabled="1"', $html);
+        $this->assertStringContainsString('id="targetMode"', $html);
+        $this->assertStringContainsString('id="importTargetFields"', $html);
     }
 
     /**

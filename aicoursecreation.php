@@ -116,8 +116,9 @@ $logourl = new moodle_url('/local/coursegen/pix/logo.png');
 // Subsections toggle only renders when the feature is enabled and mod_subsection is available.
 $subsectionsenabled = \local_coursegen\local\service\course_planning_service::subsections_available();
 
-// Import-into-existing-course controls render only when the site opted in (ticket #9539).
-$importexistingenabled = !empty(get_config('local_coursegen', 'enableimportexisting'));
+// Import-into-existing-course controls render only when the site opted in and the user holds the
+// full import capability set on at least one course (ticket #9539).
+$importexistingenabled = \local_coursegen\local\service\import_permissions::is_offered($USER->id);
 
 // Prepare template context.
 $templatecontext = [
