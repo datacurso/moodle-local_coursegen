@@ -15,20 +15,18 @@
 
 namespace local_coursegen;
 
-use local_coursegen\utils\html_cleaner;
 use local_coursegen\utils\text_editor_parameter_cleaner;
 
 /**
- * What is removed from the HTML the AI writes and what stays.
+ * What is removed from the HTML the AI writes before it is stored, and what stays.
  *
  * @package    local_coursegen
  * @category   test
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- * @covers     \local_coursegen\utils\html_cleaner
  * @covers     \local_coursegen\utils\text_editor_parameter_cleaner
  */
-final class html_cleaner_test extends \advanced_testcase {
+final class text_editor_parameter_cleaner_test extends \advanced_testcase {
     /**
      * Hostile pieces of HTML and what must not survive of each.
      *
@@ -48,6 +46,19 @@ final class html_cleaner_test extends \advanced_testcase {
     }
 
     /**
+     * The text of an editor field of the parameters after the cleaning.
+     *
+     * @param string $html
+     * @return string
+     */
+    private function cleaned(string $html): string {
+        $result = text_editor_parameter_cleaner::clean_text_editor_objects([
+            'content' => ['text' => $html, 'format' => 1, 'itemid' => 0],
+        ]);
+        return $result['content']['text'];
+    }
+
+    /**
      * Nothing dangerous is left after cleaning.
      *
      * @dataProvider hostile_provider
@@ -57,7 +68,7 @@ final class html_cleaner_test extends \advanced_testcase {
     public function test_removes_what_runs_code(string $html, string $forbidden): void {
         $this->resetAfterTest();
 
-        $result = html_cleaner::clean($html);
+        $result = $this->cleaned($html);
 
         $this->assertStringNotContainsStringIgnoringCase($forbidden, $result);
     }
@@ -70,7 +81,7 @@ final class html_cleaner_test extends \advanced_testcase {
         $html = '<section style="max-width:1000px;background:#f4f7fa;"><h2 style="color:#203442;">Title</h2>'
             . '<ol><li>One</li></ol><table><tr><td>A</td></tr></table></section>';
 
-        $result = html_cleaner::clean($html);
+        $result = $this->cleaned($html);
 
         $this->assertStringContainsString('<h2', $result);
         $this->assertStringContainsString('<ol>', $result);
@@ -82,8 +93,8 @@ final class html_cleaner_test extends \advanced_testcase {
      * A text with no markup is returned as it came.
      */
     public function test_a_plain_text_is_untouched(): void {
-        $this->assertSame('Just a sentence.', html_cleaner::clean('Just a sentence.'));
-        $this->assertSame('', html_cleaner::clean(''));
+        $this->assertSame('Just a sentence.', $this->cleaned('Just a sentence.'));
+        $this->assertSame('', $this->cleaned(''));
     }
 
     /**
