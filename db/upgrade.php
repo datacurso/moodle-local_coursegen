@@ -272,5 +272,14 @@ function xmldb_local_coursegen_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026090900, 'local', 'coursegen');
     }
 
+    if ($oldversion < 2026102000) {
+        // Create the two recommended roles (AI course creator, AI course creator and importer)
+        // unless roles with their shortnames already exist; existing roles are never modified.
+        \local_coursegen\local\role_installer::install_missing_roles();
+
+        // Coursegen savepoint reached.
+        upgrade_plugin_savepoint(true, 2026102000, 'local', 'coursegen');
+    }
+
     return true;
 }

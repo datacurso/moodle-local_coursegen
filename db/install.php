@@ -23,10 +23,18 @@
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+defined('MOODLE_INTERNAL') || die();
+
 /**
  * Custom code to be run on installing the plugin.
+ *
+ * Creates the two recommended roles (AI course creator, AI course creator and
+ * importer) unless roles with their shortnames already exist.
+ *
+ * @return bool
  */
 function xmldb_local_coursegen_install() {
+    \local_coursegen\local\role_installer::install_missing_roles();
 
     return true;
 }
