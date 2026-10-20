@@ -30,6 +30,7 @@ import {
     buildGapRow,
     dropGapBeforeAddRow,
     removeInstanceRow,
+    insertGeneratedRow,
 } from 'local_coursegen/local/template/template_instance_rows';
 import {openSpaceModal} from 'local_coursegen/local/template/template_space_modal';
 import {chooseActivityType} from 'local_coursegen/local/template/template_space_chooser';
@@ -155,10 +156,22 @@ const applyChoiceToRow = async(row, choice) => {
  * @param {HTMLElement} beforeEl The row-gap or add-row the menu opened from.
  * @param {Object} picked {modname, name, icon} of the picked type.
  * @param {Function} markDirty Marks the wizard as having unsaved changes.
- * @param {{required: boolean, instruction: string}} choice What the modal saved.
+ * @param {{mode: string, name: string, required: boolean, instruction: string}} choice What the modal saved.
  */
 const saveNewSpace = async(tbody, beforeEl, picked, markDirty, choice) => {
-    await insertSpaceRow(tbody, beforeEl, {...picked, ...choice});
+    if (choice.mode === 'ai') {
+        // The AI always creates it from this instruction: an activity of its own, with no template behind it.
+        const iconurl = (/src="([^"]+)"/.exec(picked.icon || '') || [])[1] || '';
+        await insertGeneratedRow(tbody, beforeEl, {
+            modname: picked.modname,
+            name: choice.name || picked.name,
+            typelabel: picked.name,
+            iconurl,
+            prompt: choice.instruction,
+        });
+    } else {
+        await insertSpaceRow(tbody, beforeEl, {...picked, ...choice});
+    }
     markDirty();
 };
 
@@ -213,7 +226,7 @@ const editSpaceRow = (row, markDirty) => {
     const instructionEl = row.querySelector(Selectors.regions.spaceInstruction);
     const instruction = instructionEl.textContent.trim();
     const onSave = saveEditedSpace.bind(null, row, markDirty);
-    openSpaceModal({subject, required: row.dataset.required === REQUIRED_VALUE, instruction, onSave});
+    openSpaceModal({subject, required: row.dataset.required === REQUIRED_VALUE, instruction, onSave, lockMode: true});
 };
 
 /**

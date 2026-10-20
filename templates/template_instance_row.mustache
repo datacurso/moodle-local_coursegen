@@ -49,6 +49,8 @@
                            row's own <img> for one just picked client-side.
     * typelabel string
     * prompt string      - The saved/typed extra instruction, if any.
+    * generated bool     - The instance has no template activity behind it: the AI always creates it from its instruction.
+    * promptopen bool    - Show the instruction row open (always for a generated instance).
 
     Example context (json):
     {
@@ -59,11 +61,13 @@
         "modname": "lesson",
         "iconurl": "https://example.com/lesson.svg",
         "typelabel": "Lesson",
-        "prompt": ""
+        "prompt": "",
+        "generated": false,
+        "promptopen": false
     }
 }}
 <tr class="tpl-row-instance" data-for="instancerow" data-instance-id="{{instanceid}}"
-    data-source-cmid="{{sourcecmid}}" data-source-name="{{sourcename}}" data-modname="{{modname}}">
+    data-source-cmid="{{sourcecmid}}" data-source-name="{{sourcename}}" data-modname="{{modname}}"{{#generated}} data-generated="1"{{/generated}}>
     <td class="align-middle tpl-select-col">
         <input type="checkbox" data-region="instance-select" data-id="{{instanceid}}"
                aria-label="{{name}}">
@@ -85,7 +89,8 @@
             <input type="text" class="ignoredirty form-control" data-region="instance-name-input"
                    aria-label="{{#str}} template_instance_name, local_coursegen {{/str}}">
         </span>
-        <span class="tpl-badge tpl-badge-instance ml-2">{{#str}} template_instance_badge, local_coursegen, {{sourcename}} {{/str}}</span>
+        {{#generated}}<span class="tpl-badge tpl-badge-instance ml-2">{{#str}} template_generated_badge, local_coursegen {{/str}}</span>{{/generated}}
+        {{^generated}}<span class="tpl-badge tpl-badge-instance ml-2">{{#str}} template_instance_badge, local_coursegen, {{sourcename}} {{/str}}</span>{{/generated}}
     </td>
     <td class="align-middle text-muted" data-region="local_coursegen/template/type-label">{{typelabel}}</td>
     <td class="align-middle text-right">
@@ -101,11 +106,11 @@
         </div>
     </td>
 </tr>
-<tr class="tpl-instance-prompt-row d-none" data-for="instanceprompt" data-instance-id="{{instanceid}}">
+<tr class="tpl-instance-prompt-row{{^promptopen}} d-none{{/promptopen}}" data-for="instanceprompt" data-instance-id="{{instanceid}}">
     <td colspan="4">
         <div class="tpl-prompt-field">
-            <textarea data-region="instance-prompt" data-id="{{instanceid}}" rows="2"
-                      placeholder="{{#str}} template_instance_prompt_placeholder, local_coursegen {{/str}}">{{prompt}}</textarea>
+            <textarea data-region="instance-prompt" data-id="{{instanceid}}" rows="{{#generated}}4{{/generated}}{{^generated}}2{{/generated}}"
+                      placeholder="{{#generated}}{{#str}} template_generated_prompt_placeholder, local_coursegen {{/str}}{{/generated}}{{^generated}}{{#str}} template_instance_prompt_placeholder, local_coursegen {{/str}}{{/generated}}">{{prompt}}</textarea>
         </div>
     </td>
 </tr>
