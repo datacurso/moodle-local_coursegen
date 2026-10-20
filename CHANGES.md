@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026101228
+
+### Added
+- **An H5P activity can be shown inside the page that links to it**  
+  A link written for an H5P activity of the course, marked to be shown embedded, becomes the player of that activity once the course exists, so the student uses it without leaving the page or pressing a button. If the activity cannot be shown that way, the link stays as a normal link.
+
 ## [2.0.10] - 2026101227
 
 ### Added

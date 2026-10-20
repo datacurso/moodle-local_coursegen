@@ -18,6 +18,7 @@ namespace local_coursegen\local\service;
 
 use cm_info;
 use course_modinfo;
+use local_coursegen\local\link\embed_link;
 use local_coursegen\local\link\link_token;
 use local_coursegen\local\link\module_link_texts;
 use local_coursegen\local\link\module_link_texts_registry;
@@ -176,6 +177,7 @@ final class activity_link_resolver {
 
         $original = (string) $record->{$column};
         $resolved = link_token::replace($original, $urlbyuid);
+        $resolved = embed_link::apply($resolved);
 
         $remaininguid = link_token::first_remaining_uid($resolved);
         if ($remaininguid !== null) {
