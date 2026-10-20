@@ -16,6 +16,8 @@
 
 namespace local_coursegen\mod_settings;
 
+use local_coursegen\utils\html_cleaner;
+
 defined('MOODLE_INTERNAL') || die();
 
 global $CFG;
@@ -178,9 +180,13 @@ class quiz_settings extends base_settings {
             $question->category = $categoryinfo->id;
             $question->qtype = $aiquestiondata['qtype'];
             $question->name = $aiquestiondata['name'];
-            $question->questiontext = $aiquestiondata['questiontext']['text'] ?? '';
+            $question->questiontext = html_cleaner::clean(
+                (string) ($aiquestiondata['questiontext']['text'] ?? '')
+            );
             $question->questiontextformat = $aiquestiondata['questiontext']['format'] ?? FORMAT_HTML;
-            $question->generalfeedback = $aiquestiondata['generalfeedback']['text'] ?? '';
+            $question->generalfeedback = html_cleaner::clean(
+                (string) ($aiquestiondata['generalfeedback']['text'] ?? '')
+            );
             $question->generalfeedbackformat = $aiquestiondata['generalfeedback']['format'] ?? FORMAT_HTML;
             $question->defaultmark = $aiquestiondata['defaultmark'] ?? 1;
             $question->penalty = $aiquestiondata['penalty'] ?? 0.3333333;

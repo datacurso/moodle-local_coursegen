@@ -6,6 +6,8 @@
 
 ## Fixed
 
+- **The text the AI writes is cleaned before it is saved**  
+  Pages, lessons, books, labels, forums, quiz questions and database entries could keep scripts, event attributes or script links if the AI wrote them, for example after reading a document that asked for them. The text is now cleaned the way Moodle cleans any text from a person who is not trusted: scripts, event attributes, script links, frames and forms are removed, while the layout and the inline styles stay. Links of a database URL field must be real addresses.
 - **Syllabus uploads are validated on the server**  
   The syllabus endpoint no longer relies on the file picker alone. It now re-checks the extension (PDF, DOCX or TXT), the 10 MB size limit and the real file content before anything is stored or sent to the course service, so a renamed or forged file is rejected with a localized message. The endpoint also validates its context.
 - **Error messages no longer expose technical detail**  

@@ -16,6 +16,8 @@
 
 namespace local_coursegen\mod_settings;
 
+use local_coursegen\utils\html_cleaner;
+
 defined('MOODLE_INTERNAL') || die();
 
 require_once("$CFG->libdir/filelib.php");
@@ -63,7 +65,7 @@ class book_settings extends base_settings {
             $contenteditor = ['text' => (string)$contenteditor];
         }
 
-        $contenteditor['text'] = (string)($contenteditor['text'] ?? '');
+        $contenteditor['text'] = html_cleaner::clean((string)($contenteditor['text'] ?? ''));
         $contenteditor['format'] = (int)($contenteditor['format'] ?? FORMAT_HTML);
 
         $contentitemid = (int)($contenteditor['itemid'] ?? 0);
