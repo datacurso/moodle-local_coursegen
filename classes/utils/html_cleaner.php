@@ -40,7 +40,7 @@ final class html_cleaner {
      * @return string
      */
     public static function clean(string $html): string {
-        if ($html === '' || strpos($html, '<') === false) {
+        if ($html === '') {
             return $html;
         }
         return clean_text($html, FORMAT_HTML);
