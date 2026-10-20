@@ -89,7 +89,7 @@
             <input type="text" class="ignoredirty form-control" data-region="instance-name-input"
                    aria-label="{{#str}} template_instance_name, local_coursegen {{/str}}">
         </span>
-        {{#generated}}<span class="tpl-badge tpl-badge-instance ml-2">{{#str}} template_generated_badge, local_coursegen {{/str}}</span>{{/generated}}
+        {{#generated}}<span class="tpl-badge tpl-badge-generated ml-2">{{#str}} template_generated_badge, local_coursegen {{/str}}</span>{{/generated}}
         {{^generated}}<span class="tpl-badge tpl-badge-instance ml-2">{{#str}} template_instance_badge, local_coursegen, {{sourcename}} {{/str}}</span>{{/generated}}
     </td>
     <td class="align-middle text-muted" data-region="local_coursegen/template/type-label">{{typelabel}}</td>
