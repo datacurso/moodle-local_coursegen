@@ -48,6 +48,12 @@ final class role_installer_test extends \advanced_testcase {
         'moodle/restore:userinfo',
     ];
 
+    /** @var string[] Stock roles the creator role may assign. */
+    private const CREATOR_ASSIGNABLE = ['teacher', 'student'];
+
+    /** @var string[] Stock roles the importer role may assign. */
+    private const IMPORTER_ASSIGNABLE = ['editingteacher', 'teacher', 'student'];
+
     /** @var int[] Context levels both roles are assignable at. */
     private const CONTEXT_LEVELS = [CONTEXT_SYSTEM, CONTEXT_COURSE, CONTEXT_MODULE];
 
@@ -102,6 +108,7 @@ final class role_installer_test extends \advanced_testcase {
      * @param string $namekey Lang key of the name.
      * @param string $desckey Lang key of the description.
      * @param string[] $extras Capabilities expected on top of the archetype defaults.
+     * @param string[] $assignable Shortnames of the stock roles the role is expected to be allowed to assign, exactly.
      * @return \stdClass The role record.
      */
     private function assert_role_matches_spec(
@@ -109,7 +116,8 @@ final class role_installer_test extends \advanced_testcase {
         string $name,
         string $namekey,
         string $desckey,
-        array $extras
+        array $extras,
+        array $assignable
     ): \stdClass {
         global $DB;
 
@@ -128,11 +136,31 @@ final class role_installer_test extends \advanced_testcase {
         sort($expectedlevels);
         $this->assertSame($expectedlevels, $levels);
 
-        $assignable = array_map('intval', $DB->get_fieldset_select('role_allow_assign', 'allowassign', 'roleid = ?', [$role->id]));
-        $this->assertContains(self::role_id('teacher'), $assignable);
-        $this->assertContains(self::role_id('student'), $assignable);
+        $expectedassign = array_map([self::class, 'role_id'], $assignable);
+        sort($expectedassign);
+        $actualassign = array_map('intval', $DB->get_fieldset_select('role_allow_assign', 'allowassign', 'roleid = ?', [$role->id]));
+        sort($actualassign);
+        $this->assertSame($expectedassign, $actualassign);
 
         return $role;
+    }
+
+    /**
+     * Delete the roles the installer creates, to start from a site that has neither.
+     *
+     * The PHPUnit site is installed with this plugin, so db/install.php has
+     * already created both roles there.
+     *
+     * @return void
+     */
+    private static function remove_installed_roles(): void {
+        global $DB;
+        foreach ([role_installer::CREATOR_SHORTNAME, role_installer::IMPORTER_SHORTNAME] as $shortname) {
+            $roleid = $DB->get_field('role', 'id', ['shortname' => $shortname]);
+            if ($roleid) {
+                delete_role((int) $roleid);
+            }
+        }
     }
 
     /**
@@ -155,6 +183,7 @@ final class role_installer_test extends \advanced_testcase {
     public function test_install_missing_roles_creates_both_roles_on_a_fresh_site(): void {
         global $DB;
         $this->resetAfterTest();
+        self::remove_installed_roles();
 
         $this->assertFalse($DB->record_exists('role', ['shortname' => role_installer::CREATOR_SHORTNAME]));
         $this->assertFalse($DB->record_exists('role', ['shortname' => role_installer::IMPORTER_SHORTNAME]));
@@ -168,14 +197,16 @@ final class role_installer_test extends \advanced_testcase {
             'AI course creator (editing teacher)',
             'role_creator_name',
             'role_creator_desc',
-            self::CREATOR_EXTRAS
+            self::CREATOR_EXTRAS,
+            self::CREATOR_ASSIGNABLE
         );
         $importer = $this->assert_role_matches_spec(
             role_installer::IMPORTER_SHORTNAME,
             'AI course creator and importer',
             'role_importer_name',
             'role_importer_desc',
-            array_merge(self::CREATOR_EXTRAS, self::IMPORTER_EXTRAS)
+            array_merge(self::CREATOR_EXTRAS, self::IMPORTER_EXTRAS),
+            self::IMPORTER_ASSIGNABLE
         );
 
         $generator = $this->getDataGenerator();
@@ -196,6 +227,7 @@ final class role_installer_test extends \advanced_testcase {
      */
     public function test_install_missing_roles_is_idempotent(): void {
         $this->resetAfterTest();
+        self::remove_installed_roles();
 
         role_installer::install_missing_roles();
         $before = self::role_tables_snapshot();
@@ -210,6 +242,7 @@ final class role_installer_test extends \advanced_testcase {
     public function test_install_missing_roles_keeps_an_existing_role_untouched(): void {
         global $DB;
         $this->resetAfterTest();
+        self::remove_installed_roles();
 
         $legacyid = create_role('Legacy creator', role_installer::CREATOR_SHORTNAME, 'Built by hand', 'coursecreator');
         reset_role_capabilities($legacyid);
@@ -231,7 +264,8 @@ final class role_installer_test extends \advanced_testcase {
             'AI course creator and importer',
             'role_importer_name',
             'role_importer_desc',
-            array_merge(self::CREATOR_EXTRAS, self::IMPORTER_EXTRAS)
+            array_merge(self::CREATOR_EXTRAS, self::IMPORTER_EXTRAS),
+            self::IMPORTER_ASSIGNABLE
         );
     }
 
@@ -246,6 +280,7 @@ final class role_installer_test extends \advanced_testcase {
     public function test_install_missing_roles_names_the_roles_in_the_site_language(): void {
         global $CFG, $DB;
         $this->resetAfterTest();
+        self::remove_installed_roles();
 
         $langdir = $CFG->langotherroot . '/es';
         check_dir_exists($langdir);
@@ -273,6 +308,7 @@ final class role_installer_test extends \advanced_testcase {
     public function test_install_missing_roles_works_before_the_plugin_capabilities_are_registered(): void {
         global $DB;
         $this->resetAfterTest();
+        self::remove_installed_roles();
 
         $DB->delete_records('capabilities', ['component' => 'local_coursegen']);
         \cache::make('core', 'capabilities')->delete('core_capabilities');
@@ -286,7 +322,39 @@ final class role_installer_test extends \advanced_testcase {
             'AI course creator (editing teacher)',
             'role_creator_name',
             'role_creator_desc',
-            self::CREATOR_EXTRAS
+            self::CREATOR_EXTRAS,
+            self::CREATOR_ASSIGNABLE
         );
+    }
+
+    /**
+     * Only the importer role lets its holder assign editing teachers in a course.
+     *
+     * This is what lets the restore of the import map editing teachers of the
+     * original course to editingteacher instead of downgrading them to teacher.
+     */
+    public function test_only_the_importer_role_can_assign_editing_teachers_in_a_course(): void {
+        global $DB;
+        $this->resetAfterTest();
+        self::remove_installed_roles();
+
+        role_installer::install_missing_roles();
+
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course();
+        $coursecontext = \context_course::instance($course->id);
+        $creatoruser = $generator->create_user();
+        $importeruser = $generator->create_user();
+        $creatorid = (int) $DB->get_field('role', 'id', ['shortname' => role_installer::CREATOR_SHORTNAME], MUST_EXIST);
+        $importerid = (int) $DB->get_field('role', 'id', ['shortname' => role_installer::IMPORTER_SHORTNAME], MUST_EXIST);
+        role_assign($creatorid, $creatoruser->id, context_system::instance()->id);
+        role_assign($importerid, $importeruser->id, context_system::instance()->id);
+
+        $importerroles = get_assignable_roles($coursecontext, ROLENAME_SHORT, false, $importeruser->id);
+        $creatorroles = get_assignable_roles($coursecontext, ROLENAME_SHORT, false, $creatoruser->id);
+
+        $this->assertContains('editingteacher', $importerroles);
+        $this->assertContains('teacher', $creatorroles);
+        $this->assertNotContains('editingteacher', $creatorroles);
     }
 }

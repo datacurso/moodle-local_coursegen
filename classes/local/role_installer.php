@@ -24,10 +24,15 @@ use local_coursegen\local\service\creation_permissions;
  *
  * Both roles are editing teachers (archetype defaults) plus the capabilities
  * the creation flow needs; the importer also holds the user-data backup and
- * restore capabilities the import into an existing course needs. A role is
- * created only when no role with its shortname exists; an existing one is
- * never modified or removed, whatever it contains. Names and descriptions
- * come from the plugin strings in the site language at creation time.
+ * restore capabilities the import into an existing course needs. The creator
+ * may assign the teacher and student roles; the importer may also assign the
+ * editing teacher role, so the restore of the import maps editing teachers of
+ * the original course to editingteacher instead of downgrading them to teacher
+ * (restore_dbops::get_best_assignable_role()); a stock role missing from the
+ * site is skipped. A role is created only when no role with its shortname
+ * exists; an existing one is never modified or removed, whatever it contains.
+ * Names and descriptions come from the plugin strings in the site language at
+ * creation time.
  *
  * @package    local_coursegen
  * @copyright  2026 Josue Condori <https://datacurso.com>
@@ -49,9 +54,6 @@ final class role_installer {
     /** @var int[] Context levels both roles are assignable at. */
     private const CONTEXT_LEVELS = [CONTEXT_SYSTEM, CONTEXT_COURSE, CONTEXT_MODULE];
 
-    /** @var string[] Shortnames of the stock roles holders of either role may assign. */
-    private const ASSIGNABLE_ROLES = ['teacher', 'student'];
-
     /**
      * Create the roles that do not exist yet.
      *
@@ -65,11 +67,13 @@ final class role_installer {
                 'name' => 'role_creator_name',
                 'description' => 'role_creator_desc',
                 'capabilities' => creation_permissions::EXTRA_CAPABILITIES,
+                'assignable' => ['teacher', 'student'],
             ],
             self::IMPORTER_SHORTNAME => [
                 'name' => 'role_importer_name',
                 'description' => 'role_importer_desc',
                 'capabilities' => array_merge(creation_permissions::EXTRA_CAPABILITIES, self::IMPORT_CAPABILITIES),
+                'assignable' => ['editingteacher', 'teacher', 'student'],
             ],
         ];
 
@@ -79,7 +83,13 @@ final class role_installer {
                 continue;
             }
             self::ensure_plugin_capabilities_registered();
-            self::create_role_from_spec($shortname, $spec['name'], $spec['description'], $spec['capabilities']);
+            self::create_role_from_spec(
+                $shortname,
+                $spec['name'],
+                $spec['description'],
+                $spec['capabilities'],
+                $spec['assignable']
+            );
             $created[] = $shortname;
         }
         return $created;
@@ -109,13 +119,15 @@ final class role_installer {
      * @param string $namekey Lang key of the role name.
      * @param string $descriptionkey Lang key of the role description.
      * @param string[] $capabilities Capabilities allowed on the system context on top of the archetype defaults.
+     * @param string[] $assignable Shortnames of the stock roles holders may assign; missing ones are skipped.
      * @return int The new role id.
      */
     private static function create_role_from_spec(
         string $shortname,
         string $namekey,
         string $descriptionkey,
-        array $capabilities
+        array $capabilities,
+        array $assignable
     ): int {
         global $DB;
 
@@ -136,8 +148,8 @@ final class role_installer {
 
         set_role_contextlevels($roleid, self::CONTEXT_LEVELS);
 
-        foreach (self::ASSIGNABLE_ROLES as $assignable) {
-            $assignableid = $DB->get_field('role', 'id', ['shortname' => $assignable]);
+        foreach ($assignable as $assignableshortname) {
+            $assignableid = $DB->get_field('role', 'id', ['shortname' => $assignableshortname]);
             if ($assignableid) {
                 core_role_set_assign_allowed($roleid, (int) $assignableid);
             }
