@@ -30,18 +30,49 @@
     * requiredchecked bool    - Preselect "Required".
     * optionalchecked bool    - Preselect "Optional".
     * instruction string      - The instruction typed so far; may be empty.
+    * teacherchecked bool     - Preselect "The teacher provides it".
+    * aichecked bool          - Preselect "The AI always creates it".
+    * name string             - The name the AI activity will have; may be empty.
+    * lockmode bool           - Editing an existing space: the mode cannot be changed.
 
     Example context (json):
     {
         "subject": "File",
         "requiredchecked": true,
         "optionalchecked": false,
-        "instruction": ""
+        "instruction": "",
+        "teacherchecked": true,
+        "aichecked": false,
+        "name": ""
     }
 }}
 <div class="local_coursegen-template_space_modal_body">
-<p class="mb-3">{{#str}} template_space_modal_intro, local_coursegen, {{subject}} {{/str}}</p>
-<fieldset class="mb-3">
+{{^lockmode}}<fieldset class="mb-3">
+    <legend class="h6">{{#str}} template_space_mode_label, local_coursegen {{/str}}</legend>
+    <div class="form-check mb-2">
+        <input class="form-check-input" type="radio" name="template-space-mode" data-region="local_coursegen/template/space-mode-choice"
+               id="{{uniqid}}-mode-teacher" value="teacher"{{#teacherchecked}} checked{{/teacherchecked}}>
+        <label class="form-check-label" for="{{uniqid}}-mode-teacher">
+            <strong>{{#str}} template_space_mode_teacher, local_coursegen {{/str}}</strong>
+            <span class="d-block text-muted small">{{#str}} template_space_mode_teacher_desc, local_coursegen, {{subject}} {{/str}}</span>
+        </label>
+    </div>
+    <div class="form-check">
+        <input class="form-check-input" type="radio" name="template-space-mode" data-region="local_coursegen/template/space-mode-choice"
+               id="{{uniqid}}-mode-ai" value="ai"{{#aichecked}} checked{{/aichecked}}>
+        <label class="form-check-label" for="{{uniqid}}-mode-ai">
+            <strong>{{#str}} template_space_mode_ai, local_coursegen {{/str}}</strong>
+            <span class="d-block text-muted small">{{#str}} template_space_mode_ai_desc, local_coursegen, {{subject}} {{/str}}</span>
+        </label>
+    </div>
+</fieldset>{{/lockmode}}
+{{#lockmode}}<input type="radio" class="d-none" name="template-space-mode" data-region="local_coursegen/template/space-mode-choice" value="teacher" checked>{{/lockmode}}
+<div class="form-group mb-3" data-region="local_coursegen/template/space-name-group"{{^aichecked}} hidden{{/aichecked}}>
+    <label for="{{uniqid}}-name">{{#str}} template_space_name_label, local_coursegen {{/str}}</label>
+    <input type="text" class="form-control" id="{{uniqid}}-name" data-region="local_coursegen/template/space-name-field"
+           value="{{name}}" placeholder="{{subject}}">
+</div>
+<fieldset class="mb-3" data-region="local_coursegen/template/space-required-group"{{#aichecked}} hidden{{/aichecked}}>
     <legend class="h6">{{#str}} template_space_requirement_label, local_coursegen {{/str}}</legend>
     <div class="form-check mb-2">
         <input class="form-check-input" type="radio" name="template-space-required-choice" data-region="local_coursegen/template/space-required-choice"
@@ -61,8 +92,9 @@
     </div>
 </fieldset>
 <div class="form-group mb-0">
-    <label for="{{uniqid}}-instruction">{{#str}} template_space_instruction_label, local_coursegen {{/str}}</label>
+    <label for="{{uniqid}}-instruction" data-region="local_coursegen/template/space-instruction-label">{{#aichecked}}{{#str}} template_space_instruction_label_ai, local_coursegen {{/str}}{{/aichecked}}{{^aichecked}}{{#str}} template_space_instruction_label, local_coursegen {{/str}}{{/aichecked}}</label>
     <textarea class="form-control" id="{{uniqid}}-instruction" rows="4" data-region="local_coursegen/template/space-instruction-field"
               placeholder="{{#str}} template_space_instruction_placeholder, local_coursegen {{/str}}">{{instruction}}</textarea>
+    <small class="form-text text-muted" data-region="local_coursegen/template/space-ai-help"{{^aichecked}} hidden{{/aichecked}}>{{#str}} template_space_ai_help, local_coursegen {{/str}}</small>
 </div>
 </div>

@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026101225
+
+### Added
+- **A space in a template can be an activity the AI always creates**  
+  In the menu of a section, "Add a space for an activity" now asks who makes the activity. The teacher can still provide it. Or the AI always creates it: the administrator gives it a name and the instructions it must follow, and a course made from the template always gets that activity, written from the syllabus and the material with those instructions, without the teacher seeing it or changing it. There is no need to add a template activity to the template course for it.
+
 ## [2.0.10] - 2026101224
 
 ### Fixed

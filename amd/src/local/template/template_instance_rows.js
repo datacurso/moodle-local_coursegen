@@ -77,14 +77,16 @@ export const buildGapRow = () => renderRowFragment('local_coursegen/template_row
  * @returns {Promise<DocumentFragment>} The instance row plus its own (hidden) prompt row.
  */
 const buildInstanceRowFragment = (data, instanceid) => renderRowFragment('local_coursegen/template_instance_row', {
+    generated: data.sourcecmid === 0,
+    promptopen: data.sourcecmid === 0,
     instanceid,
-    name: data.sourcename,
+    name: data.name === undefined ? data.sourcename : data.name,
     sourcename: data.sourcename,
     sourcecmid: data.sourcecmid,
     modname: data.modname,
     iconurl: data.iconurl,
     typelabel: data.typelabel,
-    prompt: '',
+    prompt: data.prompt || '',
 });
 
 /**
@@ -137,6 +139,39 @@ export const insertInstanceRow = async(tbody, beforeEl, picked) => {
     const nameEl = instanceRow.querySelector(Selectors.regions.instanceNameEditable);
     startNameEdit(nameEl);
     return instanceRow;
+};
+
+/**
+ * Insert an activity the AI always creates from the instruction the admin wrote: an instance with no template
+ * activity behind it, whose instruction row stays open.
+ *
+ * @param {HTMLElement} tbody The section's table body.
+ * @param {HTMLElement} beforeEl The row-gap or add-row the trigger belongs to.
+ * @param {Object} generated {modname, name, typelabel, iconurl, prompt}
+ * @returns {Promise<HTMLElement>} The new instance row.
+ */
+export const insertGeneratedRow = async(tbody, beforeEl, generated) => {
+    const previous = beforeEl.previousElementSibling;
+    if (!(previous && previous.matches(Selectors.regions.rowGap))) {
+        const leadingGap = await buildGapRow();
+        tbody.insertBefore(leadingGap, beforeEl);
+    }
+    const instanceid = NEW_ROW_PREFIX + nextTempId++;
+    const fragment = await buildInstanceRowFragment({
+        sourcecmid: 0,
+        sourcename: '',
+        name: generated.name,
+        modname: generated.modname,
+        iconurl: generated.iconurl,
+        typelabel: generated.typelabel,
+        prompt: generated.prompt,
+    }, instanceid);
+    const row = fragment.querySelector(Selectors.rows.instance);
+    tbody.insertBefore(fragment, beforeEl);
+    const trailingGap = await buildGapRow();
+    tbody.insertBefore(trailingGap, beforeEl);
+    dropGapBeforeAddRow(tbody);
+    return row;
 };
 
 /**
