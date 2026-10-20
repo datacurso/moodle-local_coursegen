@@ -12,6 +12,7 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace local_coursegen;
 
@@ -52,6 +53,8 @@ final class text_editor_parameter_cleaner_test extends \advanced_testcase {
      * @return string
      */
     private function cleaned(string $html): string {
+        $this->resetAfterTest();
+        $this->setAdminUser();
         $result = text_editor_parameter_cleaner::clean_text_editor_objects([
             'content' => ['text' => $html, 'format' => 1, 'itemid' => 0],
         ]);
@@ -102,6 +105,7 @@ final class text_editor_parameter_cleaner_test extends \advanced_testcase {
      */
     public function test_cleans_the_text_editor_fields_of_the_parameters(): void {
         $this->resetAfterTest();
+        $this->setAdminUser();
         $parameters = [
             'name' => 'A page',
             'content' => ['text' => '<p>Ok</p><script>alert(1)</script>', 'format' => 1, 'itemid' => 0],
