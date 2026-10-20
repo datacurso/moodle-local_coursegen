@@ -121,6 +121,10 @@ $subsectionsenabled = \local_coursegen\local\service\course_planning_service::su
 // full import capability set on at least one course (ticket #9539).
 $importexistingenabled = \local_coursegen\local\service\import_permissions::is_offered($USER->id);
 
+// The import help describes the configured content mode: append for "add", replace otherwise.
+$importcontentmodeadd = \local_coursegen\local\service\course_import_service::get_content_mode()
+    === \local_coursegen\local\service\course_import_service::CONTENT_MODE_ADD;
+
 // Prepare template context.
 $templatecontext = [
     'guidelines' => json_encode($systeminstructions),
@@ -133,6 +137,7 @@ $templatecontext = [
     'isresuming' => $resumesessionid > 0,
     'subsectionsenabled' => $subsectionsenabled,
     'importexistingenabled' => $importexistingenabled,
+    'importcontentmodeadd' => $importcontentmodeadd,
     // Initial (empty) guideline listboxes; JavaScript re-renders them from the same templates.
     'guidelinelist' => [
         'listlabel' => get_string('courseai_guidelines_list_label', 'local_coursegen'),

@@ -181,7 +181,6 @@ const STRING_KEYS = [
     'courseai_targetmode_new',
     'courseai_targetmode_import',
     'courseai_import_title',
-    'courseai_import_help',
     'courseai_import_category_label',
     'courseai_import_category_placeholder',
     'courseai_import_course_label',

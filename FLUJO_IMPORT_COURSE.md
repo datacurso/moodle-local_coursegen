@@ -233,6 +233,3 @@ La rama está en `create_course.php:179-194`, tras crear el staging, leyendo `im
 
 - `generation_result_applied` se dispara tres veces en la ruta de importación: al crear el staging (`create_course_service.php:87`, contexto del staging), al responder `create_course` (`create_course.php:202`, contexto de sistema, con el id del staging) y al terminar la importación (`course_import_service.php:152`, contexto de la copia). Decidir cuál es el evento de auditoría válido.
 - El sondeo usa `get_course_session_state` completo cada 5 s, que devuelve también `coursedatajson`, `snapshotjson` y `streamingurl`; un endpoint ligero que devuelva solo el bloque `import` reduciría carga.
-- Solo `lang/en` y `lang/es` tienen las cadenas nuevas; `de`, `fr`, `id`, `pt` y `ru` caen al inglés.
-- La ayuda `courseai_import_help` describe siempre un reemplazo; con `importcontentmode = add` el texto no corresponde.
-- Rol Gestor: el arquetipo `manager` de serie no pasa el portón de creación y carece por defecto de las capacidades de usuario de backup/restore. Falta decidir si se amplía ese rol o se documenta el rol dedicado como único soporte.

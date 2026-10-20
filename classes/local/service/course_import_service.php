@@ -570,13 +570,22 @@ class course_import_service {
     }
 
     /**
+     * Resolve the import content mode from the importcontentmode setting.
+     *
+     * @return string self::CONTENT_MODE_ADD for "add", self::CONTENT_MODE_REPLACE for any other value or when unset.
+     */
+    public static function get_content_mode(): string {
+        $mode = (string)get_config('local_coursegen', 'importcontentmode');
+        return $mode === self::CONTENT_MODE_ADD ? self::CONTENT_MODE_ADD : self::CONTENT_MODE_REPLACE;
+    }
+
+    /**
      * Resolve the restore target from the import content mode setting.
      *
      * @return int backup::TARGET_EXISTING_ADDING for "add", backup::TARGET_EXISTING_DELETING otherwise.
      */
     private static function get_import_target(): int {
-        $mode = (string)get_config('local_coursegen', 'importcontentmode');
-        if ($mode === self::CONTENT_MODE_ADD) {
+        if (self::get_content_mode() === self::CONTENT_MODE_ADD) {
             return \backup::TARGET_EXISTING_ADDING;
         }
         return \backup::TARGET_EXISTING_DELETING;

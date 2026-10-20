@@ -16,6 +16,7 @@
 
 namespace local_coursegen;
 
+use local_coursegen\local\service\course_import_service;
 use local_coursegen\local\service\import_permissions;
 
 /**
@@ -40,9 +41,10 @@ final class courseai_page_template_test extends \advanced_testcase {
      * Render the page template with the context shape aicoursecreation.php builds.
      *
      * @param bool $importexistingenabled Value of the importexistingenabled flag.
+     * @param bool $importcontentmodeadd Value of the importcontentmodeadd flag.
      * @return string Rendered HTML.
      */
-    private function render(bool $importexistingenabled): string {
+    private function render(bool $importexistingenabled, bool $importcontentmodeadd = false): string {
         global $OUTPUT;
         return $OUTPUT->render_from_template('local_coursegen/courseai_page', [
             'guidelines' => '[]',
@@ -55,6 +57,7 @@ final class courseai_page_template_test extends \advanced_testcase {
             'isresuming' => false,
             'subsectionsenabled' => false,
             'importexistingenabled' => $importexistingenabled,
+            'importcontentmodeadd' => $importcontentmodeadd,
             'guidelinelist' => [
                 'listlabel' => 'Guidelines list',
                 'emptytext' => 'No results',
@@ -209,5 +212,47 @@ final class courseai_page_template_test extends \advanced_testcase {
         // The done state reuses the completion card, whose title and button label are swapped by JS.
         $this->assertStringContainsString('id="completionTitle"', $html);
         $this->assertStringContainsString('id="btnOpenMoodleCourseLabel"', $html);
+    }
+
+    /**
+     * Values of the importcontentmode setting and the help string the import panel must show.
+     *
+     * @return array
+     */
+    public static function import_help_provider(): array {
+        return [
+            'add' => ['add', 'courseai_import_help_add', 'courseai_import_help_replace'],
+            'replace' => ['replace', 'courseai_import_help_replace', 'courseai_import_help_add'],
+            'unset' => [null, 'courseai_import_help_replace', 'courseai_import_help_add'],
+            'unknown value' => ['merge', 'courseai_import_help_replace', 'courseai_import_help_add'],
+        ];
+    }
+
+    /**
+     * The import panel help describes the configured import content mode: aicoursecreation.php
+     * feeds the importcontentmodeadd flag from course_import_service::get_content_mode(), and any
+     * value other than "add" describes a replace.
+     *
+     * @dataProvider import_help_provider
+     * @param string|null $mode Value of local_coursegen/importcontentmode, null to leave it unset.
+     * @param string $expected String identifier of the help that must render.
+     * @param string $unexpected String identifier of the help that must not render.
+     * @return void
+     */
+    public function test_import_help_matches_import_content_mode(?string $mode, string $expected, string $unexpected): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        if ($mode === null) {
+            unset_config('importcontentmode', 'local_coursegen');
+        } else {
+            set_config('importcontentmode', $mode, 'local_coursegen');
+        }
+
+        $isadd = course_import_service::get_content_mode() === course_import_service::CONTENT_MODE_ADD;
+        $html = $this->render(true, $isadd);
+
+        $this->assertStringContainsString(s(get_string($expected, 'local_coursegen')), $html);
+        $this->assertStringNotContainsString(s(get_string($unexpected, 'local_coursegen')), $html);
+        $this->assertDebuggingNotCalled();
     }
 }

@@ -27,6 +27,7 @@
         "defaultlang": "es",
         "subsectionsenabled": false,
         "importexistingenabled": true,
+        "importcontentmodeadd": false,
         "guidelinelist": {
             "listlabel": "Guidelines list",
             "emptytext": "No results",
@@ -713,7 +714,9 @@
           {{! Target of the import: category first, then a course of that category (AJAX autocomplete). }}
           <div id="importTargetFields" style="display:none">
             <h6 class="mb-1">{{#str}}courseai_import_title, local_coursegen{{/str}}</h6>
-            <p class="text-muted mb-3" style="font-size:.875rem">{{#str}}courseai_import_help, local_coursegen{{/str}}</p>
+            <p class="text-muted mb-3" style="font-size:.875rem">{{!
+            }}{{#importcontentmodeadd}}{{#str}}courseai_import_help_add, local_coursegen{{/str}}{{/importcontentmodeadd}}{{!
+            }}{{^importcontentmodeadd}}{{#str}}courseai_import_help_replace, local_coursegen{{/str}}{{/importcontentmodeadd}}</p>
             <div class="form-group" id="importCategoryGroup">
               <label for="importCategory">{{#str}}courseai_import_category_label, local_coursegen{{/str}}</label>
               <select id="importCategory" class="form-control"></select>
