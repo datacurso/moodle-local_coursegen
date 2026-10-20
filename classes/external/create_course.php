@@ -32,6 +32,7 @@ use local_coursegen\event\generation_result_applied;
 use local_coursegen\local\service\ai_course_api_service;
 use local_coursegen\local\service\course_import_service;
 use local_coursegen\local\service\course_session_service;
+use local_coursegen\local\service\creation_permissions;
 use local_coursegen\local\service\create_course_service;
 use local_coursegen\local\service\import_permissions;
 use local_coursegen\task\import_generated_course_task;
@@ -125,8 +126,9 @@ class create_course extends external_api {
 
         $context = context_system::instance();
         self::validate_context($context);
-        require_capability('moodle/course:create', $context);
-        require_capability('local/coursegen:createcoursewithai', $context);
+        // The full creation set in at least one category (ticket #9539); the exact
+        // target category is checked again once it is resolved.
+        creation_permissions::require_anywhere();
 
         $recordid = (int)$params['recordid'];
 
@@ -221,7 +223,8 @@ class create_course extends external_api {
      * @return \stdClass Target course record.
      * @throws invalid_parameter_exception When no target was given.
      * @throws moodle_exception When the feature is disabled or the target is not importable.
-     * @throws \required_capability_exception When the user may not import into the target.
+     * @throws \required_capability_exception When the user may not create in the target's category or import
+     *     into the target.
      */
     private static function require_import_target(int $targetcourseid): \stdClass {
         global $DB;
@@ -237,6 +240,9 @@ class create_course extends external_api {
             throw new moodle_exception('error_import_target_invalid', 'local_coursegen');
         }
 
+        // The staging course is created in the target's category, so the creator
+        // set is required there before the import set (ticket #9539).
+        creation_permissions::require_for_category((int)$target->category);
         import_permissions::require_for_target($target);
 
         return $target;

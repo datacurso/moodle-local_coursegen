@@ -174,11 +174,6 @@ class chat_hook {
             return false;
         }
 
-        $systemcontext = \context_system::instance();
-
-        return has_all_capabilities([
-            'moodle/course:create',
-            'local/coursegen:createcoursewithai',
-        ], $systemcontext);
+        return \local_coursegen\local\service\creation_permissions::can_create_anywhere();
     }
 }

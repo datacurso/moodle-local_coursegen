@@ -98,17 +98,16 @@ final class create_course_import_mode_test extends \advanced_testcase {
     }
 
     /**
-     * Give the user the two system-level capabilities the web service gate requires.
+     * Give the user, at system level, the full creation set the web service gate requires
+     * (editingteacher archetype plus four capabilities, ticket #9539).
      *
      * @param int $userid User id.
-     * @return void
+     * @return int The creator role id, so a test can override one of its capabilities.
      */
-    private function allow_ws_gate_at_system(int $userid): void {
-        $systemcontext = \context_system::instance();
-        $roleid = create_role('AI course creator', 'aicoursecreator', '');
-        assign_capability('local/coursegen:createcoursewithai', CAP_ALLOW, $roleid, $systemcontext->id, true);
-        assign_capability('moodle/course:create', CAP_ALLOW, $roleid, $systemcontext->id, true);
-        role_assign($roleid, $userid, $systemcontext->id);
+    private function allow_ws_gate_at_system(int $userid): int {
+        $roleid = $this->getDataGenerator()->get_plugin_generator('local_coursegen')->create_course_creator_role();
+        role_assign($roleid, $userid, \context_system::instance()->id);
+        return $roleid;
     }
 
     /**
@@ -260,7 +259,9 @@ final class create_course_import_mode_test extends \advanced_testcase {
     }
 
     /**
-     * Without backup/restore on the target the import is denied before any course is materialised.
+     * Without the user data capabilities on the target (the creation set carries backup, restore and
+     * visibility but neither moodle/backup:userinfo nor moodle/restore:userinfo) the import is denied
+     * before any course is materialised.
      */
     public function test_import_mode_denies_user_without_target_capabilities(): void {
         global $DB;
@@ -287,21 +288,19 @@ final class create_course_import_mode_test extends \advanced_testcase {
     }
 
     /**
-     * A user holding backup, restore and course:create but not moodle/course:visibility must be
-     * rejected before any staging course is created: the import hides the original course, so
-     * queuing a task that is bound to fail at run time would waste a generated course.
+     * A user holding the creation set (which includes backup, restore and course:create) but not
+     * moodle/course:visibility on the target must be rejected before any staging course is created:
+     * the import hides the original course, so queuing a task that is bound to fail at run time
+     * would waste a generated course.
      */
     public function test_import_mode_denies_user_without_visibility_capability(): void {
         global $DB;
 
         $user = $this->getDataGenerator()->create_user();
-        $this->allow_ws_gate_at_system($user->id);
+        $creatorroleid = $this->allow_ws_gate_at_system($user->id);
         $target = $this->getDataGenerator()->create_course();
         $targetcontext = \context_course::instance($target->id);
-        $roleid = $this->getDataGenerator()->create_role(['shortname' => 'importer_no_visibility']);
-        assign_capability('moodle/backup:backupcourse', CAP_ALLOW, $roleid, $targetcontext->id, true);
-        assign_capability('moodle/restore:restorecourse', CAP_ALLOW, $roleid, $targetcontext->id, true);
-        role_assign($roleid, $user->id, $targetcontext->id);
+        assign_capability('moodle/course:visibility', CAP_PROHIBIT, $creatorroleid, $targetcontext->id, true);
         $this->setUser($user);
         $session = $this->create_session((int) $user->id);
         $service = $this->mock_result(['fullname' => 'AI course', 'shortname' => 'aicourse']);

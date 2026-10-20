@@ -30,6 +30,7 @@ use external_api;
 use external_function_parameters;
 use external_single_structure;
 use external_value;
+use local_coursegen\local\service\creation_permissions;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -67,9 +68,8 @@ class courseai_filepicker_init extends external_api {
         $context = context_system::instance();
         self::validate_context($context);
 
-        // Check permissions.
-        require_capability('moodle/course:create', $context);
-        require_capability('local/coursegen:createcoursewithai', $context);
+        // Check permissions: the full creation set in at least one category (ticket #9539).
+        creation_permissions::require_anywhere();
 
         $draftitemid = file_get_unused_draft_itemid();
         $clientid = uniqid('local_coursegen_courseai_syllabus_');

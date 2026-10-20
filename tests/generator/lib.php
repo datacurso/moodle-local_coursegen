@@ -53,4 +53,32 @@ class local_coursegen_generator extends component_generator_base {
 
         return $instruction;
     }
+
+    /**
+     * Create a role holding the full "create a course with AI" capability set.
+     *
+     * The role takes the editingteacher archetype defaults (reset_role_capabilities)
+     * plus the four extra capabilities creation_permissions requires, all as
+     * role definitions at system level, so assigning it in any context grants
+     * the full set there. Each call creates a new role with a unique shortname.
+     *
+     * @param array $record Optional overrides: name, shortname.
+     * @return int The role id.
+     */
+    public function create_course_creator_role(array $record = []): int {
+        static $counter = 0;
+        $counter++;
+
+        $name = $record['name'] ?? ('AI course creator ' . $counter);
+        $shortname = $record['shortname'] ?? ('aicoursecreator' . $counter);
+        $roleid = create_role($name, $shortname, '', \local_coursegen\local\service\creation_permissions::ARCHETYPE);
+        reset_role_capabilities($roleid);
+
+        $systemcontext = context_system::instance();
+        foreach (\local_coursegen\local\service\creation_permissions::EXTRA_CAPABILITIES as $capability) {
+            assign_capability($capability, CAP_ALLOW, $roleid, $systemcontext->id, true);
+        }
+
+        return $roleid;
+    }
 }

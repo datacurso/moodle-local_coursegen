@@ -94,13 +94,27 @@ final class course_confirmation_permissions_test extends \advanced_testcase {
     }
 
     /**
-     * Give the user moodle/course:create in one category only.
+     * Give the user the full creation set (editingteacher archetype plus four, ticket #9539) in one
+     * category only.
      *
      * @param int $userid User id.
      * @param \core_course_category $category Category where the user may create courses.
      * @return void
      */
     private function allow_course_create_in_category(int $userid, \core_course_category $category): void {
+        $categorycontext = \context_coursecat::instance($category->id);
+        $roleid = $this->getDataGenerator()->get_plugin_generator('local_coursegen')->create_course_creator_role();
+        role_assign($roleid, $userid, $categorycontext->id);
+    }
+
+    /**
+     * Give the user moodle/course:create alone in one category.
+     *
+     * @param int $userid User id.
+     * @param \core_course_category $category Category where the user may create courses the plain way.
+     * @return void
+     */
+    private function allow_plain_course_create_in_category(int $userid, \core_course_category $category): void {
         $categorycontext = \context_coursecat::instance($category->id);
         $roleid = create_role('Category course creator', 'catcoursecreator', '');
         assign_capability('moodle/course:create', CAP_ALLOW, $roleid, $categorycontext->id, true);
@@ -264,6 +278,39 @@ final class course_confirmation_permissions_test extends \advanced_testcase {
         $offeredids = array_column($result['categories'], 'id');
         $this->assertSame([(int) $cata->id], $offeredids);
         $this->assertNotContains((int) $catb->id, $offeredids);
+    }
+
+    /**
+     * A category where the user holds moodle/course:create but not the full creation set is not
+     * offered: creating there would be refused by the gate (ticket #9539).
+     */
+    public function test_category_with_plain_course_create_only_is_not_offered(): void {
+        $this->resetAfterTest();
+
+        $generator = $this->getDataGenerator();
+        $cata = \core_course_category::create(['name' => 'Full set category']);
+        $catb = \core_course_category::create(['name' => 'Plain create category']);
+
+        $user = $generator->create_user();
+        $this->allow_createcoursewithai_at_system($user->id);
+        $this->allow_course_create_in_category($user->id, $cata);
+        $this->allow_plain_course_create_in_category($user->id, $catb);
+        $this->setUser($user);
+
+        $session = $this->create_session($user->id);
+
+        $service = $this->getMockBuilder(ai_course_api_service::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods(['get_course_result'])
+            ->getMock();
+        $service->method('get_course_result')->willReturn([
+            'result' => ['course_configuration' => ['fullname' => 'AI planned course', 'shortname' => 'aiplanned']],
+        ]);
+        testable_get_course_settings::$mockservice = $service;
+
+        $result = testable_get_course_settings::execute((int) $session->get('id'));
+
+        $this->assertSame([(int) $cata->id], array_column($result['categories'], 'id'));
     }
 
     /**

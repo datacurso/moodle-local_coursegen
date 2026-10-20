@@ -27,10 +27,11 @@ require_once($CFG->libdir . '/filelib.php');
 
 require_login();
 
-// Check permissions.
+// Check permissions: the full creation set (editingteacher archetype plus four
+// capabilities) in at least one category, the same gate as the button and the
+// web services of the flow (ticket #9539).
 $systemcontext = context_system::instance();
-require_capability('moodle/course:create', $systemcontext);
-require_capability('local/coursegen:createcoursewithai', $systemcontext);
+\local_coursegen\local\service\creation_permissions::require_anywhere();
 
 // Set up the page.
 $url = new moodle_url('/local/coursegen/aicoursecreation.php');
