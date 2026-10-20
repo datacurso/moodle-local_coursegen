@@ -106,10 +106,10 @@
         </div>
     </td>
 </tr>
-<tr class="tpl-instance-prompt-row{{^promptopen}} d-none{{/promptopen}}" data-for="instanceprompt" data-instance-id="{{instanceid}}">
+<tr class="tpl-instance-prompt-row{{^promptopen}} d-none{{/promptopen}}{{#generated}} tpl-prompt-standard{{/generated}}" data-for="instanceprompt" data-instance-id="{{instanceid}}">
     <td colspan="4">
         <div class="tpl-prompt-field">
-            <textarea data-region="instance-prompt" data-id="{{instanceid}}" rows="{{#generated}}4{{/generated}}{{^generated}}2{{/generated}}"
+            <textarea class="{{#generated}}form-control{{/generated}}" data-region="instance-prompt" data-id="{{instanceid}}" rows="{{#generated}}4{{/generated}}{{^generated}}2{{/generated}}"
                       placeholder="{{#generated}}{{#str}} template_generated_prompt_placeholder, local_coursegen {{/str}}{{/generated}}{{^generated}}{{#str}} template_instance_prompt_placeholder, local_coursegen {{/str}}{{/generated}}">{{prompt}}</textarea>
         </div>
     </td>
