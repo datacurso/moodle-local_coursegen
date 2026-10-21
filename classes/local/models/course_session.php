@@ -41,6 +41,9 @@ class course_session extends persistent {
     /** Status: creation failed. */
     const STATUS_FAILED = 4;
 
+    /** Status: generated course is being imported into an existing course. */
+    const STATUS_IMPORTING = 5;
+
     /**
      * Return the definition of the properties of this model.
      *
@@ -69,6 +72,7 @@ class course_session extends persistent {
                     self::STATUS_CREATING,
                     self::STATUS_CREATED,
                     self::STATUS_FAILED,
+                    self::STATUS_IMPORTING,
                 ],
                 'default' => self::STATUS_PENDING,
             ],

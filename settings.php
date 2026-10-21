@@ -53,6 +53,45 @@ if ($hassiteconfig) {
         0
     ));
 
+    // Off by default: importing into an existing course copies and replaces
+    // the target, so the site must opt in explicitly (ticket #9539).
+    $settings->add(new admin_setting_configcheckbox(
+        'local_coursegen/enableimportexisting',
+        get_string('setting_enableimportexisting', 'local_coursegen'),
+        get_string('setting_enableimportexisting_desc', 'local_coursegen'),
+        0
+    ));
+
+    // Only meaningful while the import is enabled: "replace" deletes the copy
+    // content before importing the generated course, "add" keeps the existing
+    // sections and activities and merges the generated ones on top.
+    $settings->add(new admin_setting_configselect(
+        'local_coursegen/importcontentmode',
+        get_string('setting_importcontentmode', 'local_coursegen'),
+        get_string('setting_importcontentmode_desc', 'local_coursegen'),
+        'replace',
+        [
+            'replace' => get_string('importcontentmode_replace', 'local_coursegen'),
+            'add' => get_string('importcontentmode_add', 'local_coursegen'),
+        ]
+    ));
+    $settings->hide_if('local_coursegen/importcontentmode', 'local_coursegen/enableimportexisting', 'notchecked');
+
+    // Only meaningful while the import is enabled: "adhoc" queues a cron task
+    // and the page polls until it ends, "sync" runs the copy and the import
+    // inside the create_course request.
+    $settings->add(new admin_setting_configselect(
+        'local_coursegen/importexecution',
+        get_string('setting_importexecution', 'local_coursegen'),
+        get_string('setting_importexecution_desc', 'local_coursegen'),
+        'adhoc',
+        [
+            'adhoc' => get_string('importexecution_adhoc', 'local_coursegen'),
+            'sync' => get_string('importexecution_sync', 'local_coursegen'),
+        ]
+    ));
+    $settings->hide_if('local_coursegen/importexecution', 'local_coursegen/enableimportexisting', 'notchecked');
+
     $ADMIN->add($pluginname, $settings);
 
     // Development settings page: service URL overrides for dev/staging

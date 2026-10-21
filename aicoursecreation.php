@@ -27,10 +27,11 @@ require_once($CFG->libdir . '/filelib.php');
 
 require_login();
 
-// Check permissions.
+// Check permissions: the full creation set (editingteacher archetype plus four
+// capabilities) in at least one category, the same gate as the button and the
+// web services of the flow (ticket #9539).
 $systemcontext = context_system::instance();
-require_capability('moodle/course:create', $systemcontext);
-require_capability('local/coursegen:createcoursewithai', $systemcontext);
+\local_coursegen\local\service\creation_permissions::require_anywhere();
 
 // Set up the page.
 $url = new moodle_url('/local/coursegen/aicoursecreation.php');
@@ -116,6 +117,14 @@ $logourl = new moodle_url('/local/coursegen/pix/logo.png');
 // Subsections toggle only renders when the feature is enabled and mod_subsection is available.
 $subsectionsenabled = \local_coursegen\local\service\course_planning_service::subsections_available();
 
+// Import-into-existing-course controls render only when the site opted in and the user holds the
+// full import capability set on at least one course (ticket #9539).
+$importexistingenabled = \local_coursegen\local\service\import_permissions::is_offered($USER->id);
+
+// The import help describes the configured content mode: append for "add", replace otherwise.
+$importcontentmodeadd = \local_coursegen\local\service\course_import_service::get_content_mode()
+    === \local_coursegen\local\service\course_import_service::CONTENT_MODE_ADD;
+
 // Prepare template context.
 $templatecontext = [
     'guidelines' => json_encode($systeminstructions),
@@ -127,6 +136,8 @@ $templatecontext = [
     'allsessions' => $allsessionsdata,
     'isresuming' => $resumesessionid > 0,
     'subsectionsenabled' => $subsectionsenabled,
+    'importexistingenabled' => $importexistingenabled,
+    'importcontentmodeadd' => $importcontentmodeadd,
     // Initial (empty) guideline listboxes; JavaScript re-renders them from the same templates.
     'guidelinelist' => [
         'listlabel' => get_string('courseai_guidelines_list_label', 'local_coursegen'),

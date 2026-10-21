@@ -32,6 +32,7 @@ use external_single_structure;
 use local_coursegen\local\service\ai_course_api_service;
 use local_coursegen\local\service\course_session_service;
 use local_coursegen\local\service\create_course_service;
+use local_coursegen\local\service\creation_permissions;
 use context_system;
 
 defined('MOODLE_INTERNAL') || die();
@@ -72,14 +73,7 @@ class get_course_settings extends external_api {
 
         $context = context_system::instance();
         self::validate_context($context);
-        require_capability('local/coursegen:createcoursewithai', $context);
-
-        // Category-level course creators are accepted: the user must hold
-        // moodle/course:create at system level or in at least one category.
-        $catlist = \core_course_category::make_categories_list('moodle/course:create');
-        if (empty($catlist) && !has_capability('moodle/course:create', $context)) {
-            throw new \required_capability_exception($context, 'moodle/course:create', 'nopermissions', '');
-        }
+        creation_permissions::require_anywhere();
 
         $recordid = (int)$params['recordid'];
 
@@ -93,9 +87,13 @@ class get_course_settings extends external_api {
 
         $settings = create_course_service::get_course_settings($session, $resultdata);
 
-        // Offer only the categories where the user can actually create courses.
+        // Offer only the categories where the user holds the full creation set (ticket #9539):
+        // the ones where create_course would accept the request.
         $categories = [];
-        foreach ($catlist as $id => $pathname) {
+        foreach (\core_course_category::make_categories_list('moodle/course:create') as $id => $pathname) {
+            if (!creation_permissions::can_create_in((int)$id)) {
+                continue;
+            }
             $categories[] = [
                 'id' => (int)$id,
                 'pathname' => $pathname,
