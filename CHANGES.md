@@ -7,9 +7,7 @@
 - **The text the AI writes is cleaned before it is saved**  
   Pages, lessons, books, labels, forums, quiz questions and database entries could keep scripts, event attributes or script links if the AI wrote them, for example after reading a document that asked for them. The text is now cleaned the way Moodle cleans any text from a person who is not trusted: scripts, event attributes, script links, frames and forms are removed, while the layout and the inline styles stay. Links of a database URL field must be real addresses (#371)
 
-## 2.1.0-wp
-
-**Released on:** Unreleased
+## [2.1.0-wp] - Unreleased
 
 **Compatibility note:** This version is compatible only with **Moodle Workplace 4.5**.
 
@@ -41,11 +39,9 @@
 - **Existing data moves to the Default tenant**  
   The upgrade moves the plugin settings stored in `config_plugins` (service URLs, subsections and image generation settings) to the Workplace Default tenant, keeping any value that tenant already had, and removes them from `config_plugins`. Existing system instructions are assigned to the Default tenant as well.
 
-## 2.0.6
+## [2.0.6] - Unreleased
 
-**Released on:** Unreleased
-
-**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.2**.
+**Compatibility note:** This version is compatible from **Moodle 4.5** to **Moodle 5.2**.
 
 ## Fixed
 
@@ -67,11 +63,9 @@
 - **Guideline list templates are self-contained listboxes**  
   `local_coursegen/local/courseai/guideline_list` and `guideline_list_compact` now render the whole `<ul role="listbox">` (with a `listlabel` context variable for its accessible name) instead of bare `<li>` fragments, so they validate on their own and the `.mustachelintignore` exception is gone. The page renders them once through the same partials inside `[data-region="guideline-list"]` / `[data-region="guideline-list-compact"]` wrappers, JavaScript replaces the whole list inside those wrappers and delegates clicks on them; the `#guidelineList` / `#guidelineListCompact` ids are unchanged.
 
-## 2.0.5
+## [2.0.5] - 2026-09-11
 
-**Released on:** 2026-09-11
-
-**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
+**Compatibility note:** This version is compatible from **Moodle 4.5** to **Moodle 5.1**.
 
 ## Security
 
@@ -102,44 +96,36 @@
 - **Missing English strings for the syllabus and planning UI**  
   Six strings existed only in translations and rendered as `[[key]]` placeholders for English users; they are now defined in the English pack and translated across all supported languages.
 
-## 2.0.4
+## [2.0.4] - 2026-08-27
 
-**Released on:** 2026-08-27
-
-**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
+**Compatibility note:** This version is compatible from **Moodle 4.5** to **Moodle 5.1**.
 
 ## Fixed
 
 - **Missing Spanish translations added to the course creation assistant**  
   The plan review screen, activity generation progress messages, stop/resume/retry controls, and the activity log were showing in English regardless of the site's language, because their strings had no Spanish translation. All of them are now translated.
 
-## 2.0.3
+## [2.0.3] - 2026-08-24
 
-**Released on:** 2026-08-24
-
-**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
+**Compatibility note:** This version is compatible from **Moodle 4.5** to **Moodle 5.1**.
 
 ## Fixed
 
 - **Spanish translation corrected across the language file**  
   Several activity names and UI strings used incorrect literal translations, inconsistent terminology for the same activity type across different strings, and grammar issues. Activity names are now aligned with the site's installed Spanish language pack.
 
-## 2.0.2
+## [2.0.2] - 2026-08-20
 
-**Released on:** 2026-08-20
-
-**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
+**Compatibility note:** This version is compatible from **Moodle 4.5** to **Moodle 5.1**.
 
 ## Fixed
 
 - **Workshop settings handle the initial phase and AI-generated criteria**  
   Workshop activities generated with AI now correctly set the initial submission phase and apply AI-generated assessment criteria, covered by a new test suite.
 
-## 2.0.1
+## [2.0.1] - 2026-08-19
 
-**Released on:** 2026-08-19
-
-**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
+**Compatibility note:** This version is compatible from **Moodle 4.5** to **Moodle 5.1**.
 
 ## Added
 
@@ -174,11 +160,9 @@
 - **Version bump**  
   Internal version bumped to **2026081801** and release bumped to **2.0.1**.
 
-## 2.0.0
+## [2.0.0] - 2026-08-14
 
-**Released on:** 2026-08-14
-
-**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
+**Compatibility note:** This version is compatible from **Moodle 4.5** to **Moodle 5.1**.
 
 ## Added
 
@@ -203,11 +187,9 @@
 - **Silent discard of unhandled module settings**  
   A `mod_settings` payload arriving for a module type with no handler class now emits a debugging warning instead of being silently ignored.
 
-## 1.7.3
+## [1.7.3] - 2026-08-13
 
-**Released on:** 2026-08-13
-
-**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
+**Compatibility note:** This version is compatible from **Moodle 4.5** to **Moodle 5.1**.
 
 ## Fixed
 
@@ -216,11 +198,9 @@
 - **Version bump**  
   Internal version bumped to **2026081300** and release bumped to **1.7.3**.
 
-## 1.7.2
+## [1.7.2] - 2026-08-12
 
-**Released on:** 2026-08-12
-
-**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
+**Compatibility note:** This version is compatible from **Moodle 4.5** to **Moodle 5.1**.
 
 ## Fixed
 
@@ -229,11 +209,9 @@
 - **Version bump**  
   Internal version bumped to **2026081202** and release bumped to **1.7.2**.
 
-## 1.7.1
+## [1.7.1] - 2026-08-12
 
-**Released on:** 2026-08-12
-
-**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
+**Compatibility note:** This version is compatible from **Moodle 4.5** to **Moodle 5.1**.
 
 ## Fixed
 
@@ -242,11 +220,9 @@
 - **Version bump**  
   Internal version bumped to **2026081201** and release bumped to **1.7.1**.
 
-## 1.7.0
+## [1.7.0] - 2026-08-12
 
-**Released on:** 2026-08-12
-
-**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
+**Compatibility note:** This version is compatible from **Moodle 4.5** to **Moodle 5.1**.
 
 ## Changed
 
@@ -255,11 +231,9 @@
 - **Version bump**  
   Internal version bumped to **2026081200** and release bumped to **1.7.0**.
 
-## 1.6.0
+## [1.6.0] - 2026-06-02
 
-**Released on:** 2026-06-02
-
-**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
+**Compatibility note:** This version is compatible from **Moodle 4.5** to **Moodle 5.1**.
 
 ## Changed
 
@@ -289,11 +263,9 @@
 - **AI course creation menu entry no longer shown to users who cannot use it**  
   **Site administration > Courses > Create a new course with AI** declared only `local/coursegen:createcoursewithai`, while the page itself requires that capability *and* `moodle/course:create`. Because `admin_externalpage` treats its capability list as OR, a user holding only the plugin capability was shown the entry and then denied access on click. The entry is now registered only when both capabilities are held in the system context.
 
-## 1.5.0
+## [1.5.0] - 2026-06-01
 
-**Released on:** 2026-06-01
-
-**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
+**Compatibility note:** This version is compatible from **Moodle 4.5** to **Moodle 5.1**.
 
 ## Changed
 
@@ -312,11 +284,9 @@
 - **Version bump**  
   Internal version bumped to **2026060101** and release bumped to **1.5.0**.
 
-## 1.4.0
+## [1.4.0] - 2026-05-14
 
-**Released on:** 2026-05-14
-
-**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
+**Compatibility note:** This version is compatible from **Moodle 4.5** to **Moodle 5.1**.
 
 ## Changed
 
@@ -348,11 +318,9 @@
 - **Removed floating sidebar toggle**  
   Removed the absolute-positioned toggle button that caused horizontal page scroll. Sidebar remains accessible via navbar trigger only.
 
-## 1.3.3
+## [1.3.3] - 2026-04-10
 
-**Released on:** 2026-04-10
-
-**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
+**Compatibility note:** This version is compatible from **Moodle 4.5** to **Moodle 5.1**.
 
 ## Added
 - **Automated prompt-based course creation service**
@@ -374,11 +342,9 @@
 - **Language pack consistency cleanup**
   Normalized language files formatting for repository consistency.
 
-## 1.3.2
+## [1.3.2] - 2026-01-26
 
-**Released on:** 2026-01-26
-
-**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
+**Compatibility note:** This version is compatible from **Moodle 4.5** to **Moodle 5.1**.
 
 ## Added
 - **Optional admin settings for DataCurso service URLs**  
@@ -395,11 +361,9 @@
   Internal version bumped to **2026012300** and release version bumped to **1.3.2**.
 
 
-## 1.3.1
+## [1.3.1] - 2025-12-16
 
-**Released on:** 2025-12-16
-
-**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
+**Compatibility note:** This version is compatible from **Moodle 4.5** to **Moodle 5.1**.
 
 ## Added
 - **AI response language selector on the course form**  
@@ -419,11 +383,9 @@
 - **Version bump**  
   Internal version bumped to **2025121601** and release version bumped to **1.3.1**.
 
-## 1.3.0
+## [1.3.0] - 2025-12-11
 
-**Released on:** 2025-12-11
-
- **Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
+**Compatibility note:** This version is compatible from **Moodle 4.5** to **Moodle 5.1**.
 
 ## Added
 - **Optional image generation support for AI course planning**  
@@ -439,11 +401,9 @@
 - **Version bump**  
   Internal version bumped to **2025121100** and release version bumped to **1.3.0**.
 
-## 1.2.1
+## [1.2.1] - 2025-12-09
 
-**Released on:** 2025-12-09
-
-  **Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
+**Compatibility note:** This version is compatible from **Moodle 4.5** to **Moodle 5.1**.
  
  ## Fixed
  
@@ -451,11 +411,9 @@
   - The previous logic required an exact path match to `/course/view.php`, which failed on subdirectory installs like `https://mysite.com/mymoodle/`.  
   - Updated the detection to use a substring check with `strpos()` for `/course/view.php`, so URL variations and extra path components are handled correctly.
 
-## 1.2.0
+## [1.2.0] - 2025-12-05
 
-**Released on:** 2025-12-05
-
- **Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
+**Compatibility note:** This version is compatible from **Moodle 4.5** to **Moodle 5.1**.
 
 ## Added
 - **Optional system instruction support**
@@ -485,11 +443,9 @@
 - **Privacy provider tests aligned**
   Updated privacy provider tests to reference the renamed system instruction table.
 
-## 1.0.3
+## [1.0.3] - 2025-12-02
 
-**Released on:** 2025-12-02
-
- **Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
+**Compatibility note:** This version is compatible from **Moodle 4.5** to **Moodle 5.1**.
 
 ## Added
 - **Automated release workflow for the plugin.**  
