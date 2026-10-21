@@ -16,11 +16,16 @@ Feature: Create with AI button on the My courses page
       | enablemycourses | 1 |
     And the following "users" exist:
       | username | firstname | lastname | email                |
-      | manager1 | Mona      | Manager  | manager1@example.com |
+      | creator1 | Cara      | Creator  | creator1@example.com |
       | student1 | Sam       | Student  | student1@example.com |
+    # The full creation set (ticket #9539) is the editingteacher archetype plus four
+    # capabilities; the stock editingteacher role extended with them holds it.
+    And the following "role capabilities" exist:
+      | role           | moodle/course:create | moodle/course:view | local/coursegen:createcoursewithai | local/coursegen:createactivitywithai |
+      | editingteacher | allow                | allow              | allow                              | allow                                |
     And the following "role assigns" exist:
-      | user     | role    | contextlevel | reference |
-      | manager1 | manager | System       |           |
+      | user     | role           | contextlevel | reference |
+      | creator1 | editingteacher | System       |           |
     And the following "courses" exist:
       | fullname | shortname | category |
       | Course 1 | C1        | 0        |
@@ -36,8 +41,8 @@ Feature: Create with AI button on the My courses page
     And "#local_coursegen_aicourseform" "css_element" should exist
     And "[data-action='local_coursegen/add_ai_course']" "css_element" should exist
 
-  Scenario: Manager without enrolled courses sees the button in the empty state
-    Given I log in as "manager1"
+  Scenario: Creator without enrolled courses sees the button in the empty state
+    Given I log in as "creator1"
     When I visit "/my/courses.php"
     Then "#action_bar" "css_element" should exist
     And "Create with AI" "button" should exist

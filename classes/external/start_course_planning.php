@@ -24,6 +24,7 @@ use external_value;
 use local_coursegen\event\generation_failed;
 use local_coursegen\event\generation_job_started;
 use local_coursegen\local\service\course_planning_service;
+use local_coursegen\local\service\creation_permissions;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -86,8 +87,7 @@ class start_course_planning extends external_api {
 
         $context = context_system::instance();
         self::validate_context($context);
-        require_capability('moodle/course:create', $context);
-        require_capability('local/coursegen:createcoursewithai', $context);
+        creation_permissions::require_anywhere();
 
         try {
             $outcome = course_planning_service::start_course_planning(

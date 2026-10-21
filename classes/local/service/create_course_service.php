@@ -49,11 +49,11 @@ class create_course_service {
         global $CFG;
 
         // Resolve the effective category (user override → AI value → site default)
-        // and require course creation permission in that exact category before any
-        // creation work happens. Thrown (not returned) so callers surface it as a
-        // proper permission error.
+        // and require the full creation set in that exact category before any
+        // creation work happens (ticket #9539). Thrown (not returned) so callers
+        // surface it as a proper permission error naming the missing capability.
         $effectivecategoryid = self::resolve_effective_category($resultdata, $overrides);
-        require_capability('moodle/course:create', \context_coursecat::instance($effectivecategoryid));
+        creation_permissions::require_for_category($effectivecategoryid);
 
         try {
             // This request may take a long time depending on the complexity of the prompt that the AI has to resolve.

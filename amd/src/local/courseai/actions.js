@@ -47,8 +47,10 @@ export const createCourseaiActions = (deps) => {
     const {
         promptInput, btnGenerate, btnApprove, planActions,
         pcToggleBtn, pcDetailsPanel, pcChevron,
-        planningProgressCard, completionView, completionSummary,
-        btnOpenMoodleCourse, btnCreateAnotherCourse,
+        planningProgressCard, completionView, completionTitle, completionSummary,
+        btnOpenMoodleCourse, btnOpenMoodleCourseLabel, btnCreateAnotherCourse,
+        importProgressView, importProgressSpinner, importProgressFailedIcon,
+        importProgressTitle, importProgressSummary, btnOpenGeneratedCourse,
         btnWithImages, imgToggleWrap, langSelect,
         btnWithSubsections, subToggleWrap,
         compactPromptInput, btnCompactRegenerate,
@@ -123,49 +125,74 @@ export const createCourseaiActions = (deps) => {
         }
     };
 
-    const showCompletionView = (result) => {
-        state.createdCourseResult = result || null;
-        state.createdCourseUrl = result?.courseurl || '';
-        state.currentStage = 'completed';
-        // The course is created and can no longer be edited from this wizard, so the
-        // composer must be gone on the success view. Hide it explicitly here (not only
-        // via the body-class CSS) so a stale/aggregated stylesheet can't leave it
-        // visible, and keep the declarative class in sync.
+    /**
+     * Close the generation layout: the course exists (or is being imported) and can no
+     * longer be edited from this wizard, so the composer and the plan cards go away and
+     * only the final card (completion or import progress) stays.
+     *
+     * @returns {void}
+     */
+    const finishGenerationLayout = () => {
+        // Hide the composer explicitly here (not only via the body-class CSS) so a
+        // stale/aggregated stylesheet can't leave it visible, and keep the declarative
+        // class in sync.
         state.planApproved = true;
         document.body.classList.add('cg-plan-approved');
         if (elements.compactChatCard) {
             elements.compactChatCard.style.display = 'none';
         }
-        if (completionSummary) {
-            completionSummary.textContent = buildCompletionSummary(state, texts, formatTemplate);
-        }
         if (planningProgressCard) { planningProgressCard.style.display = 'none'; }
         if (elements.planReviewCard) { elements.planReviewCard.style.display = 'none'; }
         if (planActions) { planActions.style.display = 'none'; }
         // Generation is over: drop the live progress view (the plan cards) so only the
-        // success panel shows, and clear the generation styling.
+        // final panel shows, and clear the generation styling.
         document.body.classList.remove('cg-generating');
         if (elements.planDetailedView) { elements.planDetailedView.style.display = 'none'; }
-        if (completionView) { completionView.style.display = 'flex'; }
-        if (btnOpenMoodleCourse) { btnOpenMoodleCourse.disabled = !state.createdCourseUrl; }
         stepsUi.setStepState('planning', 'done');
         stepsUi.setStepState('generating', 'done');
         stepsUi.updateFlowNav();
         // Drop any lingering "working" indicator (e.g. the one shown when the user hit
         // Accept). Generation is over, so it must not sit in the bottom slot beside the
-        // success view.
+        // final view.
         const workingEntry = document.getElementById('cgFeedbackThinking');
         if (workingEntry) { workingEntry.remove(); }
-        // Pin the left thread to the bottom so the final "Your course is ready" turn is
-        // comfortably visible. Without this the newest turns sit below the fold and the
-        // user has to scroll down to see the completion message. Deferred to the next
-        // frame so it runs after this view's layout changes settle.
+        // Pin the left thread to the bottom so the final turn is comfortably visible.
+        // Without this the newest turns sit below the fold and the user has to scroll
+        // down to see the completion message. Deferred to the next frame so it runs
+        // after this view's layout changes settle.
         const chatScroll = document.getElementById('courseaiChatScroll');
         if (chatScroll) {
             window.requestAnimationFrame(() => {
                 chatScroll.scrollTop = chatScroll.scrollHeight;
             });
         }
+    };
+
+    const showCompletionView = (result) => {
+        stopImportPolling();
+        state.createdCourseResult = result || null;
+        state.createdCourseUrl = result?.courseurl || '';
+        state.currentStage = 'completed';
+        const importCompleted = Boolean(result?.importcompleted);
+        finishGenerationLayout();
+        if (importProgressView) { importProgressView.style.display = 'none'; }
+        if (completionTitle) {
+            completionTitle.textContent = importCompleted
+                ? texts.courseai_import_completed_title
+                : texts.courseai_completion_title;
+        }
+        if (completionSummary) {
+            completionSummary.textContent = importCompleted
+                ? texts.import_completed
+                : buildCompletionSummary(state, texts, formatTemplate);
+        }
+        if (btnOpenMoodleCourseLabel) {
+            btnOpenMoodleCourseLabel.textContent = importCompleted
+                ? texts.courseai_import_btn_open_imported
+                : texts.courseai_completion_btn_open_course;
+        }
+        if (completionView) { completionView.style.display = 'flex'; }
+        if (btnOpenMoodleCourse) { btnOpenMoodleCourse.disabled = !state.createdCourseUrl; }
         // Celebratory confetti — a DOUBLE pop. Both bursts run the SAME animation; the
         // second fires ~1.5s later: late enough to read as a distinct second pop, but
         // while the first is still falling so there is NO empty gap between them (2s
@@ -173,6 +200,148 @@ export const createCourseaiActions = (deps) => {
         const confettiLayer = document.getElementById('pcConfetti');
         fireConfetti(confettiLayer);
         window.setTimeout(() => fireConfetti(confettiLayer), 1500);
+    };
+
+    // ---- Import into an existing course (ticket #9539) -------------------------------
+    // The backend answers create_course with importqueued=true and the STAGING course.
+    // In the background execution an adhoc task copies the target and imports the
+    // staging into the copy, and the page polls the session state until importstate
+    // is done|failed (capped). In the foreground execution the answer already carries
+    // the terminal importstate (and copycourseid), so the terminal view is rendered
+    // straight away and nothing is polled.
+    const IMPORT_POLL_INTERVAL_MS = 5000;
+    const IMPORT_POLL_MAX_MS = 10 * 60 * 1000;
+    let importPollTimer = null;
+    let importPollStartedAt = 0;
+    let importPollInFlight = false;
+    /** @type {string} URL of the staging (generated) course, the fallback while importing. */
+    let generatedCourseUrl = '';
+
+    /**
+     * Stop polling the import state (terminal state, timeout or page unload).
+     *
+     * @returns {void}
+     */
+    const stopImportPolling = () => {
+        if (importPollTimer) {
+            window.clearInterval(importPollTimer);
+            importPollTimer = null;
+        }
+    };
+    window.addEventListener('pagehide', stopImportPolling);
+
+    /**
+     * Render the failed state of the import card: the original course was left as it
+     * was and the generated (staging) course is still there for the user. No confetti.
+     *
+     * @param {string} message localized importmessage from the backend, if any
+     * @returns {void}
+     */
+    const renderImportFailed = (message) => {
+        stopImportPolling();
+        state.currentStage = 'import_failed';
+        if (importProgressSpinner) { importProgressSpinner.style.display = 'none'; }
+        if (importProgressFailedIcon) { importProgressFailedIcon.style.display = ''; }
+        if (importProgressTitle) { importProgressTitle.textContent = texts.courseai_import_failed_title; }
+        if (importProgressSummary) { importProgressSummary.textContent = message || texts.import_failed; }
+        if (btnOpenGeneratedCourse) { btnOpenGeneratedCourse.disabled = !generatedCourseUrl; }
+    };
+
+    /**
+     * Apply one session-state answer to the import card.
+     *
+     * @param {Object} info create_course result or get_course_session_state result
+     * @returns {boolean} true when a terminal state (done|failed) was rendered
+     */
+    const applyImportState = (info) => {
+        const importState = String(info?.importstate || '');
+        if (importState === 'done') {
+            // The copy is the course the user asked for; the staging course is gone.
+            // get_course_session_state sends copycourseurl; create_course (foreground
+            // execution) only sends copycourseid, so the URL is built from it.
+            const copyCourseId = Number(info?.copycourseid || 0);
+            const copyCourseUrl = String(info?.copycourseurl || '')
+                || (copyCourseId > 0 ? M.cfg.wwwroot + '/course/view.php?id=' + copyCourseId : '');
+            showCompletionView({
+                success: true,
+                importcompleted: true,
+                courseid: copyCourseId,
+                courseurl: copyCourseUrl || generatedCourseUrl,
+            });
+            return true;
+        }
+        if (importState === 'failed') {
+            renderImportFailed(String(info?.importmessage || ''));
+            return true;
+        }
+        if (importProgressSummary) {
+            const progressText = importState === 'queued' ? texts.import_queued : texts.import_running;
+            importProgressSummary.textContent = String(info?.importmessage || '')
+                || (importState ? progressText : texts.courseai_import_progress_body);
+        }
+        return false;
+    };
+
+    /**
+     * Poll get_course_session_state every 5 s until done|failed, for at most 10 min.
+     *
+     * @param {number} recordid local session record id
+     * @returns {void}
+     */
+    const startImportPolling = (recordid) => {
+        stopImportPolling();
+        importPollStartedAt = Date.now();
+        importPollInFlight = false;
+        importPollTimer = window.setInterval(async() => {
+            if (importPollInFlight) {
+                return;
+            }
+            if (Date.now() - importPollStartedAt > IMPORT_POLL_MAX_MS) {
+                stopImportPolling();
+                if (importProgressSummary) { importProgressSummary.textContent = texts.courseai_import_timeout; }
+                return;
+            }
+            importPollInFlight = true;
+            try {
+                const info = await CourseaiRepository.getSessionState(recordid);
+                applyImportState(info);
+            } catch (error) {
+                // Transient failure: keep polling until the cap.
+            } finally {
+                importPollInFlight = false;
+            }
+        }, IMPORT_POLL_INTERVAL_MS);
+    };
+
+    /**
+     * Show the "Importing into the existing course..." card and poll until the import
+     * ends. `result` is the create_course answer (courseid/courseurl = staging course)
+     * plus `recordid`; on resume it may already carry a terminal importstate.
+     *
+     * @param {Object} result
+     * @returns {void}
+     */
+    const showImportProgressView = (result) => {
+        stopImportPolling();
+        state.createdCourseResult = result || null;
+        state.createdCourseUrl = result?.courseurl || '';
+        state.currentStage = 'importing';
+        generatedCourseUrl = String(result?.courseurl || '');
+        finishGenerationLayout();
+        if (completionView) { completionView.style.display = 'none'; }
+        if (importProgressSpinner) { importProgressSpinner.style.display = ''; }
+        if (importProgressFailedIcon) { importProgressFailedIcon.style.display = 'none'; }
+        if (importProgressTitle) { importProgressTitle.textContent = texts.courseai_import_progress_title; }
+        if (importProgressSummary) { importProgressSummary.textContent = texts.courseai_import_progress_body; }
+        if (btnOpenGeneratedCourse) { btnOpenGeneratedCourse.disabled = !generatedCourseUrl; }
+        if (importProgressView) { importProgressView.style.display = 'flex'; }
+        if (applyImportState(result)) {
+            return;
+        }
+        const recordid = Number(result?.recordid || state.sessionid || 0);
+        if (recordid > 0) {
+            startImportPolling(recordid);
+        }
     };
 
     const resetForAnotherCourse = () => {
@@ -281,6 +450,13 @@ export const createCourseaiActions = (deps) => {
                 window.location.href = 'aicoursecreation.php';
             });
         }
+        if (btnOpenGeneratedCourse) {
+            btnOpenGeneratedCourse.addEventListener('click', () => {
+                if (generatedCourseUrl) {
+                    window.open(generatedCourseUrl, '_blank', 'noopener,noreferrer');
+                }
+            });
+        }
         window.clearSyllabus = () => {
             state.syllabusFile = null;
             state.syllabusFilename = null;
@@ -305,11 +481,13 @@ export const createCourseaiActions = (deps) => {
 
     return {
         showCompletionView,
+        showImportProgressView,
         showCourseReviewPanel: () => showCourseReviewPanel(
             state, elements, texts, getCourseSettings, FormAutocomplete
         ),
         createCourseFromSession: (overrides = null) => createCourseFromSession(
-            state, elements, texts, stepsUi, Notification, createCourse, showCompletionView, overrides
+            state, elements, texts, stepsUi, Notification, createCourse, showCompletionView,
+            showImportProgressView, overrides
         ),
         handleGenerate: () => handleGenerate(genCtx()),
         sendFeedbackAction: (action) => sendFeedbackAction(action, fbCtx()),

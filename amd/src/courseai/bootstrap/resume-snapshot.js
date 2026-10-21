@@ -309,8 +309,13 @@ export const makeResumeFromSnapshot = ({
         const hasCreatedStatus = sessionStatus === 3;
         const hasCreatedCourse = Number(resume?.courseid || 0) > 0;
         const isCreated = Boolean(resume?.iscreated) || hasCreatedStatus || hasCreatedCourse;
+        // Import into an existing course (ticket #9539): status 5 means the adhoc import
+        // is pending; importstate carries queued|running|done|failed once it ran.
+        const importState = String(resume?.importstate || '');
+        const isImportDone = importState === 'done';
+        const isImporting = sessionStatus === 5 || (importState !== '' && !isImportDone);
 
-        if (isCreated) {
+        if (isCreated || isImporting) {
             stepsUi.transitionToPlanning();
             setPlanningStreamVisible();
             applyCourseTitleToHeader();
@@ -322,11 +327,32 @@ export const makeResumeFromSnapshot = ({
                 detailedUi.enableAllActionControls();
             }
 
-            actions.showCompletionView({
+            const generatedCourse = {
                 success: true,
+                recordid: Number(resume?.recordid || resumeSessionId || 0),
                 courseid: Number(resume?.courseid || 0),
                 courseurl: buildCourseUrlFromResume(resume),
-            });
+            };
+            if (isImporting) {
+                // Queued/running keeps polling; failed renders the error right away.
+                actions.showImportProgressView({
+                    ...generatedCourse,
+                    importstate: importState,
+                    importmessage: String(resume?.importmessage || ''),
+                });
+                return true;
+            }
+            if (isImportDone) {
+                // The copy is the course the user asked for; the staging course is gone.
+                actions.showCompletionView({
+                    success: true,
+                    importcompleted: true,
+                    courseid: Number(resume?.copycourseid || 0),
+                    courseurl: String(resume?.copycourseurl || '') || generatedCourse.courseurl,
+                });
+                return true;
+            }
+            actions.showCompletionView(generatedCourse);
             return true;
         }
 

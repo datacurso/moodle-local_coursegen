@@ -254,9 +254,28 @@ final class mycourses_header_hook_test extends \advanced_testcase {
     }
 
     /**
-     * A non-admin user holding both capabilities gets the button.
+     * A non-admin user holding the full creation set (editingteacher archetype plus the four extra
+     * capabilities) in a category gets the button.
      */
-    public function test_should_inject_for_user_with_both_capabilities(): void {
+    public function test_should_inject_for_user_with_the_full_creation_set(): void {
+        global $PAGE;
+
+        $this->resetAfterTest();
+        $generator = $this->getDataGenerator();
+        $user = $generator->create_user();
+        $roleid = $generator->get_plugin_generator('local_coursegen')->create_course_creator_role();
+        role_assign($roleid, $user->id, \context_system::instance());
+        $this->setUser($user);
+        $this->set_page_url('/my/courses.php');
+
+        $this->assertTrue(mycourses_header_hook::should_inject($PAGE));
+    }
+
+    /**
+     * Holding only the two page capabilities, without the rest of the creation set, no longer earns
+     * the button: the user could open the page but not complete the creation (ticket #9539).
+     */
+    public function test_should_not_inject_for_user_with_only_the_two_page_capabilities(): void {
         global $PAGE;
 
         $this->resetAfterTest();
@@ -267,7 +286,7 @@ final class mycourses_header_hook_test extends \advanced_testcase {
         $this->setUser($user);
         $this->set_page_url('/my/courses.php');
 
-        $this->assertTrue(mycourses_header_hook::should_inject($PAGE));
+        $this->assertFalse(mycourses_header_hook::should_inject($PAGE));
     }
 
     /**

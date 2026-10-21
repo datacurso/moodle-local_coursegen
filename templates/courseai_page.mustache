@@ -25,6 +25,9 @@
         "guidelines": "[{\"id\":\"si_1\",\"name\":\"Example\",\"category\":\"General\",\"description\":\"...\"}]",
         "languages": "[{\"code\":\"es\",\"name\":\"Español (es)\"}]",
         "defaultlang": "es",
+        "subsectionsenabled": false,
+        "importexistingenabled": true,
+        "importcontentmodeadd": false,
         "guidelinelist": {
             "listlabel": "Guidelines list",
             "emptytext": "No results",
@@ -603,16 +606,32 @@
           <span class="pc-completion-emoji">🎉</span>
           <span class="pc-confetti" id="pcConfetti"></span>
         </span>
-        <h3 class="pc-completion-title">{{#str}}courseai_completion_title, local_coursegen{{/str}}</h3>
+        <h3 class="pc-completion-title" id="completionTitle">{{#str}}courseai_completion_title, local_coursegen{{/str}}</h3>
         <p class="pc-completion-summary" id="completionSummary">{{#str}}courseai_completion_summary_default, local_coursegen{{/str}}</p>
         <div class="pc-completion-actions">
           <button class="btn-completion-primary" id="btnOpenMoodleCourse" type="button">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .962 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.962 0z"></path>
             </svg>
-            {{#str}}courseai_completion_btn_open_course, local_coursegen{{/str}}
+            <span id="btnOpenMoodleCourseLabel">{{#str}}courseai_completion_btn_open_course, local_coursegen{{/str}}</span>
           </button>
           <button class="btn-completion-secondary" id="btnCreateAnotherCourse" type="button">{{#str}}courseai_completion_btn_create_another, local_coursegen{{/str}}</button>
+        </div>
+      </div>
+
+      {{! Import-into-existing-course progress card (ticket #9539). Always rendered: a session
+          started while the setting was on can be resumed after it was switched off. }}
+      <div class="pc-completion-card" id="importProgressView" style="display:none">
+        <span class="pc-completion-icon" aria-hidden="true">
+          <svg id="importProgressSpinner" class="prv-spin" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+            <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+          </svg>
+          <span class="pc-completion-emoji" id="importProgressFailedIcon" style="display:none">&#9888;&#65039;</span>
+        </span>
+        <h3 class="pc-completion-title" id="importProgressTitle">{{#str}}courseai_import_progress_title, local_coursegen{{/str}}</h3>
+        <p class="pc-completion-summary" id="importProgressSummary">{{#str}}courseai_import_progress_body, local_coursegen{{/str}}</p>
+        <div class="pc-completion-actions">
+          <button class="btn-completion-secondary" id="btnOpenGeneratedCourse" type="button">{{#str}}courseai_import_btn_open_generated, local_coursegen{{/str}}</button>
         </div>
       </div>
 
@@ -645,7 +664,8 @@
       </div>
 
       {{! Review step — Bootstrap card shown inline before course creation }}
-      <div class="card" id="courseReviewPanel" style="display:none">
+      <div class="card" id="courseReviewPanel" style="display:none"
+           data-import-existing-enabled="{{#importexistingenabled}}1{{/importexistingenabled}}{{^importexistingenabled}}0{{/importexistingenabled}}">
         <div class="card-body">
           <div class="d-flex align-items-start mb-3">
             <span class="d-flex align-items-center justify-content-center mr-3"
@@ -661,23 +681,52 @@
             </div>
           </div>
 
-          <div class="form-group">
+          {{#importexistingenabled}}
+          {{! Destination of the generated content: a new course (default) or an existing one (ticket #9539). }}
+          <div class="form-group" id="targetModeGroup">
+            <label for="targetMode">{{#str}}courseai_targetmode_label, local_coursegen{{/str}}</label>
+            <select id="targetMode" class="form-control">
+              <option value="new" selected>{{#str}}courseai_targetmode_new, local_coursegen{{/str}}</option>
+              <option value="import">{{#str}}courseai_targetmode_import, local_coursegen{{/str}}</option>
+            </select>
+          </div>
+          {{/importexistingenabled}}
+
+          <div class="form-group" id="reviewFullnameGroup">
             <label for="reviewFullname">{{#str}}courseai_review_fullname_label, local_coursegen{{/str}}</label>
             <input type="text" id="reviewFullname" class="form-control" maxlength="255"
                    placeholder="{{#str}}courseai_review_fullname_placeholder, local_coursegen{{/str}}">
           </div>
 
-          <div class="form-group">
+          <div class="form-group" id="reviewShortnameGroup">
             <label for="reviewShortname">{{#str}}courseai_review_shortname_label, local_coursegen{{/str}}</label>
             <input type="text" id="reviewShortname" class="form-control" maxlength="100"
                    placeholder="{{#str}}courseai_review_shortname_placeholder, local_coursegen{{/str}}">
             <small class="form-text text-muted">{{#str}}courseai_review_shortname_note, local_coursegen{{/str}}</small>
           </div>
 
-          <div class="form-group mb-0">
+          <div class="form-group mb-0" id="reviewCategoryGroup">
             <label for="reviewCategory">{{#str}}courseai_review_category_label, local_coursegen{{/str}}</label>
             <select id="reviewCategory" class="form-control"></select>
           </div>
+
+          {{#importexistingenabled}}
+          {{! Target of the import: category first, then a course of that category (AJAX autocomplete). }}
+          <div id="importTargetFields" style="display:none">
+            <h6 class="mb-1">{{#str}}courseai_import_title, local_coursegen{{/str}}</h6>
+            <p class="text-muted mb-3" style="font-size:.875rem">{{!
+            }}{{#importcontentmodeadd}}{{#str}}courseai_import_help_add, local_coursegen{{/str}}{{/importcontentmodeadd}}{{!
+            }}{{^importcontentmodeadd}}{{#str}}courseai_import_help_replace, local_coursegen{{/str}}{{/importcontentmodeadd}}</p>
+            <div class="form-group" id="importCategoryGroup">
+              <label for="importCategory">{{#str}}courseai_import_category_label, local_coursegen{{/str}}</label>
+              <select id="importCategory" class="form-control"></select>
+            </div>
+            <div class="form-group mb-0" id="importCourseGroup">
+              <label for="importCourse">{{#str}}courseai_import_course_label, local_coursegen{{/str}}</label>
+              <select id="importCourse" class="form-control"></select>
+            </div>
+          </div>
+          {{/importexistingenabled}}
 
           <hr class="my-3">
 

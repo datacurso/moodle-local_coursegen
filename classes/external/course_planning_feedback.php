@@ -34,6 +34,7 @@ use external_multiple_structure;
 use local_coursegen\event\generation_job_started;
 use local_coursegen\local\service\ai_course_api_service;
 use local_coursegen\local\service\course_session_service;
+use local_coursegen\local\service\creation_permissions;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -95,9 +96,8 @@ class course_planning_feedback extends external_api {
         $session = course_session_service::get_user_session($recordid, $USER->id);
 
         // Owning the session is not enough: adjusting a plan consumes paid AI
-        // credits, so require the same capabilities as start_course_planning.
-        require_capability('moodle/course:create', $context);
-        require_capability('local/coursegen:createcoursewithai', $context);
+        // credits, so require the same creation gate as start_course_planning.
+        creation_permissions::require_anywhere();
 
         $sessionid = $session->get('session_id');
 

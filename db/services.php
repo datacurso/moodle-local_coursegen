@@ -148,4 +148,13 @@ $functions = [
         'capabilities' => 'moodle/course:create,local/coursegen:createcoursewithai',
         'loginrequired' => true,
     ],
+    'local_coursegen_search_target_courses' => [
+        'classname' => 'local_coursegen\\external\\search_target_courses',
+        'methodname' => 'execute',
+        'description' => 'Search courses in a category the user may import an AI-generated course into',
+        'type' => 'read',
+        'ajax' => true,
+        'capabilities' => 'local/coursegen:createcoursewithai,moodle/course:create',
+        'loginrequired' => true,
+    ],
 ];
