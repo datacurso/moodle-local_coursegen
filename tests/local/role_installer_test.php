@@ -138,7 +138,10 @@ final class role_installer_test extends \advanced_testcase {
 
         $expectedassign = array_map([self::class, 'role_id'], $assignable);
         sort($expectedassign);
-        $actualassign = array_map('intval', $DB->get_fieldset_select('role_allow_assign', 'allowassign', 'roleid = ?', [$role->id]));
+        $actualassign = array_map(
+            'intval',
+            $DB->get_fieldset_select('role_allow_assign', 'allowassign', 'roleid = ?', [$role->id])
+        );
         sort($actualassign);
         $this->assertSame($expectedassign, $actualassign);
 
@@ -284,7 +287,10 @@ final class role_installer_test extends \advanced_testcase {
 
         $langdir = $CFG->langotherroot . '/es';
         check_dir_exists($langdir);
-        file_put_contents($langdir . '/langconfig.php', "<?php\n\$string['parentlanguage'] = '';\n\$string['thislanguage'] = 'Español';\n");
+        file_put_contents(
+            $langdir . '/langconfig.php',
+            "<?php\n\$string['parentlanguage'] = '';\n\$string['thislanguage'] = 'Español';\n"
+        );
         get_string_manager()->reset_caches(true);
         $CFG->lang = 'es';
 

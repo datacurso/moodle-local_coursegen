@@ -22,7 +22,8 @@ use local_coursegen\local\models\course_session;
 
 defined('MOODLE_INTERNAL') || die();
 
-require_once(__DIR__ . '/fixtures/testable_course_import_service.php');
+global $CFG;
+require_once($CFG->dirroot . '/local/coursegen/tests/fixtures/testable_course_import_service.php');
 
 /**
  * Tests for the course import service (ticket #9539, import into an existing course).

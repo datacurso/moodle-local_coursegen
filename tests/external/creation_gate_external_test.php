@@ -51,12 +51,14 @@ final class creation_gate_external_test extends \advanced_testcase {
      * Load the testable subclasses in the isolated process (they pull in lib/externallib.php).
      */
     protected function setUp(): void {
+        global $CFG;
+
         parent::setUp();
         $this->resetAfterTest();
-        require_once(__DIR__ . '/fixtures/testable_get_course_settings.php');
-        require_once(__DIR__ . '/fixtures/testable_get_course_session_state.php');
-        require_once(__DIR__ . '/fixtures/testable_courseai_syllabus_upload.php');
-        require_once(__DIR__ . '/fixtures/testable_create_course.php');
+        require_once($CFG->dirroot . '/local/coursegen/tests/fixtures/testable_get_course_settings.php');
+        require_once($CFG->dirroot . '/local/coursegen/tests/fixtures/testable_get_course_session_state.php');
+        require_once($CFG->dirroot . '/local/coursegen/tests/fixtures/testable_courseai_syllabus_upload.php');
+        require_once($CFG->dirroot . '/local/coursegen/tests/fixtures/testable_create_course.php');
 
         // Any accidental real API call must fail fast instead of reaching the network.
         set_config('datacurso_service_url', 'https://invalid.invalid', 'local_coursegen');

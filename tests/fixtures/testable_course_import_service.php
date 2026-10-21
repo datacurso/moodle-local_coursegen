@@ -16,8 +16,6 @@
 
 namespace local_coursegen\local\service;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Testable course import service that fails while restoring the staging course onto the copy.
  *

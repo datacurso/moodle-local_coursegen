@@ -120,11 +120,12 @@ final class courseai_page_template_test extends \advanced_testcase {
 
         $importer = $generator->create_user();
         $roleid = $generator->create_role(['shortname' => 'importer']);
-        foreach (array_merge(
+        $importercapabilities = array_merge(
             ['local/coursegen:createcoursewithai'],
             import_permissions::COURSE_CAPABILITIES,
             import_permissions::CATEGORY_CAPABILITIES
-        ) as $capability) {
+        );
+        foreach ($importercapabilities as $capability) {
             assign_capability($capability, CAP_ALLOW, $roleid, $systemcontext->id, true);
         }
         role_assign($roleid, $importer->id, $systemcontext->id);

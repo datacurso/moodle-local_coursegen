@@ -223,10 +223,10 @@ La rama está en `create_course.php:179-194`, tras crear el staging, leyendo `im
 | `classes/local/models/course_session.php` | `STATUS_IMPORTING = 5` |
 | `classes/observer.php`, `db/events.php` | Observer `course_deleted` que elimina sesiones del curso borrado |
 | `lang/en/local_coursegen.php`, `lang/es/local_coursegen.php` | Cadenas de ajustes, interfaz, estados y errores |
-| `tests/creation_permissions_test.php`, `tests/creation_gate_external_test.php`, `tests/course_confirmation_permissions_test.php` | PHPUnit del portón de creación, de su aplicación en los siete servicios y de los servicios del flujo |
-| `tests/import_permissions_test.php`, `tests/search_target_courses_test.php` | PHPUnit del conjunto de importación y del buscador |
+| `tests/local/service/creation_permissions_test.php`, `tests/external/creation_gate_external_test.php`, `tests/course_confirmation_permissions_test.php` | PHPUnit del portón de creación, de su aplicación en los siete servicios y de los servicios del flujo |
+| `tests/local/service/import_permissions_test.php`, `tests/search_target_courses_test.php` | PHPUnit del conjunto de importación y del buscador |
 | `tests/create_course_import_mode_test.php`, `tests/get_course_session_state_import_test.php` | PHPUnit de `create_course` en modo importación y del estado de sesión |
-| `tests/course_import_service_test.php`, `tests/task/import_generated_course_task_test.php` | PHPUnit del servicio (modos, rollback, sesión) y de la tarea |
+| `tests/local/service/course_import_service_test.php`, `tests/task/import_generated_course_task_test.php` | PHPUnit del servicio (modos, rollback, sesión) y de la tarea |
 | `tests/fixtures/testable_course_import_service.php`, `testable_create_course.php`, `testable_get_course_session_state.php` | Subclases inyectables para los tests |
 | `tests/behat/import_existing_course.feature`, `tests/behat/create_course_permissions.feature` | Behat de la interfaz (modo, campos, buscador) y del portón; Behat no se ejecuta en este entorno |
 
