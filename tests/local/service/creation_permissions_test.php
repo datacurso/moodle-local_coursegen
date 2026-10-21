@@ -286,7 +286,8 @@ final class creation_permissions_test extends \advanced_testcase {
         $category = $this->getDataGenerator()->create_category();
         $systemcontextid = \context_system::instance()->id;
         unassign_capability('local/coursegen:createcoursewithai', $roleid, $systemcontextid);
-        unassign_capability('atto/h5p:addembed', $roleid, $systemcontextid);
+        // A category capability that sorts before the system one and exists in every supported Moodle version.
+        unassign_capability('enrol/manual:enrol', $roleid, $systemcontextid);
 
         try {
             creation_permissions::require_for_category((int) $category->id, (int) $user->id);
