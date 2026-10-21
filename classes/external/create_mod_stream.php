@@ -21,6 +21,8 @@ use external_api;
 use external_function_parameters;
 use external_single_structure;
 use external_value;
+use local_coursegen\local\activity_type_catalog;
+use local_coursegen\local\h5p_content_types;
 use local_coursegen\local\image_generation\image_policy_builder;
 use local_coursegen\local\service\ai_course_api_service;
 use local_coursegen\local\service\filetype_catalog_service;
@@ -58,6 +60,8 @@ class create_mod_stream extends external_api {
             ),
             'beforemod' => new external_value(PARAM_INT, 'Before module id', VALUE_OPTIONAL),
             'lang' => new external_value(PARAM_ALPHANUMEXT, 'Requested language code', VALUE_OPTIONAL),
+            'modname' => new external_value(PARAM_ALPHANUMEXT, 'Module name of the activity type picked', VALUE_OPTIONAL),
+            'h5ptype' => new external_value(PARAM_ALPHANUMEXT, 'H5P content type picked', VALUE_OPTIONAL),
         ]);
     }
 
@@ -78,7 +82,9 @@ class create_mod_stream extends external_api {
         string $prompt,
         int $generateimages = 0,
         ?int $beforemod = null,
-        ?string $lang = null
+        ?string $lang = null,
+        ?string $modname = null,
+        ?string $h5ptype = null
     ) {
         global $CFG, $DB, $USER;
 
@@ -90,6 +96,8 @@ class create_mod_stream extends external_api {
                 'generateimages' => $generateimages,
                 'beforemod' => $beforemod,
                 'lang' => $lang,
+                'modname' => $modname,
+                'h5ptype' => $h5ptype,
             ]);
 
             $courseid = $params['courseid'];
@@ -98,6 +106,8 @@ class create_mod_stream extends external_api {
             $generateimages = $params['generateimages'] ?? 0;
             $beforemod = $params['beforemod'] ?? null;
             $lang = $params['lang'] ?? null;
+            $modname = (string) ($params['modname'] ?? '');
+            $h5ptype = (string) ($params['h5ptype'] ?? '');
 
             $course = $DB->get_record('course', ['id' => $courseid], '*', MUST_EXIST);
             $context = context_course::instance($course->id);
@@ -110,6 +120,14 @@ class create_mod_stream extends external_api {
             require_capability('local/coursegen:createactivitywithai', $context);
             if ($generateimages == 1) {
                 require_capability('local/coursegen:generateactivityimages', $context);
+            }
+
+            // A type that was picked has to be one the modal offers on this site, and an H5P type only goes with H5P.
+            if ($modname !== '' && !activity_type_catalog::is_offered($modname)) {
+                return ['ok' => false, 'message' => get_string('error_invalid_activity_type', 'local_coursegen')];
+            }
+            if ($h5ptype !== '' && ($modname !== 'h5pactivity' || !h5p_content_types::is_valid($h5ptype))) {
+                return ['ok' => false, 'message' => get_string('error_invalid_activity_type', 'local_coursegen')];
             }
 
             $coursecontext = course_context_service::get_course_context($courseid);
@@ -158,6 +176,14 @@ class create_mod_stream extends external_api {
             $h5pcoreapi = h5p_core_api::resolve();
             if ($h5pcoreapi !== null) {
                 $payload['h5p_core_api'] = $h5pcoreapi;
+            }
+
+            // The type the teacher picked is not guessed again by the service.
+            if ($modname !== '') {
+                $payload['activity_type'] = $modname;
+            }
+            if ($h5ptype !== '') {
+                $payload['h5p_content_type'] = $h5ptype;
             }
 
             $apiservice = static::get_api_service();

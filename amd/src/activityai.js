@@ -41,8 +41,18 @@ let modalControllerRegistered = false;
  * @param {Array} languages Available languages.
  * @param {string} defaultlang Default language code.
  * @param {boolean} canimages Whether the server allows generating images with the activity.
+ * @param {Array} activitytypes The activity types the AI can create on this site: modname, name, description, iconurl.
+ * @param {Array} h5ptypes The H5P content types the AI can create: type, name, usesimages.
  */
-export const init = async(courseid, isMoodle45 = false, languages = [], defaultlang = 'en', canimages = false) => {
+export const init = async(
+    courseid,
+    isMoodle45 = false,
+    languages = [],
+    defaultlang = 'en',
+    canimages = false,
+    activitytypes = [],
+    h5ptypes = []
+) => {
     ismoodle45 = Boolean(isMoodle45);
 
     const languageList = Array.isArray(languages) ? languages : [];
@@ -58,12 +68,19 @@ export const init = async(courseid, isMoodle45 = false, languages = [], defaultl
             languages: languageList,
             defaultlang: resolvedDefaultLang,
             canimages,
+            activitytypes: Array.isArray(activitytypes) ? activitytypes : [],
+            h5ptypes: Array.isArray(h5ptypes) ? h5ptypes : [],
         },
         session: {
             sectionnum: null,
             beforemod: null,
             generateimages: 0,
             lang: resolvedDefaultLang,
+            // What the teacher picked from the list: the module name, and the H5P kind ('' lets the AI choose it).
+            activitytype: '',
+            h5ptype: '',
+            // The step of the modal before the chat: 'type' (the list), 'h5p' (the kinds of H5P) or 'prompt'.
+            typestep: 'type',
             jobid: '',
             streamingurl: '',
             phase: 'idle',

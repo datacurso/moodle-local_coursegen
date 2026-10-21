@@ -105,6 +105,89 @@ final class create_mod_stream_contract_test extends \advanced_testcase {
     }
 
     /**
+     * A type picked from the list travels to the service as it is, with the H5P kind when there is one.
+     */
+    public function test_a_picked_type_travels_to_the_service(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        $course = $this->getDataGenerator()->create_course();
+        $captured = null;
+        $this->inject_api_service($captured);
+
+        $result = testable_create_mod_stream::execute(
+            $course->id,
+            1,
+            'A summary of the unit',
+            0,
+            null,
+            'es',
+            'h5pactivity',
+            'accordion'
+        );
+        $this->assertDebuggingCalledCount(1);
+
+        $this->assertTrue($result['ok'], 'Start must succeed: ' . ($result['message'] ?? ''));
+        $this->assertSame('h5pactivity', $captured['activity_type']);
+        $this->assertSame('accordion', $captured['h5p_content_type']);
+    }
+
+    /**
+     * Without a picked type the request is as it always was: the service decides.
+     */
+    public function test_without_a_picked_type_the_service_decides(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        $course = $this->getDataGenerator()->create_course();
+        $captured = null;
+        $this->inject_api_service($captured);
+
+        $result = testable_create_mod_stream::execute($course->id, 1, 'A forum about the unit', 0, null, 'es');
+        $this->assertDebuggingCalledCount(1);
+
+        $this->assertTrue($result['ok']);
+        $this->assertArrayNotHasKey('activity_type', $captured);
+        $this->assertArrayNotHasKey('h5p_content_type', $captured);
+    }
+
+    /**
+     * A type that the list does not offer is refused before anything is sent.
+     */
+    public function test_a_type_outside_the_list_is_refused(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        $course = $this->getDataGenerator()->create_course();
+        $captured = null;
+        $this->inject_api_service($captured);
+
+        $result = testable_create_mod_stream::execute($course->id, 1, 'Something', 0, null, 'es', 'not_a_module');
+        $this->assertDebuggingCalledCount(1);
+
+        $this->assertFalse($result['ok']);
+        $this->assertSame(get_string('error_invalid_activity_type', 'local_coursegen'), $result['message']);
+        $this->assertNull($captured, 'Nothing is sent to the service');
+    }
+
+    /**
+     * An H5P kind only goes with H5P, and it has to be a kind of the list.
+     */
+    public function test_an_h5p_kind_needs_h5p_and_a_known_kind(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        $course = $this->getDataGenerator()->create_course();
+        $captured = null;
+        $this->inject_api_service($captured);
+
+        $withforum = testable_create_mod_stream::execute($course->id, 1, 'Something', 0, null, 'es', 'forum', 'accordion');
+        $this->assertDebuggingCalledCount(1);
+        $unknown = testable_create_mod_stream::execute($course->id, 1, 'Something', 0, null, 'es', 'h5pactivity', 'nope');
+        $this->assertDebuggingCalledCount(1);
+
+        $this->assertFalse($withforum['ok']);
+        $this->assertFalse($unknown['ok']);
+        $this->assertNull($captured);
+    }
+
+    /**
      * MDL-CTR-001: The individual creation request includes the data the service
      * requires at the plugin level: instructions, language and the images option.
      * The H5P framework version travels as an optional field.

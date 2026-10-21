@@ -27,10 +27,10 @@ import ajax from 'core/ajax';
  * Start streaming job to create a module with AI.
  *
  * @param {{courseid: number, sectionnum: (number|null), beforemod: (number|null),
- *     prompt: string, generateimages: number, lang: string}} payload
+ *     prompt: string, generateimages: number, lang: string, modname: string, h5ptype: string}} payload
  * @return {Promise<Object>} response
  */
-export async function createModStream({courseid, sectionnum, beforemod, prompt, generateimages, lang}) {
+export async function createModStream({courseid, sectionnum, beforemod, prompt, generateimages, lang, modname, h5ptype}) {
     const args = {
         courseid: Number(courseid) || 0,
         sectionnum: typeof sectionnum === 'number' ? sectionnum : null,
@@ -42,6 +42,14 @@ export async function createModStream({courseid, sectionnum, beforemod, prompt, 
     const language = String(lang || '').toLowerCase();
     if (language) {
         args.lang = language;
+    }
+
+    // The type the teacher picked from the list; without it the service decides.
+    if (modname) {
+        args.modname = String(modname);
+    }
+    if (h5ptype) {
+        args.h5ptype = String(h5ptype);
     }
 
     return ajax.call([
