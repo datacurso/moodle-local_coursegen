@@ -32,6 +32,7 @@ import {get_string as getString} from 'core/str';
 
 import ChatForm from 'local_coursegen/local/activityai/components/chat_form';
 import StreamOutput from 'local_coursegen/local/activityai/components/stream_output';
+import TypePicker from 'local_coursegen/local/activityai/components/type_picker';
 
 export default class extends BaseComponent {
     create() {
@@ -64,6 +65,10 @@ export default class extends BaseComponent {
         }
 
         const bodyHTML = await Templates.render('local_coursegen/add_activity_ai_modal', {});
+        const pickerHTML = await Templates.render('local_coursegen/activity_type_picker', {
+            types: this.reactive.state.page.activitytypes,
+            h5ptypes: this.reactive.state.page.h5ptypes,
+        });
 
         const state = this.reactive.state;
         const selectedlang = String(state?.session?.lang || state?.page?.defaultlang || 'en').toLowerCase();
@@ -103,6 +108,16 @@ export default class extends BaseComponent {
         const rootElement = this.modal.getRoot()[0];
         if (!rootElement) {
             return;
+        }
+
+        const slot = rootElement.querySelector("[data-region='local_coursegen/activity/typepicker_slot']");
+        if (slot) {
+            slot.innerHTML = pickerHTML;
+            new TypePicker({
+                element: slot,
+                reactive: this.reactive,
+                footer: rootElement.querySelector('.modal-footer'),
+            });
         }
 
         new StreamOutput({

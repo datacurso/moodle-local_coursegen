@@ -49,6 +49,87 @@ class Mutations {
         stateManager.state.session.sectionnum = Number(payload.sectionnum);
         stateManager.state.session.beforemod = payload.beforemod === null ? null : Number(payload.beforemod);
         stateManager.state.modal.open = true;
+        if (!stateManager.state.session.jobid) {
+            // A new conversation starts from the list of types.
+            stateManager.state.session.activitytype = '';
+            stateManager.state.session.h5ptype = '';
+            stateManager.state.session.typestep = 'type';
+        }
+        stateManager.setReadOnly(true);
+    }
+
+    /**
+     * The teacher picked a type of activity from the list.
+     *
+     * H5P asks for its kind next; any other type goes straight to the chat.
+     *
+     * @param {StateManager} stateManager
+     * @param {{modname: string}} payload
+     */
+    chooseActivityType(stateManager, payload) {
+        const modname = String(payload.modname || '');
+        const offered = stateManager.state.page.activitytypes.some((type) => type.modname === modname);
+        if (!modname || !offered || stateManager.state.session.jobid) {
+            return;
+        }
+
+        stateManager.setReadOnly(false);
+        stateManager.state.session.activitytype = modname;
+        stateManager.state.session.h5ptype = '';
+        stateManager.state.session.typestep = modname === 'h5pactivity' ? 'h5p' : 'prompt';
+        stateManager.setReadOnly(true);
+    }
+
+    /**
+     * The teacher picked the kind of H5P, or left it to the AI with an empty value.
+     *
+     * @param {StateManager} stateManager
+     * @param {{type: string}} payload
+     */
+    chooseH5pType(stateManager, payload) {
+        const type = String(payload.type || '');
+        const known = type === '' || stateManager.state.page.h5ptypes.some((kind) => kind.type === type);
+        if (!known || stateManager.state.session.jobid) {
+            return;
+        }
+
+        stateManager.setReadOnly(false);
+        stateManager.state.session.h5ptype = type;
+        stateManager.state.session.typestep = 'prompt';
+        stateManager.setReadOnly(true);
+    }
+
+    /**
+     * Go back to the list of types, while the conversation has not started.
+     *
+     * @param {StateManager} stateManager
+     */
+    changeActivityType(stateManager) {
+        if (stateManager.state.session.jobid) {
+            return;
+        }
+
+        stateManager.setReadOnly(false);
+        stateManager.state.session.activitytype = '';
+        stateManager.state.session.h5ptype = '';
+        stateManager.state.session.typestep = 'type';
+        stateManager.setReadOnly(true);
+    }
+
+    /**
+     * Describe the activity freely, without picking a type: the AI decides it from the text.
+     *
+     * @param {StateManager} stateManager
+     */
+    chooseFreeMode(stateManager) {
+        if (stateManager.state.session.jobid) {
+            return;
+        }
+
+        stateManager.setReadOnly(false);
+        stateManager.state.session.activitytype = '';
+        stateManager.state.session.h5ptype = '';
+        stateManager.state.session.typestep = 'prompt';
         stateManager.setReadOnly(true);
     }
 
@@ -170,6 +251,8 @@ class Mutations {
                     prompt,
                     generateimages: state.session.generateimages,
                     lang: String(state.session.lang || state.page.defaultlang || 'en'),
+                    modname: String(state.session.activitytype || ''),
+                    h5ptype: String(state.session.h5ptype || ''),
                 });
 
                 const jobid = response && response.job_id ? String(response.job_id) : '';
