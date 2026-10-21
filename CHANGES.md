@@ -1,3 +1,14 @@
+## 2.1.1-wp
+
+**Released on:** Unreleased
+
+**Compatibility note:** This version is compatible only with **Moodle Workplace 4.5**.
+
+## Fixed
+
+- **The text the AI writes is cleaned before it is saved**  
+  Pages, lessons, books, labels, forums, quiz questions and database entries could keep scripts, event attributes or script links if the AI wrote them, for example after reading a document that asked for them. The text is now cleaned the way Moodle cleans any text from a person who is not trusted: scripts, event attributes, script links, frames and forms are removed, while the layout and the inline styles stay. Links of a database URL field must be real addresses.
+
 ## 2.1.0-wp
 
 **Released on:** Unreleased
@@ -20,11 +31,6 @@
   `Create a new course with AI` is available to users who can create courses in any category (for example the Workplace tenant manager role in the tenant category), not only at system level. The page is listed in the Workplace admin tree and launcher, and AI courses are created in the tenant category by default.
 - **Tenant data cleanup**  
   Deleting a Workplace tenant removes its configuration and its system instructions, and detaches those instructions from the courses that referenced them.
-
-## Fixed
-
-- **The text the AI writes is cleaned before it is saved**  
-  Pages, lessons, books, labels, forums, quiz questions and database entries could keep scripts, event attributes or script links if the AI wrote them, for example after reading a document that asked for them. The text is now cleaned the way Moodle cleans any text from a person who is not trusted: scripts, event attributes, script links, frames and forms are removed, while the layout and the inline styles stay. Links of a database URL field must be real addresses.
 
 ## Changed
 
