@@ -43,15 +43,13 @@ final class activity_type_catalog_test extends \advanced_testcase {
     }
 
     /**
-     * Each type has what the modal shows: a name, a description and an icon.
+     * Each type has the name the teacher reads.
      */
-    public function test_each_type_has_a_name_a_description_and_an_icon(): void {
+    public function test_each_type_has_a_name(): void {
         $this->resetAfterTest();
 
         foreach (activity_type_catalog::for_modal() as $type) {
             $this->assertNotSame('', $type['name'], $type['modname']);
-            $this->assertNotSame('', $type['description'], $type['modname']);
-            $this->assertNotSame('', $type['iconurl'], $type['modname']);
         }
     }
 

@@ -33,6 +33,7 @@ import {get_string as getString} from 'core/str';
 import ChatForm from 'local_coursegen/local/activityai/components/chat_form';
 import StreamOutput from 'local_coursegen/local/activityai/components/stream_output';
 import TypePicker from 'local_coursegen/local/activityai/components/type_picker';
+import {chooseActivityType as openTypeChooser} from 'local_coursegen/local/template/template_space_chooser';
 
 export default class extends BaseComponent {
     create() {
@@ -64,9 +65,13 @@ export default class extends BaseComponent {
             this.modal = null;
         }
 
+        if (!this.reactive.state.session.jobid && !await this._pickType()) {
+            this.reactive.dispatch('closeModal');
+            return;
+        }
+
         const bodyHTML = await Templates.render('local_coursegen/add_activity_ai_modal', {});
         const pickerHTML = await Templates.render('local_coursegen/activity_type_picker', {
-            types: this.reactive.state.page.activitytypes,
             h5ptypes: this.reactive.state.page.h5ptypes,
         });
 
@@ -133,6 +138,31 @@ export default class extends BaseComponent {
         this.modal.getRoot().on(ModalEvents.hidden, () => {
             this.reactive.dispatch('closeModal');
         });
+    }
+
+    /**
+     * Ask for the type of the activity with Moodle's own activity chooser, limited to what the AI can create.
+     *
+     * @returns {Promise<boolean>} False when the chooser was closed without picking anything.
+     */
+    async _pickType() {
+        const state = this.reactive.state;
+        const choice = await openTypeChooser({
+            courseId: state.page.courseid,
+            supportedTypes: state.page.activitytypes.map((type) => type.modname),
+            title: await getString('addactivityai_modaltitle', 'local_coursegen'),
+            freeLabel: await getString('activitytype_free', 'local_coursegen'),
+        });
+        if (!choice) {
+            return false;
+        }
+
+        if (choice.free) {
+            this.reactive.dispatch('chooseFreeMode');
+        } else {
+            this.reactive.dispatch('chooseActivityType', {modname: choice.modname});
+        }
+        return true;
     }
 
     async _close() {

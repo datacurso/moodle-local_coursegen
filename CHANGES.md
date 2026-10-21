@@ -5,8 +5,8 @@ All notable changes to this project will be documented in this file. Each change
 ## [2.0.10] - 2026101229
 
 ### Added
-- **The modal to create an activity with the AI starts from a list of types**  
-  Instead of describing the activity from nothing, the modal first shows the activity types the AI can create on the site, each with its icon and a short description, and the AI creates exactly the type that was picked. Picking H5P asks for the kind of H5P next, by its name on screen, or lets the AI choose it. A link under the list still lets the teacher describe the activity without choosing a type. The type picked travels to the AI service, which no longer guesses it from the text, and a type the site does not offer is refused.
+- **The modal to create an activity with the AI starts from Moodle's own activity chooser**  
+  Instead of describing the activity from nothing, the modal first opens the same chooser Moodle shows to add an activity, with only the types the AI can create on the site, and the AI creates exactly the type that was picked. Picking H5P asks for the kind of H5P next, by its name on screen, or lets the AI choose it. A link under the chooser still lets the teacher describe the activity without choosing a type. The type picked travels to the AI service, which no longer guesses it from the text, and a type the site does not offer is refused.
 
 ## [2.0.10] - 2026101221
 
