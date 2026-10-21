@@ -1,3 +1,14 @@
+## 2.0.9
+
+**Released on:** Unreleased
+
+**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.2**.
+
+## Fixed
+
+- **The text the AI writes is cleaned before it is saved**  
+  Pages, lessons, books, labels, forums, quiz questions and database entries could keep scripts, event attributes or script links if the AI wrote them, for example after reading a document that asked for them. The text is now cleaned the way Moodle cleans any text from a person who is not trusted: scripts, event attributes, script links, frames and forms are removed, while the layout and the inline styles stay. Links of a database URL field must be real addresses.
+
 ## 2.0.8
 
 **Released on:** Unreleased
@@ -24,8 +35,6 @@
 
 ## Fixed
 
-- **The text the AI writes is cleaned before it is saved**  
-  Pages, lessons, books, labels, forums, quiz questions and database entries could keep scripts, event attributes or script links if the AI wrote them, for example after reading a document that asked for them. The text is now cleaned the way Moodle cleans any text from a person who is not trusted: scripts, event attributes, script links, frames and forms are removed, while the layout and the inline styles stay. Links of a database URL field must be real addresses.
 - **Optional web service parameters declared with a default**  
   `local_coursegen_create_course` declared `fullname`, `shortname` and `category` as `VALUE_OPTIONAL` with a default value, which Moodle flags with a developer debugging notice on every call and, in isolated PHPUnit runs, raised before the database reset so rows leaked between tests. They are now `VALUE_DEFAULT`; the cleaned parameters and the response are identical.
 - **Site course comparison in the import target check**  
