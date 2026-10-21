@@ -16,13 +16,11 @@
 
 namespace local_coursegen\local;
 
-use local_coursegen\output\template_row_options;
-
 /**
  * The activity types the modal to create an activity with the AI offers.
  *
  * Only what the service can write content for and the site has installed and enabled, so the teacher knows what is
- * created and the AI does not decide it.
+ * created and the AI does not decide it. The chooser draws the icon and the name itself from Moodle's own list.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -32,7 +30,7 @@ class activity_type_catalog {
     /**
      * The types for the modal, by name.
      *
-     * @return array[] Each with modname, name, description and iconurl.
+     * @return array[] Each with modname and name.
      */
     public static function for_modal(): array {
         $types = [];
@@ -40,8 +38,6 @@ class activity_type_catalog {
             $types[] = [
                 'modname' => $modname,
                 'name' => get_string('modulename', 'mod_' . $modname),
-                'description' => get_string('activitytypedesc_' . $modname, 'local_coursegen'),
-                'iconurl' => template_row_options::instance_icon_url($modname),
             ];
         }
         usort($types, static fn($a, $b) => strcoll($a['name'], $b['name']));

@@ -200,17 +200,39 @@ class ChooserSelection {
  */
 const keepFavouritesUnchanged = async() => null;
 
+/** @type {string} The region of the link that lets the caller go on without picking a type. */
+const FREE_LINK_REGION = 'local_coursegen/chooser/free';
+
+/**
+ * The footer with the link to go on without picking a type, when the caller asked for one.
+ *
+ * @param {string|null} freeLabel The text of the link, or null for no link.
+ * @returns {string} The footer HTML, empty for no footer.
+ */
+const freeLinkFooter = (freeLabel) => {
+    if (!freeLabel) {
+        return '';
+    }
+    const link = document.createElement('a');
+    link.href = '#';
+    link.dataset.region = FREE_LINK_REGION;
+    link.textContent = freeLabel;
+    return link.outerHTML;
+};
+
 /**
  * Create the chooser modal, whose body is filled in once the items are loaded.
  *
  * @param {Promise<string>} bodyPromise Resolves with the rendered chooser body.
+ * @param {Promise<string>|string} title The title of the modal.
+ * @param {string|null} freeLabel The text of the link to go on without picking a type, or null.
  * @returns {Promise<Object>} The modal instance.
  */
-const createChooserModal = (bodyPromise) => {
-    const title = getString(STRING.ADD_SPACE, COMPONENT);
+const createChooserModal = (bodyPromise, title, freeLabel) => {
     return Modal.create({
         title,
         body: bodyPromise,
+        footer: freeLinkFooter(freeLabel),
         large: true,
         scrollable: false,
         templateContext: {classes: 'modchooser'},
@@ -260,6 +282,23 @@ const pickFromClick = (modal, items, selection, e) => {
 };
 
 /**
+ * Settle the session without a type, when the link to go on without one is clicked.
+ *
+ * @param {Object} modal The chooser modal.
+ * @param {ChooserSelection} selection The session to settle.
+ * @param {MouseEvent} e The click.
+ */
+const pickFree = (modal, selection, e) => {
+    const link = e.target.closest('[data-region="' + FREE_LINK_REGION + '"]');
+    if (!link) {
+        return;
+    }
+    e.preventDefault();
+    selection.settle({modname: '', name: '', icon: '', free: true});
+    modal.hide();
+};
+
+/**
  * Make a click on a chooser link pick its type, and closing the modal
  * without a pick settle the session with null.
  *
@@ -272,6 +311,8 @@ const bindPick = (modal, items, selection) => {
     const root = rootList[0];
     const onClick = pickFromClick.bind(null, modal, items, selection);
     root.addEventListener(EVENT.CLICK, onClick, true);
+    const onFreeClick = pickFree.bind(null, modal, selection);
+    root.addEventListener(EVENT.CLICK, onFreeClick);
     const onHidden = selection.settle.bind(selection, null);
     rootList.on(ModalEvents.hidden, onHidden);
 };
@@ -302,12 +343,15 @@ const populateChooser = async({courseId, supportedTypes, modalPromise, body, sel
  * @param {Object} options
  * @param {number} options.courseId The base course.
  * @param {string[]} options.supportedTypes Module names a space can be made for.
- * @returns {Promise<{modname: string, name: string, icon: string}|null>}
- *     Null when the modal is closed without picking anything.
+ * @param {string} [options.title] The title of the modal; "Add a space for an activity" when omitted.
+ * @param {string} [options.freeLabel] The text of a link that goes on without picking a type; no link when omitted.
+ * @returns {Promise<{modname: string, name: string, icon: string, free: (boolean|undefined)}|null>}
+ *     Null when the modal is closed without picking anything; with free set when the link was used.
  */
-export const chooseActivityType = async({courseId, supportedTypes}) => {
+export const chooseActivityType = async({courseId, supportedTypes, title = null, freeLabel = null}) => {
     const body = createDeferred();
-    const modalPromise = createChooserModal(body.promise);
+    const modalTitle = title || getString(STRING.ADD_SPACE, COMPONENT);
+    const modalPromise = createChooserModal(body.promise, modalTitle, freeLabel);
     const selection = new ChooserSelection();
     try {
         await populateChooser({courseId, supportedTypes, modalPromise, body, selection});

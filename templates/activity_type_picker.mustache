@@ -17,18 +17,14 @@
 {{!
     @template local_coursegen/activity_type_picker
 
-    The steps before the chat of the activity modal: the list of the types the AI can create, the kinds of H5P, and the
-    bar that shows what was picked.
+    The steps of the activity modal that come after the chooser of types: the kinds of H5P, and the bar that shows what
+    was picked.
 
     Context variables required for this template:
-    * types array     - The activity types: modname, name, description, iconurl.
     * h5ptypes array  - The H5P kinds: type, name, usesimages.
 
     Example context (json):
     {
-        "types": [
-            {"modname": "forum", "name": "Forum", "description": "A space to discuss.", "iconurl": "https://example.com/forum.svg"}
-        ],
         "h5ptypes": [
             {"type": "question_set", "name": "Question Set", "usesimages": false}
         ]
@@ -38,26 +34,6 @@
     <div data-region="local_coursegen/activity/chosen" class="d-none align-items-center justify-content-between mb-3 p-2 border rounded bg-light">
         <span data-region="local_coursegen/activity/chosen_label"></span>
         <a href="#" data-action="local_coursegen/activity/change-type" class="small">{{#str}} activitytype_change, local_coursegen {{/str}}</a>
-    </div>
-
-    <div data-region="local_coursegen/activity/typelist">
-        <h5 class="mb-1">{{#str}} activitytype_title, local_coursegen {{/str}}</h5>
-        <p class="text-muted">{{#str}} activitytype_intro, local_coursegen {{/str}}</p>
-        <div class="row">
-            {{#types}}
-            <div class="col-12 col-md-6 col-xl-4 mb-3">
-                <button type="button" class="btn btn-outline-secondary w-100 h-100 text-left d-flex align-items-start"
-                        style="gap: .6rem;" data-action="local_coursegen/activity/pick-type" data-modname="{{modname}}">
-                    <img src="{{iconurl}}" class="icon activityicon mt-1" alt="" style="flex-shrink: 0;">
-                    <span>
-                        <strong class="d-block">{{name}}</strong>
-                        <small class="d-block text-muted">{{description}}</small>
-                    </span>
-                </button>
-            </div>
-            {{/types}}
-        </div>
-        <a href="#" data-action="local_coursegen/activity/free-mode">{{#str}} activitytype_free, local_coursegen {{/str}}</a>
     </div>
 
     <div data-region="local_coursegen/activity/h5plist" class="d-none">

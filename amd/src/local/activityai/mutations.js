@@ -50,7 +50,7 @@ class Mutations {
         stateManager.state.session.beforemod = payload.beforemod === null ? null : Number(payload.beforemod);
         stateManager.state.modal.open = true;
         if (!stateManager.state.session.jobid) {
-            // A new conversation starts from the list of types.
+            // A new conversation starts from the chooser of types.
             stateManager.state.session.activitytype = '';
             stateManager.state.session.h5ptype = '';
             stateManager.state.session.typestep = 'type';
@@ -96,23 +96,6 @@ class Mutations {
         stateManager.setReadOnly(false);
         stateManager.state.session.h5ptype = type;
         stateManager.state.session.typestep = 'prompt';
-        stateManager.setReadOnly(true);
-    }
-
-    /**
-     * Go back to the list of types, while the conversation has not started.
-     *
-     * @param {StateManager} stateManager
-     */
-    changeActivityType(stateManager) {
-        if (stateManager.state.session.jobid) {
-            return;
-        }
-
-        stateManager.setReadOnly(false);
-        stateManager.state.session.activitytype = '';
-        stateManager.state.session.h5ptype = '';
-        stateManager.state.session.typestep = 'type';
         stateManager.setReadOnly(true);
     }
 
