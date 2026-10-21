@@ -1,8 +1,6 @@
-## 2.0.9
+## [2.0.9] - 2026-10-21
 
-**Released on:** Unreleased
-
-**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.2**.
+**Compatibility note:** This version is compatible from **Moodle 4.5** to **Moodle 5.2**.
 
 ## Fixed
 
