@@ -16,7 +16,9 @@
 
 namespace local_coursegen\external;
 
+use aiprovider_datacurso\httpclient\ai_course_api;
 use context_user;
+use local_coursegen\local\api_client_factory;
 use local_coursegen\local\models\course_session;
 use local_coursegen\local\service\ai_course_api_service;
 use local_coursegen\local\service\course_session_service;
@@ -24,6 +26,10 @@ use local_coursegen\testable_courseai_syllabus_upload;
 use local_coursegen\testable_create_course;
 use local_coursegen\testable_get_course_session_state;
 use local_coursegen\testable_get_course_settings;
+
+defined('MOODLE_INTERNAL') || die();
+
+require_once(__DIR__ . '/../fixtures/aiprovider_datacurso_stub.php');
 
 /**
  * The web services of the AI course creation flow apply the creation permission gate (ticket #9539).
@@ -72,6 +78,7 @@ final class creation_gate_external_test extends \advanced_testcase {
         testable_get_course_session_state::$mockservice = null;
         testable_courseai_syllabus_upload::$mockservice = null;
         testable_create_course::$mockservice = null;
+        api_client_factory::set_test_client(null);
         parent::tearDown();
     }
 
@@ -188,6 +195,24 @@ final class creation_gate_external_test extends \advanced_testcase {
     }
 
     /**
+     * Inject an API client double answering the planning endpoints.
+     *
+     * start_course_planning and course_planning_feedback build their API service
+     * internally, so the double goes in at the client factory. This keeps the
+     * test independent of aiprovider_datacurso: the real client is never built.
+     *
+     * @return ai_course_api The injected double, for further expectations.
+     */
+    private function inject_planning_client(): ai_course_api {
+        $client = $this->getMockBuilder(ai_course_api::class)
+            ->disableOriginalConstructor()->onlyMethods(['request', 'get_base_url'])->getMock();
+        $client->method('request')->willReturn(['thread_id' => 'thread-gate-2']);
+        $client->method('get_base_url')->willReturn('https://example.com');
+        api_client_factory::set_test_client($client);
+        return $client;
+    }
+
+    /**
      * Call one service of the flow as the current user.
      *
      * @param string $service Service name.
@@ -268,21 +293,17 @@ final class creation_gate_external_test extends \advanced_testcase {
 
         switch ($service) {
             case 'start_course_planning':
-                // The real API client fails fast on the invalid URL; the service reports it in its result.
+                $this->inject_planning_client()->expects($this->once())->method('request')
+                    ->with('POST', '/course/init', $this->anything());
                 $result = $this->call($service, (int) $session->get('id'));
-                $this->assertArrayHasKey('success', $result);
-                $this->resetDebugging();
+                $this->assertTrue($result['success']);
+                $this->assertSame('thread-gate-2', $result['threadid']);
                 break;
             case 'course_planning_feedback':
-                // The service builds the real API client, which fails fast (licence check or
-                // invalid URL) with a moodle_exception that is not a permission error.
-                try {
-                    $this->call($service, (int) $session->get('id'));
-                    $this->fail('The feedback call must reach the API client.');
-                } catch (\moodle_exception $e) {
-                    $this->assertNotInstanceOf(\required_capability_exception::class, $e);
-                }
-                $this->resetDebugging();
+                $this->inject_planning_client()->expects($this->once())->method('request')
+                    ->with('POST', '/course/feedback', $this->anything());
+                $result = $this->call($service, (int) $session->get('id'));
+                $this->assertTrue($result['success']);
                 break;
             case 'get_course_settings':
                 $result = $this->call($service, (int) $session->get('id'));
