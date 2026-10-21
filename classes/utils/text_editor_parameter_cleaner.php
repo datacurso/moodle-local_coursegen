@@ -118,6 +118,7 @@ class text_editor_parameter_cleaner {
         $text = (string)($editorobject['text'] ?? '');
         $text = self::normalize_escaped_html_quotes($text);
         $text = self::replace_generated_images_in_text($text, $itemid);
+        $text = clean_text($text, FORMAT_HTML);
 
         return [
             'text' => $text,

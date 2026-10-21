@@ -178,9 +178,9 @@ class quiz_settings extends base_settings {
             $question->category = $categoryinfo->id;
             $question->qtype = $aiquestiondata['qtype'];
             $question->name = $aiquestiondata['name'];
-            $question->questiontext = $aiquestiondata['questiontext']['text'] ?? '';
+            $question->questiontext = clean_text((string) ($aiquestiondata['questiontext']['text'] ?? ''), FORMAT_HTML);
             $question->questiontextformat = $aiquestiondata['questiontext']['format'] ?? FORMAT_HTML;
-            $question->generalfeedback = $aiquestiondata['generalfeedback']['text'] ?? '';
+            $question->generalfeedback = clean_text((string) ($aiquestiondata['generalfeedback']['text'] ?? ''), FORMAT_HTML);
             $question->generalfeedbackformat = $aiquestiondata['generalfeedback']['format'] ?? FORMAT_HTML;
             $question->defaultmark = $aiquestiondata['defaultmark'] ?? 1;
             $question->penalty = $aiquestiondata['penalty'] ?? 0.3333333;

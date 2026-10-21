@@ -203,7 +203,16 @@ class data_settings extends base_settings {
                 $content->content1 = $parts[1];
                 break;
             case 'textarea':
+                $content->content = clean_text($value, FORMAT_HTML);
                 $content->content1 = FORMAT_HTML;
+                break;
+            case 'url':
+                // A link that runs script is not a link: only a real address is stored.
+                $url = clean_param($value, PARAM_URL);
+                if ($url === '') {
+                    return;
+                }
+                $content->content = $url;
                 break;
         }
         $DB->insert_record('data_content', $content);
