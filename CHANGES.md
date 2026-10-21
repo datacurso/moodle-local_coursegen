@@ -1,6 +1,4 @@
-## 2.0.9-wp
-
-**Released on:** Unreleased
+## [2.0.9-wp] - 2026-10-21
 
 **Compatibility note:** This version is compatible only with **Moodle Workplace 4.5**.
 
