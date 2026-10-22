@@ -1241,3 +1241,4 @@ $string['cpb_file_title'] = 'Documento de apoyo';
 $string['cpb_file_help'] = 'Adjunta un sílabo o cualquier documento en el que la IA deba basar la presentación.';
 $string['cpb_file_attach'] = 'Adjuntar un archivo';
 $string['cpb_file_remove'] = 'Quitar el archivo';
+$string['cpb_empty'] = 'Todavía no hay diapositivas. Agrega las que quieras, al menos 3.';

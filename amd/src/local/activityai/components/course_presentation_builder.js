@@ -58,13 +58,6 @@ const QUESTION_NAMES = {
 };
 
 /**
- * The slides a new presentation starts with, so the form shows how it is used.
- *
- * @returns {Object[]}
- */
-const starterSlides = () => ['cover', 'content', 'content', 'question', 'closing'].map((template) => newSlide(template));
-
-/**
  * An empty slide of a kind.
  *
  * @param {string} template
@@ -85,7 +78,7 @@ export default class extends BaseComponent {
     create(descriptor) {
         this.name = 'local_coursegen_activityai_course_presentation_builder';
         this.footer = descriptor.footer || null;
-        this.model = {topic: '', mode: 'manual', limit: 'none', min: MIN_SLIDES, max: 8, slides: starterSlides()};
+        this.model = {topic: '', mode: 'manual', limit: 'none', min: MIN_SLIDES, max: 8, slides: []};
         this.strings = null;
     }
 
