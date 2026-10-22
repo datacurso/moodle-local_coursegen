@@ -1133,7 +1133,6 @@ $string['courseai_template_progress_short'] = '{$a->done}/{$a->total}';
 $string['courseai_topbar_activities'] = 'Activities';
 $string['courseai_topbar_activities_toggle'] = 'Show the activities the AI writes';
 $string['courseai_topbar_activities_panel'] = 'Activities the AI writes';
-$string['activitytype_free'] = 'Describe it without choosing a type';
 $string['activitytype_chosen'] = 'Type: {$a}';
 $string['h5ptype_title'] = 'Which kind of H5P?';
 $string['h5ptype_usesimages'] = 'Uses images';

@@ -201,38 +201,6 @@ class ChooserSelection {
  */
 const keepFavouritesUnchanged = async() => null;
 
-/** @type {string} The region of the link that lets the caller go on without picking a type. */
-const FREE_LINK_REGION = 'local_coursegen/chooser/free';
-
-/**
- * The chooser body with the link to go on without picking a type at the end of the list, when the caller asked for one.
- *
- * The link goes inside the list and not in the footer of the modal: with a footer, the help panel of an item swaps it
- * and its Back button stops working. Inside the list, it hides with the list when the help panel opens.
- *
- * @param {string} rendered The chooser body HTML.
- * @param {string|null} freeLabel The text of the link, or null for no link.
- * @returns {string} The body HTML.
- */
-const withFreeLink = (rendered, freeLabel) => {
-    if (!freeLabel) {
-        return rendered;
-    }
-    const body = document.createElement('div');
-    body.innerHTML = rendered;
-    const list = body.querySelector('.modchoosercontainer');
-    if (!list) {
-        return rendered;
-    }
-    const link = document.createElement('a');
-    link.href = '#';
-    link.className = 'mt-3 align-self-start';
-    link.dataset.region = FREE_LINK_REGION;
-    link.textContent = freeLabel;
-    list.appendChild(link);
-    return body.innerHTML;
-};
-
 /**
  * Create the chooser modal, whose body is filled in once the items are loaded.
  *
@@ -293,23 +261,6 @@ const pickFromClick = (modal, items, selection, e) => {
 };
 
 /**
- * Settle the session without a type, when the link to go on without one is clicked.
- *
- * @param {Object} modal The chooser modal.
- * @param {ChooserSelection} selection The session to settle.
- * @param {MouseEvent} e The click.
- */
-const pickFree = (modal, selection, e) => {
-    const link = e.target.closest('[data-region="' + FREE_LINK_REGION + '"]');
-    if (!link) {
-        return;
-    }
-    e.preventDefault();
-    selection.settle({modname: '', name: '', icon: '', free: true});
-    modal.hide();
-};
-
-/**
  * Make a click on a chooser link pick its type, and closing the modal
  * without a pick settle the session with null.
  *
@@ -322,8 +273,6 @@ const bindPick = (modal, items, selection) => {
     const root = rootList[0];
     const onClick = pickFromClick.bind(null, modal, items, selection);
     root.addEventListener(EVENT.CLICK, onClick, true);
-    const onFreeClick = pickFree.bind(null, modal, selection);
-    root.addEventListener(EVENT.CLICK, onFreeClick);
     const onHidden = selection.settle.bind(selection, null);
     rootList.on(ModalEvents.hidden, onHidden);
 };
@@ -366,15 +315,14 @@ const addHeaderBack = (modal, label, selection) => {
  * @param {Promise<Object>} params.modalPromise The chooser modal being created.
  * @param {{resolve: Function}} params.body Resolves the modal body.
  * @param {ChooserSelection} params.selection The session to settle.
- * @param {string|null} params.linkLabel The text of the link under the list, or null for no link.
  * @param {boolean} params.showTabs Whether the Activities and Resources tabs are offered.
  * @param {string|null} params.backLabel The text of a Back button in the header, or null for none.
  */
-const showItems = async({items, modalPromise, body, selection, linkLabel, showTabs, backLabel}) => {
+const showItems = async({items, modalPromise, body, selection, showTabs, backLabel}) => {
     ChooserDialogue.displayChooser(modalPromise, items, keepFavouritesUnchanged, {footer: false});
     const data = templateData(items, showTabs);
     const rendered = await Templates.render('core_course/activitychooser', data);
-    body.resolve(withFreeLink(rendered, linkLabel));
+    body.resolve(rendered);
     const modal = await modalPromise;
     bindPick(modal, items, selection);
     if (backLabel) {
@@ -388,18 +336,17 @@ const showItems = async({items, modalPromise, body, selection, linkLabel, showTa
  * @param {Object} options
  * @param {Promise<string>|string} options.title The title of the modal.
  * @param {Function} options.loadItems Returns the items, or a promise of them.
- * @param {string|null} options.linkLabel The text of a link under the list, or null for no link.
  * @param {boolean} options.showTabs Whether the Activities and Resources tabs are offered.
  * @param {string|null} options.backLabel The text of a Back button in the header, or null for none.
  * @returns {Promise<Object|null>} The pick, null when the modal is closed without one.
  */
-const openChooser = async({title, loadItems, linkLabel, showTabs, backLabel = null}) => {
+const openChooser = async({title, loadItems, showTabs, backLabel = null}) => {
     const body = createDeferred();
     const modalPromise = createChooserModal(body.promise, title);
     const selection = new ChooserSelection();
     try {
         const items = await loadItems();
-        await showItems({items, modalPromise, body, selection, linkLabel, showTabs, backLabel});
+        await showItems({items, modalPromise, body, selection, showTabs, backLabel});
     } catch (error) {
         const modal = await modalPromise;
         modal.destroy();
@@ -415,15 +362,13 @@ const openChooser = async({title, loadItems, linkLabel, showTabs, backLabel = nu
  * @param {number} options.courseId The base course.
  * @param {string[]} options.supportedTypes Module names a space can be made for.
  * @param {string} [options.title] The title of the modal; "Add a space for an activity" when omitted.
- * @param {string} [options.freeLabel] The text of a link that goes on without picking a type; no link when omitted.
- * @returns {Promise<{modname: string, name: string, icon: string, free: (boolean|undefined)}|null>}
- *     Null when the modal is closed without picking anything; with free set when the link was used.
+ * @returns {Promise<{modname: string, name: string, icon: string}|null>}
+ *     Null when the modal is closed without picking anything.
  */
-export const chooseActivityType = ({courseId, supportedTypes, title = null, freeLabel = null}) => {
+export const chooseActivityType = ({courseId, supportedTypes, title = null}) => {
     return openChooser({
         title: title || getString(STRING.ADD_SPACE, COMPONENT),
         loadItems: () => fetchSupportedItems(courseId, supportedTypes),
-        linkLabel: freeLabel,
         showTabs: true,
     });
 };
@@ -443,7 +388,6 @@ export const chooseKind = ({title, kinds, usesImagesLabel, backLabel}) => {
     return openChooser({
         title,
         loadItems: () => kindItems(kinds, usesImagesLabel),
-        linkLabel: null,
         showTabs: false,
         backLabel,
     });
