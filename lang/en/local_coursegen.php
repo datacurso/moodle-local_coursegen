@@ -1251,7 +1251,6 @@ $string['cpb_image'] = 'Image';
 $string['cpb_image_none'] = 'No image';
 $string['cpb_image_generate'] = 'Generate an image';
 $string['cpb_image_help'] = 'What the image shows and in which style';
-$string['cpb_image_note'] = 'Images are only made if you choose “Generate images” below.';
 $string['cpb_video'] = 'Video address (YouTube or mp4)';
 $string['cpb_video_help'] = 'Only an address you give; the AI never invents one.';
 $string['cpb_question'] = 'Question';

@@ -26,6 +26,7 @@
     * hastitle, hastext, hasimage, hasvideo, hasquestion bool - The parts this kind of slide has.
     * title, text, image, video, question string - What was written.
     * imagegenerate bool    - Whether the image is generated.
+    * canimages bool        - Whether the person may generate images.
     * qtypes array          - The kinds of question: value, label, selected.
     * qchosen bool          - Whether a question kind other than none is chosen.
     * first, last bool      - Whether the slide is the first or the last.
@@ -34,7 +35,7 @@
     {
         "index": 0, "number": 1, "templates": [{"value": "cover", "label": "Cover", "selected": true}],
         "hastitle": true, "hastext": false, "hasimage": true, "hasvideo": false, "hasquestion": false,
-        "title": "", "text": "", "image": "", "video": "", "question": "", "imagegenerate": false,
+        "title": "", "text": "", "image": "", "video": "", "question": "", "imagegenerate": false, "canimages": true,
         "qtypes": [], "qchosen": false, "first": true, "last": true
     }
 }}
@@ -75,11 +76,10 @@
             <label class="d-block">{{#str}} cpb_image, local_coursegen {{/str}}</label>
             <select class="custom-select mb-2" data-slide-field="imagemode">
                 <option value="none" {{^imagegenerate}}selected{{/imagegenerate}}>{{#str}} cpb_image_none, local_coursegen {{/str}}</option>
-                <option value="generate" {{#imagegenerate}}selected{{/imagegenerate}}>{{#str}} cpb_image_generate, local_coursegen {{/str}}</option>
+                {{#canimages}}<option value="generate" {{#imagegenerate}}selected{{/imagegenerate}}>{{#str}} cpb_image_generate, local_coursegen {{/str}}</option>{{/canimages}}
             </select>
             <input type="text" class="form-control {{^imagegenerate}}d-none{{/imagegenerate}}" data-slide-field="image" value="{{image}}"
                    placeholder="{{#str}} cpb_image_help, local_coursegen {{/str}}">
-            <small class="form-text text-muted {{^imagegenerate}}d-none{{/imagegenerate}}">{{#str}} cpb_image_note, local_coursegen {{/str}}</small>
         </div>
         {{/hasimage}}
         {{#hasvideo}}
