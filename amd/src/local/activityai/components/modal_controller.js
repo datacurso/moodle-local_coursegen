@@ -33,18 +33,15 @@ import {get_string as getString} from 'core/str';
 import ChatForm from 'local_coursegen/local/activityai/components/chat_form';
 import StreamOutput from 'local_coursegen/local/activityai/components/stream_output';
 import TypePicker from 'local_coursegen/local/activityai/components/type_picker';
-import {chooseActivityType as openTypeChooser} from 'local_coursegen/local/template/template_space_chooser';
+import {
+    chooseActivityType as openTypeChooser,
+    chooseKind as openKindChooser,
+} from 'local_coursegen/local/template/template_space_chooser';
 
 export default class extends BaseComponent {
     create() {
         this.name = 'local_coursegen_activityai_modal_controller';
         this.modal = null;
-    }
-
-    getWatchers() {
-        return [
-            {watch: 'modal.open:updated', handler: this._handleOpenChange},
-        ];
     }
 
     async _handleOpenChange({element}) {
@@ -71,9 +68,7 @@ export default class extends BaseComponent {
         }
 
         const bodyHTML = await Templates.render('local_coursegen/add_activity_ai_modal', {});
-        const pickerHTML = await Templates.render('local_coursegen/activity_type_picker', {
-            h5ptypes: this.reactive.state.page.h5ptypes,
-        });
+        const pickerHTML = await Templates.render('local_coursegen/activity_type_picker', {});
 
         const state = this.reactive.state;
         const selectedlang = String(state?.session?.lang || state?.page?.defaultlang || 'en').toLowerCase();
@@ -143,26 +138,81 @@ export default class extends BaseComponent {
     /**
      * Ask for the type of the activity with Moodle's own activity chooser, limited to what the AI can create.
      *
+     * H5P goes on to ask for its kind in the same kind of chooser; going back from there returns to the types.
+     *
      * @returns {Promise<boolean>} False when the chooser was closed without picking anything.
      */
     async _pickType() {
         const state = this.reactive.state;
-        const choice = await openTypeChooser({
-            courseId: state.page.courseid,
-            supportedTypes: state.page.activitytypes.map((type) => type.modname),
-            title: await getString('addactivityai_modaltitle', 'local_coursegen'),
-            freeLabel: await getString('activitytype_free', 'local_coursegen'),
+        for (;;) {
+            const choice = await openTypeChooser({
+                courseId: state.page.courseid,
+                supportedTypes: state.page.activitytypes.map((type) => type.modname),
+                title: await getString('addactivityai_modaltitle', 'local_coursegen'),
+                freeLabel: await getString('activitytype_free', 'local_coursegen'),
+            });
+            if (!choice) {
+                return false;
+            }
+
+            if (choice.free) {
+                this.reactive.dispatch('chooseFreeMode');
+                return true;
+            }
+
+            this.reactive.dispatch('chooseActivityType', {modname: choice.modname});
+            if (choice.modname !== 'h5pactivity') {
+                return true;
+            }
+
+            const kind = await this._pickKind();
+            if (kind !== null) {
+                this.reactive.dispatch('chooseH5pType', {type: kind});
+                return true;
+            }
+        }
+    }
+
+    /**
+     * Ask for the kind of H5P with the same chooser Moodle uses for the types.
+     *
+     * @returns {Promise<string|null>} The kind ('' lets the AI choose it), or null to go back to the types.
+     */
+    async _pickKind() {
+        const choice = await openKindChooser({
+            title: await getString('h5ptype_title', 'local_coursegen'),
+            kinds: this.reactive.state.page.h5ptypes,
+            usesImagesLabel: await getString('h5ptype_usesimages', 'local_coursegen'),
+            backLabel: await getString('h5ptype_back', 'local_coursegen'),
         });
-        if (!choice) {
-            return false;
+        if (!choice || choice.free) {
+            return null;
         }
 
-        if (choice.free) {
-            this.reactive.dispatch('chooseFreeMode');
-        } else {
-            this.reactive.dispatch('chooseActivityType', {modname: choice.modname});
+        return choice.modname;
+    }
+
+    getWatchers() {
+        return [
+            {watch: 'modal.open:updated', handler: this._handleOpenChange},
+            {watch: 'session.typestep:updated', handler: this._handleStepChange},
+        ];
+    }
+
+    /**
+     * The kind of H5P is asked again when the teacher chooses to change it from the chat.
+     *
+     * @param {Object} param0
+     * @param {Object} param0.element The session.
+     */
+    async _handleStepChange({element}) {
+        if (element.typestep !== 'h5p' || !this.modal) {
+            return;
         }
-        return true;
+
+        const current = String(element.h5ptype || '');
+        const kind = await this._pickKind();
+        this.reactive.dispatch('chooseH5pType', {type: kind === null ? current : kind});
     }
 
     async _close() {

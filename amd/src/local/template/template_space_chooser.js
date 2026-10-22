@@ -117,19 +117,20 @@ const itemsOfArchetype = (items, archetype) => {
  * Resources tabs (no favourites or recommended tabs here).
  *
  * @param {Array} items
+ * @param {boolean} showTabs Whether the Activities and Resources tabs are offered next to All.
  * @returns {Object}
  */
-const templateData = (items) => {
+const templateData = (items, showTabs = true) => {
     const activities = itemsOfArchetype(items, ARCHETYPE_ACTIVITY);
     const resources = itemsOfArchetype(items, ARCHETYPE_RESOURCE);
     return {
         'default': items,
         showAll: true,
         activities,
-        showActivities: true,
+        showActivities: showTabs,
         activitiesFirst: false,
         resources,
-        showResources: true,
+        showResources: showTabs,
         favourites: [],
         recommended: [],
         recommendedFirst: false,
@@ -328,24 +329,48 @@ const bindPick = (modal, items, selection) => {
 };
 
 /**
- * Load the supported items into the chooser modal and wire up the pick.
+ * Show the items in the chooser modal and wire up the pick.
  *
  * @param {Object} params
- * @param {number} params.courseId The base course.
- * @param {string[]} params.supportedTypes Module names a space can be made for.
+ * @param {Array} params.items The content items to offer.
  * @param {Promise<Object>} params.modalPromise The chooser modal being created.
  * @param {{resolve: Function}} params.body Resolves the modal body.
  * @param {ChooserSelection} params.selection The session to settle.
- * @param {string|null} params.freeLabel The text of the link to go on without picking a type, or null.
+ * @param {string|null} params.linkLabel The text of the link under the list, or null for no link.
+ * @param {boolean} params.showTabs Whether the Activities and Resources tabs are offered.
  */
-const populateChooser = async({courseId, supportedTypes, modalPromise, body, selection, freeLabel}) => {
-    const items = await fetchSupportedItems(courseId, supportedTypes);
+const showItems = async({items, modalPromise, body, selection, linkLabel, showTabs}) => {
     ChooserDialogue.displayChooser(modalPromise, items, keepFavouritesUnchanged, {footer: false});
-    const data = templateData(items);
+    const data = templateData(items, showTabs);
     const rendered = await Templates.render('core_course/activitychooser', data);
-    body.resolve(withFreeLink(rendered, freeLabel));
+    body.resolve(withFreeLink(rendered, linkLabel));
     const modal = await modalPromise;
     bindPick(modal, items, selection);
+};
+
+/**
+ * Open the chooser with the given items and resolve with the picked one.
+ *
+ * @param {Object} options
+ * @param {Promise<string>|string} options.title The title of the modal.
+ * @param {Function} options.loadItems Returns the items, or a promise of them.
+ * @param {string|null} options.linkLabel The text of a link under the list, or null for no link.
+ * @param {boolean} options.showTabs Whether the Activities and Resources tabs are offered.
+ * @returns {Promise<Object|null>} The pick, null when the modal is closed without one.
+ */
+const openChooser = async({title, loadItems, linkLabel, showTabs}) => {
+    const body = createDeferred();
+    const modalPromise = createChooserModal(body.promise, title);
+    const selection = new ChooserSelection();
+    try {
+        const items = await loadItems();
+        await showItems({items, modalPromise, body, selection, linkLabel, showTabs});
+    } catch (error) {
+        const modal = await modalPromise;
+        modal.destroy();
+        throw error;
+    }
+    return selection.promise;
 };
 
 /**
@@ -359,17 +384,69 @@ const populateChooser = async({courseId, supportedTypes, modalPromise, body, sel
  * @returns {Promise<{modname: string, name: string, icon: string, free: (boolean|undefined)}|null>}
  *     Null when the modal is closed without picking anything; with free set when the link was used.
  */
-export const chooseActivityType = async({courseId, supportedTypes, title = null, freeLabel = null}) => {
-    const body = createDeferred();
-    const modalTitle = title || getString(STRING.ADD_SPACE, COMPONENT);
-    const modalPromise = createChooserModal(body.promise, modalTitle);
-    const selection = new ChooserSelection();
-    try {
-        await populateChooser({courseId, supportedTypes, modalPromise, body, selection, freeLabel});
-    } catch (error) {
-        const modal = await modalPromise;
-        modal.destroy();
-        throw error;
-    }
-    return selection.promise;
+export const chooseActivityType = ({courseId, supportedTypes, title = null, freeLabel = null}) => {
+    return openChooser({
+        title: title || getString(STRING.ADD_SPACE, COMPONENT),
+        loadItems: () => fetchSupportedItems(courseId, supportedTypes),
+        linkLabel: freeLabel,
+        showTabs: true,
+    });
+};
+
+/**
+ * Open the same chooser with items of our own, for the kinds inside a type such as H5P.
+ *
+ * @param {Object} options
+ * @param {string} options.title The title of the modal.
+ * @param {Array} options.kinds What to offer: type, name, description, iconurl and usesimages of each.
+ * @param {string} options.usesImagesLabel The note shown for the kinds that use images.
+ * @param {string} options.backLabel The text of the link that goes back, under the list.
+ * @returns {Promise<{modname: string, name: string, icon: string, free: (boolean|undefined)}|null>}
+ *     The kind picked (its type in modname); with free set when the link to go back was used; null when closed.
+ */
+export const chooseKind = ({title, kinds, usesImagesLabel, backLabel}) => {
+    return openChooser({
+        title,
+        loadItems: () => kindItems(kinds, usesImagesLabel),
+        linkLabel: backLabel,
+        showTabs: false,
+    });
+};
+
+/**
+ * Plain text as HTML.
+ *
+ * @param {string} text
+ * @returns {string}
+ */
+const escapeHtml = (text) => {
+    const holder = document.createElement('div');
+    holder.textContent = text;
+    return holder.innerHTML;
+};
+
+/**
+ * The kinds as the items the chooser draws: a tile with the picture, the name and, behind the info button, the description.
+ *
+ * @param {Array} kinds What to offer.
+ * @param {string} usesImagesLabel The note shown for the kinds that use images.
+ * @returns {Array}
+ */
+const kindItems = (kinds, usesImagesLabel) => {
+    return kinds.map((kind) => {
+        const note = kind.usesimages ? ' ' + escapeHtml('(' + usesImagesLabel + ')') : '';
+        return {
+            name: kind.type,
+            title: kind.name,
+            link: '?add=' + encodeURIComponent(kind.type),
+            icon: '<img class="icon" alt="" style="width: 64px; height: 40px; max-width: none; object-fit: contain;" src="' +
+                escapeHtml(kind.iconurl) + '">',
+            help: '<p>' + escapeHtml(kind.description) + note + '</p>',
+            purpose: '',
+            branded: 1,
+            componentname: 'mod_h5pactivity',
+            archetype: ARCHETYPE_ACTIVITY,
+            legacyitem: true,
+        };
+    });
 };
