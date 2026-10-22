@@ -100,6 +100,22 @@ class Mutations {
     }
 
     /**
+     * Go back to the kinds of H5P, while the conversation has not started.
+     *
+     * @param {StateManager} stateManager
+     */
+    changeH5pKind(stateManager) {
+        if (stateManager.state.session.jobid || stateManager.state.session.activitytype !== 'h5pactivity') {
+            return;
+        }
+
+        stateManager.setReadOnly(false);
+        stateManager.state.session.h5ptype = '';
+        stateManager.state.session.typestep = 'h5p';
+        stateManager.setReadOnly(true);
+    }
+
+    /**
      * Describe the activity freely, without picking a type: the AI decides it from the text.
      *
      * @param {StateManager} stateManager
