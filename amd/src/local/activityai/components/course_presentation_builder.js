@@ -130,6 +130,21 @@ export default class extends BaseComponent {
                 field.style.removeProperty('display');
             }
         }
+        // Whether images are made is decided slide by slide in the form, so the general choice of the footer is hidden.
+        this.footer?.querySelectorAll("input[name='generate_images']").forEach((radio) => {
+            const label = radio.closest('label');
+            if (!label) {
+                return;
+            }
+            if (forThisKind) {
+                label.style.setProperty('display', 'none', 'important');
+            } else {
+                label.style.removeProperty('display');
+            }
+        });
+        if (forThisKind) {
+            this._syncImages();
+        }
         // The file shown in the footer is shown by the form instead, so it is not shown twice.
         const shown = this.footer?.querySelector("[data-region='local_coursegen/activity/selectedfile']");
         if (shown) {
@@ -155,7 +170,19 @@ export default class extends BaseComponent {
         const {html, js} = await Templates.renderForPromise('local_coursegen/course_presentation_builder', context);
         Templates.replaceNodeContents(this.element, html, js);
         this._sync();
+        this._syncImages();
         this._drawFile();
+    }
+
+    /**
+     * Images are made when at least one slide asks for one; the general option of the chat follows the slides.
+     */
+    _syncImages() {
+        const wanted = this.model.slides.some((slide) => PARTS[slide.template].includes('image') && slide.imagemode === 'generate');
+        const value = wanted && this.reactive.state.page.canimages ? 1 : 0;
+        if (this.reactive.state.session.generateimages !== value) {
+            this.reactive.dispatch('setGenerateImages', value);
+        }
     }
 
     /**
@@ -204,6 +231,7 @@ export default class extends BaseComponent {
             video: slide.video,
             question: slide.question,
             imagegenerate: slide.imagemode === 'generate',
+            canimages: Boolean(this.reactive.state.page.canimages),
             qtypes: QUESTION_KINDS.map((value) => ({value, label: labels[value], selected: value === slide.qtype})),
             qchosen: slide.qtype !== 'none',
             first: index === 0,
@@ -226,6 +254,7 @@ export default class extends BaseComponent {
                 return;
             }
             slide[field] = target.value;
+            this._syncImages();
             if (event.type === 'change' && ['template', 'imagemode', 'qtype'].includes(field)) {
                 if (field === 'template') {
                     const wasQuestion = PARTS[slide.template]?.includes('question');
@@ -337,6 +366,7 @@ export default class extends BaseComponent {
             return;
         }
 
+        this._syncImages();
         try {
             await this.reactive.dispatch('submitPrompt', {prompt: this._instruction()});
         } catch (exception) {
