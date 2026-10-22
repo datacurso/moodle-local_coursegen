@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026101231
+
+### Added
+- **A form to lay out a Course Presentation in the chat to create an activity**  
+  When the kind of H5P is Course Presentation, the chat shows a form instead of the single field: what the presentation is about, the tone, the number of slides and the slides one by one. Each slide is of a kind (cover, content, content with image or video, question, content with question, closing) and shows only the parts that kind has: the title, the text to write, the image to generate, the address of a video, and a question with its type. Slides can be added, removed, duplicated and moved. What is filled in becomes one instruction that says, slide by slide, what the AI has to write.
+
 ## [2.0.10] - 2026101230
 
 ### Added

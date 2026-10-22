@@ -1,0 +1,84 @@
+{{!
+    @template local_coursegen/activity_type_picker
+
+    The first steps of the chat to create an activity, inside the chat itself: what was chosen so far, the types the
+    AI can create and, for H5P, its kinds. The tiles are Moodle's own chooser tiles.
+
+    Context variables required for this template:
+    * typeitems array  - The chooser items of the types the AI can create.
+    * kinditems array  - The chooser items of the H5P kinds.
+
+    Example context (json):
+    {
+        "typeitems": [
+            {"name": "forum", "title": "Forum", "link": "?add=forum", "icon": "<img class='icon' src='https://example.com/forum.svg' alt=''>", "componentname": "mod_forum", "purpose": "collaboration", "branded": 0, "legacyitem": true}
+        ],
+        "kinditems": []
+{{!
+    @template local_coursegen/course_presentation_builder
+
+    The form to lay out a Course Presentation: what it is about and the slides, each with only the parts its kind of
+    slide has. It replaces the single field of the chat for this kind of H5P.
+
+    Context variables required for this template:
+    * topic string          - The topic and objective written so far.
+    * tones array           - The tones: value, label, selected.
+    * exact bool            - Whether the number of slides is pinned.
+    * exactcount int        - The number of slides when it is pinned.
+    * slides array          - The slides, each drawn with local_coursegen/course_presentation_slide.
+
+    Example context (json):
+    {
+        "topic": "",
+        "tones": [{"value": "neutral", "label": "Neutral", "selected": true}],
+        "exact": false,
+        "exactcount": 6,
+        "slides": []
+    }
+}}
+<div class="local_coursegen_cp_builder d-none" data-region="local_coursegen/activity/builder">
+    <div class="p-3 mb-3 bg-light rounded">
+        <p class="mb-0">{{#str}} cpb_intro, local_coursegen {{/str}}</p>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <h5 class="card-title">{{#str}} cpb_general_title, local_coursegen {{/str}}</h5>
+            <div class="form-group">
+                <label for="cpb-topic">{{#str}} cpb_topic, local_coursegen {{/str}}</label>
+                <textarea id="cpb-topic" class="form-control" rows="3" data-field="topic"
+                          placeholder="{{#str}} cpb_topic_help, local_coursegen {{/str}}">{{topic}}</textarea>
+            </div>
+            <div class="form-row">
+                <div class="form-group col-md-6">
+                    <label class="d-block" for="cpb-tone">{{#str}} cpb_tone, local_coursegen {{/str}}</label>
+                    <select id="cpb-tone" class="custom-select" data-field="tone">
+                        {{#tones}}<option value="{{value}}" {{#selected}}selected{{/selected}}>{{label}}</option>{{/tones}}
+                    </select>
+                </div>
+                <div class="form-group col-md-6">
+                    <label class="d-block" for="cpb-count">{{#str}} cpb_count, local_coursegen {{/str}}</label>
+                    <div class="d-flex align-items-center" style="gap: .5rem;">
+                        <select id="cpb-count" class="custom-select" data-field="count">
+                            <option value="content" {{^exact}}selected{{/exact}}>{{#str}} cpb_count_content, local_coursegen {{/str}}</option>
+                            <option value="exact" {{#exact}}selected{{/exact}}>{{#str}} cpb_count_exact, local_coursegen {{/str}}</option>
+                        </select>
+                        <input type="number" min="3" max="30" class="form-control {{^exact}}d-none{{/exact}}" style="max-width: 6rem;"
+                               data-field="exactcount" value="{{exactcount}}" aria-label="{{#str}} cpb_count, local_coursegen {{/str}}">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <h5 class="mb-2">{{#str}} cpb_slides_title, local_coursegen {{/str}}</h5>
+    <div data-region="local_coursegen/activity/builder_slides">{{#slides}}{{> local_coursegen/course_presentation_slide}}{{/slides}}</div>
+    <button type="button" class="btn btn-outline-primary mb-3" data-action="local_coursegen/builder/add">
+        <i class="fa fa-plus mr-1" aria-hidden="true"></i>{{#str}} cpb_add, local_coursegen {{/str}}
+    </button>
+
+    <div class="alert alert-danger d-none" role="alert" data-region="local_coursegen/activity/builder_error"></div>
+    <div class="text-right mb-3">
+        <button type="button" class="btn btn-primary" data-action="local_coursegen/builder/submit">{{#str}} cpb_submit, local_coursegen {{/str}}</button>
+    </div>
+</div>
