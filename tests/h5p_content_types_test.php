@@ -40,6 +40,29 @@ final class h5p_content_types_test extends \advanced_testcase {
     }
 
     /**
+     * Every kind has a short description in the language files.
+     */
+    public function test_every_kind_has_a_description(): void {
+        $strings = get_string_manager();
+
+        foreach (array_keys(h5p_content_types::TYPES) as $type) {
+            $this->assertTrue($strings->string_exists('h5ptypedesc_' . $type, 'local_coursegen'), $type);
+        }
+    }
+
+    /**
+     * Every kind has a picture: its own, or the one of the H5P activity when H5P gives it none.
+     */
+    public function test_every_kind_has_a_picture(): void {
+        $this->resetAfterTest();
+
+        foreach (h5p_content_types::for_modal() as $kind) {
+            $this->assertNotSame('', $kind['iconurl'], $kind['type']);
+            $this->assertNotSame('', $kind['description'], $kind['type']);
+        }
+    }
+
+    /**
      * The list shows every kind once, with its name.
      */
     public function test_the_list_shows_every_kind_once(): void {

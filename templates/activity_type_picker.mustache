@@ -21,19 +21,22 @@
     was picked.
 
     Context variables required for this template:
-    * h5ptypes array  - The H5P kinds: type, name, usesimages.
+    * h5ptypes array  - The H5P kinds: type, name, description, iconurl, usesimages.
 
     Example context (json):
     {
         "h5ptypes": [
-            {"type": "question_set", "name": "Question Set", "usesimages": false}
+            {"type": "question_set", "name": "Question Set", "description": "A sequence of questions.", "iconurl": "https://example.com/question_set.svg", "usesimages": false}
         ]
     }
 }}
 <div class="local_coursegen_type_picker" data-region="local_coursegen/activity/typepicker">
     <div data-region="local_coursegen/activity/chosen" class="d-none align-items-center justify-content-between mb-3 p-2 border rounded bg-light">
         <span data-region="local_coursegen/activity/chosen_label"></span>
-        <a href="#" data-action="local_coursegen/activity/change-type" class="small">{{#str}} activitytype_change, local_coursegen {{/str}}</a>
+        <span>
+            <a href="#" data-action="local_coursegen/activity/change-kind" data-region="local_coursegen/activity/change_kind" class="small d-none mr-3">{{#str}} h5ptype_current, local_coursegen {{/str}}</a>
+            <a href="#" data-action="local_coursegen/activity/change-type" class="small">{{#str}} activitytype_change, local_coursegen {{/str}}</a>
+        </span>
     </div>
 
     <div data-region="local_coursegen/activity/h5plist" class="d-none">
@@ -41,7 +44,7 @@
         <p class="text-muted">{{#str}} h5ptype_intro, local_coursegen {{/str}}</p>
         <div class="row">
             <div class="col-12 col-md-6 col-xl-4 mb-3">
-                <button type="button" class="btn btn-outline-primary w-100 h-100 text-left"
+                <button type="button" class="btn btn-outline-primary w-100 h-100 text-left d-flex flex-column"
                         data-action="local_coursegen/activity/pick-h5ptype" data-type="">
                     <strong class="d-block">{{#str}} h5ptype_auto, local_coursegen {{/str}}</strong>
                     <small class="d-block text-muted">{{#str}} h5ptype_autodesc, local_coursegen {{/str}}</small>
@@ -49,10 +52,14 @@
             </div>
             {{#h5ptypes}}
             <div class="col-12 col-md-6 col-xl-4 mb-3">
-                <button type="button" class="btn btn-outline-secondary w-100 h-100 text-left"
-                        data-action="local_coursegen/activity/pick-h5ptype" data-type="{{type}}">
+                <button type="button" class="btn btn-outline-secondary w-100 h-100 text-left d-flex flex-column p-2"
+                        style="gap: .4rem;" data-action="local_coursegen/activity/pick-h5ptype" data-type="{{type}}">
+                    <span class="d-block rounded bg-light text-center w-100" style="height: 84px;">
+                        <img src="{{iconurl}}" alt="" class="h-100" style="max-width: 100%; object-fit: contain;">
+                    </span>
                     <strong class="d-block">{{name}}</strong>
-                    {{#usesimages}}<small class="d-block text-muted">{{#str}} h5ptype_usesimages, local_coursegen {{/str}}</small>{{/usesimages}}
+                    <small class="d-block text-muted">{{description}}</small>
+                    {{#usesimages}}<small class="d-block text-muted font-italic">{{#str}} h5ptype_usesimages, local_coursegen {{/str}}</small>{{/usesimages}}
                 </button>
             </div>
             {{/h5ptypes}}

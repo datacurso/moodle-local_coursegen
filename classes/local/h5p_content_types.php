@@ -90,7 +90,7 @@ class h5p_content_types {
     /**
      * The list as the modal shows it.
      *
-     * @return array[] Each with type, name and usesimages.
+     * @return array[] Each with type, name, description, iconurl and usesimages.
      */
     public static function for_modal(): array {
         $list = [];
@@ -98,9 +98,26 @@ class h5p_content_types {
             $list[] = [
                 'type' => $type,
                 'name' => get_string('h5ptype_' . $type, 'local_coursegen'),
+                'description' => get_string('h5ptypedesc_' . $type, 'local_coursegen'),
+                'iconurl' => self::icon_url($type),
                 'usesimages' => $usesimages,
             ];
         }
         return $list;
+    }
+
+    /**
+     * The picture H5P gives the content type, or the icon of the H5P activity when the type has none.
+     *
+     * @param string $type
+     * @return string
+     */
+    private static function icon_url(string $type): string {
+        global $CFG, $OUTPUT;
+
+        if (file_exists($CFG->dirroot . '/local/coursegen/pix/h5p/' . $type . '.svg')) {
+            return $OUTPUT->image_url('h5p/' . $type, 'local_coursegen')->out(false);
+        }
+        return $OUTPUT->image_url('monologo', 'h5pactivity')->out(false);
     }
 }

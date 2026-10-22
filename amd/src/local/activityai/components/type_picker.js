@@ -33,6 +33,8 @@ export default class extends BaseComponent {
             CHOSEN: "[data-region='local_coursegen/activity/chosen']",
             CHOSEN_LABEL: "[data-region='local_coursegen/activity/chosen_label']",
             CHANGE: "[data-action='local_coursegen/activity/change-type']",
+            CHANGE_KIND: "[data-region='local_coursegen/activity/change_kind']",
+            PROMPT: "[data-region='local_coursegen/activity/prompt']",
             WELCOME: "[data-region='local_coursegen/activity/welcome']",
         };
     }
@@ -61,6 +63,9 @@ export default class extends BaseComponent {
         if (action === 'local_coursegen/activity/pick-h5ptype') {
             event.preventDefault();
             this.reactive.dispatch('chooseH5pType', {type: target.dataset.type || ''});
+        } else if (action === 'local_coursegen/activity/change-kind') {
+            event.preventDefault();
+            this.reactive.dispatch('changeH5pKind');
         } else if (action === 'local_coursegen/activity/change-type') {
             event.preventDefault();
             this._askForTheTypeAgain();
@@ -110,28 +115,63 @@ export default class extends BaseComponent {
             labelElement.textContent = label;
         }
 
-        // The type cannot change once the conversation started.
-        const change = this.getElement(this.selectors.CHANGE);
-        if (change && chosen) {
-            chosen.querySelector(this.selectors.CHANGE)?.classList.toggle('d-none', Boolean(session.jobid));
+        // The type cannot change once the conversation started; H5P can go back to its kinds without leaving H5P.
+        const started = Boolean(session.jobid);
+        chosen?.querySelector(this.selectors.CHANGE)?.classList.toggle('d-none', started);
+        chosen?.querySelector(this.selectors.CHANGE_KIND)
+            ?.classList.toggle('d-none', started || session.activitytype !== 'h5pactivity');
+
+        await this._placeholder(session, chatVisible);
+    }
+
+    /**
+     * The field of the chat says what is going to be created, with the type that was picked.
+     *
+     * @param {Object} session
+     * @param {boolean} chatVisible
+     */
+    async _placeholder(session, chatVisible) {
+        const prompt = this.footer?.querySelector(this.selectors.PROMPT);
+        if (!prompt) {
+            return;
         }
+
+        if (this.defaultPlaceholder === undefined) {
+            this.defaultPlaceholder = prompt.getAttribute('placeholder') || '';
+        }
+
+        const name = chatVisible ? await this._name(session) : '';
+        prompt.setAttribute(
+            'placeholder',
+            name ? await getString('activitytype_placeholder', 'local_coursegen', name) : this.defaultPlaceholder
+        );
     }
 
     async _label(session) {
+        const name = await this._name(session);
+        return name ? getString('activitytype_chosen', 'local_coursegen', name) : '';
+    }
+
+    /**
+     * The name of what is going to be created: the type, and for H5P its kind.
+     *
+     * @param {Object} session
+     * @returns {Promise<string>} Empty when the type is not decided.
+     */
+    async _name(session) {
         const type = this.reactive.state.page.activitytypes.find((item) => item.modname === session.activitytype);
         if (!type) {
             return '';
         }
 
-        let name = type.name;
         if (type.modname === 'h5pactivity' && session.h5ptype) {
             const kind = this.reactive.state.page.h5ptypes.find((item) => item.type === session.h5ptype);
             if (kind) {
-                name = type.name + ' · ' + kind.name;
+                return type.name + ' · ' + kind.name;
             }
         }
 
-        return getString('activitytype_chosen', 'local_coursegen', name);
+        return type.name;
     }
 
     _show(element, visible, displayClass = 'd-block') {
