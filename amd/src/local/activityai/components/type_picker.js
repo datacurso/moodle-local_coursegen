@@ -14,7 +14,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * The steps of the activity modal that come after the chooser of types: the kinds of H5P and the bar with the type.
+ * The bar of the activity modal that shows the type picked, with the links to change it, and the field that names it.
  *
  * @module     local_coursegen/local/activityai/components/type_picker
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -29,7 +29,6 @@ export default class extends BaseComponent {
         this.name = 'local_coursegen_activityai_type_picker';
         this.footer = descriptor.footer || null;
         this.selectors = {
-            H5PLIST: "[data-region='local_coursegen/activity/h5plist']",
             CHOSEN: "[data-region='local_coursegen/activity/chosen']",
             CHOSEN_LABEL: "[data-region='local_coursegen/activity/chosen_label']",
             CHANGE: "[data-action='local_coursegen/activity/change-type']",
@@ -60,10 +59,7 @@ export default class extends BaseComponent {
         }
 
         const action = target.dataset.action;
-        if (action === 'local_coursegen/activity/pick-h5ptype') {
-            event.preventDefault();
-            this.reactive.dispatch('chooseH5pType', {type: target.dataset.type || ''});
-        } else if (action === 'local_coursegen/activity/change-kind') {
+        if (action === 'local_coursegen/activity/change-kind') {
             event.preventDefault();
             this.reactive.dispatch('changeH5pKind');
         } else if (action === 'local_coursegen/activity/change-type') {
@@ -93,8 +89,6 @@ export default class extends BaseComponent {
     async _refresh() {
         const session = this.reactive.state.session;
         const step = String(session.typestep || 'type');
-
-        this._show(this.getElement(this.selectors.H5PLIST), step === 'h5p');
 
         // The chat, with its footer, only shows once the type is decided (or the teacher chose to describe it freely).
         const chatVisible = step === 'prompt';

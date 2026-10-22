@@ -110,7 +110,6 @@ class Mutations {
         }
 
         stateManager.setReadOnly(false);
-        stateManager.state.session.h5ptype = '';
         stateManager.state.session.typestep = 'h5p';
         stateManager.setReadOnly(true);
     }
