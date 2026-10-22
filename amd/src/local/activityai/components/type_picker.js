@@ -14,7 +14,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * The bar of the activity modal that shows the type picked, with the links to change it, and the field that names it.
+ * The bar of the activity modal that shows the type picked, and the field that names it.
  *
  * @module     local_coursegen/local/activityai/components/type_picker
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -31,15 +31,12 @@ export default class extends BaseComponent {
         this.selectors = {
             CHOSEN: "[data-region='local_coursegen/activity/chosen']",
             CHOSEN_LABEL: "[data-region='local_coursegen/activity/chosen_label']",
-            CHANGE: "[data-action='local_coursegen/activity/change-type']",
-            CHANGE_KIND: "[data-region='local_coursegen/activity/change_kind']",
             PROMPT: "[data-region='local_coursegen/activity/prompt']",
             WELCOME: "[data-region='local_coursegen/activity/welcome']",
         };
     }
 
     stateReady() {
-        this.addEventListener(this.element, 'click', this._handleClick);
         this._refresh();
     }
 
@@ -50,40 +47,6 @@ export default class extends BaseComponent {
             {watch: 'session.h5ptype:updated', handler: this._refresh},
             {watch: 'session.jobid:updated', handler: this._refresh},
         ];
-    }
-
-    _handleClick(event) {
-        const target = event.target.closest('[data-action]');
-        if (!target || !this.element.contains(target)) {
-            return;
-        }
-
-        const action = target.dataset.action;
-        if (action === 'local_coursegen/activity/change-kind') {
-            event.preventDefault();
-            this.reactive.dispatch('changeH5pKind');
-        } else if (action === 'local_coursegen/activity/change-type') {
-            event.preventDefault();
-            this._askForTheTypeAgain();
-        }
-    }
-
-    /**
-     * Back to the chooser of types: the modal closes and opens again where it was, which starts from the chooser.
-     */
-    _askForTheTypeAgain() {
-        const session = this.reactive.state.session;
-        if (session.jobid) {
-            return;
-        }
-
-        const position = {
-            courseid: this.reactive.state.page.courseid,
-            sectionnum: session.sectionnum,
-            beforemod: session.beforemod,
-        };
-        this.reactive.dispatch('closeModal');
-        this.reactive.dispatch('openModal', position);
     }
 
     async _refresh() {
@@ -108,12 +71,6 @@ export default class extends BaseComponent {
         if (labelElement) {
             labelElement.textContent = label;
         }
-
-        // The type cannot change once the conversation started; H5P can go back to its kinds without leaving H5P.
-        const started = Boolean(session.jobid);
-        chosen?.querySelector(this.selectors.CHANGE)?.classList.toggle('d-none', started);
-        chosen?.querySelector(this.selectors.CHANGE_KIND)
-            ?.classList.toggle('d-none', started || session.activitytype !== 'h5pactivity');
 
         await this._placeholder(session, chatVisible);
     }

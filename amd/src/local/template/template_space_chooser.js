@@ -328,6 +328,36 @@ const bindPick = (modal, items, selection) => {
     rootList.on(ModalEvents.hidden, onHidden);
 };
 
+/** @type {string} The region of the button in the header that goes back to the previous view. */
+const BACK_BUTTON_REGION = 'local_coursegen/chooser/back';
+
+/**
+ * Put a Back button at the start of a modal's header, always in sight, that settles the session as going back.
+ *
+ * @param {Object} modal The chooser modal.
+ * @param {string} label The text of the button.
+ * @param {ChooserSelection} selection The session to settle.
+ */
+const addHeaderBack = (modal, label, selection) => {
+    const header = modal.getRoot()[0].querySelector('.modal-header');
+    if (!header) {
+        return;
+    }
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'btn btn-link p-0 mr-3 text-nowrap';
+    button.dataset.region = BACK_BUTTON_REGION;
+    const arrow = document.createElement('span');
+    arrow.className = 'fa fa-arrow-left mr-1';
+    arrow.setAttribute('aria-hidden', 'true');
+    button.append(arrow, document.createTextNode(label));
+    button.addEventListener(EVENT.CLICK, () => {
+        selection.settle({modname: '', name: '', icon: '', back: true});
+        modal.hide();
+    });
+    header.prepend(button);
+};
+
 /**
  * Show the items in the chooser modal and wire up the pick.
  *
@@ -338,14 +368,18 @@ const bindPick = (modal, items, selection) => {
  * @param {ChooserSelection} params.selection The session to settle.
  * @param {string|null} params.linkLabel The text of the link under the list, or null for no link.
  * @param {boolean} params.showTabs Whether the Activities and Resources tabs are offered.
+ * @param {string|null} params.backLabel The text of a Back button in the header, or null for none.
  */
-const showItems = async({items, modalPromise, body, selection, linkLabel, showTabs}) => {
+const showItems = async({items, modalPromise, body, selection, linkLabel, showTabs, backLabel}) => {
     ChooserDialogue.displayChooser(modalPromise, items, keepFavouritesUnchanged, {footer: false});
     const data = templateData(items, showTabs);
     const rendered = await Templates.render('core_course/activitychooser', data);
     body.resolve(withFreeLink(rendered, linkLabel));
     const modal = await modalPromise;
     bindPick(modal, items, selection);
+    if (backLabel) {
+        addHeaderBack(modal, backLabel, selection);
+    }
 };
 
 /**
@@ -356,15 +390,16 @@ const showItems = async({items, modalPromise, body, selection, linkLabel, showTa
  * @param {Function} options.loadItems Returns the items, or a promise of them.
  * @param {string|null} options.linkLabel The text of a link under the list, or null for no link.
  * @param {boolean} options.showTabs Whether the Activities and Resources tabs are offered.
+ * @param {string|null} options.backLabel The text of a Back button in the header, or null for none.
  * @returns {Promise<Object|null>} The pick, null when the modal is closed without one.
  */
-const openChooser = async({title, loadItems, linkLabel, showTabs}) => {
+const openChooser = async({title, loadItems, linkLabel, showTabs, backLabel = null}) => {
     const body = createDeferred();
     const modalPromise = createChooserModal(body.promise, title);
     const selection = new ChooserSelection();
     try {
         const items = await loadItems();
-        await showItems({items, modalPromise, body, selection, linkLabel, showTabs});
+        await showItems({items, modalPromise, body, selection, linkLabel, showTabs, backLabel});
     } catch (error) {
         const modal = await modalPromise;
         modal.destroy();
@@ -400,16 +435,17 @@ export const chooseActivityType = ({courseId, supportedTypes, title = null, free
  * @param {string} options.title The title of the modal.
  * @param {Array} options.kinds What to offer: type, name, description, iconurl and usesimages of each.
  * @param {string} options.usesImagesLabel The note shown for the kinds that use images.
- * @param {string} options.backLabel The text of the link that goes back, under the list.
- * @returns {Promise<{modname: string, name: string, icon: string, free: (boolean|undefined)}|null>}
- *     The kind picked (its type in modname); with free set when the link to go back was used; null when closed.
+ * @param {string} options.backLabel The text of the Back button in the header.
+ * @returns {Promise<{modname: string, back: (boolean|undefined)}|null>}
+ *     The kind picked (its type in modname); with back set when Back was used; null when closed.
  */
 export const chooseKind = ({title, kinds, usesImagesLabel, backLabel}) => {
     return openChooser({
         title,
         loadItems: () => kindItems(kinds, usesImagesLabel),
-        linkLabel: backLabel,
+        linkLabel: null,
         showTabs: false,
+        backLabel,
     });
 };
 

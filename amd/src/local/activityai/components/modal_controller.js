@@ -104,6 +104,7 @@ export default class extends BaseComponent {
 
         this.modal.getRoot().addClass('local_coursegen_course_ai_modal');
         this.modal.show();
+        this._addHeaderBack(await getString('activitytype_back', 'local_coursegen'));
 
         const rootElement = this.modal.getRoot()[0];
         if (!rootElement) {
@@ -166,7 +167,7 @@ export default class extends BaseComponent {
             }
 
             const kind = await this._pickKind();
-            if (kind !== null) {
+            if (typeof kind === 'string') {
                 this.reactive.dispatch('chooseH5pType', {type: kind});
                 return true;
             }
@@ -176,26 +177,27 @@ export default class extends BaseComponent {
     /**
      * Ask for the kind of H5P with the same chooser Moodle uses for the types.
      *
-     * @returns {Promise<string|null>} The kind ('' lets the AI choose it), or null to go back to the types.
+     * @returns {Promise<string|null|undefined>} The kind; null when the teacher went back; undefined when it was closed.
      */
     async _pickKind() {
         const choice = await openKindChooser({
             title: await getString('h5ptype_title', 'local_coursegen'),
             kinds: this.reactive.state.page.h5ptypes,
             usesImagesLabel: await getString('h5ptype_usesimages', 'local_coursegen'),
-            backLabel: await getString('h5ptype_back', 'local_coursegen'),
+            backLabel: await getString('activitytype_back', 'local_coursegen'),
         });
-        if (!choice || choice.free) {
-            return null;
+        if (!choice) {
+            return undefined;
         }
 
-        return choice.modname;
+        return choice.back ? null : choice.modname;
     }
 
     getWatchers() {
         return [
             {watch: 'modal.open:updated', handler: this._handleOpenChange},
             {watch: 'session.typestep:updated', handler: this._handleStepChange},
+            {watch: 'session.jobid:updated', handler: this._hideBackOnceStarted},
         ];
     }
 
@@ -212,7 +214,75 @@ export default class extends BaseComponent {
 
         const current = String(element.h5ptype || '');
         const kind = await this._pickKind();
-        this.reactive.dispatch('chooseH5pType', {type: kind === null ? current : kind});
+        if (kind === null) {
+            // Back from the kinds goes to the types.
+            this._restart();
+            return;
+        }
+        this.reactive.dispatch('chooseH5pType', {type: kind === undefined ? current : kind});
+    }
+
+    /**
+     * The Back button is for before the conversation starts: once it has, the type cannot change.
+     *
+     * @param {Object} param0
+     * @param {Object} param0.element The session.
+     */
+    _hideBackOnceStarted({element}) {
+        const button = this.modal?.getRoot()[0].querySelector('[data-region="local_coursegen/activity/back"]');
+        button?.classList.toggle('d-none', Boolean(element.jobid));
+    }
+
+    /**
+     * Start again from the chooser of types: the modal closes and opens again where it was.
+     */
+    _restart() {
+        const state = this.reactive.state;
+        const position = {
+            courseid: state.page.courseid,
+            sectionnum: state.session.sectionnum,
+            beforemod: state.session.beforemod,
+        };
+        this.reactive.dispatch('closeModal');
+        this.reactive.dispatch('openModal', position);
+    }
+
+    /**
+     * One step back from the chat: to the kinds of H5P, or to the types for any other type.
+     */
+    _goBack() {
+        const session = this.reactive.state.session;
+        if (session.jobid) {
+            return;
+        }
+
+        if (session.activitytype === 'h5pactivity') {
+            this.reactive.dispatch('changeH5pKind');
+        } else {
+            this._restart();
+        }
+    }
+
+    /**
+     * A Back button at the start of the header of the chat, in sight while the conversation has not started.
+     *
+     * @param {string} label The text of the button.
+     */
+    _addHeaderBack(label) {
+        const header = this.modal.getRoot()[0].querySelector('.modal-header');
+        if (!header) {
+            return;
+        }
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'btn btn-link p-0 mr-3 text-nowrap';
+        button.dataset.region = 'local_coursegen/activity/back';
+        const arrow = document.createElement('span');
+        arrow.className = 'fa fa-arrow-left mr-1';
+        arrow.setAttribute('aria-hidden', 'true');
+        button.append(arrow, document.createTextNode(label));
+        button.addEventListener('click', () => this._goBack());
+        header.prepend(button);
     }
 
     async _close() {
