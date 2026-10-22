@@ -113,6 +113,7 @@ export default class extends BaseComponent {
             {watch: 'session.h5ptype:updated', handler: this._sync},
             {watch: 'session.jobid:updated', handler: this._sync},
             {watch: 'session.locked:updated', handler: this._sync},
+            {watch: 'upload:updated', handler: this._drawFile},
         ];
     }
 
@@ -136,6 +137,11 @@ export default class extends BaseComponent {
                 field.style.removeProperty('display');
             }
         }
+        // The file shown in the footer is shown by the form instead, so it is not shown twice.
+        const shown = this.footer?.querySelector("[data-region='local_coursegen/activity/selectedfile']");
+        if (shown) {
+            shown.hidden = forThisKind;
+        }
         // The images and language options of the footer stay, because they apply to the presentation too.
     }
 
@@ -156,6 +162,22 @@ export default class extends BaseComponent {
         const {html, js} = await Templates.renderForPromise('local_coursegen/course_presentation_builder', context);
         Templates.replaceNodeContents(this.element, html, js);
         this._sync();
+        this._drawFile();
+    }
+
+    /**
+     * The file attached, if any, with the way to remove it. The upload itself is the one of the chat: the button of
+     * the footer opens the file picker and the file travels with the instruction.
+     */
+    _drawFile() {
+        const filename = String(this.reactive.state.upload.filename || '');
+        const box = this.element.querySelector("[data-region='local_coursegen/activity/builder_file']");
+        const name = this.element.querySelector("[data-region='local_coursegen/activity/builder_file_name']");
+        box?.classList.toggle('d-none', filename === '');
+        box?.classList.toggle('d-flex', filename !== '');
+        if (name) {
+            name.textContent = filename;
+        }
     }
 
     /**
@@ -277,6 +299,12 @@ export default class extends BaseComponent {
             case 'remove':
                 slides.splice(index, 1);
                 break;
+            case 'attach':
+                this.footer?.querySelector("[data-region='local_coursegen/activity/upload']")?.click();
+                return;
+            case 'detach':
+                this.reactive.dispatch('setUpload', {draftitemid: null, filename: ''});
+                return;
             case 'submit':
                 await this._submit();
                 return;
@@ -354,6 +382,9 @@ export default class extends BaseComponent {
             'Create a Course Presentation H5P.',
             'Topic and objective: ' + model.topic.trim(),
         ];
+        if (this.reactive.state.upload.filename) {
+            lines.push('Base the content on the attached document.');
+        }
         if (model.mode === 'auto') {
             lines.push('Number of slides: ' + this._limitText() + '.');
             lines.push('Decide yourself what each slide has: write the slides the topic needs.');

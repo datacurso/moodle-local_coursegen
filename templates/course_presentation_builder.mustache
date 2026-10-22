@@ -92,6 +92,26 @@
         </div>
     </div>
 
+    <div class="card mb-3">
+        <div class="card-body">
+            <h5 class="card-title">{{#str}} cpb_file_title, local_coursegen {{/str}}</h5>
+            <p class="text-muted">{{#str}} cpb_file_help, local_coursegen {{/str}}</p>
+            <div class="d-flex align-items-center flex-wrap" style="gap: .75rem;">
+                <button type="button" class="btn btn-outline-secondary" data-action="local_coursegen/builder/attach">
+                    <i class="fa fa-paperclip mr-1" aria-hidden="true"></i>{{#str}} cpb_file_attach, local_coursegen {{/str}}
+                </button>
+                <span class="d-none align-items-center" data-region="local_coursegen/activity/builder_file">
+                    <i class="fa fa-file mr-2" aria-hidden="true"></i>
+                    <span class="text-truncate" style="max-width: 24rem;" data-region="local_coursegen/activity/builder_file_name"></span>
+                    <button type="button" class="btn btn-link p-0 ml-2" data-action="local_coursegen/builder/detach"
+                            aria-label="{{#str}} cpb_file_remove, local_coursegen {{/str}}" title="{{#str}} cpb_file_remove, local_coursegen {{/str}}">
+                        <i class="fa fa-times" aria-hidden="true"></i>
+                    </button>
+                </span>
+            </div>
+        </div>
+    </div>
+
     {{#manual}}
     <h5 class="mb-2">{{#str}} cpb_slides_title, local_coursegen {{/str}}</h5>
     <div data-region="local_coursegen/activity/builder_slides">{{#slides}}{{> local_coursegen/course_presentation_slide}}{{/slides}}</div>
