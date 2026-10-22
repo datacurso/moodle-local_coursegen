@@ -27,6 +27,7 @@
     * title, text, image, video, question string - What was written.
     * imagenone, imagegenerate, imageupload bool - Which way the image is made: none, generated or uploaded.
     * imagename string      - The name of the picture uploaded for the slide.
+    * videoerror, imageerror string - What is wrong with the video address or the picture of the slide, if anything.
     * canimages bool        - Whether the person may generate images.
     * imageoptional bool    - Whether the slide may go without an image (not for the kinds that are a slide with an image).
     * qtypes array          - The kinds of question: value, label, selected.
@@ -87,7 +88,8 @@
             {{/imagegenerate}}
             {{#imageupload}}
             <div class="d-flex align-items-center flex-wrap" style="gap: .75rem;">
-                <button type="button" class="btn btn-outline-secondary" data-action="local_coursegen/builder/pickimage">
+                <button type="button" class="btn {{#imageerror}}btn-outline-danger{{/imageerror}}{{^imageerror}}btn-outline-secondary{{/imageerror}}"
+                        data-action="local_coursegen/builder/pickimage" {{#imageerror}}data-invalid="true"{{/imageerror}}>
                     <i class="fa fa-image mr-1" aria-hidden="true"></i>{{#str}} cpb_image_choose, local_coursegen {{/str}}
                 </button>
                 {{#imagename}}
@@ -101,13 +103,15 @@
                 </span>
                 {{/imagename}}
             </div>
+            {{#imageerror}}<div class="text-danger small mt-1" role="alert">{{imageerror}}</div>{{/imageerror}}
             {{/imageupload}}
         </div>
         {{/hasimage}}
         {{#hasvideo}}
         <div class="form-group">
             <label class="d-block">{{#str}} cpb_video, local_coursegen {{/str}}</label>
-            <input type="url" class="form-control" data-slide-field="video" value="{{video}}" placeholder="https://">
+            <input type="url" class="form-control {{#videoerror}}is-invalid{{/videoerror}}" data-slide-field="video" value="{{video}}" placeholder="https://">
+            <div class="invalid-feedback">{{videoerror}}</div>
             <small class="form-text text-muted">{{#str}} cpb_video_help, local_coursegen {{/str}}</small>
         </div>
         {{/hasvideo}}
