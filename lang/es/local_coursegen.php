@@ -1237,3 +1237,7 @@ $string['cpb_min'] = 'Mínimo';
 $string['cpb_max'] = 'Máximo';
 $string['cpb_auto_note'] = 'La IA decide qué lleva cada diapositiva. Para elegir qué lleva cada una, defínelas una por una.';
 $string['cpb_error_limits'] = 'Los límites deben estar entre 3 y 30 diapositivas, y el máximo no puede ser menor que el mínimo.';
+$string['cpb_file_title'] = 'Documento de apoyo';
+$string['cpb_file_help'] = 'Adjunta un sílabo o cualquier documento en el que la IA deba basar la presentación.';
+$string['cpb_file_attach'] = 'Adjuntar un archivo';
+$string['cpb_file_remove'] = 'Quitar el archivo';

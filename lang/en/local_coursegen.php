@@ -1276,3 +1276,7 @@ $string['cpb_min'] = 'Minimum';
 $string['cpb_max'] = 'Maximum';
 $string['cpb_auto_note'] = 'The AI decides what each slide has. To choose what each slide has, define them one by one.';
 $string['cpb_error_limits'] = 'The limits must be between 3 and 30 slides, and the maximum cannot be below the minimum.';
+$string['cpb_file_title'] = 'Supporting document';
+$string['cpb_file_help'] = 'Attach a syllabus or any document the AI should base the presentation on.';
+$string['cpb_file_attach'] = 'Attach a file';
+$string['cpb_file_remove'] = 'Remove the file';
