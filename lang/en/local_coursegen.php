@@ -1267,3 +1267,4 @@ $string['cpb_file_title'] = 'Supporting document';
 $string['cpb_file_help'] = 'Attach a syllabus or any document the AI should base the presentation on.';
 $string['cpb_file_attach'] = 'Attach a file';
 $string['cpb_file_remove'] = 'Remove the file';
+$string['cpb_empty'] = 'There are no slides yet. Add the ones you want, at least 3.';

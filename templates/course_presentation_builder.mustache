@@ -115,6 +115,7 @@
     {{#manual}}
     <h5 class="mb-2">{{#str}} cpb_slides_title, local_coursegen {{/str}}</h5>
     <div data-region="local_coursegen/activity/builder_slides">{{#slides}}{{> local_coursegen/course_presentation_slide}}{{/slides}}</div>
+    {{^slides}}<p class="text-muted">{{#str}} cpb_empty, local_coursegen {{/str}}</p>{{/slides}}
     <button type="button" class="btn btn-outline-primary mb-3" data-action="local_coursegen/builder/add">
         <i class="fa fa-plus mr-1" aria-hidden="true"></i>{{#str}} cpb_add, local_coursegen {{/str}}
     </button>
