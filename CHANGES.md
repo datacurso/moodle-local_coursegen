@@ -5,8 +5,8 @@ All notable changes to this project will be documented in this file. Each change
 ## [2.0.10] - 2026101230
 
 ### Added
-- **The modal to create an activity with the AI starts from Moodle's own activity chooser**  
-  Instead of describing the activity from nothing, the modal first opens the same chooser Moodle shows to add an activity, with only the types the AI can create on the site, and the AI creates exactly the type that was picked. Picking H5P asks for the kind of H5P next in the same kind of chooser, each kind with the picture H5P gives it and its description behind the info button. In the chat, the field says what is going to be created, for example the H5P kind. Every view has a Back button in its header that returns to the previous one: from the chat to the kinds of H5P (or the types) and from the kinds to the types. The type picked travels to the AI service, which no longer guesses it from the text, and a type the site does not offer is refused.
+- **The chat to create an activity with the AI asks for the type inside the chat itself**  
+  Instead of describing the activity from nothing, the chat opens with the types the AI can create on the site, drawn as the tiles of Moodle's own activity chooser. What is chosen stays in the conversation as the teacher's side of it, H5P goes on to ask for its kind in the same chat, with the description of each kind as its hint, and the field says what is going to be created, for example the H5P kind. A Back button in the header goes one step back, from the chat to the kinds of H5P or the types, until the conversation starts. The type picked travels to the AI service, which no longer guesses it from the text, and a type the site does not offer is refused.
 
 ## [2.0.10] - 2026101221
 

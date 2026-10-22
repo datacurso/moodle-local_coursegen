@@ -1170,3 +1170,4 @@ $string['h5ptypedesc_speak_the_words'] = 'Los estudiantes responden una pregunta
 $string['h5ptypedesc_speak_the_words_set'] = 'Una serie de preguntas que se responden con la voz.';
 $string['activitytype_placeholder'] = 'Describe el recurso de tipo {$a} que quieres crear.';
 $string['activitytype_back'] = 'Atrás';
+$string['activitytype_title'] = '¿Qué quieres crear?';
