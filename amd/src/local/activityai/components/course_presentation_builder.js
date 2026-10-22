@@ -47,8 +47,6 @@ const PARTS = {
 /** The kinds of question the service writes today. */
 const QUESTION_KINDS = ['none', 'multi_choice', 'true_false', 'fill_in_the_blanks'];
 
-const TONES = ['neutral', 'close', 'formal', 'technical'];
-
 /** How each kind of slide is named in the instruction, which is written in English. */
 const KIND_NAMES = {
     cover: 'cover', content: 'content', content_image: 'content with an image', content_video: 'content with a video',
@@ -58,8 +56,6 @@ const KIND_NAMES = {
 const QUESTION_NAMES = {
     multi_choice: 'multiple choice', true_false: 'true or false', fill_in_the_blanks: 'fill in the blanks',
 };
-
-const TONE_NAMES = {neutral: 'neutral', close: 'close and friendly', formal: 'formal', technical: 'technical'};
 
 /**
  * The slides a new presentation starts with, so the form shows how it is used.
@@ -89,14 +85,13 @@ export default class extends BaseComponent {
     create(descriptor) {
         this.name = 'local_coursegen_activityai_course_presentation_builder';
         this.footer = descriptor.footer || null;
-        this.model = {topic: '', tone: 'neutral', exact: false, exactcount: 6, slides: starterSlides()};
+        this.model = {topic: '', exact: false, exactcount: 6, slides: starterSlides()};
         this.strings = null;
     }
 
     async stateReady() {
         const keys = [
             ...Object.keys(PARTS).map((name) => 'cpb_tpl_' + name),
-            ...TONES.map((name) => 'cpb_tone_' + name),
             'cpb_q_none', 'cpb_q_multi', 'cpb_q_tf', 'cpb_q_fill',
             'cpb_error_topic', 'cpb_error_slides', 'cpb_error_video',
         ];
@@ -149,9 +144,6 @@ export default class extends BaseComponent {
         const slides = model.slides.map((slide, index) => this._slideContext(slide, index, model.slides.length));
         const context = {
             topic: model.topic,
-            tones: TONES.map((value) => ({
-                value, label: this.strings['cpb_tone_' + value], selected: value === model.tone,
-            })),
             exact: model.exact,
             exactcount: model.exactcount,
             slides,
@@ -339,7 +331,6 @@ export default class extends BaseComponent {
         const lines = [
             'Create a Course Presentation H5P.',
             'Topic and objective: ' + model.topic.trim(),
-            'Tone: ' + TONE_NAMES[model.tone] + '.',
             model.exact
                 ? 'Number of slides: exactly ' + model.exactcount + '.'
                 : 'Number of slides: the ones the content needs, at least ' + MIN_SLIDES + '.',
