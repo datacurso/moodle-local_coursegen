@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file. Each change
 
 ### Added
 - **The chat to create an activity with the AI asks for the type inside the chat itself**  
-  Instead of describing the activity from nothing, the chat opens with the types the AI can create on the site, drawn as the tiles of Moodle's own activity chooser. What is chosen stays in the conversation as the teacher's side of it, H5P goes on to ask for its kind in the same chat, with the description of each kind as its hint, and the field says what is going to be created, for example the H5P kind. A Back button in the header goes one step back, from the chat to the kinds of H5P or the types, until the conversation starts. The type picked travels to the AI service, which no longer guesses it from the text, and a type the site does not offer is refused.
+  Instead of describing the activity from nothing, the chat opens with the types the AI can create on the site, drawn as the tiles of Moodle's own activity chooser. What is chosen stays in the conversation as the teacher's side of it, H5P goes on to ask for its kind in the same chat, with the description of each kind as its hint, and the field says what is going to be created, for example the H5P kind. Each list has a search box that filters the tiles by name and, for the H5P kinds, by description, ignoring case and accents. A Back button in the header goes one step back, from the chat to the kinds of H5P or the types, until the conversation starts. The type picked travels to the AI service, which no longer guesses it from the text, and a type the site does not offer is refused.
 
 ## [2.0.10] - 2026101228
 

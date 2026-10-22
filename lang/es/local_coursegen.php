@@ -1184,3 +1184,4 @@ $string['h5ptypedesc_speak_the_words_set'] = 'Una serie de preguntas que se resp
 $string['activitytype_placeholder'] = 'Describe el recurso de tipo {$a} que quieres crear.';
 $string['activitytype_back'] = 'Atrás';
 $string['activitytype_title'] = '¿Qué quieres crear?';
+$string['activitytype_noresults'] = 'Ningún resultado coincide con tu búsqueda.';
