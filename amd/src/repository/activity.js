@@ -143,3 +143,23 @@ export async function uploadActivityFile({courseid, jobid, draftitemid}) {
         },
     ])[0];
 }
+
+/**
+ * Upload the picture a teacher chose for one slide of a Course Presentation.
+ *
+ * @param {{courseid: number, jobid: string, draftitemid: number, slide: number}} payload
+ * @return {Promise<Object>} response
+ */
+export async function uploadActivitySlideImage({courseid, jobid, draftitemid, slide}) {
+    return ajax.call([
+        {
+            methodname: 'local_coursegen_activity_slide_image_upload',
+            args: {
+                courseid: Number(courseid) || 0,
+                jobid,
+                draftitemid: Number(draftitemid) || 0,
+                slide: Number(slide) || 0,
+            },
+        },
+    ])[0];
+}

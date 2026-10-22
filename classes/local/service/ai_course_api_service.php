@@ -180,6 +180,22 @@ class ai_course_api_service {
     }
 
     /**
+     * Upload the picture a teacher chose for one slide of a Course Presentation.
+     *
+     * @param string $threadid External activity generation identifier (thread_id).
+     * @param stored_file $file The picture.
+     * @param int $slide Number of the slide it is for, 1 is the first.
+     * @return array Decoded response from the API.
+     */
+    public function upload_activity_slide_image(string $threadid, stored_file $file, int $slide): array {
+        return $this->client->upload_file(
+            '/activity/slide-image/upload',
+            $file,
+            ['thread_id' => $threadid, 'slide' => $slide]
+        );
+    }
+
+    /**
      * Send human feedback for an existing AI course planning session.
      *
      * @param string $sessionid External planning session identifier.

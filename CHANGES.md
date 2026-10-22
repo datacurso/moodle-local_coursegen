@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026101234
+
+### Added
+- **A Course Presentation can use the pictures a teacher uploads**  
+  In the form of the presentation, the image of a slide can be uploaded as well as generated or left out. The file picker opens for a picture, and the picture goes into its slide as it is, instead of the AI making one. A slide that is a slide with an image can no longer go without its image. A new web service sends each picture to the AI service with the number of its slide.
+
+## [2.0.10] - 2026101231
+
+### Added
+- **A form to lay out a Course Presentation in the chat to create an activity**  
+  When the kind of H5P is Course Presentation, the chat shows a form instead of the single field: what the presentation is about and how the slides are decided. Either the person defines them one by one, and then the number of slides is the number listed, or the AI decides them, with no limit, a maximum, or a minimum and a maximum. Each slide is of a kind (cover, content, content with image or video, question, content with question, closing) and shows only the parts that kind has: the title, the text to write, the image to generate (images are made when a slide asks for one, with no general switch), the address of a video, and a question with its type. A file, such as a syllabus, can be attached with the file picker of the chat, and the AI bases the presentation on it. The list of slides starts empty: the person adds the ones wanted, and they can be removed, duplicated and moved. When something is missing, the fields with the problem turn red with their message, the first one is focused, and the red goes away as it is fixed. What is filled in becomes one instruction that says, slide by slide, what the AI has to write.
+
 ## [2.0.10] - 2026101230
 
 ### Added

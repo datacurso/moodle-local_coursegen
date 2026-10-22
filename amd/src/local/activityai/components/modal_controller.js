@@ -33,6 +33,7 @@ import {get_string as getString} from 'core/str';
 import ChatForm from 'local_coursegen/local/activityai/components/chat_form';
 import StreamOutput from 'local_coursegen/local/activityai/components/stream_output';
 import TypePicker from 'local_coursegen/local/activityai/components/type_picker';
+import CoursePresentationBuilder from 'local_coursegen/local/activityai/components/course_presentation_builder';
 import {fetchSupportedItems, kindItems} from 'local_coursegen/local/template/template_space_chooser';
 
 export default class extends BaseComponent {
@@ -123,6 +124,14 @@ export default class extends BaseComponent {
                 footer: rootElement.querySelector('.modal-footer'),
                 typeItems,
                 kindItems: kindList,
+            });
+
+            const builderSlot = document.createElement('div');
+            slot.append(builderSlot);
+            new CoursePresentationBuilder({
+                element: builderSlot,
+                reactive: this.reactive,
+                footer: rootElement.querySelector('.modal-footer'),
             });
         }
 

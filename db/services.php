@@ -95,6 +95,15 @@ $functions = [
         'capabilities' => 'moodle/course:manageactivities,moodle/course:update',
         'loginrequired' => true,
     ],
+    'local_coursegen_activity_slide_image_upload' => [
+        'classname' => 'local_coursegen\\external\\activity_slide_image_upload',
+        'methodname' => 'execute',
+        'description' => 'Upload the picture of a slide of a Course Presentation for an AI activity generation thread',
+        'type' => 'write',
+        'ajax' => true,
+        'capabilities' => 'moodle/course:manageactivities,moodle/course:update',
+        'loginrequired' => true,
+    ],
     'local_coursegen_manage_image_generation' => [
         'classname' => 'local_coursegen\\external\\manage_image_generation',
         'methodname' => 'execute',
