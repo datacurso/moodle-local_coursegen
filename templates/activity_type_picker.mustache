@@ -1,17 +1,13 @@
 {{!
     @template local_coursegen/activity_type_picker
 
-    The bar of the activity modal that shows what was picked, with the links to change it.
+    The bar of the activity modal that shows what was picked.
 
     Example context (json):
     {}
 }}
 <div class="local_coursegen_type_picker" data-region="local_coursegen/activity/typepicker">
-    <div data-region="local_coursegen/activity/chosen" class="d-none align-items-center justify-content-between mb-3 p-2 border rounded bg-light">
+    <div data-region="local_coursegen/activity/chosen" class="d-none align-items-center mb-3 p-2 border rounded bg-light">
         <span data-region="local_coursegen/activity/chosen_label"></span>
-        <span>
-            <a href="#" data-action="local_coursegen/activity/change-kind" data-region="local_coursegen/activity/change_kind" class="small d-none mr-3">{{#str}} h5ptype_current, local_coursegen {{/str}}</a>
-            <a href="#" data-action="local_coursegen/activity/change-type" class="small">{{#str}} activitytype_change, local_coursegen {{/str}}</a>
-        </span>
     </div>
 </div>

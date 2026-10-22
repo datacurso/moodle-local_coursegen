@@ -63,12 +63,12 @@ final class h5p_content_types_test extends \advanced_testcase {
     }
 
     /**
-     * The list shows every kind once, with its name, after the choice to let the AI pick.
+     * The list shows every kind once, with its name.
      */
     public function test_the_list_shows_every_kind_once(): void {
         $list = h5p_content_types::for_modal();
 
-        $this->assertSame(array_merge([''], array_keys(h5p_content_types::TYPES)), array_column($list, 'type'));
+        $this->assertSame(array_keys(h5p_content_types::TYPES), array_column($list, 'type'));
         foreach ($list as $kind) {
             $this->assertNotSame('', $kind['name'], $kind['type']);
         }

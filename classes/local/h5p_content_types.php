@@ -88,20 +88,12 @@ class h5p_content_types {
     }
 
     /**
-     * The list as the modal shows it, starting with the choice to let the AI pick the kind (an empty type).
+     * The list as the modal shows it.
      *
      * @return array[] Each with type, name, description, iconurl and usesimages.
      */
     public static function for_modal(): array {
-        global $OUTPUT;
-
-        $list = [[
-            'type' => '',
-            'name' => get_string('h5ptype_auto', 'local_coursegen'),
-            'description' => get_string('h5ptype_autodesc', 'local_coursegen'),
-            'iconurl' => $OUTPUT->image_url('monologo', 'h5pactivity')->out(false),
-            'usesimages' => false,
-        ]];
+        $list = [];
         foreach (self::TYPES as $type => $usesimages) {
             $list[] = [
                 'type' => $type,
