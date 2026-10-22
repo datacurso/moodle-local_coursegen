@@ -22,15 +22,22 @@
 
     Context variables required for this template:
     * topic string          - The topic and objective written so far.
-    * exact bool            - Whether the number of slides is pinned.
-    * exactcount int        - The number of slides when it is pinned.
+    * manual bool           - Whether the person defines the slides one by one (otherwise the AI decides them).
+    * count int             - How many slides the person defined.
+    * limitnone, limitmax, limitrange bool - The limit on the number of slides the AI decides.
+    * min, max int          - The limits of the number of slides.
     * slides array          - The slides, each drawn with local_coursegen/course_presentation_slide.
 
     Example context (json):
     {
         "topic": "",
-        "exact": false,
-        "exactcount": 6,
+        "manual": true,
+        "count": 5,
+        "limitnone": true,
+        "limitmax": false,
+        "limitrange": false,
+        "min": 3,
+        "max": 8,
         "slides": []
     }
 }}
@@ -47,27 +54,51 @@
                 <textarea id="cpb-topic" class="form-control" rows="3" data-field="topic"
                           placeholder="{{#str}} cpb_topic_help, local_coursegen {{/str}}">{{topic}}</textarea>
             </div>
-            <div class="form-row">
-                <div class="form-group col-12">
-                    <label class="d-block" for="cpb-count">{{#str}} cpb_count, local_coursegen {{/str}}</label>
-                    <div class="d-flex align-items-center" style="gap: .5rem;">
-                        <select id="cpb-count" class="custom-select" data-field="count">
-                            <option value="content" {{^exact}}selected{{/exact}}>{{#str}} cpb_count_content, local_coursegen {{/str}}</option>
-                            <option value="exact" {{#exact}}selected{{/exact}}>{{#str}} cpb_count_exact, local_coursegen {{/str}}</option>
-                        </select>
-                        <input type="number" min="3" max="30" class="form-control {{^exact}}d-none{{/exact}}" style="max-width: 6rem;"
-                               data-field="exactcount" value="{{exactcount}}" aria-label="{{#str}} cpb_count, local_coursegen {{/str}}">
-                    </div>
-                </div>
+            <div class="form-group">
+                <label class="d-block" for="cpb-mode">{{#str}} cpb_mode, local_coursegen {{/str}}</label>
+                <select id="cpb-mode" class="custom-select" data-field="mode">
+                    <option value="manual" {{#manual}}selected{{/manual}}>{{#str}} cpb_mode_manual, local_coursegen {{/str}}</option>
+                    <option value="auto" {{^manual}}selected{{/manual}}>{{#str}} cpb_mode_auto, local_coursegen {{/str}}</option>
+                </select>
+                {{#manual}}
+                <small class="form-text text-muted" data-region="local_coursegen/activity/builder_count">{{#str}} cpb_count_now, local_coursegen, {{count}} {{/str}}</small>
+                {{/manual}}
             </div>
+            {{^manual}}
+            <div class="form-row">
+                <div class="form-group col-md-6">
+                    <label class="d-block" for="cpb-limit">{{#str}} cpb_limit, local_coursegen {{/str}}</label>
+                    <select id="cpb-limit" class="custom-select" data-field="limit">
+                        <option value="none" {{#limitnone}}selected{{/limitnone}}>{{#str}} cpb_limit_none, local_coursegen {{/str}}</option>
+                        <option value="max" {{#limitmax}}selected{{/limitmax}}>{{#str}} cpb_limit_max, local_coursegen {{/str}}</option>
+                        <option value="range" {{#limitrange}}selected{{/limitrange}}>{{#str}} cpb_limit_range, local_coursegen {{/str}}</option>
+                    </select>
+                </div>
+                {{#limitrange}}
+                <div class="form-group col-md-3">
+                    <label class="d-block" for="cpb-min">{{#str}} cpb_min, local_coursegen {{/str}}</label>
+                    <input id="cpb-min" type="number" min="3" max="30" class="form-control" data-field="min" value="{{min}}">
+                </div>
+                {{/limitrange}}
+                {{^limitnone}}
+                <div class="form-group col-md-3">
+                    <label class="d-block" for="cpb-max">{{#str}} cpb_max, local_coursegen {{/str}}</label>
+                    <input id="cpb-max" type="number" min="3" max="30" class="form-control" data-field="max" value="{{max}}">
+                </div>
+                {{/limitnone}}
+            </div>
+            <p class="mb-0 text-muted">{{#str}} cpb_auto_note, local_coursegen {{/str}}</p>
+            {{/manual}}
         </div>
     </div>
 
+    {{#manual}}
     <h5 class="mb-2">{{#str}} cpb_slides_title, local_coursegen {{/str}}</h5>
     <div data-region="local_coursegen/activity/builder_slides">{{#slides}}{{> local_coursegen/course_presentation_slide}}{{/slides}}</div>
     <button type="button" class="btn btn-outline-primary mb-3" data-action="local_coursegen/builder/add">
         <i class="fa fa-plus mr-1" aria-hidden="true"></i>{{#str}} cpb_add, local_coursegen {{/str}}
     </button>
+    {{/manual}}
 
     <div class="alert alert-danger d-none" role="alert" data-region="local_coursegen/activity/builder_error"></div>
     <div class="text-right mb-3">

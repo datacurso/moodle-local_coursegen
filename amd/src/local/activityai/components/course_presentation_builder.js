@@ -85,7 +85,7 @@ export default class extends BaseComponent {
     create(descriptor) {
         this.name = 'local_coursegen_activityai_course_presentation_builder';
         this.footer = descriptor.footer || null;
-        this.model = {topic: '', exact: false, exactcount: 6, slides: starterSlides()};
+        this.model = {topic: '', mode: 'manual', limit: 'none', min: MIN_SLIDES, max: 8, slides: starterSlides()};
         this.strings = null;
     }
 
@@ -93,7 +93,7 @@ export default class extends BaseComponent {
         const keys = [
             ...Object.keys(PARTS).map((name) => 'cpb_tpl_' + name),
             'cpb_q_none', 'cpb_q_multi', 'cpb_q_tf', 'cpb_q_fill',
-            'cpb_error_topic', 'cpb_error_slides', 'cpb_error_video',
+            'cpb_error_topic', 'cpb_error_slides', 'cpb_error_video', 'cpb_error_limits',
         ];
         const texts = await getStrings(keys.map((key) => ({key, component: COMPONENT})));
         this.strings = {};
@@ -144,8 +144,13 @@ export default class extends BaseComponent {
         const slides = model.slides.map((slide, index) => this._slideContext(slide, index, model.slides.length));
         const context = {
             topic: model.topic,
-            exact: model.exact,
-            exactcount: model.exactcount,
+            manual: model.mode === 'manual',
+            count: model.slides.length,
+            limitnone: model.limit === 'none',
+            limitmax: model.limit === 'max',
+            limitrange: model.limit === 'range',
+            min: model.min,
+            max: model.max,
             slides,
         };
         const {html, js} = await Templates.renderForPromise('local_coursegen/course_presentation_builder', context);
@@ -224,11 +229,11 @@ export default class extends BaseComponent {
         if (!field) {
             return;
         }
-        if (field === 'count') {
-            this.model.exact = target.value === 'exact';
+        if (field === 'mode' || field === 'limit') {
+            this.model[field] = target.value;
             await this._render();
-        } else if (field === 'exactcount') {
-            this.model.exactcount = Number(target.value) || MIN_SLIDES;
+        } else if (field === 'min' || field === 'max') {
+            this.model[field] = Number(target.value) || MIN_SLIDES;
         } else {
             this.model[field] = target.value;
         }
@@ -282,6 +287,21 @@ export default class extends BaseComponent {
     }
 
     /**
+     * What is wrong with the limits of the number of slides the AI decides, or an empty string.
+     *
+     * @returns {string}
+     */
+    _limitsError() {
+        const {limit, min, max} = this.model;
+        if (limit === 'none') {
+            return '';
+        }
+        const lowest = limit === 'range' ? min : MIN_SLIDES;
+        const valid = max >= MIN_SLIDES && max <= MAX_SLIDES && min >= MIN_SLIDES && lowest <= max;
+        return valid ? '' : this.strings.cpb_error_limits;
+    }
+
+    /**
      * Check the form and send the instruction it makes.
      */
     async _submit() {
@@ -310,8 +330,10 @@ export default class extends BaseComponent {
         if (!this.model.topic.trim()) {
             return this.strings.cpb_error_topic;
         }
-        const total = this.model.exact ? this.model.exactcount : this.model.slides.length;
-        if (this.model.slides.length < MIN_SLIDES || total < MIN_SLIDES) {
+        if (this.model.mode === 'auto') {
+            return this._limitsError();
+        }
+        if (this.model.slides.length < MIN_SLIDES) {
             return this.strings.cpb_error_slides;
         }
         const badVideo = this.model.slides.some((slide) => {
@@ -331,15 +353,35 @@ export default class extends BaseComponent {
         const lines = [
             'Create a Course Presentation H5P.',
             'Topic and objective: ' + model.topic.trim(),
-            model.exact
-                ? 'Number of slides: exactly ' + model.exactcount + '.'
-                : 'Number of slides: the ones the content needs, at least ' + MIN_SLIDES + '.',
-            'The slides, in this order. Follow this structure and write only what each slide asks for:',
         ];
+        if (model.mode === 'auto') {
+            lines.push('Number of slides: ' + this._limitText() + '.');
+            lines.push('Decide yourself what each slide has: write the slides the topic needs.');
+            return lines.join('\n');
+        }
+
+        lines.push('Number of slides: exactly ' + model.slides.length + '.');
+        lines.push('The slides, in this order. Follow this structure and write only what each slide asks for:');
         model.slides.forEach((slide, index) => {
             lines.push((index + 1) + '. ' + this._slideLine(slide));
         });
         return lines.join('\n');
+    }
+
+    /**
+     * The limit on the number of slides, in words.
+     *
+     * @returns {string}
+     */
+    _limitText() {
+        const {limit, min, max} = this.model;
+        if (limit === 'max') {
+            return 'at most ' + max + ' (and at least ' + MIN_SLIDES + ')';
+        }
+        if (limit === 'range') {
+            return 'between ' + min + ' and ' + max;
+        }
+        return 'the ones the topic needs, at least ' + MIN_SLIDES;
     }
 
     /**
