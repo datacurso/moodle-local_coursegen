@@ -22,7 +22,6 @@
 
     Context variables required for this template:
     * topic string          - The topic and objective written so far.
-    * tones array           - The tones: value, label, selected.
     * exact bool            - Whether the number of slides is pinned.
     * exactcount int        - The number of slides when it is pinned.
     * slides array          - The slides, each drawn with local_coursegen/course_presentation_slide.
@@ -30,7 +29,6 @@
     Example context (json):
     {
         "topic": "",
-        "tones": [{"value": "neutral", "label": "Neutral", "selected": true}],
         "exact": false,
         "exactcount": 6,
         "slides": []
@@ -50,13 +48,7 @@
                           placeholder="{{#str}} cpb_topic_help, local_coursegen {{/str}}">{{topic}}</textarea>
             </div>
             <div class="form-row">
-                <div class="form-group col-md-6">
-                    <label class="d-block" for="cpb-tone">{{#str}} cpb_tone, local_coursegen {{/str}}</label>
-                    <select id="cpb-tone" class="custom-select" data-field="tone">
-                        {{#tones}}<option value="{{value}}" {{#selected}}selected{{/selected}}>{{label}}</option>{{/tones}}
-                    </select>
-                </div>
-                <div class="form-group col-md-6">
+                <div class="form-group col-12">
                     <label class="d-block" for="cpb-count">{{#str}} cpb_count, local_coursegen {{/str}}</label>
                     <div class="d-flex align-items-center" style="gap: .5rem;">
                         <select id="cpb-count" class="custom-select" data-field="count">
