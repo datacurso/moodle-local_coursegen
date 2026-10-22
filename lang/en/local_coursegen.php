@@ -1222,3 +1222,4 @@ $string['h5ptypedesc_speak_the_words'] = 'Students answer a question with their 
 $string['h5ptypedesc_speak_the_words_set'] = 'A series of questions answered with the voice.';
 $string['activitytype_placeholder'] = 'Describe the {$a} you want to create.';
 $string['activitytype_back'] = 'Back';
+$string['activitytype_title'] = 'What do you want to create?';

@@ -89,7 +89,7 @@ const supportedItemsOf = (items, supportedTypes) => {
  * @param {string[]} supportedTypes Module names a space can be made for.
  * @returns {Promise<Array>} Content items, each flagged so no favourite star is drawn.
  */
-const fetchSupportedItems = async(courseId, supportedTypes) => {
+export const fetchSupportedItems = async(courseId, supportedTypes) => {
     const data = await Repository.activityModules(courseId, 0);
     const supported = supportedItemsOf(data.content_items, supportedTypes);
     return withoutFavouriteStars(supported);
@@ -117,20 +117,19 @@ const itemsOfArchetype = (items, archetype) => {
  * Resources tabs (no favourites or recommended tabs here).
  *
  * @param {Array} items
- * @param {boolean} showTabs Whether the Activities and Resources tabs are offered next to All.
  * @returns {Object}
  */
-const templateData = (items, showTabs = true) => {
+const templateData = (items) => {
     const activities = itemsOfArchetype(items, ARCHETYPE_ACTIVITY);
     const resources = itemsOfArchetype(items, ARCHETYPE_RESOURCE);
     return {
         'default': items,
         showAll: true,
         activities,
-        showActivities: showTabs,
+        showActivities: true,
         activitiesFirst: false,
         resources,
-        showResources: showTabs,
+        showResources: true,
         favourites: [],
         recommended: [],
         recommendedFirst: false,
@@ -205,10 +204,10 @@ const keepFavouritesUnchanged = async() => null;
  * Create the chooser modal, whose body is filled in once the items are loaded.
  *
  * @param {Promise<string>} bodyPromise Resolves with the rendered chooser body.
- * @param {Promise<string>|string} title The title of the modal.
  * @returns {Promise<Object>} The modal instance.
  */
-const createChooserModal = (bodyPromise, title) => {
+const createChooserModal = (bodyPromise) => {
+    const title = getString(STRING.ADD_SPACE, COMPONENT);
     return Modal.create({
         title,
         body: bodyPromise,
@@ -277,82 +276,24 @@ const bindPick = (modal, items, selection) => {
     rootList.on(ModalEvents.hidden, onHidden);
 };
 
-/** @type {string} The region of the button in the header that goes back to the previous view. */
-const BACK_BUTTON_REGION = 'local_coursegen/chooser/back';
-
 /**
- * Put a Back button at the start of a modal's header, always in sight, that settles the session as going back.
- *
- * @param {Object} modal The chooser modal.
- * @param {string} label The text of the button.
- * @param {ChooserSelection} selection The session to settle.
- */
-const addHeaderBack = (modal, label, selection) => {
-    const header = modal.getRoot()[0].querySelector('.modal-header');
-    if (!header) {
-        return;
-    }
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'btn btn-link p-0 mr-3 text-nowrap';
-    button.dataset.region = BACK_BUTTON_REGION;
-    const arrow = document.createElement('span');
-    arrow.className = 'fa fa-arrow-left mr-1';
-    arrow.setAttribute('aria-hidden', 'true');
-    button.append(arrow, document.createTextNode(label));
-    button.addEventListener(EVENT.CLICK, () => {
-        selection.settle({modname: '', name: '', icon: '', back: true});
-        modal.hide();
-    });
-    header.prepend(button);
-};
-
-/**
- * Show the items in the chooser modal and wire up the pick.
+ * Load the supported items into the chooser modal and wire up the pick.
  *
  * @param {Object} params
- * @param {Array} params.items The content items to offer.
+ * @param {number} params.courseId The base course.
+ * @param {string[]} params.supportedTypes Module names a space can be made for.
  * @param {Promise<Object>} params.modalPromise The chooser modal being created.
  * @param {{resolve: Function}} params.body Resolves the modal body.
  * @param {ChooserSelection} params.selection The session to settle.
- * @param {boolean} params.showTabs Whether the Activities and Resources tabs are offered.
- * @param {string|null} params.backLabel The text of a Back button in the header, or null for none.
  */
-const showItems = async({items, modalPromise, body, selection, showTabs, backLabel}) => {
+const populateChooser = async({courseId, supportedTypes, modalPromise, body, selection}) => {
+    const items = await fetchSupportedItems(courseId, supportedTypes);
     ChooserDialogue.displayChooser(modalPromise, items, keepFavouritesUnchanged, {footer: false});
-    const data = templateData(items, showTabs);
+    const data = templateData(items);
     const rendered = await Templates.render('core_course/activitychooser', data);
     body.resolve(rendered);
     const modal = await modalPromise;
     bindPick(modal, items, selection);
-    if (backLabel) {
-        addHeaderBack(modal, backLabel, selection);
-    }
-};
-
-/**
- * Open the chooser with the given items and resolve with the picked one.
- *
- * @param {Object} options
- * @param {Promise<string>|string} options.title The title of the modal.
- * @param {Function} options.loadItems Returns the items, or a promise of them.
- * @param {boolean} options.showTabs Whether the Activities and Resources tabs are offered.
- * @param {string|null} options.backLabel The text of a Back button in the header, or null for none.
- * @returns {Promise<Object|null>} The pick, null when the modal is closed without one.
- */
-const openChooser = async({title, loadItems, showTabs, backLabel = null}) => {
-    const body = createDeferred();
-    const modalPromise = createChooserModal(body.promise, title);
-    const selection = new ChooserSelection();
-    try {
-        const items = await loadItems();
-        await showItems({items, modalPromise, body, selection, showTabs, backLabel});
-    } catch (error) {
-        const modal = await modalPromise;
-        modal.destroy();
-        throw error;
-    }
-    return selection.promise;
 };
 
 /**
@@ -361,36 +302,21 @@ const openChooser = async({title, loadItems, showTabs, backLabel = null}) => {
  * @param {Object} options
  * @param {number} options.courseId The base course.
  * @param {string[]} options.supportedTypes Module names a space can be made for.
- * @param {string} [options.title] The title of the modal; "Add a space for an activity" when omitted.
  * @returns {Promise<{modname: string, name: string, icon: string}|null>}
  *     Null when the modal is closed without picking anything.
  */
-export const chooseActivityType = ({courseId, supportedTypes, title = null}) => {
-    return openChooser({
-        title: title || getString(STRING.ADD_SPACE, COMPONENT),
-        loadItems: () => fetchSupportedItems(courseId, supportedTypes),
-        showTabs: true,
-    });
-};
-
-/**
- * Open the same chooser with items of our own, for the kinds inside a type such as H5P.
- *
- * @param {Object} options
- * @param {string} options.title The title of the modal.
- * @param {Array} options.kinds What to offer: type, name, description, iconurl and usesimages of each.
- * @param {string} options.usesImagesLabel The note shown for the kinds that use images.
- * @param {string} options.backLabel The text of the Back button in the header.
- * @returns {Promise<{modname: string, back: (boolean|undefined)}|null>}
- *     The kind picked (its type in modname); with back set when Back was used; null when closed.
- */
-export const chooseKind = ({title, kinds, usesImagesLabel, backLabel}) => {
-    return openChooser({
-        title,
-        loadItems: () => kindItems(kinds, usesImagesLabel),
-        showTabs: false,
-        backLabel,
-    });
+export const chooseActivityType = async({courseId, supportedTypes}) => {
+    const body = createDeferred();
+    const modalPromise = createChooserModal(body.promise);
+    const selection = new ChooserSelection();
+    try {
+        await populateChooser({courseId, supportedTypes, modalPromise, body, selection});
+    } catch (error) {
+        const modal = await modalPromise;
+        modal.destroy();
+        throw error;
+    }
+    return selection.promise;
 };
 
 /**
@@ -406,13 +332,13 @@ const escapeHtml = (text) => {
 };
 
 /**
- * The kinds as the items the chooser draws: a tile with the picture, the name and, behind the info button, the description.
+ * The kinds as the items of Moodle's chooser: a tile with the picture and the name; the description goes in the help.
  *
  * @param {Array} kinds What to offer.
  * @param {string} usesImagesLabel The note shown for the kinds that use images.
  * @returns {Array}
  */
-const kindItems = (kinds, usesImagesLabel) => {
+export const kindItems = (kinds, usesImagesLabel) => {
     return kinds.map((kind) => {
         const note = kind.usesimages ? ' ' + escapeHtml('(' + usesImagesLabel + ')') : '';
         return {

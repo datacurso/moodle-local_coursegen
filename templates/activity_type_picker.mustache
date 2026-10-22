@@ -1,13 +1,43 @@
 {{!
     @template local_coursegen/activity_type_picker
 
-    The bar of the activity modal that shows what was picked.
+    The first steps of the chat to create an activity, inside the chat itself: what was chosen so far, the types the
+    AI can create and, for H5P, its kinds. The tiles are Moodle's own chooser tiles.
+
+    Context variables required for this template:
+    * typeitems array  - The chooser items of the types the AI can create.
+    * kinditems array  - The chooser items of the H5P kinds.
 
     Example context (json):
-    {}
+    {
+        "typeitems": [
+            {"name": "forum", "title": "Forum", "link": "?add=forum", "icon": "<img class='icon' src='https://example.com/forum.svg' alt=''>", "componentname": "mod_forum", "purpose": "collaboration", "branded": 0, "legacyitem": true}
+        ],
+        "kinditems": []
+    }
 }}
 <div class="local_coursegen_type_picker" data-region="local_coursegen/activity/typepicker">
-    <div data-region="local_coursegen/activity/chosen" class="d-none align-items-center mb-3 p-2 border rounded bg-light">
-        <span data-region="local_coursegen/activity/chosen_label"></span>
+    <div data-region="local_coursegen/activity/choices" class="d-flex flex-column align-items-end"></div>
+
+    <div data-region="local_coursegen/activity/typestep" class="d-none">
+        <div class="p-3 mb-3 bg-light rounded">
+            <p class="mb-0">{{#str}} activitytype_title, local_coursegen {{/str}}</p>
+        </div>
+        <div class="modchoosercontainer bg-light rounded p-2">
+            <div class="optionscontainer d-flex flex-wrap mw-100" role="menubar">
+                {{#typeitems}}{{> core_course/local/activitychooser/item}}{{/typeitems}}
+            </div>
+        </div>
+    </div>
+
+    <div data-region="local_coursegen/activity/kindstep" class="d-none">
+        <div class="p-3 mb-3 bg-light rounded">
+            <p class="mb-0">{{#str}} h5ptype_title, local_coursegen {{/str}}</p>
+        </div>
+        <div class="modchoosercontainer bg-light rounded p-2">
+            <div class="optionscontainer d-flex flex-wrap mw-100" role="menubar">
+                {{#kinditems}}{{> core_course/local/activitychooser/item}}{{/kinditems}}
+            </div>
+        </div>
     </div>
 </div>

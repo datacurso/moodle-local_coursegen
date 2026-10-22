@@ -81,14 +81,14 @@ class Mutations {
     }
 
     /**
-     * The teacher picked the kind of H5P, or left it to the AI with an empty value.
+     * The teacher picked the kind of H5P.
      *
      * @param {StateManager} stateManager
      * @param {{type: string}} payload
      */
     chooseH5pType(stateManager, payload) {
         const type = String(payload.type || '');
-        const known = type === '' || stateManager.state.page.h5ptypes.some((kind) => kind.type === type);
+        const known = stateManager.state.page.h5ptypes.some((kind) => kind.type === type);
         if (!known || stateManager.state.session.jobid) {
             return;
         }
@@ -100,17 +100,25 @@ class Mutations {
     }
 
     /**
-     * Go back to the kinds of H5P, while the conversation has not started.
+     * One step back, while the conversation has not started: from the chat to the kinds of H5P, or to the types.
      *
      * @param {StateManager} stateManager
      */
-    changeH5pKind(stateManager) {
-        if (stateManager.state.session.jobid || stateManager.state.session.activitytype !== 'h5pactivity') {
+    goBack(stateManager) {
+        const session = stateManager.state.session;
+        if (session.jobid) {
             return;
         }
 
         stateManager.setReadOnly(false);
-        stateManager.state.session.typestep = 'h5p';
+        if (session.typestep === 'prompt' && session.activitytype === 'h5pactivity') {
+            session.h5ptype = '';
+            session.typestep = 'h5p';
+        } else {
+            session.activitytype = '';
+            session.h5ptype = '';
+            session.typestep = 'type';
+        }
         stateManager.setReadOnly(true);
     }
 

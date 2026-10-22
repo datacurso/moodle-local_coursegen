@@ -141,3 +141,8 @@ span.local_coursegen-sparkles-icon.white {
 }
 
 /* Activity AI Modal Styles - Consistent with Course AI Modal */
+
+/* The tiles of the chat to create an activity are the chooser's, without the info button that needs the chooser's panel. */
+.local_coursegen_type_picker [data-action="show-option-summary"] {
+    display: none;
+}

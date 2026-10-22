@@ -33,10 +33,7 @@ import {get_string as getString} from 'core/str';
 import ChatForm from 'local_coursegen/local/activityai/components/chat_form';
 import StreamOutput from 'local_coursegen/local/activityai/components/stream_output';
 import TypePicker from 'local_coursegen/local/activityai/components/type_picker';
-import {
-    chooseActivityType as openTypeChooser,
-    chooseKind as openKindChooser,
-} from 'local_coursegen/local/template/template_space_chooser';
+import {fetchSupportedItems, kindItems} from 'local_coursegen/local/template/template_space_chooser';
 
 export default class extends BaseComponent {
     create() {
@@ -62,13 +59,19 @@ export default class extends BaseComponent {
             this.modal = null;
         }
 
-        if (!this.reactive.state.session.jobid && !await this._pickType()) {
-            this.reactive.dispatch('closeModal');
-            return;
-        }
-
         const bodyHTML = await Templates.render('local_coursegen/add_activity_ai_modal', {});
-        const pickerHTML = await Templates.render('local_coursegen/activity_type_picker', {});
+        const typeItems = await fetchSupportedItems(
+            this.reactive.state.page.courseid,
+            this.reactive.state.page.activitytypes.map((type) => type.modname)
+        );
+        const kindList = kindItems(
+            this.reactive.state.page.h5ptypes,
+            await getString('h5ptype_usesimages', 'local_coursegen')
+        );
+        const pickerHTML = await Templates.render('local_coursegen/activity_type_picker', {
+            typeitems: typeItems,
+            kinditems: kindList,
+        });
 
         const state = this.reactive.state;
         const selectedlang = String(state?.session?.lang || state?.page?.defaultlang || 'en').toLowerCase();
@@ -118,6 +121,8 @@ export default class extends BaseComponent {
                 element: slot,
                 reactive: this.reactive,
                 footer: rootElement.querySelector('.modal-footer'),
+                typeItems,
+                kindItems: kindList,
             });
         }
 
@@ -136,125 +141,22 @@ export default class extends BaseComponent {
         });
     }
 
-    /**
-     * Ask for the type of the activity with Moodle's own activity chooser, limited to what the AI can create.
-     *
-     * H5P goes on to ask for its kind in the same kind of chooser; going back from there returns to the types.
-     *
-     * @returns {Promise<boolean>} False when the chooser was closed without picking anything.
-     */
-    async _pickType() {
-        const state = this.reactive.state;
-        for (;;) {
-            const choice = await openTypeChooser({
-                courseId: state.page.courseid,
-                supportedTypes: state.page.activitytypes.map((type) => type.modname),
-                title: await getString('addactivityai_modaltitle', 'local_coursegen'),
-            });
-            if (!choice) {
-                return false;
-            }
-
-            this.reactive.dispatch('chooseActivityType', {modname: choice.modname});
-            if (choice.modname !== 'h5pactivity') {
-                return true;
-            }
-
-            const kind = await this._pickKind();
-            if (typeof kind === 'string') {
-                this.reactive.dispatch('chooseH5pType', {type: kind});
-                return true;
-            }
-        }
-    }
-
-    /**
-     * Ask for the kind of H5P with the same chooser Moodle uses for the types.
-     *
-     * @returns {Promise<string|null|undefined>} The kind; null when the teacher went back; undefined when it was closed.
-     */
-    async _pickKind() {
-        const choice = await openKindChooser({
-            title: await getString('h5ptype_title', 'local_coursegen'),
-            kinds: this.reactive.state.page.h5ptypes,
-            usesImagesLabel: await getString('h5ptype_usesimages', 'local_coursegen'),
-            backLabel: await getString('activitytype_back', 'local_coursegen'),
-        });
-        if (!choice) {
-            return undefined;
-        }
-
-        return choice.back ? null : choice.modname;
-    }
-
     getWatchers() {
         return [
             {watch: 'modal.open:updated', handler: this._handleOpenChange},
-            {watch: 'session.typestep:updated', handler: this._handleStepChange},
-            {watch: 'session.jobid:updated', handler: this._hideBackOnceStarted},
+            {watch: 'session.typestep:updated', handler: this._syncBack},
+            {watch: 'session.jobid:updated', handler: this._syncBack},
         ];
     }
 
     /**
-     * The kind of H5P is asked again when the teacher chooses to change it from the chat.
-     *
-     * @param {Object} param0
-     * @param {Object} param0.element The session.
+     * The Back button is for before the conversation starts and after the first step: there is nothing before the
+     * types, and once the conversation has started the type cannot change.
      */
-    async _handleStepChange({element}) {
-        if (element.typestep !== 'h5p' || !this.modal) {
-            return;
-        }
-
-        const current = String(element.h5ptype || '');
-        const kind = await this._pickKind();
-        if (kind === null) {
-            // Back from the kinds goes to the types.
-            this._restart();
-            return;
-        }
-        this.reactive.dispatch('chooseH5pType', {type: kind === undefined ? current : kind});
-    }
-
-    /**
-     * The Back button is for before the conversation starts: once it has, the type cannot change.
-     *
-     * @param {Object} param0
-     * @param {Object} param0.element The session.
-     */
-    _hideBackOnceStarted({element}) {
-        const button = this.modal?.getRoot()[0].querySelector('[data-region="local_coursegen/activity/back"]');
-        button?.classList.toggle('d-none', Boolean(element.jobid));
-    }
-
-    /**
-     * Start again from the chooser of types: the modal closes and opens again where it was.
-     */
-    _restart() {
-        const state = this.reactive.state;
-        const position = {
-            courseid: state.page.courseid,
-            sectionnum: state.session.sectionnum,
-            beforemod: state.session.beforemod,
-        };
-        this.reactive.dispatch('closeModal');
-        this.reactive.dispatch('openModal', position);
-    }
-
-    /**
-     * One step back from the chat: to the kinds of H5P, or to the types for any other type.
-     */
-    _goBack() {
+    _syncBack() {
         const session = this.reactive.state.session;
-        if (session.jobid) {
-            return;
-        }
-
-        if (session.activitytype === 'h5pactivity') {
-            this.reactive.dispatch('changeH5pKind');
-        } else {
-            this._restart();
-        }
+        const button = this.modal?.getRoot()[0].querySelector('[data-region="local_coursegen/activity/back"]');
+        button?.classList.toggle('d-none', Boolean(session.jobid) || session.typestep === 'type');
     }
 
     /**
@@ -275,8 +177,9 @@ export default class extends BaseComponent {
         arrow.className = 'fa fa-arrow-left mr-1';
         arrow.setAttribute('aria-hidden', 'true');
         button.append(arrow, document.createTextNode(label));
-        button.addEventListener('click', () => this._goBack());
+        button.addEventListener('click', () => this.reactive.dispatch('goBack'));
         header.prepend(button);
+        this._syncBack();
     }
 
     async _close() {
