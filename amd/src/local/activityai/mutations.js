@@ -197,7 +197,7 @@ class Mutations {
      * Submit the initial prompt (creates session) OR a feedback prompt (adjust).
      *
      * @param {StateManager} stateManager
-     * @param {{prompt: string}} payload
+     * @param {{prompt: string, slideImages: (Array<{slide: number, draftitemid: number}>|undefined)}} payload
      */
     async submitPrompt(stateManager, payload) {
         await ensureUiTexts();
@@ -266,6 +266,16 @@ class Mutations {
                         state.upload.filename = '';
                         stateManager.setReadOnly(true);
                     }
+                }
+
+                // The pictures the teacher chose for the slides go to the service before the run starts, one by one.
+                for (const image of payload.slideImages || []) {
+                    await repository.uploadSlideImage({
+                        courseid,
+                        jobid,
+                        draftitemid: image.draftitemid,
+                        slide: image.slide,
+                    });
                 }
 
                 stateManager.setReadOnly(false);
