@@ -36,11 +36,14 @@ export default class extends BaseComponent {
             KINDSTEP: "[data-region='local_coursegen/activity/kindstep']",
             OPTION: "[data-region='chooser-option-container']",
             PROMPT: "[data-region='local_coursegen/activity/prompt']",
+            SEARCH: "[data-region='local_coursegen/activity/search']",
+            NORESULTS: "[data-region='local_coursegen/activity/noresults']",
         };
     }
 
     stateReady() {
         this.addEventListener(this.element, 'click', this._handleClick);
+        this.addEventListener(this.element, 'input', this._handleSearch);
         this._describeKinds();
         this._refresh();
     }
@@ -82,9 +85,63 @@ export default class extends BaseComponent {
         }
     }
 
+    /**
+     * Filter the tiles of the step by what was typed, in their name and, for the kinds of H5P, their description.
+     * The rest of the text of a tile (the label of its info button) is not searched.
+     *
+     * @param {Event} event
+     */
+    _handleSearch(event) {
+        const field = event.target.closest(this.selectors.SEARCH);
+        if (!field || !this.element.contains(field)) {
+            return;
+        }
+
+        this._filter(field.closest("[data-region$='step']"), field.value);
+    }
+
+    /**
+     * Show only the tiles of a step that match the text.
+     *
+     * @param {HTMLElement} step The step that holds the tiles.
+     * @param {string} text What was typed.
+     */
+    _filter(step, text) {
+        if (!step) {
+            return;
+        }
+
+        const words = this._plain(text).split(/\s+/).filter(Boolean);
+        let shown = 0;
+        step.querySelectorAll(this.selectors.OPTION).forEach((tile) => {
+            const name = tile.querySelector('.optionname')?.textContent || '';
+            const haystack = this._plain(name + ' ' + (tile.title || ''));
+            const matches = words.every((word) => haystack.includes(word));
+            tile.classList.toggle('d-none', !matches);
+            shown += matches ? 1 : 0;
+        });
+        step.querySelector(this.selectors.NORESULTS)?.classList.toggle('d-none', shown > 0);
+    }
+
+    /**
+     * Text without case and accents, so that a search finds "Línea" typing "linea".
+     *
+     * @param {string} text
+     * @returns {string}
+     */
+    _plain(text) {
+        return String(text).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    }
+
     async _refresh() {
         const session = this.reactive.state.session;
         const step = String(session.typestep || 'type');
+
+        // Every view starts without a search.
+        this.element.querySelectorAll(this.selectors.SEARCH).forEach((field) => {
+            field.value = '';
+            this._filter(field.closest("[data-region$='step']"), '');
+        });
 
         this._show(this.getElement(this.selectors.TYPESTEP), step === 'type');
         this._show(this.getElement(this.selectors.KINDSTEP), step === 'h5p');

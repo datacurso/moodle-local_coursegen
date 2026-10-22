@@ -1210,3 +1210,4 @@ $string['h5ptypedesc_speak_the_words_set'] = 'A series of questions answered wit
 $string['activitytype_placeholder'] = 'Describe the {$a} you want to create.';
 $string['activitytype_back'] = 'Back';
 $string['activitytype_title'] = 'What do you want to create?';
+$string['activitytype_noresults'] = 'No result matches your search.';
