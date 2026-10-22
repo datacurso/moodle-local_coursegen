@@ -27,6 +27,7 @@
     * title, text, image, video, question string - What was written.
     * imagegenerate bool    - Whether the image is generated.
     * canimages bool        - Whether the person may generate images.
+    * imageoptional bool    - Whether the slide may go without an image (not for the kinds that are a slide with an image).
     * qtypes array          - The kinds of question: value, label, selected.
     * qchosen bool          - Whether a question kind other than none is chosen.
     * first, last bool      - Whether the slide is the first or the last.
@@ -35,7 +36,7 @@
     {
         "index": 0, "number": 1, "templates": [{"value": "cover", "label": "Cover", "selected": true}],
         "hastitle": true, "hastext": false, "hasimage": true, "hasvideo": false, "hasquestion": false,
-        "title": "", "text": "", "image": "", "video": "", "question": "", "imagegenerate": false, "canimages": true,
+        "title": "", "text": "", "image": "", "video": "", "question": "", "imagegenerate": false, "canimages": true, "imageoptional": true,
         "qtypes": [], "qchosen": false, "first": true, "last": true
     }
 }}
@@ -75,7 +76,7 @@
         <div class="form-group">
             <label class="d-block">{{#str}} cpb_image, local_coursegen {{/str}}</label>
             <select class="custom-select mb-2" data-slide-field="imagemode">
-                <option value="none" {{^imagegenerate}}selected{{/imagegenerate}}>{{#str}} cpb_image_none, local_coursegen {{/str}}</option>
+                {{#imageoptional}}<option value="none" {{^imagegenerate}}selected{{/imagegenerate}}>{{#str}} cpb_image_none, local_coursegen {{/str}}</option>{{/imageoptional}}
                 {{#canimages}}<option value="generate" {{#imagegenerate}}selected{{/imagegenerate}}>{{#str}} cpb_image_generate, local_coursegen {{/str}}</option>{{/canimages}}
             </select>
             <input type="text" class="form-control {{^imagegenerate}}d-none{{/imagegenerate}}" data-slide-field="image" value="{{image}}"
