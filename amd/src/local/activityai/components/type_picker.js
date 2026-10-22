@@ -32,7 +32,6 @@ export default class extends BaseComponent {
             CHOSEN: "[data-region='local_coursegen/activity/chosen']",
             CHOSEN_LABEL: "[data-region='local_coursegen/activity/chosen_label']",
             PROMPT: "[data-region='local_coursegen/activity/prompt']",
-            WELCOME: "[data-region='local_coursegen/activity/welcome']",
         };
     }
 
@@ -53,15 +52,10 @@ export default class extends BaseComponent {
         const session = this.reactive.state.session;
         const step = String(session.typestep || 'type');
 
-        // The chat, with its footer, only shows once the type is decided (or the teacher chose to describe it freely).
+        // The chat, with its footer, only shows once the type is decided.
         const chatVisible = step === 'prompt';
         if (this.footer) {
             this.footer.classList.toggle('d-none', !chatVisible);
-        }
-        const welcome = this.element.closest("[data-region='local_coursegen/activity/root']")
-            ?.querySelector(this.selectors.WELCOME);
-        if (welcome) {
-            welcome.classList.toggle('d-none', !chatVisible);
         }
 
         const chosen = this.getElement(this.selectors.CHOSEN);
