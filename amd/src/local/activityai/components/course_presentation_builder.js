@@ -105,6 +105,8 @@ export default class extends BaseComponent {
         this.footer = descriptor.footer || null;
         this.model = {topic: '', mode: 'manual', limit: 'none', min: MIN_SLIDES, max: 8, slides: []};
         this.strings = null;
+        // What is wrong with the form, by field, once the person tried to create the presentation.
+        this.errors = {};
     }
 
     async stateReady() {
@@ -183,6 +185,9 @@ export default class extends BaseComponent {
         const slides = model.slides.map((slide, index) => this._slideContext(slide, index, model.slides.length));
         const context = {
             topic: model.topic,
+            topicerror: this.errors.topic || '',
+            limiterror: this.errors.limits || '',
+            slideserror: this.errors.slides || '',
             manual: model.mode === 'manual',
             count: model.slides.length,
             limitnone: model.limit === 'none',
@@ -261,6 +266,8 @@ export default class extends BaseComponent {
             imageupload: slide.imagemode === 'upload',
             imagename: slide.imagename,
             canimages: Boolean(this.reactive.state.page.canimages),
+            videoerror: this.errors['slide-' + index + '-video'] || '',
+            imageerror: this.errors['slide-' + index + '-image'] || '',
             qtypes: QUESTION_KINDS.map((value) => ({value, label: labels[value], selected: value === slide.qtype})),
             qchosen: slide.qtype !== 'none',
             first: index === 0,
@@ -283,6 +290,9 @@ export default class extends BaseComponent {
                 return;
             }
             slide[field] = target.value;
+            if (field === 'video') {
+                this._clearError('slide-' + slideNode.dataset.index + '-video', target);
+            }
             this._syncImages();
             if (event.type === 'change' && ['template', 'imagemode', 'qtype'].includes(field)) {
                 if (field === 'template') {
@@ -296,6 +306,7 @@ export default class extends BaseComponent {
                         slide.qtype = 'none';
                     }
                 }
+                this.errors = {};
                 await this._render();
             }
             return;
@@ -307,11 +318,16 @@ export default class extends BaseComponent {
         }
         if (field === 'mode' || field === 'limit') {
             this.model[field] = target.value;
+            this.errors = {};
             await this._render();
         } else if (field === 'min' || field === 'max') {
             this.model[field] = Number(target.value) || MIN_SLIDES;
+            this._clearError('limits', this.element.querySelector('#cpb-min'), this.element.querySelector('#cpb-max'));
         } else {
             this.model[field] = target.value;
+            if (field === 'topic') {
+                this._clearError('topic', target);
+            }
         }
     }
 
@@ -329,6 +345,10 @@ export default class extends BaseComponent {
 
         const slides = this.model.slides;
         const index = Number(button.closest("[data-region='local_coursegen/builder/slide']")?.dataset.index);
+        if (['add', 'up', 'down', 'duplicate', 'remove', 'removeimage'].includes(action.replace('local_coursegen/builder/', ''))) {
+            // Slides change places or number, so the errors of the slides no longer point at the same ones.
+            this.errors = {};
+        }
         switch (action.replace('local_coursegen/builder/', '')) {
             case 'add':
                 if (slides.length < MAX_SLIDES) {
@@ -391,6 +411,20 @@ export default class extends BaseComponent {
     }
 
     /**
+     * The person fixed a field: its error goes away, without drawing the form again (that would lose the focus).
+     *
+     * @param {string} key The error.
+     * @param {...HTMLElement} fields The fields that showed it.
+     */
+    _clearError(key, ...fields) {
+        delete this.errors[key];
+        fields.forEach((field) => field?.classList.remove('is-invalid'));
+        if (key === 'limits') {
+            this.element.querySelectorAll('.text-danger[role="alert"]').forEach((message) => message.remove());
+        }
+    }
+
+    /**
      * Choose the picture of a slide with the file picker; the slide shows its name once chosen.
      *
      * @param {Object} slide
@@ -403,6 +437,7 @@ export default class extends BaseComponent {
                 onPicked: async(file) => {
                     slide.imagedraft = file.draftitemid;
                     slide.imagename = file.filename;
+                    this.errors = {};
                     await this._render();
                 },
             });
@@ -435,17 +470,14 @@ export default class extends BaseComponent {
     }
 
     /**
-     * Check the form and send the instruction it makes.
+     * Check the form: if something is wrong the fields are marked, the first one is brought into view and focused,
+     * and nothing is sent; otherwise the instruction is sent.
      */
     async _submit() {
-        const error = this._validate();
-        const box = this.element.querySelector("[data-region='local_coursegen/activity/builder_error']");
-        box?.classList.toggle('d-none', error === '');
-        if (box) {
-            box.textContent = error;
-        }
-        if (error) {
-            box?.scrollIntoView({block: 'center'});
+        this.errors = this._validate();
+        if (Object.keys(this.errors).length) {
+            await this._render();
+            this._focusFirstError();
             return;
         }
 
@@ -458,27 +490,44 @@ export default class extends BaseComponent {
     }
 
     /**
-     * @returns {string} What is wrong with the form, or an empty string.
+     * Bring the first field with an error into view and focus it.
+     */
+    _focusFirstError() {
+        const first = this.element.querySelector('.is-invalid, [data-invalid="true"]');
+        first?.scrollIntoView({block: 'center'});
+        first?.focus();
+    }
+
+    /**
+     * What is wrong with the form, by field.
+     *
+     * @returns {Object} Messages by field: topic, limits, slides, and for each slide its video and image.
      */
     _validate() {
+        const errors = {};
         if (!this.model.topic.trim()) {
-            return this.strings.cpb_error_topic;
+            errors.topic = this.strings.cpb_error_topic;
         }
         if (this.model.mode === 'auto') {
-            return this._limitsError();
+            const limits = this._limitsError();
+            if (limits) {
+                errors.limits = limits;
+            }
+            return errors;
         }
         if (this.model.slides.length < MIN_SLIDES) {
-            return this.strings.cpb_error_slides;
+            errors.slides = this.strings.cpb_error_slides;
         }
-        const badVideo = this.model.slides.some((slide) => {
+        this.model.slides.forEach((slide, index) => {
             const video = slide.video.trim();
-            return PARTS[slide.template].includes('video') && video !== '' && !/^https?:\/\//i.test(video);
+            if (PARTS[slide.template].includes('video') && video !== '' && !/^https?:\/\//i.test(video)) {
+                errors['slide-' + index + '-video'] = this.strings.cpb_error_video;
+            }
+            if (this._usesPicture(slide) && !slide.imagedraft) {
+                errors['slide-' + index + '-image'] = this.strings.cpb_error_image;
+            }
         });
-        if (badVideo) {
-            return this.strings.cpb_error_video;
-        }
-        const missing = this.model.slides.some((slide) => this._usesPicture(slide) && !slide.imagedraft);
-        return missing ? this.strings.cpb_error_image : '';
+        return errors;
     }
 
     /**

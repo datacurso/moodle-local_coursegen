@@ -27,6 +27,7 @@
     * limitnone, limitmax, limitrange bool - The limit on the number of slides the AI decides.
     * min, max int          - The limits of the number of slides.
     * slides array          - The slides, each drawn with local_coursegen/course_presentation_slide.
+    * topicerror, limiterror, slideserror string - What is wrong with the topic, the limits and the number of slides, if anything.
 
     Example context (json):
     {
@@ -51,8 +52,9 @@
             <h5 class="card-title">{{#str}} cpb_general_title, local_coursegen {{/str}}</h5>
             <div class="form-group">
                 <label for="cpb-topic">{{#str}} cpb_topic, local_coursegen {{/str}}</label>
-                <textarea id="cpb-topic" class="form-control" rows="3" data-field="topic"
+                <textarea id="cpb-topic" class="form-control {{#topicerror}}is-invalid{{/topicerror}}" rows="3" data-field="topic"
                           placeholder="{{#str}} cpb_topic_help, local_coursegen {{/str}}">{{topic}}</textarea>
+                <div class="invalid-feedback">{{topicerror}}</div>
             </div>
             <div class="form-group">
                 <label class="d-block" for="cpb-mode">{{#str}} cpb_mode, local_coursegen {{/str}}</label>
@@ -77,16 +79,17 @@
                 {{#limitrange}}
                 <div class="form-group col-md-3">
                     <label class="d-block" for="cpb-min">{{#str}} cpb_min, local_coursegen {{/str}}</label>
-                    <input id="cpb-min" type="number" min="3" max="30" class="form-control" data-field="min" value="{{min}}">
+                    <input id="cpb-min" type="number" min="3" max="30" class="form-control {{#limiterror}}is-invalid{{/limiterror}}" data-field="min" value="{{min}}">
                 </div>
                 {{/limitrange}}
                 {{^limitnone}}
                 <div class="form-group col-md-3">
                     <label class="d-block" for="cpb-max">{{#str}} cpb_max, local_coursegen {{/str}}</label>
-                    <input id="cpb-max" type="number" min="3" max="30" class="form-control" data-field="max" value="{{max}}">
+                    <input id="cpb-max" type="number" min="3" max="30" class="form-control {{#limiterror}}is-invalid{{/limiterror}}" data-field="max" value="{{max}}">
                 </div>
                 {{/limitnone}}
             </div>
+            {{#limiterror}}<div class="text-danger small mb-2" role="alert">{{limiterror}}</div>{{/limiterror}}
             <p class="mb-0 text-muted">{{#str}} cpb_auto_note, local_coursegen {{/str}}</p>
             {{/manual}}
         </div>
@@ -116,12 +119,14 @@
     <h5 class="mb-2">{{#str}} cpb_slides_title, local_coursegen {{/str}}</h5>
     <div data-region="local_coursegen/activity/builder_slides">{{#slides}}{{> local_coursegen/course_presentation_slide}}{{/slides}}</div>
     {{^slides}}<p class="text-muted">{{#str}} cpb_empty, local_coursegen {{/str}}</p>{{/slides}}
-    <button type="button" class="btn btn-outline-primary mb-3" data-action="local_coursegen/builder/add">
+    <button type="button" class="btn {{#slideserror}}btn-outline-danger{{/slideserror}}{{^slideserror}}btn-outline-primary{{/slideserror}} mb-2"
+            data-action="local_coursegen/builder/add" {{#slideserror}}data-invalid="true"{{/slideserror}}>
         <i class="fa fa-plus mr-1" aria-hidden="true"></i>{{#str}} cpb_add, local_coursegen {{/str}}
     </button>
+    {{#slideserror}}<div class="text-danger mb-3" role="alert">{{slideserror}}</div>{{/slideserror}}
+    <div class="mb-3"></div>
     {{/manual}}
 
-    <div class="alert alert-danger d-none" role="alert" data-region="local_coursegen/activity/builder_error"></div>
     <div class="text-right mb-3">
         <button type="button" class="btn btn-primary" data-action="local_coursegen/builder/submit">{{#str}} cpb_submit, local_coursegen {{/str}}</button>
     </div>
