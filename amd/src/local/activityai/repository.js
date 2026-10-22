@@ -29,6 +29,7 @@ import {
     sendActivityFeedback,
     initActivityFilepicker,
     uploadActivityFile,
+    uploadActivitySlideImage,
 } from 'local_coursegen/repository/activity';
 
 export const startSession = async(payload) => {
@@ -49,4 +50,8 @@ export const initFilepicker = async(payload) => {
 
 export const uploadFile = async(payload) => {
     return uploadActivityFile(payload);
+};
+
+export const uploadSlideImage = async(payload) => {
+    return uploadActivitySlideImage(payload);
 };

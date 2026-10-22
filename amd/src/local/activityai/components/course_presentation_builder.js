@@ -26,6 +26,7 @@
 import {BaseComponent} from 'core/reactive';
 import Templates from 'core/templates';
 import Notification from 'core/notification';
+import {pickFile} from 'local_coursegen/local/activityai/filepicker';
 import {get_strings as getStrings} from 'core/str';
 
 const COMPONENT = 'local_coursegen';
@@ -47,6 +48,9 @@ const PARTS = {
 /** The kinds of slide that are, by their name, a slide with an image: the image is not optional there. */
 const IMAGE_REQUIRED = ['content_image'];
 
+/** The extensions of the pictures the service accepts for a slide. */
+const PICTURE_TYPES = ['.png', '.jpg', '.jpeg', '.gif'];
+
 /** The kinds of question the service writes today. */
 const QUESTION_KINDS = ['none', 'multi_choice', 'true_false', 'fill_in_the_blanks'];
 
@@ -61,17 +65,35 @@ const QUESTION_NAMES = {
 };
 
 /**
+ * How the image of a new slide is made: a slide that is, by its name, a slide with an image asks for it, by
+ * generating it when the person may and by uploading it when not.
+ *
+ * @param {string} template
+ * @param {boolean} canImages Whether the person may generate images.
+ * @returns {string}
+ */
+const defaultImageMode = (template, canImages) => {
+    if (!IMAGE_REQUIRED.includes(template)) {
+        return 'none';
+    }
+    return canImages ? 'generate' : 'upload';
+};
+
+/**
  * An empty slide of a kind.
  *
  * @param {string} template
+ * @param {boolean} canImages Whether the person may generate images.
  * @returns {Object}
  */
-const newSlide = (template) => ({
+const newSlide = (template, canImages = true) => ({
     template,
     title: '',
     text: '',
-    imagemode: IMAGE_REQUIRED.includes(template) ? 'generate' : 'none',
+    imagemode: defaultImageMode(template, canImages),
     image: '',
+    imagedraft: 0,
+    imagename: '',
     video: '',
     qtype: PARTS[template].includes('question') ? 'multi_choice' : 'none',
     question: '',
@@ -89,7 +111,7 @@ export default class extends BaseComponent {
         const keys = [
             ...Object.keys(PARTS).map((name) => 'cpb_tpl_' + name),
             'cpb_q_none', 'cpb_q_multi', 'cpb_q_tf', 'cpb_q_fill',
-            'cpb_error_topic', 'cpb_error_slides', 'cpb_error_video', 'cpb_error_limits',
+            'cpb_error_topic', 'cpb_error_slides', 'cpb_error_video', 'cpb_error_limits', 'cpb_error_image',
         ];
         const texts = await getStrings(keys.map((key) => ({key, component: COMPONENT})));
         this.strings = {};
@@ -178,16 +200,6 @@ export default class extends BaseComponent {
     }
 
     /**
-     * A kind of slide that is a slide with an image needs the permission to generate images; without it, it is not offered.
-     *
-     * @param {string} template
-     * @returns {boolean}
-     */
-    _canUse(template) {
-        return !IMAGE_REQUIRED.includes(template) || Boolean(this.reactive.state.page.canimages);
-    }
-
-    /**
      * Images are made when at least one slide asks for one; the general option of the chat follows the slides.
      */
     _syncImages() {
@@ -230,11 +242,9 @@ export default class extends BaseComponent {
         return {
             index,
             number: index + 1,
-            templates: Object.keys(PARTS)
-                .filter((value) => value === slide.template || this._canUse(value))
-                .map((value) => ({
-                    value, label: this.strings['cpb_tpl_' + value], selected: value === slide.template,
-                })),
+            templates: Object.keys(PARTS).map((value) => ({
+                value, label: this.strings['cpb_tpl_' + value], selected: value === slide.template,
+            })),
             imageoptional: !IMAGE_REQUIRED.includes(slide.template),
             hastitle: parts.includes('title'),
             hastext: parts.includes('text'),
@@ -246,7 +256,10 @@ export default class extends BaseComponent {
             image: slide.image,
             video: slide.video,
             question: slide.question,
+            imagenone: slide.imagemode === 'none',
             imagegenerate: slide.imagemode === 'generate',
+            imageupload: slide.imagemode === 'upload',
+            imagename: slide.imagename,
             canimages: Boolean(this.reactive.state.page.canimages),
             qtypes: QUESTION_KINDS.map((value) => ({value, label: labels[value], selected: value === slide.qtype})),
             qchosen: slide.qtype !== 'none',
@@ -273,8 +286,8 @@ export default class extends BaseComponent {
             this._syncImages();
             if (event.type === 'change' && ['template', 'imagemode', 'qtype'].includes(field)) {
                 if (field === 'template') {
-                    if (IMAGE_REQUIRED.includes(target.value)) {
-                        slide.imagemode = 'generate';
+                    if (IMAGE_REQUIRED.includes(target.value) && slide.imagemode === 'none') {
+                        slide.imagemode = defaultImageMode(target.value, Boolean(this.reactive.state.page.canimages));
                     }
                     const wasQuestion = PARTS[slide.template]?.includes('question');
                     slide.qtype = PARTS[target.value].includes('question') && slide.qtype === 'none' && !wasQuestion
@@ -319,7 +332,7 @@ export default class extends BaseComponent {
         switch (action.replace('local_coursegen/builder/', '')) {
             case 'add':
                 if (slides.length < MAX_SLIDES) {
-                    slides.push(newSlide('content'));
+                    slides.push(newSlide('content', Boolean(this.reactive.state.page.canimages)));
                 }
                 break;
             case 'up':
@@ -339,6 +352,13 @@ export default class extends BaseComponent {
                 break;
             case 'remove':
                 slides.splice(index, 1);
+                break;
+            case 'pickimage':
+                await this._pickImage(slides[index]);
+                return;
+            case 'removeimage':
+                slides[index].imagedraft = 0;
+                slides[index].imagename = '';
                 break;
             case 'attach':
                 this.footer?.querySelector("[data-region='local_coursegen/activity/upload']")?.click();
@@ -371,6 +391,50 @@ export default class extends BaseComponent {
     }
 
     /**
+     * Choose the picture of a slide with the file picker; the slide shows its name once chosen.
+     *
+     * @param {Object} slide
+     */
+    async _pickImage(slide) {
+        try {
+            await pickFile({
+                courseid: this.reactive.state.page.courseid,
+                acceptedTypes: PICTURE_TYPES,
+                onPicked: async(file) => {
+                    slide.imagedraft = file.draftitemid;
+                    slide.imagename = file.filename;
+                    await this._render();
+                },
+            });
+        } catch (exception) {
+            Notification.exception(exception);
+        }
+    }
+
+    /**
+     * The pictures chosen for the slides, with the number of the slide each goes to.
+     *
+     * @returns {Array<{slide: number, draftitemid: number}>}
+     */
+    _slideImages() {
+        if (this.model.mode !== 'manual') {
+            return [];
+        }
+        return this.model.slides
+            .map((slide, index) => ({slide: index + 1, draftitemid: slide.imagedraft, uses: this._usesPicture(slide)}))
+            .filter((image) => image.uses && image.draftitemid)
+            .map(({slide, draftitemid}) => ({slide, draftitemid}));
+    }
+
+    /**
+     * @param {Object} slide
+     * @returns {boolean} Whether the slide has a picture the person uploaded.
+     */
+    _usesPicture(slide) {
+        return PARTS[slide.template].includes('image') && slide.imagemode === 'upload';
+    }
+
+    /**
      * Check the form and send the instruction it makes.
      */
     async _submit() {
@@ -387,7 +451,7 @@ export default class extends BaseComponent {
 
         this._syncImages();
         try {
-            await this.reactive.dispatch('submitPrompt', {prompt: this._instruction()});
+            await this.reactive.dispatch('submitPrompt', {prompt: this._instruction(), slideImages: this._slideImages()});
         } catch (exception) {
             Notification.exception(exception);
         }
@@ -410,7 +474,11 @@ export default class extends BaseComponent {
             const video = slide.video.trim();
             return PARTS[slide.template].includes('video') && video !== '' && !/^https?:\/\//i.test(video);
         });
-        return badVideo ? this.strings.cpb_error_video : '';
+        if (badVideo) {
+            return this.strings.cpb_error_video;
+        }
+        const missing = this.model.slides.some((slide) => this._usesPicture(slide) && !slide.imagedraft);
+        return missing ? this.strings.cpb_error_image : '';
     }
 
     /**
@@ -471,6 +539,9 @@ export default class extends BaseComponent {
         }
         if (parts.includes('text')) {
             pieces.push(slide.text.trim() ? 'text: ' + slide.text.trim() : 'text: explain what the slide needs');
+        }
+        if (this._usesPicture(slide)) {
+            pieces.push('image: the picture the person uploaded for this slide, which is added as it is: do not make one');
         }
         if (parts.includes('image') && slide.imagemode === 'generate') {
             pieces.push('image: ' + (slide.image.trim() || 'an image that illustrates the slide'));

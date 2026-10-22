@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026101234
+
+### Added
+- **A Course Presentation can use the pictures a teacher uploads**  
+  In the form of the presentation, the image of a slide can be uploaded as well as generated or left out. The file picker opens for a picture, and the picture goes into its slide as it is, instead of the AI making one. A slide that is a slide with an image can no longer go without its image. A new web service sends each picture to the AI service with the number of its slide.
+
 ## [2.0.10] - 2026101231
 
 ### Added

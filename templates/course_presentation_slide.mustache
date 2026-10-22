@@ -25,7 +25,8 @@
     * templates array       - The kinds of slide: value, label, selected.
     * hastitle, hastext, hasimage, hasvideo, hasquestion bool - The parts this kind of slide has.
     * title, text, image, video, question string - What was written.
-    * imagegenerate bool    - Whether the image is generated.
+    * imagenone, imagegenerate, imageupload bool - Which way the image is made: none, generated or uploaded.
+    * imagename string      - The name of the picture uploaded for the slide.
     * canimages bool        - Whether the person may generate images.
     * imageoptional bool    - Whether the slide may go without an image (not for the kinds that are a slide with an image).
     * qtypes array          - The kinds of question: value, label, selected.
@@ -36,7 +37,7 @@
     {
         "index": 0, "number": 1, "templates": [{"value": "cover", "label": "Cover", "selected": true}],
         "hastitle": true, "hastext": false, "hasimage": true, "hasvideo": false, "hasquestion": false,
-        "title": "", "text": "", "image": "", "video": "", "question": "", "imagegenerate": false, "canimages": true, "imageoptional": true,
+        "title": "", "text": "", "image": "", "video": "", "question": "", "imagenone": true, "imagegenerate": false, "imageupload": false, "imagename": "", "canimages": true, "imageoptional": true,
         "qtypes": [], "qchosen": false, "first": true, "last": true
     }
 }}
@@ -76,11 +77,31 @@
         <div class="form-group">
             <label class="d-block">{{#str}} cpb_image, local_coursegen {{/str}}</label>
             <select class="custom-select mb-2" data-slide-field="imagemode">
-                {{#imageoptional}}<option value="none" {{^imagegenerate}}selected{{/imagegenerate}}>{{#str}} cpb_image_none, local_coursegen {{/str}}</option>{{/imageoptional}}
+                {{#imageoptional}}<option value="none" {{#imagenone}}selected{{/imagenone}}>{{#str}} cpb_image_none, local_coursegen {{/str}}</option>{{/imageoptional}}
                 {{#canimages}}<option value="generate" {{#imagegenerate}}selected{{/imagegenerate}}>{{#str}} cpb_image_generate, local_coursegen {{/str}}</option>{{/canimages}}
+                <option value="upload" {{#imageupload}}selected{{/imageupload}}>{{#str}} cpb_image_upload, local_coursegen {{/str}}</option>
             </select>
-            <input type="text" class="form-control {{^imagegenerate}}d-none{{/imagegenerate}}" data-slide-field="image" value="{{image}}"
+            {{#imagegenerate}}
+            <input type="text" class="form-control" data-slide-field="image" value="{{image}}"
                    placeholder="{{#str}} cpb_image_help, local_coursegen {{/str}}">
+            {{/imagegenerate}}
+            {{#imageupload}}
+            <div class="d-flex align-items-center flex-wrap" style="gap: .75rem;">
+                <button type="button" class="btn btn-outline-secondary" data-action="local_coursegen/builder/pickimage">
+                    <i class="fa fa-image mr-1" aria-hidden="true"></i>{{#str}} cpb_image_choose, local_coursegen {{/str}}
+                </button>
+                {{#imagename}}
+                <span class="d-flex align-items-center">
+                    <i class="fa fa-file-image-o mr-2" aria-hidden="true"></i>
+                    <span class="text-truncate" style="max-width: 22rem;">{{imagename}}</span>
+                    <button type="button" class="btn btn-link p-0 ml-2" data-action="local_coursegen/builder/removeimage"
+                            aria-label="{{#str}} cpb_image_remove, local_coursegen {{/str}}" title="{{#str}} cpb_image_remove, local_coursegen {{/str}}">
+                        <i class="fa fa-times" aria-hidden="true"></i>
+                    </button>
+                </span>
+                {{/imagename}}
+            </div>
+            {{/imageupload}}
         </div>
         {{/hasimage}}
         {{#hasvideo}}
