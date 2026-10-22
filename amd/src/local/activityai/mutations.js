@@ -115,23 +115,6 @@ class Mutations {
     }
 
     /**
-     * Describe the activity freely, without picking a type: the AI decides it from the text.
-     *
-     * @param {StateManager} stateManager
-     */
-    chooseFreeMode(stateManager) {
-        if (stateManager.state.session.jobid) {
-            return;
-        }
-
-        stateManager.setReadOnly(false);
-        stateManager.state.session.activitytype = '';
-        stateManager.state.session.h5ptype = '';
-        stateManager.state.session.typestep = 'prompt';
-        stateManager.setReadOnly(true);
-    }
-
-    /**
      * Close modal.
      *
      * @param {StateManager} stateManager

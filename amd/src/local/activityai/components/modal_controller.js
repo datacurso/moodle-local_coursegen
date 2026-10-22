@@ -150,15 +150,9 @@ export default class extends BaseComponent {
                 courseId: state.page.courseid,
                 supportedTypes: state.page.activitytypes.map((type) => type.modname),
                 title: await getString('addactivityai_modaltitle', 'local_coursegen'),
-                freeLabel: await getString('activitytype_free', 'local_coursegen'),
             });
             if (!choice) {
                 return false;
-            }
-
-            if (choice.free) {
-                this.reactive.dispatch('chooseFreeMode');
-                return true;
             }
 
             this.reactive.dispatch('chooseActivityType', {modname: choice.modname});
