@@ -44,6 +44,9 @@ const PARTS = {
     closing: ['title', 'text'],
 };
 
+/** The kinds of slide that are, by their name, a slide with an image: the image is not optional there. */
+const IMAGE_REQUIRED = ['content_image'];
+
 /** The kinds of question the service writes today. */
 const QUESTION_KINDS = ['none', 'multi_choice', 'true_false', 'fill_in_the_blanks'];
 
@@ -67,7 +70,7 @@ const newSlide = (template) => ({
     template,
     title: '',
     text: '',
-    imagemode: 'none',
+    imagemode: IMAGE_REQUIRED.includes(template) ? 'generate' : 'none',
     image: '',
     video: '',
     qtype: PARTS[template].includes('question') ? 'multi_choice' : 'none',
@@ -175,6 +178,16 @@ export default class extends BaseComponent {
     }
 
     /**
+     * A kind of slide that is a slide with an image needs the permission to generate images; without it, it is not offered.
+     *
+     * @param {string} template
+     * @returns {boolean}
+     */
+    _canUse(template) {
+        return !IMAGE_REQUIRED.includes(template) || Boolean(this.reactive.state.page.canimages);
+    }
+
+    /**
      * Images are made when at least one slide asks for one; the general option of the chat follows the slides.
      */
     _syncImages() {
@@ -217,9 +230,12 @@ export default class extends BaseComponent {
         return {
             index,
             number: index + 1,
-            templates: Object.keys(PARTS).map((value) => ({
-                value, label: this.strings['cpb_tpl_' + value], selected: value === slide.template,
-            })),
+            templates: Object.keys(PARTS)
+                .filter((value) => value === slide.template || this._canUse(value))
+                .map((value) => ({
+                    value, label: this.strings['cpb_tpl_' + value], selected: value === slide.template,
+                })),
+            imageoptional: !IMAGE_REQUIRED.includes(slide.template),
             hastitle: parts.includes('title'),
             hastext: parts.includes('text'),
             hasimage: parts.includes('image'),
@@ -257,6 +273,9 @@ export default class extends BaseComponent {
             this._syncImages();
             if (event.type === 'change' && ['template', 'imagemode', 'qtype'].includes(field)) {
                 if (field === 'template') {
+                    if (IMAGE_REQUIRED.includes(target.value)) {
+                        slide.imagemode = 'generate';
+                    }
                     const wasQuestion = PARTS[slide.template]?.includes('question');
                     slide.qtype = PARTS[target.value].includes('question') && slide.qtype === 'none' && !wasQuestion
                         ? 'multi_choice' : slide.qtype;
