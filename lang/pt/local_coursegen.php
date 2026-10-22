@@ -93,7 +93,6 @@ $string['addactivityai_faildefault'] = 'Não foi possível criar o recurso.';
 $string['addactivityai_label'] = 'Descreva o que você precisa';
 $string['addactivityai_modaltitle'] = 'Crie recurso/atividade com AI';
 $string['addactivityai_placeholder'] = 'Descreva qual recurso ou atividade você deseja criar';
-$string['addactivityai_welcome'] = 'Olá! Diga-me qual recurso ou atividade você precisa e eu criarei em seu curso. 😊';
 $string['addactivitywithia'] = 'Adicione atividade ou recurso com AI';
 $string['addcourseai_arialabel'] = 'Assistente AI para criação de cursos';
 $string['addcourseai_done'] = 'Feito! O curso foi criado com sucesso.';

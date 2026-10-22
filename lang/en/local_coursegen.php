@@ -99,7 +99,6 @@ $string['addactivityai_faildefault'] = 'It was not possible to create the resour
 $string['addactivityai_label'] = 'Describe what you need';
 $string['addactivityai_modaltitle'] = 'Create resource/activity with AI';
 $string['addactivityai_placeholder'] = 'Describe what resource or activity you want to create';
-$string['addactivityai_welcome'] = 'Hi! Tell me what resource or activity you need and I will create it in your course. 😊';
 $string['addactivitywithia'] = 'Add activity or resource with AI';
 $string['addcourseai_arialabel'] = 'AI assistant to create courses';
 $string['addcourseai_done'] = 'Done! The course was created successfully.';

@@ -93,7 +93,6 @@ $string['addactivityai_faildefault'] = 'Tidak mungkin membuat sumber daya.';
 $string['addactivityai_label'] = 'Jelaskan apa yang Anda butuhkan';
 $string['addactivityai_modaltitle'] = 'Buat sumber daya/aktivitas dengan AI';
 $string['addactivityai_placeholder'] = 'Jelaskan sumber daya atau aktivitas apa yang ingin Anda buat';
-$string['addactivityai_welcome'] = 'Hai! Beri tahu saya sumber daya atau aktivitas apa yang Anda perlukan dan saya akan membuatnya di kursus Anda. 😊';
 $string['addactivitywithia'] = 'Tambahkan aktivitas atau sumber daya dengan AI';
 $string['addcourseai_arialabel'] = 'AI asisten untuk membuat kursus';
 $string['addcourseai_done'] = 'Selesai! Kursus berhasil dibuat.';
