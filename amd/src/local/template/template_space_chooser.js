@@ -204,20 +204,32 @@ const keepFavouritesUnchanged = async() => null;
 const FREE_LINK_REGION = 'local_coursegen/chooser/free';
 
 /**
- * The footer with the link to go on without picking a type, when the caller asked for one.
+ * The chooser body with the link to go on without picking a type at the end of the list, when the caller asked for one.
  *
+ * The link goes inside the list and not in the footer of the modal: with a footer, the help panel of an item swaps it
+ * and its Back button stops working. Inside the list, it hides with the list when the help panel opens.
+ *
+ * @param {string} rendered The chooser body HTML.
  * @param {string|null} freeLabel The text of the link, or null for no link.
- * @returns {string} The footer HTML, empty for no footer.
+ * @returns {string} The body HTML.
  */
-const freeLinkFooter = (freeLabel) => {
+const withFreeLink = (rendered, freeLabel) => {
     if (!freeLabel) {
-        return '';
+        return rendered;
+    }
+    const body = document.createElement('div');
+    body.innerHTML = rendered;
+    const list = body.querySelector('.modchoosercontainer');
+    if (!list) {
+        return rendered;
     }
     const link = document.createElement('a');
     link.href = '#';
+    link.className = 'mt-3 align-self-start';
     link.dataset.region = FREE_LINK_REGION;
     link.textContent = freeLabel;
-    return link.outerHTML;
+    list.appendChild(link);
+    return body.innerHTML;
 };
 
 /**
@@ -225,14 +237,12 @@ const freeLinkFooter = (freeLabel) => {
  *
  * @param {Promise<string>} bodyPromise Resolves with the rendered chooser body.
  * @param {Promise<string>|string} title The title of the modal.
- * @param {string|null} freeLabel The text of the link to go on without picking a type, or null.
  * @returns {Promise<Object>} The modal instance.
  */
-const createChooserModal = (bodyPromise, title, freeLabel) => {
+const createChooserModal = (bodyPromise, title) => {
     return Modal.create({
         title,
         body: bodyPromise,
-        footer: freeLinkFooter(freeLabel),
         large: true,
         scrollable: false,
         templateContext: {classes: 'modchooser'},
@@ -326,13 +336,14 @@ const bindPick = (modal, items, selection) => {
  * @param {Promise<Object>} params.modalPromise The chooser modal being created.
  * @param {{resolve: Function}} params.body Resolves the modal body.
  * @param {ChooserSelection} params.selection The session to settle.
+ * @param {string|null} params.freeLabel The text of the link to go on without picking a type, or null.
  */
-const populateChooser = async({courseId, supportedTypes, modalPromise, body, selection}) => {
+const populateChooser = async({courseId, supportedTypes, modalPromise, body, selection, freeLabel}) => {
     const items = await fetchSupportedItems(courseId, supportedTypes);
     ChooserDialogue.displayChooser(modalPromise, items, keepFavouritesUnchanged, {footer: false});
     const data = templateData(items);
     const rendered = await Templates.render('core_course/activitychooser', data);
-    body.resolve(rendered);
+    body.resolve(withFreeLink(rendered, freeLabel));
     const modal = await modalPromise;
     bindPick(modal, items, selection);
 };
@@ -351,10 +362,10 @@ const populateChooser = async({courseId, supportedTypes, modalPromise, body, sel
 export const chooseActivityType = async({courseId, supportedTypes, title = null, freeLabel = null}) => {
     const body = createDeferred();
     const modalTitle = title || getString(STRING.ADD_SPACE, COMPONENT);
-    const modalPromise = createChooserModal(body.promise, modalTitle, freeLabel);
+    const modalPromise = createChooserModal(body.promise, modalTitle);
     const selection = new ChooserSelection();
     try {
-        await populateChooser({courseId, supportedTypes, modalPromise, body, selection});
+        await populateChooser({courseId, supportedTypes, modalPromise, body, selection, freeLabel});
     } catch (error) {
         const modal = await modalPromise;
         modal.destroy();
