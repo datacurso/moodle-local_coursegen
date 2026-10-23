@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026101239
+
+### Changed
+- **The Course Presentation editor is for telling the AI what to write, with Moodle's own form components**  
+  The editor opens with a field for the topic, the file the AI bases the presentation on, and an optional number of slides. Each slide has a line to tell the AI what to write in each part, which are the title, the text, the image, the question and the whole slide. One button writes the whole presentation from the topic and those lines, and the line of a part, with its Apply button, rewrites only that part. If no slides are added, the AI decides how many it needs. What the AI wrote can still be edited by hand, and the activity is made from what is on the screen. The custom styles were reduced to the layout, and the look comes from the standard Moodle form components.
+
 ## [2.0.10] - 2026101238
 
 ### Changed
