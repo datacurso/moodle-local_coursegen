@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026101238
+
+### Changed
+- **The Course Presentation editor follows the look of the rest of the plugin**  
+  The editor now uses the same palette and shapes as the course-creation page: coral marks what is selected and what sends, the brand purple marks what the AI does, and the cards, borders, radius and shadows are the same. The description screen and the bar for the AI are built as the chat box of the course page, with the text field on top and its tools below, a round attach button and a round send button. The styles of the editor are written on the plugin's own colour variables instead of fixed colours.
+
 ## [2.0.10] - 2026101237
 
 ### Changed
