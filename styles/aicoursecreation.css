@@ -172,6 +172,15 @@ svg { display: block; flex-shrink: 0; }
   overflow: hidden;
 }
 
+/* A course that was already made: the card of the course alone, in the middle, without the form that makes a new one. */
+.courseai-workspace.is-template.is-finished {
+  grid-template-columns: minmax(0, 1fr);
+}
+.courseai-workspace.is-template.is-finished .tpl-left-panel,
+.courseai-workspace.is-template.is-finished .cg-splitter {
+  display: none;
+}
+
 .courseai-workspace.is-planning .context-wrap,
 .courseai-workspace.is-template .context-wrap {
   max-width: none;

@@ -205,7 +205,11 @@ class template_row_options {
         $sourcename = $instance->get('sourcename');
         $modname = $instance->get('modname');
         $iconurl = self::instance_icon_url($modname);
+        // An instance with no template activity behind it is an activity the AI always creates from its instruction.
+        $generated = (int) $instance->get('sourcecmid') === 0;
         return [
+            'generated' => $generated,
+            'promptopen' => $generated,
             'instanceid' => (int) $instance->get('id'),
             'name' => $name,
             'typelabel' => $typelabel,

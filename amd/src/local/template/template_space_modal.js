@@ -52,18 +52,40 @@ const getModal = () => {
  * Read what the admin chose in the modal body.
  *
  * @param {Object} modal The modal instance.
- * @returns {{required: boolean, instruction: string}}
+ * @returns {{mode: string, name: string, required: boolean, instruction: string}}
  */
 const readChoice = (modal) => {
     const rootList = modal.getRoot();
     const root = rootList[0];
     const checked = root.querySelector(Selectors.regions.spaceRequiredChoice);
+    const mode = root.querySelector(Selectors.regions.spaceModeChecked).value;
     const instructionField = root.querySelector(Selectors.regions.spaceInstructionField);
     const instruction = instructionField.value.trim();
+    const name = root.querySelector(Selectors.regions.spaceNameField).value.trim();
     return {
+        mode,
+        name,
         required: checked.value === REQUIRED_VALUE,
         instruction,
     };
+};
+
+/**
+ * Show what belongs to the chosen mode: for the AI, the name and the help, and not the requirement.
+ *
+ * @param {Object} modal The modal instance.
+ */
+const bindModeChoice = (modal) => {
+    const root = modal.getRoot()[0];
+    const apply = async() => {
+        const ai = root.querySelector(Selectors.regions.spaceModeChecked).value === 'ai';
+        root.querySelector(Selectors.regions.spaceNameGroup).hidden = !ai;
+        root.querySelector(Selectors.regions.spaceAiHelp).hidden = !ai;
+        root.querySelector(Selectors.regions.spaceRequiredGroup).hidden = ai;
+        const key = ai ? 'template_space_instruction_label_ai' : 'template_space_instruction_label';
+        root.querySelector(Selectors.regions.spaceInstructionLabel).textContent = await getString(key, COMPONENT);
+    };
+    root.querySelectorAll(Selectors.regions.spaceModeChoice).forEach((radio) => radio.addEventListener('change', apply));
 };
 
 /**
@@ -115,18 +137,28 @@ const handleHidden = (ctx) => {
  * @param {string} options.subject What the space is for — an activity type or name.
  * @param {boolean} options.required Whether "Required" is preselected.
  * @param {string} options.instruction The instruction typed so far.
- * @param {Function} options.onSave ({required, instruction}) => void.
+ * @param {string} [options.mode] 'teacher' (the default) or 'ai' (the AI always creates the activity).
+ * @param {string} [options.name] The name of an AI activity.
+ * @param {boolean} [options.lockMode] Editing an existing space: the mode cannot be changed.
+ * @param {Function} options.onSave ({mode, name, required, instruction}) => void.
  * @param {Function} [options.onCancel] Called once for any non-save close.
  */
-export const openSpaceModal = async({subject, required, instruction, onSave, onCancel}) => {
+export const openSpaceModal = async({
+    subject, required, instruction, onSave, onCancel, mode = 'teacher', name = '', lockMode = false,
+}) => {
     const modal = await getModal();
     const body = await Templates.render('local_coursegen/template_space_modal_body', {
         subject,
         requiredchecked: required,
         optionalchecked: !required,
         instruction,
+        teacherchecked: mode !== 'ai',
+        aichecked: mode === 'ai',
+        name,
+        lockmode: lockMode,
     });
     await modal.setBody(body);
+    bindModeChoice(modal);
 
     const ctx = {modal, onSave, onCancel, resolved: false};
     const saveHandler = handleSave.bind(null, ctx);

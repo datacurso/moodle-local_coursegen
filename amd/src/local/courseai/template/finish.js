@@ -111,5 +111,6 @@ export const showFinishedCourse = (host, state, session) => {
     state.withImages = false;
     state.createAnotherUrl = CREATE_ANOTHER_URL;
     showFinishView();
+    document.getElementById('courseaiWorkspace')?.classList.add('is-finished');
     host.actions.showCompletionView({success: true, courseurl: session.courseurl});
 };

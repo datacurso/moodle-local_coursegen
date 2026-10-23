@@ -1,28 +1,28 @@
 {{!
-    @template local_coursegen/activity_type_picker
+    This file is part of Moodle - http://moodle.org/
 
-    The first steps of the chat to create an activity, inside the chat itself: what was chosen so far, the types the
-    AI can create and, for H5P, its kinds. The tiles are Moodle's own chooser tiles.
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
 
-    Context variables required for this template:
-    * typeitems array  - The chooser items of the types the AI can create.
-    * kinditems array  - The chooser items of the H5P kinds.
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
 
-    Example context (json):
-    {
-        "typeitems": [
-            {"name": "forum", "title": "Forum", "link": "?add=forum", "icon": "<img class='icon' src='https://example.com/forum.svg' alt=''>", "componentname": "mod_forum", "purpose": "collaboration", "branded": 0, "legacyitem": true}
-        ],
-        "kinditems": []
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
 {{!
     @template local_coursegen/presentation_editor_busy
 
-    The veil over a part of a slide while the AI writes it.
+    The veil over the slide while the AI works on it.
 
     Example context (json):
     {}
 }}
-<div class="position-absolute d-flex align-items-center justify-content-center" style="inset: 0; background: rgba(255,255,255,.75); z-index: 2; gap: .5rem;" role="status">
-    <span class="spinner-border spinner-border-sm text-primary" aria-hidden="true"></span>
+<div class="pe-veil" role="status">
+    <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
     <span>{{#str}} pe_working, local_coursegen {{/str}}</span>
 </div>

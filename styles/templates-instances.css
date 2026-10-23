@@ -251,3 +251,31 @@
     font-size: 0.68rem;
     color: #6c757d;
 }
+
+/* An activity the AI always creates from the administrator's instruction: told apart from an instance of a template
+   activity (purple) and from a space the teacher fills (orange). */
+.tpl-badge-generated {
+    background: #e0f5ee;
+    color: #00695c;
+}
+
+.tpl-row-instance[data-generated="1"] {
+    background: #f3fbf8;
+    box-shadow: inset 3px 0 0 #1a9e86;
+}
+
+/* The instruction of an AI-created activity is a regular Moodle field, not the pink box of the other instructions. */
+.tpl-prompt-standard .tpl-prompt-field {
+    border: none;
+    background: transparent;
+    padding: 0;
+    margin-top: 0;
+}
+
+.tpl-prompt-standard .tpl-prompt-field textarea.form-control {
+    border: 1px solid #ced4da;
+    background: #fff;
+    resize: vertical;
+    font-size: inherit;
+    padding: 0.375rem 0.75rem;
+}

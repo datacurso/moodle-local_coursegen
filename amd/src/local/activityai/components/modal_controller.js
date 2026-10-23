@@ -34,7 +34,6 @@ import ChatForm from 'local_coursegen/local/activityai/components/chat_form';
 import StreamOutput from 'local_coursegen/local/activityai/components/stream_output';
 import TypePicker from 'local_coursegen/local/activityai/components/type_picker';
 import PresentationEditor from 'local_coursegen/local/activityai/components/presentation_editor';
-import CoursePresentationBuilder from 'local_coursegen/local/activityai/components/course_presentation_builder';
 import {fetchSupportedItems, kindItems} from 'local_coursegen/local/template/template_space_chooser';
 
 export default class extends BaseComponent {
@@ -127,20 +126,13 @@ export default class extends BaseComponent {
                 kindItems: kindList,
             });
 
-            const builderSlot = document.createElement('div');
-            slot.append(builderSlot);
-            new CoursePresentationBuilder({
-                element: builderSlot,
-                reactive: this.reactive,
-                footer: rootElement.querySelector('.modal-footer'),
-            });
-
             const editorSlot = document.createElement('div');
             editorSlot.className = 'd-none';
             slot.append(editorSlot);
             new PresentationEditor({
                 element: editorSlot,
                 reactive: this.reactive,
+                footer: rootElement.querySelector('.modal-footer'),
             });
         }
 

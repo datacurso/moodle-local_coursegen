@@ -82,6 +82,8 @@ class name_template_session extends external_api {
         $coursedata['fullname'] = $params['fullname'];
         $coursedata['shortname'] = $params['shortname'];
         $session->set('coursedata', json_encode($coursedata, JSON_UNESCAPED_UNICODE));
+        $session->set('title', \core_text::substr($params['fullname'], 0, 255));
+        $session->set('shortname', \core_text::substr($params['shortname'], 0, 100));
         $session->update();
 
         return ['saved' => true];

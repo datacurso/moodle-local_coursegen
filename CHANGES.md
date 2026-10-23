@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026101237
+
+### Changed
+- **A new look for the Course Presentation editor**  
+  The editor uses a wider window and shows the slides as thumbnails on the left, the selected slide on a canvas like a real slide, and a bar for the AI below it. The bar can be aimed at the whole slide or at its title, text, image or question, and the part being edited is highlighted and selected for it automatically. Ready-made instructions such as simplifying the language or adding an example apply with one click. Questions are added with buttons for each type, and the first screen is a clean panel to describe the presentation, with an option to start from scratch. The texts of the editor were rewritten in a neutral, professional tone, and the strings of the removed form were deleted.
+
+## [2.0.10] - 2026101236
+
+### Changed
+- **Course Presentation opens straight into the editor, with no form first**  
+  Choosing Course Presentation now shows the editor at once, with three empty slides the person can start filling in by hand. On top there is a box to tell the AI what the presentation is about, with a button to attach a file and another to write all the slides with the AI, which asks before replacing slides that already have content. Each slide also lets the person describe an image for the AI to make or upload a picture of their own. The AI job only starts the first time the AI is needed, so entering and leaving the editor costs nothing. The form with the list of slides is gone.
+
 ## [2.0.10] - 2026101235
 
 ### Added
@@ -25,6 +37,36 @@ All notable changes to this project will be documented in this file. Each change
 ### Added
 - **The chat to create an activity with the AI asks for the type inside the chat itself**  
   Instead of describing the activity from nothing, the chat opens with the types the AI can create on the site, drawn as the tiles of Moodle's own activity chooser. What is chosen stays in the conversation as the teacher's side of it, H5P goes on to ask for its kind in the same chat, with the description of each kind as its hint, and the field says what is going to be created, for example the H5P kind. Each list has a search box that filters the tiles by name and, for the H5P kinds, by description, ignoring case and accents. A Back button in the header goes one step back, from the chat to the kinds of H5P or the types, until the conversation starts. The type picked travels to the AI service, which no longer guesses it from the text, and a type the site does not offer is refused.
+
+## [2.0.10] - 2026101228
+
+### Added
+- **An H5P activity can be shown inside the page that links to it**  
+  A link written for an H5P activity of the course, marked to be shown embedded, becomes the player of that activity once the course exists, so the student uses it without leaving the page or pressing a button. If the activity cannot be shown that way, the link stays as a normal link.
+
+## [2.0.10] - 2026101227
+
+### Added
+- **A space in a template can be an activity the AI always creates**  
+  In the menu of a section, "Add a space for an activity" now asks who makes the activity. The teacher can still provide it. Or the AI always creates it: the administrator gives it a name and the instructions it must follow, and a course made from the template always gets that activity, written from the syllabus and the material with those instructions, without the teacher seeing it or changing it. There is no need to add a template activity to the template course for it. In the structure of the template these activities have their own green mark and side stripe, so they are not mistaken for an instance of a template activity (purple) or a space for the teacher (orange).
+
+## [2.0.10] - 2026101224
+
+### Fixed
+- **A finished course opens as its card alone**  
+  Opening a course already made from a template showed its card on the right and, on the left, the empty form that makes a new course. The form and the divider are now hidden, so the card is the whole view.
+
+## [2.0.10] - 2026101223
+
+### Fixed
+- **A question that cannot be stored no longer stops its quiz at that point**  
+  When the AI gave a question a penalty Moodle could not store, creating that question failed and every question after it was left out, while the course was still reported as created. The penalty is now always a valid number and a question that still fails is skipped, so the rest of the quiz is added.
+
+## [2.0.10] - 2026101222
+
+### Fixed
+- **The page to create a course no longer runs out of memory when a user has many generations**  
+  Every course made from a template keeps its whole payload, megabytes of text, in its session, and the page read all of the sessions of the user to draw the list of recent courses, twice. After about fifty of them the page failed with an error 500. The list now reads only what it shows: the name, the short name and the template of each session are kept in small columns of their own, filled in for the sessions that already exist, and the list asks only for the sessions it draws.
 
 ## [2.0.10] - 2026101221
 
