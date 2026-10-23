@@ -194,6 +194,57 @@ class Mutations {
     }
 
     /**
+     * Open the session of the Course Presentation editor: the job is started and the document and the pictures the
+     * teacher chose are sent, but nothing is generated yet; the editor asks for the draft once the job exists.
+     *
+     * @param {StateManager} stateManager
+     * @param {{prompt: string}} payload
+     */
+    async beginPresentation(stateManager, payload) {
+        await ensureUiTexts();
+
+        const state = stateManager.state;
+        const courseid = Number(state.page.courseid) || 0;
+        stateManager.setReadOnly(false);
+        state.session.locked = true;
+        state.session.phase = 'editing_starting';
+        stateManager.setReadOnly(true);
+
+        try {
+            const response = await repository.startSession({
+                courseid,
+                sectionnum: state.session.sectionnum,
+                beforemod: state.session.beforemod,
+                prompt: String(payload.prompt || ''),
+                generateimages: state.session.generateimages,
+                lang: String(state.session.lang || state.page.defaultlang || 'en'),
+                modname: String(state.session.activitytype || ''),
+                h5ptype: String(state.session.h5ptype || ''),
+            });
+            const jobid = response && response.job_id ? String(response.job_id) : '';
+            if (!jobid) {
+                throw new Error(response && response.message ? response.message : 'Missing session response');
+            }
+
+            if (state.upload.draftitemid) {
+                await repository.uploadFile({courseid, jobid, draftitemid: state.upload.draftitemid});
+            }
+
+            stateManager.setReadOnly(false);
+            state.session.jobid = jobid;
+            state.session.locked = false;
+            state.session.phase = 'editing';
+            stateManager.setReadOnly(true);
+        } catch (error) {
+            stateManager.setReadOnly(false);
+            state.session.locked = false;
+            state.session.phase = 'idle';
+            stateManager.setReadOnly(true);
+            throw error;
+        }
+    }
+
+    /**
      * Submit the initial prompt (creates session) OR a feedback prompt (adjust).
      *
      * @param {StateManager} stateManager

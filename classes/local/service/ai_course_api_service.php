@@ -196,6 +196,58 @@ class ai_course_api_service {
     }
 
     /**
+     * Ask the service to write the slides of a Course Presentation, without building it.
+     *
+     * @param string $threadid External activity generation identifier (thread_id).
+     * @param string $instructions What the presentation is about; empty to use the one of the thread.
+     * @return array The name, the description and the slides.
+     */
+    public function presentation_draft(string $threadid, string $instructions): array {
+        return $this->client->request('POST', '/activity/presentation/draft', [
+            'thread_id' => $threadid,
+            'instructions' => $instructions,
+        ]) ?? [];
+    }
+
+    /**
+     * Ask the service to write one slide, or one of its parts, again.
+     *
+     * @param string $threadid External activity generation identifier (thread_id).
+     * @param array $slides The slides as they are now.
+     * @param int $index The slide to write again, 0 is the first.
+     * @param string $instruction What to change.
+     * @param string|null $part The part to change, or null for any.
+     * @return array The slide written again.
+     */
+    public function presentation_slide(string $threadid, array $slides, int $index, string $instruction, ?string $part): array {
+        return $this->client->request('POST', '/activity/presentation/slide', [
+            'thread_id' => $threadid,
+            'slides' => $slides,
+            'index' => $index,
+            'instruction' => $instruction,
+            'part' => $part,
+        ]) ?? [];
+    }
+
+    /**
+     * Ask the service to make the package of a Course Presentation from its slides.
+     *
+     * @param string $threadid External activity generation identifier (thread_id).
+     * @param string $name Name of the activity.
+     * @param string $intro Description of the activity.
+     * @param array $slides The slides as the teacher left them.
+     * @return array What the service answered.
+     */
+    public function presentation_build(string $threadid, string $name, string $intro, array $slides): array {
+        return $this->client->request('POST', '/activity/presentation/build', [
+            'thread_id' => $threadid,
+            'name' => $name,
+            'intro' => $intro,
+            'slides' => $slides,
+        ]) ?? [];
+    }
+
+    /**
      * Send human feedback for an existing AI course planning session.
      *
      * @param string $sessionid External planning session identifier.
