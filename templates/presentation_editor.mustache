@@ -23,7 +23,8 @@
 
     Context variables required for this template:
     * error string, topic string, name string
-    * manual bool, auto bool, min int, max int
+    * manual bool, auto bool, min int, max int, languages array (code, name, selected)
+    * hint string, nocreate bool - Why the activity cannot be created yet, and whether the button is off.
     * hasfile bool, filename string
     * busy bool, busyall bool, creating bool
     * addopen bool, layouts array (key, label)
@@ -39,47 +40,58 @@
     <div class="pe-alert" role="alert" data-region="local_coursegen/pe/error">{{error}}</div>
     {{/error}}
 
-    <section class="pe-context">
-        <div class="pe-field">
-            <label class="pe-cap" for="pe-topic"><i class="fa fa-star" aria-hidden="true"></i>{{#str}} pe_ctx_label, local_coursegen {{/str}}</label>
-            <div class="pe-promptbox">
-                <textarea id="pe-topic" rows="2" data-field="topic" placeholder="{{#str}} pe_ctx_placeholder, local_coursegen {{/str}}">{{topic}}</textarea>
+    <section class="pe-step">
+        <header class="pe-step-head">
+            <span class="pe-step-no">1</span>
+            <div>
+                <h3 class="pe-step-title">{{#str}} pe_step1_title, local_coursegen {{/str}}</h3>
+                <p class="pe-step-help">{{#str}} pe_step1_help, local_coursegen {{/str}}</p>
             </div>
-        </div>
-        <div class="pe-side">
-            <div class="pe-seg" role="group" aria-label="{{#str}} pe_strip, local_coursegen {{/str}}">
-                <button type="button" data-action="local_coursegen/pe/setmode" data-mode="manual" aria-pressed="{{#manual}}true{{/manual}}{{^manual}}false{{/manual}}">{{#str}} pe_mode_manual, local_coursegen {{/str}}</button>
-                <button type="button" data-action="local_coursegen/pe/setmode" data-mode="auto" aria-pressed="{{#auto}}true{{/auto}}{{^auto}}false{{/auto}}">{{#str}} pe_mode_auto, local_coursegen {{/str}}</button>
+        </header>
+        <div class="pe-composer">
+            <textarea id="pe-topic" rows="3" data-field="topic" aria-label="{{#str}} pe_step1_title, local_coursegen {{/str}}"
+                      placeholder="{{#str}} pe_ctx_placeholder, local_coursegen {{/str}}">{{topic}}</textarea>
+            <div class="pe-composer-tools">
+                {{^hasfile}}
+                <button type="button" class="pe-round" data-action="local_coursegen/pe/attach"
+                        title="{{#str}} pe_attach, local_coursegen {{/str}}" aria-label="{{#str}} pe_attach, local_coursegen {{/str}}"><i class="fa fa-paperclip" aria-hidden="true"></i></button>
+                {{/hasfile}}
+                {{#hasfile}}
+                <span class="pe-file">
+                    <i class="fa fa-paperclip" aria-hidden="true"></i><span class="pe-truncate">{{filename}}</span>
+                    <button type="button" class="pe-icon" data-action="local_coursegen/pe/removefile"
+                            title="{{#str}} pe_remove_file, local_coursegen {{/str}}" aria-label="{{#str}} pe_remove_file, local_coursegen {{/str}}"><i class="fa fa-times" aria-hidden="true"></i></button>
+                </span>
+                {{/hasfile}}
+                <label class="pe-lang">
+                    <span class="sr-only">{{#str}} pe_lang, local_coursegen {{/str}}</span>
+                    <i class="fa fa-globe" aria-hidden="true"></i>
+                    <select data-field="lang">
+                        {{#languages}}<option value="{{code}}" {{#selected}}selected{{/selected}}>{{name}}</option>{{/languages}}
+                    </select>
+                </label>
+                <span class="pe-grow"></span>
+                <button type="button" class="pe-btn pe-btn-primary" data-action="local_coursegen/pe/generate" {{#busy}}disabled{{/busy}}>
+                    {{#busyall}}<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>{{/busyall}}
+                    {{^busyall}}<i class="fa fa-star" aria-hidden="true"></i>{{/busyall}}
+                    {{#str}} pe_generate, local_coursegen {{/str}}
+                </button>
             </div>
-            {{#auto}}
-            <div class="pe-range">
-                <span>{{#str}} pe_range_between, local_coursegen {{/str}}</span>
-                <input type="number" min="3" max="30" data-field="min" value="{{min}}" aria-label="{{#str}} pe_range_min, local_coursegen {{/str}}">
-                <span>{{#str}} pe_range_and, local_coursegen {{/str}}</span>
-                <input type="number" min="3" max="30" data-field="max" value="{{max}}" aria-label="{{#str}} pe_range_max, local_coursegen {{/str}}">
-                <span>{{#str}} pe_range_unit, local_coursegen {{/str}}</span>
-            </div>
-            {{/auto}}
-            {{^hasfile}}
-            <button type="button" class="pe-btn pe-btn-small" data-action="local_coursegen/pe/attach">
-                <i class="fa fa-paperclip" aria-hidden="true"></i>{{#str}} pe_attach, local_coursegen {{/str}}
-            </button>
-            {{/hasfile}}
-            {{#hasfile}}
-            <span class="pe-file">
-                <i class="fa fa-paperclip" aria-hidden="true"></i><span class="pe-truncate">{{filename}}</span>
-                <button type="button" class="pe-icon" data-action="local_coursegen/pe/removefile"
-                        title="{{#str}} pe_remove_file, local_coursegen {{/str}}" aria-label="{{#str}} pe_remove_file, local_coursegen {{/str}}"><i class="fa fa-times" aria-hidden="true"></i></button>
-            </span>
-            {{/hasfile}}
-            <button type="button" class="pe-btn pe-btn-primary" data-action="local_coursegen/pe/generate" {{#busy}}disabled{{/busy}}>
-                {{#busyall}}<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>{{/busyall}}
-                {{^busyall}}<i class="fa fa-star" aria-hidden="true"></i>{{/busyall}}
-                {{#str}} pe_generate, local_coursegen {{/str}}
-            </button>
         </div>
     </section>
 
+    <section class="pe-step">
+        <header class="pe-step-head">
+            <span class="pe-step-no">2</span>
+            <div>
+                <h3 class="pe-step-title">{{#str}} pe_step2_title, local_coursegen {{/str}}</h3>
+                <p class="pe-step-help">{{#str}} pe_step2_help, local_coursegen {{/str}}</p>
+            </div>
+            <div class="pe-seg" role="group" aria-label="{{#str}} pe_step2_title, local_coursegen {{/str}}">
+                <button type="button" data-action="local_coursegen/pe/setmode" data-mode="manual" aria-pressed="{{#manual}}true{{/manual}}{{^manual}}false{{/manual}}">{{#str}} pe_mode_manual, local_coursegen {{/str}}</button>
+                <button type="button" data-action="local_coursegen/pe/setmode" data-mode="auto" aria-pressed="{{#auto}}true{{/auto}}{{^auto}}false{{/auto}}">{{#str}} pe_mode_auto, local_coursegen {{/str}}</button>
+            </div>
+        </header>
     <div class="pe-work">
         <aside class="pe-rail" aria-label="{{#str}} pe_strip, local_coursegen {{/str}}">
             {{#manual}}
@@ -119,6 +131,13 @@
                 <i class="fa fa-star" aria-hidden="true"></i>
                 <strong>{{#str}} pe_auto_title, local_coursegen {{/str}}</strong>
                 <p>{{#str}} pe_auto_help, local_coursegen {{/str}}</p>
+                <div class="pe-range">
+                    <span>{{#str}} pe_range_between, local_coursegen {{/str}}</span>
+                    <input type="number" min="3" max="30" data-field="min" value="{{min}}" aria-label="{{#str}} pe_range_min, local_coursegen {{/str}}">
+                    <span>{{#str}} pe_range_and, local_coursegen {{/str}}</span>
+                    <input type="number" min="3" max="30" data-field="max" value="{{max}}" aria-label="{{#str}} pe_range_max, local_coursegen {{/str}}">
+                    <span>{{#str}} pe_range_unit, local_coursegen {{/str}}</span>
+                </div>
             </div>
             {{/auto}}
             {{#manual}}
@@ -149,13 +168,23 @@
             {{/manual}}
         </section>
     </div>
+    </section>
 
-    <footer class="pe-footer">
-        <label class="sr-only" for="pe-name">{{#str}} pe_name, local_coursegen {{/str}}</label>
-        <input id="pe-name" type="text" class="pe-name" data-field="name" value="{{name}}" placeholder="{{#str}} pe_name, local_coursegen {{/str}}">
-        <button type="button" class="pe-btn pe-btn-primary" data-action="local_coursegen/pe/create" {{#busy}}disabled{{/busy}}>
-            {{#creating}}<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>{{/creating}}
-            {{#str}} pe_create, local_coursegen {{/str}}
-        </button>
-    </footer>
+    <section class="pe-step pe-final">
+        <header class="pe-step-head">
+            <span class="pe-step-no">3</span>
+            <div>
+                <h3 class="pe-step-title">{{#str}} pe_step3_title, local_coursegen {{/str}}</h3>
+                <p class="pe-step-help {{^hint}}is-ready{{/hint}}">{{#hint}}{{hint}}{{/hint}}{{^hint}}{{#str}} pe_ready_hint, local_coursegen {{/str}}{{/hint}}</p>
+            </div>
+        </header>
+        <div class="pe-final-row">
+            <label class="sr-only" for="pe-name">{{#str}} pe_name, local_coursegen {{/str}}</label>
+            <input id="pe-name" type="text" class="pe-name" data-field="name" value="{{name}}" placeholder="{{#str}} pe_name, local_coursegen {{/str}}">
+            <button type="button" class="pe-btn pe-btn-primary" data-action="local_coursegen/pe/create" {{#nocreate}}disabled{{/nocreate}}>
+                {{#creating}}<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>{{/creating}}
+                {{#str}} pe_create, local_coursegen {{/str}}
+            </button>
+        </div>
+    </section>
 </div>

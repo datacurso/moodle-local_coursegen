@@ -56,7 +56,8 @@ const SAFE_FIXED = {
 };
 
 const STRING_KEYS = [
-    'pe_error_name', 'pe_error_slides', 'pe_error_title', 'pe_error_brief', 'pe_error_pending', 'pe_regenerate_title',
+    'pe_ready_hint', 'pe_error_name', 'pe_error_slides', 'pe_error_title', 'pe_error_brief', 'pe_error_pending',
+    'pe_regenerate_title',
     'pe_regenerate_body', 'pe_regenerate_yes', 'pe_slide_label', 'pe_option', 'pe_save_error',
     ...model.TYPES.map((type) => 'pe_type_' + type),
     ...model.QUESTION_KINDS.map((kind) => 'pe_kind_' + kind),
@@ -87,7 +88,10 @@ export default class extends BaseComponent {
         this.name = 'local_coursegen_activityai_presentation_editor';
         this.footer = descriptor.footer || null;
         this.model = null;
-        this.ui = {busy: '', error: '', topic: '', addOpen: false, copyFor: null, filename: ''};
+        this.ui = {
+            busy: '', error: '', topic: '', addOpen: false, copyFor: null, filename: '', hint: '',
+            languages: descriptor.languages || [],
+        };
         this.sentFile = null;
         this.strings = {};
     }
@@ -133,20 +137,15 @@ export default class extends BaseComponent {
     }
 
     /**
-     * The field of the chat and the general choice about images are not used here.
+     * The chat form of the footer is not used here: the language is chosen in the editor and images per element.
      *
      * @param {boolean} hidden
      */
     _syncFooter(hidden) {
-        const radios = this.footer ? [...this.footer.querySelectorAll("input[name='generate_images']")] : [];
-        const nodes = [this.footer?.querySelector('.ai-prompt-container'), ...radios.map((radio) => radio.closest('label'))];
-        nodes.filter(Boolean).forEach((node) => {
-            if (hidden) {
-                node.style.setProperty('display', 'none', 'important');
-            } else {
-                node.style.removeProperty('display');
-            }
-        });
+        const form = this.footer?.querySelector('form');
+        if (form) {
+            form.classList.toggle('d-none', hidden);
+        }
     }
 
     _refreshFile() {
@@ -157,6 +156,7 @@ export default class extends BaseComponent {
     }
 
     async _render() {
+        this.ui.hint = this._problem();
         const context = buildContext(this.model, this.ui, this.strings, clean);
         const {html, js} = await Templates.renderForPromise('local_coursegen/presentation_editor', context);
         Templates.replaceNodeContents(this.element, html, js);
@@ -449,7 +449,7 @@ export default class extends BaseComponent {
         if (state.session.jobid) {
             return;
         }
-        await this.reactive.dispatch('setGenerateImages', 1);
+        await this.reactive.dispatch('setGenerateImages', this.reactive.state.page.canimages ? 1 : 0);
         await this.reactive.dispatch('beginPresentation', {prompt: this.ui.topic || this.model.name || KIND});
         if (!state.session.jobid) {
             throw new Error(this.strings.pe_save_error);
@@ -639,17 +639,33 @@ export default class extends BaseComponent {
      */
     _problem() {
         const slides = this.model.slides;
-        if (this.model.mode !== 'manual' || slides.length < model.MIN_SLIDES) {
-            return this.model.mode !== 'manual' ? this.strings.pe_error_pending : this.strings.pe_error_slides;
+        if (this.model.mode !== 'manual') {
+            return this.strings.pe_error_pending;
         }
-        if (!this.model.name.trim()) {
-            return this.strings.pe_error_name;
+        if (slides.length < model.MIN_SLIDES) {
+            return this.strings.pe_error_slides;
         }
-        const titled = slides.every((slide) => model.blockOf(slide, 'title') && model.blockOf(slide, 'title').value.trim());
-        if (!titled) {
-            return model.hasPending(slides) ? this.strings.pe_error_pending : this.strings.pe_error_title;
+        if (model.hasPending(slides)) {
+            return this.strings.pe_error_pending;
         }
-        return model.hasPending(slides) ? this.strings.pe_error_pending : '';
+        return this.model.name.trim() ? '' : this.strings.pe_error_name;
+    }
+
+    /**
+     * Show whether the activity can be created, without drawing the editor again.
+     */
+    _refreshHint() {
+        const hint = this._problem();
+        this.ui.hint = hint;
+        const help = this.element.querySelector('.pe-final .pe-step-help');
+        const create = this.element.querySelector(".pe-final [data-action$='/create']");
+        if (help) {
+            help.textContent = hint || this.strings.pe_ready_hint;
+            help.classList.toggle('is-ready', !hint);
+        }
+        if (create) {
+            create.disabled = Boolean(hint) || Boolean(this.ui.busy);
+        }
     }
 
     /**
@@ -665,17 +681,19 @@ export default class extends BaseComponent {
         if (target.tagName === 'TEXTAREA') {
             grow(target);
         }
+        if (target.dataset.field === 'lang') {
+            this.reactive.dispatch('setLang', String(target.value || '').toLowerCase());
+            return;
+        }
         const own = {topic: () => (this.ui.topic = target.value), name: () => (this.model.name = target.value),
             min: () => (this.model.min = Number(target.value) || model.MIN_SLIDES),
             max: () => (this.model.max = Number(target.value) || model.MIN_SLIDES)};
         if (own[target.dataset.field]) {
             own[target.dataset.field]();
-            return;
+        } else if (target.dataset.block && this._block(target.dataset.block)) {
+            this._typed(this._block(target.dataset.block), target);
         }
-        const block = target.dataset.block ? this._block(target.dataset.block) : null;
-        if (block) {
-            this._typed(block, target);
-        }
+        this._refreshHint();
     }
 
     /**
