@@ -56,7 +56,7 @@ const SAFE_FIXED = {
 };
 
 const STRING_KEYS = [
-    'pe_ready_hint', 'pe_error_name', 'pe_error_slides', 'pe_error_title', 'pe_error_brief', 'pe_error_pending',
+    'pe_error_slides', 'pe_error_brief', 'pe_error_pending',
     'pe_regenerate_title',
     'pe_regenerate_body', 'pe_regenerate_yes', 'pe_slide_label', 'pe_option', 'pe_save_error',
     ...model.TYPES.map((type) => 'pe_type_' + type),
@@ -88,7 +88,7 @@ export default class extends BaseComponent {
         this.footer = descriptor.footer || null;
         this.model = null;
         this.ui = {
-            busy: '', error: '', topic: '', copyFor: null, filename: '', hint: '',
+            busy: '', error: '', topic: '', copyFor: null, filename: '',
             languages: descriptor.languages || [],
         };
         this.sentFile = null;
@@ -155,7 +155,6 @@ export default class extends BaseComponent {
     }
 
     async _render() {
-        this.ui.hint = this._problem();
         const context = buildContext(this.model, this.ui, this.strings, clean);
         const {html, js} = await Templates.renderForPromise('local_coursegen/presentation_editor', context);
         Templates.replaceNodeContents(this.element, html, js);
@@ -498,24 +497,46 @@ export default class extends BaseComponent {
      * Write all the presentation from the general instruction and what each element asks for.
      */
     async _generate() {
+        if (!await this._confirmRewrite()) {
+            return;
+        }
+        await this._write();
+        await this._render();
+    }
+
+    /**
+     * @returns {Promise<boolean>} Whether to go on: the AI is about to replace what it wrote before.
+     */
+    async _confirmRewrite() {
+        if (this.model.mode !== 'manual' || !model.hasResults(this.model.slides)) {
+            return true;
+        }
+        try {
+            await Notification.saveCancelPromise(
+                this.strings.pe_regenerate_title, this.strings.pe_regenerate_body, this.strings.pe_regenerate_yes);
+        } catch (cancelled) {
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * Ask the AI to write everything that is an instruction.
+     *
+     * @returns {Promise<boolean>} Whether it was written.
+     */
+    async _write() {
         if (!this.ui.topic.trim()) {
             this.ui.error = this.strings.pe_error_brief;
             await this._render();
             this.element.querySelector("[data-field='topic']")?.focus();
-            return;
-        }
-        if (this.model.mode === 'manual' && model.hasResults(this.model.slides)) {
-            try {
-                await Notification.saveCancelPromise(
-                    this.strings.pe_regenerate_title, this.strings.pe_regenerate_body, this.strings.pe_regenerate_yes);
-            } catch (cancelled) {
-                return;
-            }
+            return false;
         }
 
         this.ui.busy = 'all';
         this.ui.error = '';
         await this._render();
+        let written = false;
         try {
             const started = Boolean(this.reactive.state.session.jobid);
             await this._ensureSession();
@@ -528,14 +549,14 @@ export default class extends BaseComponent {
                 filename: this.ui.filename,
                 slides: this.model.slides,
             });
-            const draft = await repository.draftPresentation(this._job({instructions}));
-            this._takeDraft(draft);
+            this._takeDraft(await repository.draftPresentation(this._job({instructions})));
             await this._fillMarkers();
+            written = true;
         } catch (error) {
             this.ui.error = this._messageOf(error);
         }
         this.ui.busy = '';
-        await this._render();
+        return written;
     }
 
     /**
@@ -597,9 +618,15 @@ export default class extends BaseComponent {
     }
 
     /**
-     * Build the activity from the slides as they are and go to it.
+     * Write what is still an instruction, build the activity from the slides and go to it.
      */
     async _create() {
+        if (this.model.mode !== 'manual' || model.hasPending(this.model.slides)) {
+            if (!await this._confirmRewrite() || !await this._write()) {
+                await this._render();
+                return;
+            }
+        }
         const problem = this._problem();
         if (problem) {
             this.ui.error = problem;
@@ -613,7 +640,7 @@ export default class extends BaseComponent {
         try {
             await this._ensureSession();
             await repository.buildPresentation(this._job({
-                name: this.model.name.trim(),
+                name: (this.model.name.trim() || this.ui.topic.trim().slice(0, 60)),
                 intro: this.model.intro,
                 slides: this._serviceSlides(),
             }));
@@ -627,37 +654,14 @@ export default class extends BaseComponent {
     }
 
     /**
-     * @returns {string} What stops the activity from being made, or an empty string.
+     * @returns {string} What stops the activity from being made once the AI has written, or an empty string.
      */
     _problem() {
         const slides = this.model.slides;
-        if (this.model.mode !== 'manual') {
-            return this.strings.pe_error_pending;
+        if (this.model.mode !== 'manual' || slides.length < model.MIN_SLIDES) {
+            return this.model.mode !== 'manual' ? this.strings.pe_error_pending : this.strings.pe_error_slides;
         }
-        if (slides.length < model.MIN_SLIDES) {
-            return this.strings.pe_error_slides;
-        }
-        if (model.hasPending(slides)) {
-            return this.strings.pe_error_pending;
-        }
-        return this.model.name.trim() ? '' : this.strings.pe_error_name;
-    }
-
-    /**
-     * Show whether the activity can be created, without drawing the editor again.
-     */
-    _refreshHint() {
-        const hint = this._problem();
-        this.ui.hint = hint;
-        const help = this.element.querySelector('.pe-final .pe-hint');
-        const create = this.element.querySelector(".pe-final [data-action$='/create']");
-        if (help) {
-            help.textContent = hint || this.strings.pe_ready_hint;
-            help.classList.toggle('is-ready', !hint);
-        }
-        if (create) {
-            create.disabled = Boolean(hint) || Boolean(this.ui.busy);
-        }
+        return model.hasPending(slides) ? this.strings.pe_error_pending : '';
     }
 
     /**
@@ -685,7 +689,6 @@ export default class extends BaseComponent {
         } else if (target.dataset.block && this._block(target.dataset.block)) {
             this._typed(this._block(target.dataset.block), target);
         }
-        this._refreshHint();
     }
 
     /**
