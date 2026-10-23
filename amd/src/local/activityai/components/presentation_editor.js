@@ -56,7 +56,8 @@ const SAFE_FIXED = {
 };
 
 const STRING_KEYS = [
-    'pe_error_slides', 'pe_error_brief', 'pe_error_pending',
+    'pe_error_slides', 'pe_error_brief', 'pe_error_range', 'pe_error_notitle', 'pe_error_instr', 'pe_error_title',
+    'pe_error_text', 'pe_error_html', 'pe_error_video', 'pe_error_image', 'pe_error_question', 'pe_error_notwritten',
     'pe_regenerate_title',
     'pe_regenerate_body', 'pe_regenerate_yes', 'pe_slide_label', 'pe_option', 'pe_save_error',
     ...model.TYPES.map((type) => 'pe_type_' + type),
@@ -88,7 +89,7 @@ export default class extends BaseComponent {
         this.footer = descriptor.footer || null;
         this.model = null;
         this.ui = {
-            busy: '', error: '', topic: '', copyFor: null, filename: '',
+            busy: '', error: '', errors: {blocks: {}, slide: {}}, topic: '', copyFor: null, filename: '',
             languages: descriptor.languages || [],
         };
         this.sentFile = null;
@@ -224,6 +225,7 @@ export default class extends BaseComponent {
             return false;
         }
         this.ui.error = '';
+        this.ui.errors = this._noErrors();
         handlers[action]();
         return true;
     }
@@ -497,11 +499,9 @@ export default class extends BaseComponent {
      * Write all the presentation from the general instruction and what each element asks for.
      */
     async _generate() {
-        if (!await this._confirmRewrite()) {
-            return;
+        if (await this._confirmRewrite()) {
+            await this._write();
         }
-        await this._write();
-        await this._render();
     }
 
     /**
@@ -526,10 +526,7 @@ export default class extends BaseComponent {
      * @returns {Promise<boolean>} Whether it was written.
      */
     async _write() {
-        if (!this.ui.topic.trim()) {
-            this.ui.error = this.strings.pe_error_brief;
-            await this._render();
-            this.element.querySelector("[data-field='topic']")?.focus();
+        if (!await this._showErrors(this._validate(false))) {
             return false;
         }
 
@@ -556,6 +553,7 @@ export default class extends BaseComponent {
             this.ui.error = this._messageOf(error);
         }
         this.ui.busy = '';
+        await this._render();
         return written;
     }
 
@@ -623,14 +621,10 @@ export default class extends BaseComponent {
     async _create() {
         if (this.model.mode !== 'manual' || model.hasPending(this.model.slides)) {
             if (!await this._confirmRewrite() || !await this._write()) {
-                await this._render();
                 return;
             }
         }
-        const problem = this._problem();
-        if (problem) {
-            this.ui.error = problem;
-            await this._render();
+        if (!await this._showErrors(this._validate(true))) {
             return;
         }
 
@@ -654,14 +648,92 @@ export default class extends BaseComponent {
     }
 
     /**
-     * @returns {string} What stops the activity from being made once the AI has written, or an empty string.
+     * @returns {Object} No problems.
      */
-    _problem() {
-        const slides = this.model.slides;
-        if (this.model.mode !== 'manual' || slides.length < model.MIN_SLIDES) {
-            return this.model.mode !== 'manual' ? this.strings.pe_error_pending : this.strings.pe_error_slides;
+    _noErrors() {
+        return {blocks: {}, slide: {}};
+    }
+
+    /**
+     * Find what is wrong in the fields, field by field.
+     *
+     * @param {boolean} written Whether the AI already had its turn: before it, the instructions are what has to be there.
+     * @returns {Object} The problems, by field.
+     */
+    _validate(written) {
+        const errors = this._noErrors();
+        const text = this.strings;
+        const {slides, mode, min, max} = this.model;
+        if (!written && !this.ui.topic.trim()) {
+            errors.topic = text.pe_error_brief;
         }
-        return model.hasPending(slides) ? this.strings.pe_error_pending : '';
+        if (mode === 'auto') {
+            if (!written && !(min >= model.MIN_SLIDES && max <= model.MAX_SLIDES && max >= min)) {
+                errors.range = text.pe_error_range;
+            }
+            return errors;
+        }
+        if (slides.length < model.MIN_SLIDES) {
+            errors.slides = text.pe_error_slides;
+        }
+        slides.forEach((slide, index) => {
+            if (!model.blockOf(slide, 'title')) {
+                errors.slide[index] = text.pe_error_notitle;
+            }
+            slide.blocks.forEach((block) => {
+                const code = model.blockProblem(block, written);
+                if (code) {
+                    errors.blocks[block.id] = text['pe_error_' + code];
+                }
+            });
+        });
+        return errors;
+    }
+
+    /**
+     * Mark the fields with a problem, go to the first one and focus it.
+     *
+     * @param {Object} errors
+     * @returns {Promise<boolean>} True when there is nothing wrong.
+     */
+    async _showErrors(errors) {
+        const slides = this.model.slides;
+        const found = slides.map((slide, index) => slide.blocks.some((block) => errors.blocks[block.id]) ||
+            errors.slide[index] ? index : -1).filter((index) => index >= 0);
+        if (!errors.topic && !errors.range && !errors.slides && !found.length) {
+            return true;
+        }
+        this.ui.errors = errors;
+        if (found.length && !found.includes(this.model.current)) {
+            this.model.current = found[0];
+        }
+        await this._render();
+        const first = this.element.querySelector('[aria-invalid="true"]');
+        first?.scrollIntoView({block: 'center'});
+        first?.focus({preventScroll: true});
+        return false;
+    }
+
+    /**
+     * Take the mark of a problem off a field as soon as the person works on it.
+     *
+     * @param {HTMLElement} target
+     */
+    _clearError(target) {
+        const field = target.dataset.field;
+        const key = target.dataset.block || {topic: 'topic', min: 'range', max: 'range'}[field];
+        if (!key) {
+            return;
+        }
+        const nodes = target.dataset.block ? [...target.closest('.pe-block').querySelectorAll('.is-invalid')] :
+            [...this.element.querySelectorAll(field === 'topic' ? '#pe-topic' : '[data-field="min"], [data-field="max"]')];
+        nodes.forEach((node) => {
+            node.classList.remove('is-invalid');
+            node.removeAttribute('aria-invalid');
+        });
+        this.element.querySelectorAll(`[data-error-for='${key}']`).forEach((node) => node.remove());
+        delete this.ui.errors[key];
+        delete this.ui.errors.blocks[key];
     }
 
     /**
@@ -681,6 +753,7 @@ export default class extends BaseComponent {
             this.reactive.dispatch('setLang', String(target.value || '').toLowerCase());
             return;
         }
+        this._clearError(target);
         const own = {topic: () => (this.ui.topic = target.value), name: () => (this.model.name = target.value),
             min: () => (this.model.min = Number(target.value) || model.MIN_SLIDES),
             max: () => (this.model.max = Number(target.value) || model.MIN_SLIDES)};

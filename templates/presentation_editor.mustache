@@ -41,7 +41,9 @@
 
     <div class="pe-field">
         <label class="pe-label" for="pe-topic">{{#str}} pe_ctx_label, local_coursegen {{/str}}</label>
-        <textarea id="pe-topic" class="pe-input" rows="3" data-field="topic" placeholder="{{#str}} pe_ctx_placeholder, local_coursegen {{/str}}">{{topic}}</textarea>
+        <textarea id="pe-topic" class="pe-input {{#topicError}}is-invalid{{/topicError}}" rows="3" data-field="topic" {{#topicError}}aria-invalid="true" aria-describedby="pe-topic-error"{{/topicError}}
+                  placeholder="{{#str}} pe_ctx_placeholder, local_coursegen {{/str}}">{{topic}}</textarea>
+        {{#topicError}}<p class="pe-error" id="pe-topic-error" data-error-for="topic">{{.}}</p>{{/topicError}}
         <div class="pe-row">
             {{^hasfile}}
             <button type="button" class="pe-btn pe-btn-small" data-action="local_coursegen/pe/attach"><i class="fa fa-paperclip" aria-hidden="true"></i>{{#str}} pe_attach, local_coursegen {{/str}}</button>
@@ -70,11 +72,12 @@
         {{#auto}}
         <div class="pe-range">
             <span>{{#str}} pe_range_between, local_coursegen {{/str}}</span>
-            <input type="number" min="3" max="30" data-field="min" value="{{min}}" aria-label="{{#str}} pe_range_min, local_coursegen {{/str}}">
+            <input type="number" min="3" max="30" data-field="min" class="{{#rangeError}}is-invalid{{/rangeError}}" {{#rangeError}}aria-invalid="true"{{/rangeError}} value="{{min}}" aria-label="{{#str}} pe_range_min, local_coursegen {{/str}}">
             <span>{{#str}} pe_range_and, local_coursegen {{/str}}</span>
-            <input type="number" min="3" max="30" data-field="max" value="{{max}}" aria-label="{{#str}} pe_range_max, local_coursegen {{/str}}">
+            <input type="number" min="3" max="30" data-field="max" class="{{#rangeError}}is-invalid{{/rangeError}}" {{#rangeError}}aria-invalid="true"{{/rangeError}} value="{{max}}" aria-label="{{#str}} pe_range_max, local_coursegen {{/str}}">
             <span>{{#str}} pe_range_unit, local_coursegen {{/str}}</span>
         </div>
+        {{#rangeError}}<p class="pe-error" data-error-for="range">{{.}}</p>{{/rangeError}}
         {{/auto}}
         {{#manual}}
         <div class="pe-tabs" role="group" aria-label="{{#str}} pe_strip, local_coursegen {{/str}}">
@@ -82,7 +85,7 @@
             <button type="button" class="pe-tab {{#current}}is-active{{/current}}" data-action="local_coursegen/pe/select" data-index="{{index}}"
                     title="{{title}}" {{#current}}aria-current="true"{{/current}}>{{number}}</button>
             {{/slides}}
-            <button type="button" class="pe-tab pe-tab-add" data-action="local_coursegen/pe/addslide"
+            <button type="button" class="pe-tab pe-tab-add {{#slidesError}}is-invalid{{/slidesError}}" {{#slidesError}}aria-invalid="true"{{/slidesError}} data-action="local_coursegen/pe/addslide"
                     title="{{#str}} pe_add, local_coursegen {{/str}}" aria-label="{{#str}} pe_add, local_coursegen {{/str}}"><i class="fa fa-plus" aria-hidden="true"></i></button>
             <span class="pe-grow"></span>
             {{#current}}
@@ -97,17 +100,19 @@
             </details>
             {{/current}}
         </div>
+        {{#slidesError}}<p class="pe-error" data-error-for="slides">{{.}}</p>{{/slidesError}}
 
         {{#current}}
         <div class="pe-slide">
             {{#blocks}}{{> local_coursegen/presentation_editor_block}}{{/blocks}}
             <label class="pe-add-element">
                 <span class="sr-only">{{#str}} pe_add_element, local_coursegen {{/str}}</span>
-                <select data-field="addtype">
+                <select data-field="addtype" class="{{#slideError}}is-invalid{{/slideError}}" {{#slideError}}aria-invalid="true"{{/slideError}}>
                     <option value="">{{#str}} pe_add_element, local_coursegen {{/str}}</option>
                     {{#addchips}}<option value="{{type}}">{{label}}</option>{{/addchips}}
                 </select>
             </label>
+            {{#slideError}}<p class="pe-error" data-error-for="slide">{{.}}</p>{{/slideError}}
         </div>
         {{/current}}
         {{/manual}}

@@ -314,3 +314,35 @@ export const applyDraft = (slides, written) => {
     });
     return slides.length === written.length;
 };
+
+const YOUTUBE = /^https?:\/\/(www\.|m\.)?(youtube\.com\/(watch\?(.*&)?v=|embed\/|shorts\/)|youtu\.be\/)[\w-]{6,}/i;
+
+/**
+ * Say what is wrong with an element, so the field that has the problem can be marked.
+ *
+ * @param {Object} block
+ * @param {boolean} written Whether the AI already had its turn to write: an instruction left unwritten is then the problem.
+ * @returns {string} A code for the problem, or an empty string.
+ */
+export const blockProblem = (block, written) => {
+    if (block.mode === MODE_AI) {
+        if (written) {
+            return isReady(block) ? '' : 'notwritten';
+        }
+        const answered = block.value || block.prompt || block.question;
+        return block.instr.trim() || answered ? '' : 'instr';
+    }
+    const empty = {
+        title: !block.value.trim(),
+        text: block.mode === MODE_HTML ? !block.html.trim() : !block.fixedtext.trim(),
+        image: !block.uploaded,
+        question: !(block.question && block.question.prompt.trim()),
+    };
+    if (block.type === 'video') {
+        return YOUTUBE.test(block.url.trim()) ? '' : 'video';
+    }
+    if (block.type === 'text' && empty.text) {
+        return block.mode === MODE_HTML ? 'html' : 'text';
+    }
+    return empty[block.type] ? block.type : '';
+};
