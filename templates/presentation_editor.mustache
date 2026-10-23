@@ -17,197 +17,145 @@
 {{!
     @template local_coursegen/presentation_editor
 
-    The editor of a Course Presentation. At the top, the topic and what the AI bases the presentation on; below, the
-    slides, where each part has a line to tell the AI what to write there. What the AI writes can be edited.
+    The editor of a Course Presentation. At the top, the general instruction for the AI, how the slides are decided and
+    the file the presentation is based on; below, the slides, where each element is an instruction for the AI or
+    something fixed.
 
     Context variables required for this template:
-    * name, topic, count string - The name of the activity, the topic and the number of slides asked for.
-    * slides array          - The list: index, number, title, current.
-    * total int, hasslides bool
-    * current object        - The selected slide, with a line for the AI in each part (aititle, aibody, aiimage, aiquestion, aislide).
+    * error string, topic string, name string
+    * manual bool, auto bool, min int, max int
     * hasfile bool, filename string
-    * busy string, busyall bool, creating bool
-    * errormessage string
+    * busy bool, busyall bool, creating bool
+    * addopen bool, layouts array (key, label)
+    * slides array          - The list: index, number, current, title, wf (title, text, image, question, video).
+    * current object        - The selected slide: number, total, first, last, blocks, addchips.
 
     Example context (json):
-    {"name": "", "topic": "", "count": "", "slides": [], "total": 0, "hasslides": false, "hasfile": false, "filename": "",
-     "busy": "", "busyall": false, "creating": false, "errormessage": ""}
+    {"error": "", "topic": "", "name": "", "manual": true, "auto": false, "min": 5, "max": 8, "hasfile": false, "filename": "",
+     "busy": false, "busyall": false, "creating": false, "addopen": false, "layouts": [], "slides": [], "total": 0}
 }}
 <div class="local_coursegen_pe">
-    {{#errormessage}}
-    <div class="alert alert-danger" role="alert" data-region="local_coursegen/pe/error">{{errormessage}}</div>
-    {{/errormessage}}
+    {{#error}}
+    <div class="pe-alert" role="alert" data-region="local_coursegen/pe/error">{{error}}</div>
+    {{/error}}
 
-    <div class="card mb-3">
-        <div class="card-body position-relative">
-            {{#busyall}}{{> local_coursegen/presentation_editor_busy}}{{/busyall}}
-            <div class="form-group">
-                <label for="pe-topic">{{#str}} pe_topic_label, local_coursegen {{/str}}</label>
-                <textarea id="pe-topic" class="form-control" rows="2" data-field="topic"
-                          placeholder="{{#str}} pe_topic_placeholder, local_coursegen {{/str}}">{{topic}}</textarea>
+    <section class="pe-context">
+        <div class="pe-field">
+            <label class="pe-cap" for="pe-topic"><i class="fa fa-star" aria-hidden="true"></i>{{#str}} pe_ctx_label, local_coursegen {{/str}}</label>
+            <div class="pe-promptbox">
+                <textarea id="pe-topic" rows="2" data-field="topic" placeholder="{{#str}} pe_ctx_placeholder, local_coursegen {{/str}}">{{topic}}</textarea>
             </div>
-            <div class="d-flex align-items-end flex-wrap" style="gap: .75rem;">
-                <div>
-                    {{^hasfile}}
-                    <button type="button" class="btn btn-secondary" data-action="local_coursegen/pe/attach">
-                        <i class="fa fa-paperclip mr-1" aria-hidden="true"></i>{{#str}} pe_attach, local_coursegen {{/str}}
-                    </button>
-                    {{/hasfile}}
-                    {{#hasfile}}
-                    <span class="badge badge-light border p-2">
-                        <i class="fa fa-file-o mr-1" aria-hidden="true"></i>{{filename}}
-                        <button type="button" class="btn btn-link btn-sm p-0 ml-1" data-action="local_coursegen/pe/removefile"
-                                title="{{#str}} pe_remove_file, local_coursegen {{/str}}" aria-label="{{#str}} pe_remove_file, local_coursegen {{/str}}">
-                            <i class="fa fa-times" aria-hidden="true"></i></button>
-                    </span>
-                    {{/hasfile}}
-                </div>
-                {{^hasslides}}
-                <div>
-                    <label class="mb-0 small" for="pe-count">{{#str}} pe_count_label, local_coursegen {{/str}}</label>
-                    <input id="pe-count" type="number" min="3" max="30" class="form-control" style="width: 7rem;" data-field="count" value="{{count}}">
-                </div>
-                {{/hasslides}}
-                <span class="flex-fill"></span>
-                <button type="button" class="btn btn-primary" data-action="local_coursegen/pe/generate" {{#busy}}disabled{{/busy}}>
-                    <i class="fa fa-star mr-1" aria-hidden="true"></i>{{#str}} pe_generate, local_coursegen {{/str}}
-                </button>
-            </div>
-            <small class="form-text text-muted">{{#str}} pe_generate_help, local_coursegen {{/str}}</small>
         </div>
-    </div>
+        <div class="pe-side">
+            <div class="pe-seg" role="group" aria-label="{{#str}} pe_strip, local_coursegen {{/str}}">
+                <button type="button" data-action="local_coursegen/pe/setmode" data-mode="manual" aria-pressed="{{#manual}}true{{/manual}}{{^manual}}false{{/manual}}">{{#str}} pe_mode_manual, local_coursegen {{/str}}</button>
+                <button type="button" data-action="local_coursegen/pe/setmode" data-mode="auto" aria-pressed="{{#auto}}true{{/auto}}{{^auto}}false{{/auto}}">{{#str}} pe_mode_auto, local_coursegen {{/str}}</button>
+            </div>
+            {{#auto}}
+            <div class="pe-range">
+                <span>{{#str}} pe_range_between, local_coursegen {{/str}}</span>
+                <input type="number" min="3" max="30" data-field="min" value="{{min}}" aria-label="{{#str}} pe_range_min, local_coursegen {{/str}}">
+                <span>{{#str}} pe_range_and, local_coursegen {{/str}}</span>
+                <input type="number" min="3" max="30" data-field="max" value="{{max}}" aria-label="{{#str}} pe_range_max, local_coursegen {{/str}}">
+                <span>{{#str}} pe_range_unit, local_coursegen {{/str}}</span>
+            </div>
+            {{/auto}}
+            {{^hasfile}}
+            <button type="button" class="pe-btn pe-btn-small" data-action="local_coursegen/pe/attach">
+                <i class="fa fa-paperclip" aria-hidden="true"></i>{{#str}} pe_attach, local_coursegen {{/str}}
+            </button>
+            {{/hasfile}}
+            {{#hasfile}}
+            <span class="pe-file">
+                <i class="fa fa-paperclip" aria-hidden="true"></i><span class="pe-truncate">{{filename}}</span>
+                <button type="button" class="pe-icon" data-action="local_coursegen/pe/removefile"
+                        title="{{#str}} pe_remove_file, local_coursegen {{/str}}" aria-label="{{#str}} pe_remove_file, local_coursegen {{/str}}"><i class="fa fa-times" aria-hidden="true"></i></button>
+            </span>
+            {{/hasfile}}
+            <button type="button" class="pe-btn pe-btn-primary" data-action="local_coursegen/pe/generate" {{#busy}}disabled{{/busy}}>
+                {{#busyall}}<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>{{/busyall}}
+                {{^busyall}}<i class="fa fa-star" aria-hidden="true"></i>{{/busyall}}
+                {{#str}} pe_generate, local_coursegen {{/str}}
+            </button>
+        </div>
+    </section>
 
-    <div class="pe-workspace">
-        <div class="list-group" aria-label="{{#str}} pe_strip, local_coursegen {{/str}}">
+    <div class="pe-work">
+        <aside class="pe-rail" aria-label="{{#str}} pe_strip, local_coursegen {{/str}}">
+            {{#manual}}
             {{#slides}}
-            <button type="button" class="list-group-item list-group-item-action pe-item {{#current}}active{{/current}}"
-                    data-action="local_coursegen/pe/select" data-index="{{index}}" {{#current}}aria-current="true"{{/current}}>
-                <span class="pe-item-number">{{number}}</span><span class="pe-item-title">{{title}}</span>
+            <button type="button" class="pe-thumb {{#current}}is-active{{/current}}" data-action="local_coursegen/pe/select" data-index="{{index}}"
+                    aria-label="{{title}}" {{#current}}aria-current="true"{{/current}}>
+                <span class="pe-thumb-no">{{number}}</span>
+                <span class="pe-mini" aria-hidden="true">
+                    {{#wf.title}}<span class="pe-sk pe-sk-title {{.}}"></span>{{/wf.title}}
+                    <span class="pe-mini-row">
+                        {{#wf.text}}<span class="pe-sk-lines {{.}}"><span class="pe-sk"></span><span class="pe-sk"></span><span class="pe-sk"></span></span>{{/wf.text}}
+                        {{#wf.image}}<span class="pe-sk pe-sk-image {{.}}"></span>{{/wf.image}}
+                        {{#wf.video}}<span class="pe-sk pe-sk-image {{.}}"></span>{{/wf.video}}
+                    </span>
+                    {{#wf.question}}<span class="pe-sk pe-sk-question {{.}}"></span>{{/wf.question}}
+                </span>
             </button>
             {{/slides}}
-            <button type="button" class="list-group-item list-group-item-action text-primary" data-action="local_coursegen/pe/add">
-                <i class="fa fa-plus mr-1" aria-hidden="true"></i>{{#str}} pe_add, local_coursegen {{/str}}
+            <button type="button" class="pe-add" data-action="local_coursegen/pe/addopen" aria-expanded="{{#addopen}}true{{/addopen}}{{^addopen}}false{{/addopen}}">
+                <i class="fa fa-plus" aria-hidden="true"></i>{{#str}} pe_add, local_coursegen {{/str}}
             </button>
-        </div>
+            {{#addopen}}
+            <div class="pe-layouts" role="menu">
+                <span class="pe-layouts-title">{{#str}} pe_layout_title, local_coursegen {{/str}}</span>
+                {{#layouts}}
+                <button type="button" role="menuitem" class="pe-layout" data-action="local_coursegen/pe/addslide" data-layout="{{key}}">{{label}}</button>
+                {{/layouts}}
+            </div>
+            {{/addopen}}
+            {{/manual}}
+            {{#auto}}<p class="pe-muted">{{#str}} pe_auto_text, local_coursegen {{/str}}</p>{{/auto}}
+        </aside>
 
-        <div>
-            {{^hasslides}}
-            <p class="text-muted mb-0">{{#str}} pe_empty, local_coursegen {{/str}}</p>
-            {{/hasslides}}
+        <section class="pe-main">
+            {{#auto}}
+            <div class="pe-auto">
+                <i class="fa fa-star" aria-hidden="true"></i>
+                <strong>{{#str}} pe_auto_title, local_coursegen {{/str}}</strong>
+                <p>{{#str}} pe_auto_help, local_coursegen {{/str}}</p>
+            </div>
+            {{/auto}}
+            {{#manual}}
             {{#current}}
-            <div class="card">
-                <div class="card-header d-flex align-items-center justify-content-between">
-                    <span>{{#str}} pe_position, local_coursegen, {"number": "{{number}}", "total": "{{total}}"} {{/str}}</span>
-                    <span class="btn-group">
-                        <button type="button" class="btn btn-light btn-sm" data-action="local_coursegen/pe/up" {{#first}}disabled{{/first}}
-                                title="{{#str}} cpb_move_up, local_coursegen {{/str}}" aria-label="{{#str}} cpb_move_up, local_coursegen {{/str}}"><i class="fa fa-arrow-up" aria-hidden="true"></i></button>
-                        <button type="button" class="btn btn-light btn-sm" data-action="local_coursegen/pe/down" {{#last}}disabled{{/last}}
-                                title="{{#str}} cpb_move_down, local_coursegen {{/str}}" aria-label="{{#str}} cpb_move_down, local_coursegen {{/str}}"><i class="fa fa-arrow-down" aria-hidden="true"></i></button>
-                        <button type="button" class="btn btn-light btn-sm" data-action="local_coursegen/pe/duplicate"
-                                title="{{#str}} cpb_duplicate, local_coursegen {{/str}}" aria-label="{{#str}} cpb_duplicate, local_coursegen {{/str}}"><i class="fa fa-clone" aria-hidden="true"></i></button>
-                        <button type="button" class="btn btn-light btn-sm text-danger" data-action="local_coursegen/pe/remove"
-                                title="{{#str}} cpb_remove, local_coursegen {{/str}}" aria-label="{{#str}} cpb_remove, local_coursegen {{/str}}"><i class="fa fa-trash" aria-hidden="true"></i></button>
-                    </span>
-                </div>
-                <div class="card-body position-relative">
-                    {{#busy}}{{> local_coursegen/presentation_editor_busy}}{{/busy}}
-
-                    <div class="form-group">
-                        <label for="pe-title">{{#str}} cpb_title, local_coursegen {{/str}}</label>
-                        <input id="pe-title" type="text" class="form-control" data-field="title" value="{{title}}">
-                        {{#aititle}}{{> local_coursegen/presentation_editor_instruction}}{{/aititle}}
-                    </div>
-
-                    <div class="form-group">
-                        <label id="pe-body-label">{{#str}} cpb_text, local_coursegen {{/str}}</label>
-                        <div class="form-control h-auto pe-body" contenteditable="true" role="textbox" aria-multiline="true"
-                             aria-labelledby="pe-body-label" data-field="body_html">{{{body}}}</div>
-                        {{#aibody}}{{> local_coursegen/presentation_editor_instruction}}{{/aibody}}
-                    </div>
-
-                    <div class="form-group">
-                        <label for="pe-image">{{#str}} pe_scope_image, local_coursegen {{/str}}</label>
-                        {{#uploaded}}
-                        <div class="d-flex align-items-center" style="gap: .5rem;">
-                            <span class="flex-fill">{{#str}} pe_image_uploaded, local_coursegen {{/str}}</span>
-                            <button type="button" class="btn btn-secondary btn-sm" data-action="local_coursegen/pe/removeimage">{{#str}} pe_image_remove, local_coursegen {{/str}}</button>
-                        </div>
-                        {{/uploaded}}
-                        {{^uploaded}}
-                        <div class="input-group">
-                            <input id="pe-image" type="text" class="form-control" data-field="image_prompt" value="{{imageprompt}}"
-                                   placeholder="{{#str}} pe_image_prompt, local_coursegen {{/str}}">
-                            <div class="input-group-append">
-                                <button type="button" class="btn btn-secondary" data-action="local_coursegen/pe/uploadimage">
-                                    <i class="fa fa-upload mr-1" aria-hidden="true"></i>{{#str}} pe_image_upload, local_coursegen {{/str}}
-                                </button>
-                            </div>
-                        </div>
-                        {{/uploaded}}
-                    </div>
-
-                    {{#hasvideo}}
-                    <div class="form-group">
-                        <label for="pe-video">URL</label>
-                        <input id="pe-video" type="url" class="form-control" data-field="video_url" value="{{video}}" placeholder="https://">
-                    </div>
-                    {{/hasvideo}}
-
-                    <div class="form-group">
-                        {{#hasquestion}}
-                        <div class="d-flex align-items-center justify-content-between">
-                            <label for="pe-question">{{#str}} pe_scope_question, local_coursegen {{/str}} ({{questionlabel}})</label>
-                            <button type="button" class="btn btn-link btn-sm text-danger p-0" data-action="local_coursegen/pe/removequestion">{{#str}} pe_question_remove, local_coursegen {{/str}}</button>
-                        </div>
-                        <input id="pe-question" type="text" class="form-control mb-2" data-question="prompt" value="{{qprompt}}">
-                        {{#qmulti}}
-                        {{#qoptions}}
-                        <div class="d-flex align-items-center mb-1" style="gap: .5rem;">
-                            <input type="radio" name="pe-correct" data-question="correct" data-option="{{index}}" {{#correct}}checked{{/correct}}
-                                   title="{{#str}} pe_correct, local_coursegen {{/str}}" aria-label="{{#str}} pe_correct, local_coursegen {{/str}}">
-                            <input type="text" class="form-control form-control-sm" data-question="option" data-option="{{index}}" value="{{text}}"
-                                   aria-label="{{#str}} pe_option, local_coursegen {{/str}}">
-                        </div>
-                        {{/qoptions}}
-                        {{/qmulti}}
-                        {{#qtf}}
-                        <div class="d-flex" style="gap: 1.5rem;">
-                            <label class="mb-0"><input type="radio" name="pe-tf" data-question="truefalse" value="true" {{#qtrue}}checked{{/qtrue}}> {{#str}} pe_true, local_coursegen {{/str}}</label>
-                            <label class="mb-0"><input type="radio" name="pe-tf" data-question="truefalse" value="false" {{^qtrue}}checked{{/qtrue}}> {{#str}} pe_false, local_coursegen {{/str}}</label>
-                        </div>
-                        {{/qtf}}
-                        {{#qfill}}
-                        <textarea class="form-control" rows="3" data-question="text" aria-label="{{#str}} cpb_q_fill, local_coursegen {{/str}}">{{qtext}}</textarea>
-                        <small class="form-text text-muted">{{#str}} pe_fill_help, local_coursegen {{/str}}</small>
-                        {{/qfill}}
-                        {{/hasquestion}}
-                        {{^hasquestion}}
-                        <label class="d-block">{{#str}} pe_question_add, local_coursegen {{/str}}</label>
-                        <button type="button" class="btn btn-outline-secondary btn-sm" data-action="local_coursegen/pe/addquestion" data-kind="multi_choice">{{#str}} cpb_q_multi, local_coursegen {{/str}}</button>
-                        <button type="button" class="btn btn-outline-secondary btn-sm" data-action="local_coursegen/pe/addquestion" data-kind="true_false">{{#str}} cpb_q_tf, local_coursegen {{/str}}</button>
-                        <button type="button" class="btn btn-outline-secondary btn-sm" data-action="local_coursegen/pe/addquestion" data-kind="fill_in_the_blanks">{{#str}} cpb_q_fill, local_coursegen {{/str}}</button>
-                        {{/hasquestion}}
-                        {{#aiquestion}}{{> local_coursegen/presentation_editor_instruction}}{{/aiquestion}}
-                    </div>
-
-                    <div class="form-group mb-0">
-                        <label>{{#str}} pe_scope_slide, local_coursegen {{/str}}</label>
-                        {{#aislide}}{{> local_coursegen/presentation_editor_instruction}}{{/aislide}}
-                    </div>
-                </div>
+            <div class="pe-bar">
+                <span class="pe-count">{{#str}} pe_position, local_coursegen, {"number": "{{number}}", "total": "{{total}}"} {{/str}}</span>
+                <span class="pe-tools">
+                    <button type="button" class="pe-icon" data-action="local_coursegen/pe/sup" {{#first}}disabled{{/first}}
+                            title="{{#str}} cpb_move_up, local_coursegen {{/str}}" aria-label="{{#str}} cpb_move_up, local_coursegen {{/str}}"><i class="fa fa-arrow-up" aria-hidden="true"></i></button>
+                    <button type="button" class="pe-icon" data-action="local_coursegen/pe/sdown" {{#last}}disabled{{/last}}
+                            title="{{#str}} cpb_move_down, local_coursegen {{/str}}" aria-label="{{#str}} cpb_move_down, local_coursegen {{/str}}"><i class="fa fa-arrow-down" aria-hidden="true"></i></button>
+                    <button type="button" class="pe-icon" data-action="local_coursegen/pe/sdup"
+                            title="{{#str}} cpb_duplicate, local_coursegen {{/str}}" aria-label="{{#str}} cpb_duplicate, local_coursegen {{/str}}"><i class="fa fa-clone" aria-hidden="true"></i></button>
+                    <button type="button" class="pe-icon is-danger" data-action="local_coursegen/pe/sdel"
+                            title="{{#str}} cpb_remove, local_coursegen {{/str}}" aria-label="{{#str}} cpb_remove, local_coursegen {{/str}}"><i class="fa fa-trash" aria-hidden="true"></i></button>
+                </span>
+            </div>
+            <div class="pe-slide">
+                {{#blocks}}{{> local_coursegen/presentation_editor_block}}{{/blocks}}
+            </div>
+            <div class="pe-addrow">
+                <span class="pe-muted">{{#str}} pe_add_to_slide, local_coursegen {{/str}}</span>
+                {{#addchips}}
+                <button type="button" class="pe-chip" data-action="local_coursegen/pe/badd" data-type="{{type}}"><i class="fa fa-plus" aria-hidden="true"></i>{{label}}</button>
+                {{/addchips}}
             </div>
             {{/current}}
-        </div>
+            {{/manual}}
+        </section>
     </div>
 
-    <div class="d-flex align-items-center justify-content-between mt-3" style="gap: 1rem;">
-        <div class="flex-fill">
-            <label class="sr-only" for="pe-name">{{#str}} pe_name, local_coursegen {{/str}}</label>
-            <input id="pe-name" type="text" class="form-control" data-field="name" value="{{name}}" placeholder="{{#str}} pe_name, local_coursegen {{/str}}">
-        </div>
-        <button type="button" class="btn btn-primary" data-action="local_coursegen/pe/create" {{#busy}}disabled{{/busy}}>
-            {{#creating}}<span class="spinner-border spinner-border-sm mr-1" role="status" aria-hidden="true"></span>{{/creating}}
+    <footer class="pe-footer">
+        <label class="sr-only" for="pe-name">{{#str}} pe_name, local_coursegen {{/str}}</label>
+        <input id="pe-name" type="text" class="pe-name" data-field="name" value="{{name}}" placeholder="{{#str}} pe_name, local_coursegen {{/str}}">
+        <button type="button" class="pe-btn pe-btn-primary" data-action="local_coursegen/pe/create" {{#busy}}disabled{{/busy}}>
+            {{#creating}}<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>{{/creating}}
             {{#str}} pe_create, local_coursegen {{/str}}
         </button>
-    </div>
+    </footer>
 </div>

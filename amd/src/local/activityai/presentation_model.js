@@ -1,0 +1,316 @@
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+
+/**
+ * The slides of the Course Presentation editor, without anything to do with the page.
+ *
+ * Every element of a slide is either an instruction for the AI, which the AI writes when the presentation is
+ * generated, or something fixed that the person wrote or uploaded and stays as it is.
+ *
+ * @module     local_coursegen/local/activityai/presentation_model
+ * @copyright  2026 Wilber Narvaez <https://datacurso.com>
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
+export const MODE_AI = 'ai';
+export const MODE_FIXED = 'fixed';
+export const MODE_HTML = 'html';
+
+export const MIN_SLIDES = 3;
+export const MAX_SLIDES = 30;
+
+/** The elements a slide can have, one of each. */
+export const TYPES = ['title', 'text', 'image', 'video', 'question'];
+
+/** The questions the AI can write today. */
+export const QUESTION_KINDS = ['multi_choice', 'true_false', 'fill_in_the_blanks'];
+
+const MARKER = /\[\[coursegen:aiprompt:\s*([\s\S]*?)\]\]/g;
+
+let counter = 0;
+
+/**
+ * @param {string} type One of TYPES.
+ * @returns {Object} A new element, empty.
+ */
+export const newBlock = (type) => ({
+    id: 'b' + (++counter),
+    type,
+    mode: type === 'video' ? MODE_FIXED : MODE_AI,
+    instr: '',
+    value: '',
+    fixedtext: '',
+    html: '',
+    prompt: '',
+    uploaded: false,
+    slot: null,
+    name: '',
+    url: '',
+    kind: QUESTION_KINDS[0],
+    question: null,
+});
+
+/** The elements each layout starts with. */
+const LAYOUTS = {
+    cover: ['title', 'text', 'image'],
+    content: ['title', 'text'],
+    split: ['title', 'text', 'image'],
+    question: ['title', 'question'],
+    blank: ['title'],
+};
+
+/**
+ * @param {string} layout
+ * @returns {Object} A new slide with the elements of the layout.
+ */
+export const newSlide = (layout) => ({blocks: (LAYOUTS[layout] || LAYOUTS.blank).map(newBlock)});
+
+/**
+ * @param {Object} slide
+ * @returns {Object} A copy of the slide, with its own ids.
+ */
+export const cloneSlide = (slide) => ({blocks: slide.blocks.map((block) => cloneBlock(block))});
+
+/**
+ * @param {Object} block
+ * @returns {Object} A copy of the element, with its own id.
+ */
+export const cloneBlock = (block) => ({...JSON.parse(JSON.stringify(block)), id: 'b' + (++counter)});
+
+/**
+ * @param {Object} slide
+ * @param {string} type
+ * @returns {Object|undefined} The element of that type.
+ */
+export const blockOf = (slide, type) => slide.blocks.find((block) => block.type === type);
+
+/**
+ * @param {string} text
+ * @returns {string} Plain text as paragraphs of HTML.
+ */
+export const paragraphs = (text) => String(text || '').split(/\n\s*\n/).map((part) => part.trim()).filter(Boolean)
+    .map((part) => '<p>' + part.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/\n/g, '<br>') + '</p>').join('');
+
+/**
+ * @param {string} html
+ * @returns {string} The text of some HTML, without its tags.
+ */
+export const plain = (html) => String(html || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+
+/**
+ * @param {string} html
+ * @returns {string[]} The instructions of the markers an HTML has.
+ */
+export const markersOf = (html) => [...String(html || '').matchAll(MARKER)].map((found) => found[1].trim());
+
+/**
+ * @param {string} html
+ * @param {Function} write Gets the instruction of a marker and gives back the text that replaces it.
+ * @returns {Promise<string>} The HTML with every marker replaced; the rest of it stays as it is.
+ */
+export const fillMarkers = async(html, write) => {
+    let result = String(html || '');
+    for (const prompt of markersOf(result)) {
+        const text = String(await write(prompt)).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+        result = result.replace(MARKER, (full, inside) => inside.trim() === prompt ? text : full);
+    }
+    return result;
+};
+
+/**
+ * @param {Object} block
+ * @returns {boolean} Whether the element has what the slide needs from it.
+ */
+export const isReady = (block) => {
+    if (block.type === 'title') {
+        return Boolean(block.value.trim());
+    }
+    if (block.type === 'text') {
+        return Boolean(plain(block.value)) && !markersOf(block.value).length;
+    }
+    if (block.type === 'image') {
+        return block.uploaded || Boolean(block.prompt.trim()) || (block.mode === MODE_AI && !block.instr.trim());
+    }
+    if (block.type === 'question') {
+        return Boolean(block.question && block.question.prompt);
+    }
+    return true;
+};
+
+/**
+ * @param {Object[]} slides
+ * @returns {boolean} Whether an element still waits for the AI to write it.
+ */
+export const hasPending = (slides) => slides.some((slide) => slide.blocks.some((block) => !isReady(block)));
+
+/**
+ * @param {Object[]} slides
+ * @returns {boolean} Whether the AI wrote anything in the slides.
+ */
+export const hasResults = (slides) => slides.some((slide) => slide.blocks.some((block) =>
+    block.mode === MODE_AI && (block.value || block.prompt || block.question)));
+
+/**
+ * @param {Object} slide
+ * @param {Function} clean Makes the text of a slide safe.
+ * @returns {Object} The slide as the service takes it.
+ */
+export const toServiceSlide = (slide, clean) => {
+    const get = (type) => blockOf(slide, type);
+    const image = get('image');
+    const text = get('text');
+    return {
+        title: get('title') ? get('title').value : '',
+        body_html: text ? clean(text.value, text.mode !== MODE_AI) : '',
+        image_prompt: image && !image.uploaded ? image.prompt : '',
+        video_url: get('video') ? get('video').url : '',
+        question: get('question') ? get('question').question : null,
+        uploaded_image: Boolean(image && image.uploaded),
+        image_slot: image && image.uploaded ? image.slot : null,
+    };
+};
+
+/**
+ * Put what the AI wrote in an element, unless the person fixed it.
+ *
+ * @param {Object} block
+ * @param {Object} written A slide as the service gives it.
+ */
+export const applyWritten = (block, written) => {
+    if (block.mode !== MODE_AI) {
+        return;
+    }
+    if (block.type === 'title') {
+        block.value = written.title || '';
+    } else if (block.type === 'text') {
+        block.value = written.body_html || '';
+    } else if (block.type === 'image' && !block.uploaded) {
+        block.prompt = written.image_prompt || '';
+    } else if (block.type === 'question') {
+        block.question = written.question || null;
+        block.kind = block.question ? block.question.type : block.kind;
+    }
+};
+
+/**
+ * @param {Object} written A slide as the service gives it.
+ * @returns {Object} A slide whose elements are all the AI's.
+ */
+export const slideFromWritten = (written) => {
+    const slide = {blocks: []};
+    const add = (type, set) => {
+        const block = newBlock(type);
+        set(block);
+        slide.blocks.push(block);
+    };
+    add('title', (block) => {
+        block.value = written.title || '';
+    });
+    add('text', (block) => {
+        block.value = written.body_html || '';
+    });
+    if (written.image_prompt) {
+        add('image', (block) => {
+            block.prompt = written.image_prompt;
+        });
+    }
+    if (written.video_url) {
+        add('video', (block) => {
+            block.url = written.video_url;
+        });
+    }
+    if (written.question) {
+        add('question', (block) => {
+            block.question = written.question;
+            block.kind = written.question.type;
+        });
+    }
+    return slide;
+};
+
+/** The name of each question, as the AI is told. */
+const QUESTION_NAMES = {multi_choice: 'multiple choice', true_false: 'true or false', fill_in_the_blanks: 'fill in the blanks'};
+
+/**
+ * @param {Object} block
+ * @returns {string} The part of the instruction for one element, or an empty string if it needs none.
+ */
+const blockLine = (block) => {
+    const said = block.instr.trim();
+    const fixed = block.mode !== MODE_AI;
+    if (block.type === 'title') {
+        return 'title: ' + (fixed ? '"' + block.value.trim() + '" (fixed)' : said || 'write a short one');
+    }
+    if (block.type === 'text') {
+        return 'text: ' + (fixed ? 'write one short sentence, it will be replaced' : said || 'explain what the slide needs');
+    }
+    if (block.type === 'image') {
+        if (block.uploaded) {
+            return 'image: the picture the person uploaded, which is added as it is: do not make one';
+        }
+        return said ? 'image: ' + said : '';
+    }
+    if (block.type === 'video') {
+        return block.url.trim() ? 'video: ' + block.url.trim() : '';
+    }
+    const asked = fixed ? 'any, it will be replaced' : said || 'a question that checks the slide';
+    return 'question (' + QUESTION_NAMES[block.kind] + '): ' + asked;
+};
+
+/**
+ * @param {Object} options
+ * @param {string} options.topic
+ * @param {string} options.mode 'manual' or 'auto'.
+ * @param {number} options.min
+ * @param {number} options.max
+ * @param {string} options.filename The attached file, if any.
+ * @param {Object[]} options.slides
+ * @returns {string} What the AI is told: the topic and, slide by slide, what each element asks for.
+ */
+export const compileInstructions = ({topic, mode, min, max, filename, slides}) => {
+    const lines = ['Create a Course Presentation H5P.', 'Topic and goal: ' + topic.trim()];
+    if (filename) {
+        lines.push('Base the content on the attached document.');
+    }
+    if (mode === 'auto') {
+        lines.push('Number of slides: between ' + min + ' and ' + max + '.');
+        lines.push('Decide yourself what each slide has: write the slides the topic needs.');
+        return lines.join('\n');
+    }
+    lines.push('Number of slides: exactly ' + slides.length + '.');
+    lines.push('The slides, in this order. Follow this structure and write only what each slide asks for:');
+    slides.forEach((slide, index) => {
+        const parts = slide.blocks.map(blockLine).filter(Boolean).join('; ');
+        lines.push((index + 1) + '. ' + (parts || 'a slide the topic needs') + '.');
+    });
+    return lines.join('\n');
+};
+
+/**
+ * Put the slides the AI wrote into the slides the person defined.
+ *
+ * @param {Object[]} slides The slides of the person; they are changed.
+ * @param {Object[]} written The slides as the service gives them.
+ * @returns {boolean} Whether the AI wrote as many slides as were defined.
+ */
+export const applyDraft = (slides, written) => {
+    slides.forEach((slide, index) => {
+        if (written[index]) {
+            slide.blocks.forEach((block) => applyWritten(block, written[index]));
+        }
+    });
+    return slides.length === written.length;
+};
