@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026101237
+
+### Changed
+- **A new look for the Course Presentation editor**  
+  The editor uses a wider window and shows the slides as thumbnails on the left, the selected slide on a canvas like a real slide, and a bar for the AI below it. The bar can be aimed at the whole slide or at its title, text, image or question, and the part being edited is highlighted and selected for it automatically. Ready-made instructions such as simplifying the language or adding an example apply with one click. Questions are added with buttons for each type, and the first screen is a clean panel to describe the presentation, with an option to start from scratch. The texts of the editor were rewritten in a neutral, professional tone, and the strings of the removed form were deleted.
+
 ## [2.0.10] - 2026101236
 
 ### Changed

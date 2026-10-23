@@ -52,7 +52,8 @@ const SAFE_HTML = {
 
 const STRING_KEYS = [
     'pe_new_slide', 'pe_error_name', 'pe_error_slides', 'pe_error_title', 'pe_error_brief', 'pe_regenerate_title',
-    'pe_regenerate_body', 'pe_regenerate_yes', 'pe_slide_label',
+    'pe_regenerate_body', 'pe_regenerate_yes', 'pe_slide_label', 'pe_scope_slide', 'pe_scope_title', 'pe_scope_body',
+    'pe_scope_image', 'pe_scope_question', 'pe_sugg_simplify', 'pe_sugg_example', 'pe_sugg_shorter',
     'cpb_q_multi', 'cpb_q_tf', 'cpb_q_fill', 'pe_option', 'pe_save_error',
 ];
 
@@ -80,9 +81,10 @@ export default class extends BaseComponent {
         this.name = 'local_coursegen_activityai_presentation_editor';
         this.footer = descriptor.footer || null;
         this.model = null;
-        this.zone = '';
+        this.scope = 'slide';
         this.busy = '';
         this.brief = '';
+        this.instruction = '';
         this.sentFile = null;
         this.errormessage = '';
         this.strings = {};
@@ -96,6 +98,7 @@ export default class extends BaseComponent {
         this.addEventListener(this.element, 'click', this._handleClick);
         this.addEventListener(this.element, 'input', this._handleInput);
         this.addEventListener(this.element, 'change', this._handleChange);
+        this.addEventListener(this.element, 'focusin', this._handleFocus);
         this._sync();
     }
 
@@ -115,8 +118,10 @@ export default class extends BaseComponent {
         const visible = session.typestep === 'prompt' && session.activitytype === 'h5pactivity' && session.h5ptype === KIND;
         this.element.classList.toggle('d-none', !visible);
         this._syncFooter(visible);
+        this.element.closest('.modal')?.classList.toggle('local_coursegen_pe_active', visible);
         if (visible && !this.model) {
             this.model = {
+                view: 'brief',
                 name: '',
                 intro: '',
                 current: 0,
@@ -201,6 +206,7 @@ export default class extends BaseComponent {
             this.model.name = this.model.name || draft.name || '';
             this.model.intro = draft.intro || '';
             this.model.current = 0;
+            this.model.view = 'edit';
             this.model.slides = (draft.slides || []).map((slide) => this._normalised(slide));
         } catch (error) {
             this.errormessage = this._messageOf(error);
@@ -265,22 +271,36 @@ export default class extends BaseComponent {
     _context() {
         const model = this.model;
         const total = model.slides.length;
+        const strings = this.strings;
+        const scopes = ['slide', 'title', 'body', 'image', 'question'].map((key) => ({
+            key,
+            label: strings['pe_scope_' + key],
+            active: this.scope === key,
+            disabled: key === 'question' && !model.slides[model.current]?.question,
+        }));
         const context = {
+            isbrief: model.view === 'brief',
+            isedit: model.view === 'edit',
+            canreturn: this._hasContent(),
             name: model.name,
             total,
-            hasslides: total > 0,
             errormessage: this.errormessage,
             busy: this.busy,
             creating: this.busy === 'create',
             busyall: this.busy === 'all',
             brief: this.brief,
+            instruction: this.instruction,
+            scopes,
+            suggestions: ['simplify', 'example', 'shorter'].map((key) => ({text: strings['pe_sugg_' + key]})),
             hasfile: Boolean(this.reactive.state.upload.draftitemid),
             filename: this.reactive.state.upload.filename,
             slides: model.slides.map((slide, index) => ({
                 index,
                 number: index + 1,
-                title: slide.title || this.strings.pe_slide_label + ' ' + (index + 1),
+                title: slide.title || strings.pe_slide_label + ' ' + (index + 1),
                 current: index === model.current,
+                hasimage: slide.uploaded_image || Boolean(slide.image_prompt),
+                hasquestion: Boolean(slide.question),
             })),
         };
         if (total > 0) {
@@ -310,7 +330,6 @@ export default class extends BaseComponent {
             last: index === total - 1,
             title: slide.title,
             body: clean(slide.body_html),
-            showimage: true,
             uploaded: slide.uploaded_image,
             imageprompt: slide.image_prompt,
             hasvideo: Boolean(slide.video_url),
@@ -326,10 +345,10 @@ export default class extends BaseComponent {
             })),
             qtrue: question ? isTrue(question.correct) : false,
             qtext: question ? question.text || '' : '',
+            busy: this.busy && this.busy !== 'create' && this.busy !== 'all',
         };
         for (const zone of Object.keys(PART_OF_ZONE)) {
-            current['ai' + zone] = this.zone === zone;
-            current['busy' + zone] = this.busy === zone;
+            current['active' + zone] = this.scope === zone;
         }
         return current;
     }
@@ -340,7 +359,6 @@ export default class extends BaseComponent {
     async _render() {
         const {html, js} = await Templates.renderForPromise('local_coursegen/presentation_editor', this._context());
         Templates.replaceNodeContents(this.element, html, js);
-        this.element.querySelector("[data-region='local_coursegen/pe/aiinput']")?.focus();
     }
 
     /**
@@ -420,11 +438,21 @@ export default class extends BaseComponent {
                     model.current = at + 1;
                 }
             },
-            ai: () => {
-                this.zone = button.dataset.zone;
+            scope: () => {
+                this.scope = button.dataset.scope;
             },
-            aicancel: () => {
-                this.zone = '';
+            blank: () => {
+                model.view = 'edit';
+            },
+            openbrief: () => {
+                model.view = 'brief';
+            },
+            closebrief: () => {
+                model.view = 'edit';
+            },
+            addquestion: () => {
+                slides[at].question = this._newQuestion(button.dataset.kind);
+                this.scope = 'question';
             },
             removequestion: () => {
                 slides[at].question = null;
@@ -436,12 +464,13 @@ export default class extends BaseComponent {
         if (moves[action]) {
             moves[action]();
             if (['select', 'previous', 'next', 'add', 'remove', 'up', 'down', 'duplicate'].includes(action)) {
-                this.zone = '';
+                this.scope = 'slide';
             }
             return true;
         }
         const asynchronous = {
             aiapply: () => this._askAi(),
+            suggest: () => this._askAi(button.dataset.text),
             create: () => this._create(),
             generate: () => this._generate(),
             attach: () => this._attach(),
@@ -502,17 +531,18 @@ export default class extends BaseComponent {
     }
 
     /**
-     * Ask the AI to change the part of the slide the bar is open for.
+     * Ask the AI to change what the bar is aimed at: the whole slide or one part of it.
+     *
+     * @param {string} [suggestion] A ready-made instruction, instead of the one typed.
      */
-    async _askAi() {
-        const input = this.element.querySelector("[data-region='local_coursegen/pe/aiinput']");
-        const instruction = String(input ? input.value : '').trim();
+    async _askAi(suggestion = '') {
+        const instruction = String(suggestion || this.instruction).trim();
         if (!instruction) {
-            input?.focus();
+            this.element.querySelector("[data-region='local_coursegen/pe/aiinput']")?.focus();
             return;
         }
 
-        const zone = this.zone;
+        const zone = this.scope === 'question' && !this._currentSlide().question ? 'slide' : this.scope;
         const index = this.model.current;
         this.busy = zone;
         await this._render();
@@ -525,7 +555,7 @@ export default class extends BaseComponent {
                 part: PART_OF_ZONE[zone],
             }));
             this._apply(index, zone, this._normalised(written));
-            this.zone = '';
+            this.instruction = '';
             this.errormessage = '';
         } catch (error) {
             this.errormessage = this._messageOf(error);
@@ -625,6 +655,10 @@ export default class extends BaseComponent {
         if (!this.model) {
             return;
         }
+        if (target.dataset.field === 'instruction') {
+            this.instruction = target.value;
+            return;
+        }
         if (target.dataset.field === 'brief') {
             this.brief = target.value;
             return;
@@ -654,9 +688,9 @@ export default class extends BaseComponent {
      * @param {string} title
      */
     _refreshStrip(title) {
-        const label = this.element.querySelector('nav .btn-primary span:last-child');
+        const label = this.element.querySelector('.pe-thumb.is-active .pe-thumb-title');
         if (label) {
-            label.textContent = title || this.strings.pe_new_slide;
+            label.textContent = title || this.strings.pe_slide_label + ' ' + (this.model.current + 1);
         }
     }
 
@@ -682,6 +716,30 @@ export default class extends BaseComponent {
     }
 
     /**
+     * Aim the AI bar at the part of the slide the person is working on.
+     *
+     * @param {FocusEvent} event
+     */
+    _handleFocus(event) {
+        const zone = event.target.closest?.('[data-zone]');
+        if (!zone || this.busy || !PART_OF_ZONE[zone.dataset.zone]) {
+            return;
+        }
+        const key = zone.dataset.zone;
+        if (key === this.scope) {
+            return;
+        }
+        this.scope = key;
+        this.element.querySelectorAll('[data-scope]').forEach((pill) => {
+            pill.classList.toggle('is-active', pill.dataset.scope === key);
+            pill.setAttribute('aria-pressed', String(pill.dataset.scope === key));
+        });
+        this.element.querySelectorAll('.pe-zone').forEach((node) => {
+            node.classList.toggle('is-active', node.dataset.zone === key);
+        });
+    }
+
+    /**
      * The choices that are made with a change and not typing: the right option, true or false, a new question.
      *
      * @param {Event} event
@@ -692,10 +750,7 @@ export default class extends BaseComponent {
             return;
         }
         const slide = this._currentSlide();
-        if (target.dataset.action === 'local_coursegen/pe/addquestion' && target.value) {
-            slide.question = this._newQuestion(target.value);
-            await this._render();
-        } else if (target.dataset.question === 'correct' && slide.question) {
+        if (target.dataset.question === 'correct' && slide.question) {
             slide.question.options.forEach((option, position) => {
                 option.correct = position === Number(target.dataset.option);
             });
