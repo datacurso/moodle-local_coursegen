@@ -198,7 +198,7 @@ class Mutations {
      * teacher chose are sent, but nothing is generated yet; the editor asks for the draft once the job exists.
      *
      * @param {StateManager} stateManager
-     * @param {{prompt: string, slideImages: (Array<{slide: number, draftitemid: number}>|undefined)}} payload
+     * @param {{prompt: string}} payload
      */
     async beginPresentation(stateManager, payload) {
         await ensureUiTexts();
@@ -228,9 +228,6 @@ class Mutations {
 
             if (state.upload.draftitemid) {
                 await repository.uploadFile({courseid, jobid, draftitemid: state.upload.draftitemid});
-            }
-            for (const image of payload.slideImages || []) {
-                await repository.uploadSlideImage({courseid, jobid, draftitemid: image.draftitemid, slide: image.slide});
             }
 
             stateManager.setReadOnly(false);

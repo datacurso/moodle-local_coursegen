@@ -30,6 +30,7 @@ import Notification from 'core/notification';
 import {get_strings as getStrings} from 'core/str';
 import DOMPurify from 'local_coursegen/purify';
 
+import {pickFile} from 'local_coursegen/local/activityai/filepicker';
 import * as repository from 'local_coursegen/local/activityai/repository';
 import {loadActivityaiStrings} from 'local_coursegen/local/activityai/i18n';
 import {createActivityFromJob} from 'local_coursegen/local/activityai/activity-creation';
@@ -37,6 +38,7 @@ import {createActivityFromJob} from 'local_coursegen/local/activityai/activity-c
 const COMPONENT = 'local_coursegen';
 const MIN_SLIDES = 3;
 const MAX_SLIDES = 30;
+const KIND = 'course_presentation';
 
 /** The parts the AI can write again on its own, by the zone of the slide they are in. */
 const PART_OF_ZONE = {title: 'title', body: 'body', image: 'image', question: 'question', slide: ''};
@@ -49,7 +51,8 @@ const SAFE_HTML = {
 };
 
 const STRING_KEYS = [
-    'pe_drafting', 'pe_retry', 'pe_new_slide', 'pe_error_name', 'pe_error_slides', 'pe_error_title',
+    'pe_new_slide', 'pe_error_name', 'pe_error_slides', 'pe_error_title', 'pe_error_brief', 'pe_regenerate_title',
+    'pe_regenerate_body', 'pe_regenerate_yes', 'pe_slide_label',
     'cpb_q_multi', 'cpb_q_tf', 'cpb_q_fill', 'pe_option', 'pe_save_error',
 ];
 
@@ -73,13 +76,15 @@ const clean = (html) => {
 const isTrue = (value) => value === true || String(value).toLowerCase() === 'true';
 
 export default class extends BaseComponent {
-    create() {
+    create(descriptor) {
         this.name = 'local_coursegen_activityai_presentation_editor';
+        this.footer = descriptor.footer || null;
         this.model = null;
         this.zone = '';
         this.busy = '';
+        this.brief = '';
+        this.sentFile = null;
         this.errormessage = '';
-        this.started = false;
         this.strings = {};
     }
 
@@ -96,45 +101,128 @@ export default class extends BaseComponent {
 
     getWatchers() {
         return [
-            {watch: 'session.phase:updated', handler: this._sync},
-            {watch: 'session.jobid:updated', handler: this._sync},
+            {watch: 'session.typestep:updated', handler: this._sync},
+            {watch: 'session.h5ptype:updated', handler: this._sync},
+            {watch: 'upload:updated', handler: this._refreshFile},
         ];
     }
 
     /**
-     * The editor shows once the session of the editor is open.
+     * The editor is what the person gets as soon as Course Presentation is chosen, with the slides still empty.
      */
     async _sync() {
         const session = this.reactive.state.session;
-        const editing = session.phase === 'editing' && Boolean(session.jobid);
-        this.element.classList.toggle('d-none', !editing);
-        if (editing && !this.started) {
-            this.started = true;
-            await this._draft();
-        }
-        if (!editing) {
-            this.started = false;
+        const visible = session.typestep === 'prompt' && session.activitytype === 'h5pactivity' && session.h5ptype === KIND;
+        this.element.classList.toggle('d-none', !visible);
+        this._syncFooter(visible);
+        if (visible && !this.model) {
+            this.model = {
+                name: '',
+                intro: '',
+                current: 0,
+                slides: [0, 1, 2].map(() => this._normalised({})),
+            };
+            await this._render();
+        } else if (!visible && !session.jobid) {
             this.model = null;
+            this.brief = '';
         }
     }
 
     /**
-     * Ask the AI for the slides and show them.
+     * The field of the chat and the general choice about images are not used here: the AI is asked from the editor and
+     * images are decided slide by slide.
+     *
+     * @param {boolean} hidden
      */
-    async _draft() {
-        this.errormessage = '';
-        this._showMessage(this.strings.pe_drafting, true);
-        try {
-            const draft = await repository.draftPresentation(this._job({instructions: ''}));
-            this.model = {
-                name: draft.name || '',
-                intro: draft.intro || '',
-                current: 0,
-                slides: (draft.slides || []).map((slide) => this._normalised(slide)),
-            };
+    _syncFooter(hidden) {
+        const radios = this.footer ? [...this.footer.querySelectorAll("input[name='generate_images']")] : [];
+        const nodes = [this.footer?.querySelector('.ai-prompt-container'), ...radios.map((radio) => radio.closest('label'))];
+        nodes.filter(Boolean).forEach((node) => {
+            if (hidden) {
+                node.style.setProperty('display', 'none', 'important');
+            } else {
+                node.style.removeProperty('display');
+            }
+        });
+    }
+
+    /**
+     * Start the job the AI works on, once, the first time the AI is needed.
+     */
+    async _ensureSession() {
+        const state = this.reactive.state;
+        if (state.session.jobid) {
+            return;
+        }
+        await this.reactive.dispatch('setGenerateImages', 1);
+        await this.reactive.dispatch('beginPresentation', {prompt: this.brief || this.model.name || KIND});
+        if (!state.session.jobid) {
+            throw new Error(this.strings.pe_save_error);
+        }
+    }
+
+    /**
+     * Ask the AI to write all the slides from what the person described.
+     */
+    async _generate() {
+        const brief = this.brief.trim();
+        if (!brief) {
+            this.errormessage = this.strings.pe_error_brief;
             await this._render();
+            this.element.querySelector("[data-field='brief']")?.focus();
+            return;
+        }
+        if (this._hasContent()) {
+            try {
+                await Notification.saveCancelPromise(
+                    this.strings.pe_regenerate_title, this.strings.pe_regenerate_body, this.strings.pe_regenerate_yes);
+            } catch (cancelled) {
+                return;
+            }
+        }
+
+        this.busy = 'all';
+        this.errormessage = '';
+        await this._render();
+        try {
+            const started = Boolean(this.reactive.state.session.jobid);
+            await this._ensureSession();
+            const file = this.reactive.state.upload.draftitemid;
+            if (started && file && this.sentFile !== file) {
+                await repository.uploadFile({
+                    courseid: this.reactive.state.page.courseid,
+                    jobid: String(this.reactive.state.session.jobid),
+                    draftitemid: file,
+                });
+            }
+            this.sentFile = file;
+            const draft = await repository.draftPresentation(this._job({instructions: brief}));
+            this.model.name = this.model.name || draft.name || '';
+            this.model.intro = draft.intro || '';
+            this.model.current = 0;
+            this.model.slides = (draft.slides || []).map((slide) => this._normalised(slide));
         } catch (error) {
-            this._showMessage(this._messageOf(error), false, true);
+            this.errormessage = this._messageOf(error);
+        }
+        this.busy = '';
+        await this._render();
+    }
+
+    /**
+     * @returns {boolean} Whether anything was written in the slides.
+     */
+    _hasContent() {
+        return this.model.slides.some((slide) => slide.title.trim() || slide.image_prompt || slide.uploaded_image ||
+            slide.question || slide.body_html.replace(/<[^>]*>/g, '').trim());
+    }
+
+    /**
+     * Show the file of the chat in the editor.
+     */
+    _refreshFile() {
+        if (this.model) {
+            this._render();
         }
     }
 
@@ -172,43 +260,11 @@ export default class extends BaseComponent {
     }
 
     /**
-     * Show a message instead of the editor: the AI is working, or something went wrong and can be tried again.
-     *
-     * @param {string} text
-     * @param {boolean} working Show the spinner.
-     * @param {boolean} retry Offer to try again.
-     */
-    _showMessage(text, working, retry = false) {
-        const box = document.createElement('div');
-        box.className = 'text-center py-5';
-        if (working) {
-            const spinner = document.createElement('span');
-            spinner.className = 'spinner-border text-primary';
-            spinner.setAttribute('role', 'status');
-            box.append(spinner);
-        }
-        const message = document.createElement('p');
-        message.className = working ? 'mt-3 mb-0' : 'alert alert-danger text-left';
-        message.textContent = text;
-        box.append(message);
-        if (retry) {
-            const button = document.createElement('button');
-            button.type = 'button';
-            button.className = 'btn btn-primary mt-2';
-            button.dataset.action = 'local_coursegen/pe/redraft';
-            button.textContent = this.strings.pe_retry;
-            box.append(button);
-        }
-        this.element.replaceChildren(box);
-    }
-
-    /**
      * @returns {Object} What the template needs to draw the editor.
      */
     _context() {
         const model = this.model;
         const total = model.slides.length;
-        const session = this.reactive.state.session;
         const context = {
             name: model.name,
             total,
@@ -216,12 +272,19 @@ export default class extends BaseComponent {
             errormessage: this.errormessage,
             busy: this.busy,
             creating: this.busy === 'create',
+            busyall: this.busy === 'all',
+            brief: this.brief,
+            hasfile: Boolean(this.reactive.state.upload.draftitemid),
+            filename: this.reactive.state.upload.filename,
             slides: model.slides.map((slide, index) => ({
-                index, number: index + 1, title: slide.title || this.strings.pe_new_slide, current: index === model.current,
+                index,
+                number: index + 1,
+                title: slide.title || this.strings.pe_slide_label + ' ' + (index + 1),
+                current: index === model.current,
             })),
         };
         if (total > 0) {
-            context.current = this._slideContext(model.slides[model.current], model.current, total, session);
+            context.current = this._slideContext(model.slides[model.current], model.current, total);
         }
         return context;
     }
@@ -230,10 +293,9 @@ export default class extends BaseComponent {
      * @param {Object} slide
      * @param {number} index
      * @param {number} total
-     * @param {Object} session
      * @returns {Object} The slide in large, ready for the template.
      */
-    _slideContext(slide, index, total, session) {
+    _slideContext(slide, index, total) {
         const question = slide.question;
         const kind = question ? question.type : '';
         const labels = {
@@ -248,7 +310,7 @@ export default class extends BaseComponent {
             last: index === total - 1,
             title: slide.title,
             body: clean(slide.body_html),
-            showimage: Boolean(session.generateimages) || slide.uploaded_image || Boolean(slide.image_prompt),
+            showimage: true,
             uploaded: slide.uploaded_image,
             imageprompt: slide.image_prompt,
             hasvideo: Boolean(slide.video_url),
@@ -299,10 +361,6 @@ export default class extends BaseComponent {
         event.preventDefault();
 
         const action = button.dataset.action.replace('local_coursegen/pe/', '');
-        if (action === 'redraft') {
-            await this._draft();
-            return;
-        }
         if (!this.model || this.busy) {
             return;
         }
@@ -336,7 +394,7 @@ export default class extends BaseComponent {
             },
             add: () => {
                 if (slides.length < MAX_SLIDES) {
-                    slides.splice(at + 1, 0, this._normalised({title: this.strings.pe_new_slide, body_html: '<p></p>'}));
+                    slides.splice(at + 1, 0, this._normalised({title: this.strings.pe_new_slide, body_html: ''}));
                     model.current = at + 1;
                 }
             },
@@ -371,6 +429,9 @@ export default class extends BaseComponent {
             removequestion: () => {
                 slides[at].question = null;
             },
+            removeimage: () => {
+                Object.assign(slides[at], {uploaded_image: false, image_slot: null});
+            },
         };
         if (moves[action]) {
             moves[action]();
@@ -379,12 +440,65 @@ export default class extends BaseComponent {
             }
             return true;
         }
-        if (action === 'aiapply') {
-            await this._askAi();
-        } else if (action === 'create') {
-            await this._create();
+        const asynchronous = {
+            aiapply: () => this._askAi(),
+            create: () => this._create(),
+            generate: () => this._generate(),
+            attach: () => this._attach(),
+            removefile: () => this.reactive.dispatch('setUpload', {draftitemid: null, filename: ''}),
+            uploadimage: () => this._uploadImage(),
+        };
+        if (asynchronous[action]) {
+            await asynchronous[action]();
         }
         return false;
+    }
+
+    /**
+     * Choose a file, such as a syllabus, the AI bases the presentation on.
+     */
+    async _attach() {
+        const state = this.reactive.state;
+        if (state.upload.draftitemid) {
+            return;
+        }
+        await pickFile({
+            courseid: state.page.courseid,
+            onPicked: (file) => this.reactive.dispatch('setUpload', file),
+        });
+    }
+
+    /**
+     * Choose a picture for the current slide: it goes in as it is, instead of the AI making one.
+     */
+    async _uploadImage() {
+        const slide = this._currentSlide();
+        const used = this.model.slides.map((other) => other.image_slot).filter(Boolean);
+        let slot = slide.image_slot;
+        for (let candidate = 1; !slot && candidate <= MAX_SLIDES; candidate++) {
+            slot = used.includes(candidate) ? null : candidate;
+        }
+        const state = this.reactive.state;
+        await pickFile({
+            courseid: state.page.courseid,
+            acceptedTypes: ['.png', '.jpg', '.jpeg', '.gif'],
+            onPicked: async(file) => {
+                try {
+                    await this._ensureSession();
+                    await repository.uploadSlideImage({
+                        courseid: state.page.courseid,
+                        jobid: String(state.session.jobid),
+                        draftitemid: file.draftitemid,
+                        slide: slot,
+                    });
+                    Object.assign(slide, {uploaded_image: true, image_slot: slot, image_prompt: ''});
+                    this.errormessage = '';
+                } catch (error) {
+                    this.errormessage = this._messageOf(error);
+                }
+                await this._render();
+            },
+        });
     }
 
     /**
@@ -403,6 +517,7 @@ export default class extends BaseComponent {
         this.busy = zone;
         await this._render();
         try {
+            await this._ensureSession();
             const written = await repository.rewriteSlide(this._job({
                 slides: this._cleanSlides(),
                 index,
@@ -471,6 +586,7 @@ export default class extends BaseComponent {
         this.errormessage = '';
         await this._render();
         try {
+            await this._ensureSession();
             await repository.buildPresentation(this._job({
                 name: model.name.trim(),
                 intro: model.intro,
@@ -507,6 +623,10 @@ export default class extends BaseComponent {
     _handleInput(event) {
         const target = event.target;
         if (!this.model) {
+            return;
+        }
+        if (target.dataset.field === 'brief') {
+            this.brief = target.value;
             return;
         }
         if (target.dataset.field === 'name') {

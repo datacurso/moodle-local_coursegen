@@ -146,3 +146,15 @@ span.local_coursegen-sparkles-icon.white {
 .local_coursegen_type_picker [data-action="show-option-summary"] {
     display: none;
 }
+
+.local_coursegen_pe .pe-edit:empty::before {
+    content: attr(data-placeholder);
+    color: #6c757d;
+    cursor: text;
+}
+
+.local_coursegen_pe .pe-edit:focus {
+    outline: 2px solid #8fb4ff;
+    outline-offset: 2px;
+    border-radius: 4px;
+}

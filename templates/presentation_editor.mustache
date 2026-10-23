@@ -29,12 +29,36 @@
     * ai string             - The zone the bar to ask the AI is open for: title, body, image, question, slide or empty.
     * busy string           - The zone the AI is working on: the same names, or create, or empty.
     * errormessage string   - What went wrong the last time, or empty.
+    * brief string          - What the person described for the AI to write all the slides.
+    * hasfile bool          - Whether a file is attached for the AI to base the presentation on.
+    * filename string
+    * busyall bool          - Whether the AI is writing all the slides.
 
     Example context (json):
     {"name": "Water", "slides": [], "total": 0, "hasslides": false, "ai": "", "busy": "", "errormessage": ""}
 }}
 <div class="local_coursegen_pe">
     {{#errormessage}}<div class="alert alert-danger" role="alert" data-region="local_coursegen/pe/error">{{errormessage}}</div>{{/errormessage}}
+
+    <div class="rounded p-3 mb-3" style="background: #f3f0ff;" data-region="local_coursegen/pe/brief">
+        <label class="font-weight-bold mb-1" for="pe-brief"><i class="fa fa-magic text-primary mr-1" aria-hidden="true"></i>{{#str}} pe_brief_label, local_coursegen {{/str}}</label>
+        <textarea id="pe-brief" class="form-control" rows="2" data-field="brief" placeholder="{{#str}} pe_brief_placeholder, local_coursegen {{/str}}">{{brief}}</textarea>
+        <div class="d-flex align-items-center flex-wrap mt-2" style="gap: .5rem;">
+            {{^hasfile}}
+            <button type="button" class="btn btn-light btn-sm" data-action="local_coursegen/pe/attach"><i class="fa fa-paperclip mr-1" aria-hidden="true"></i>{{#str}} pe_attach, local_coursegen {{/str}}</button>
+            {{/hasfile}}
+            {{#hasfile}}
+            <span class="badge badge-light border p-2"><i class="fa fa-file-o mr-1" aria-hidden="true"></i>{{filename}}
+                <button type="button" class="btn btn-link btn-sm p-0 ml-1 text-danger" data-action="local_coursegen/pe/removefile" aria-label="{{#str}} pe_remove_file, local_coursegen {{/str}}"><i class="fa fa-times" aria-hidden="true"></i></button></span>
+            {{/hasfile}}
+            <span class="flex-fill"></span>
+            <button type="button" class="btn btn-primary" data-action="local_coursegen/pe/generate" {{#busy}}disabled{{/busy}}>
+                {{#busyall}}<span class="spinner-border spinner-border-sm mr-1" role="status" aria-hidden="true"></span>{{/busyall}}
+                {{^busyall}}<i class="fa fa-magic mr-1" aria-hidden="true"></i>{{/busyall}}
+                {{#str}} pe_generate, local_coursegen {{/str}}
+            </button>
+        </div>
+    </div>
 
     <div class="d-flex align-items-end flex-wrap mb-3" style="gap: .75rem;">
         <div class="flex-fill">
@@ -47,7 +71,8 @@
         </button>
     </div>
 
-    <div class="d-flex" style="gap: 1rem; align-items: flex-start;">
+    <div class="d-flex position-relative" style="gap: 1rem; align-items: flex-start;">
+        {{#busyall}}{{> local_coursegen/presentation_editor_busy}}{{/busyall}}
         <nav class="flex-shrink-0" style="width: 11rem;" aria-label="{{#str}} pe_strip, local_coursegen {{/str}}">
             {{#slides}}
             <button type="button" data-action="local_coursegen/pe/select" data-index="{{index}}"
@@ -94,7 +119,7 @@
 
                 <div class="pe-zone mb-3" data-zone="title">
                     <div class="d-flex align-items-start" style="gap: .5rem;">
-                        <h2 class="flex-fill mb-0 pe-edit" contenteditable="true" data-field="title" role="textbox"
+                        <h2 class="flex-fill mb-0 pe-edit" contenteditable="true" data-field="title" data-placeholder="{{#str}} pe_title_placeholder, local_coursegen {{/str}}" role="textbox"
                             aria-label="{{#str}} cpb_title, local_coursegen {{/str}}">{{title}}</h2>
                         <button type="button" class="btn btn-link btn-sm p-0" data-action="local_coursegen/pe/ai" data-zone="title"
                                 title="{{#str}} pe_ai_zone, local_coursegen {{/str}}"><i class="fa fa-magic" aria-hidden="true"></i></button>
@@ -104,7 +129,7 @@
 
                 <div class="pe-zone mb-3" data-zone="body">
                     <div class="d-flex align-items-start" style="gap: .5rem;">
-                        <div class="flex-fill pe-edit" contenteditable="true" data-field="body_html" role="textbox"
+                        <div class="flex-fill pe-edit" contenteditable="true" data-field="body_html" data-placeholder="{{#str}} pe_body_placeholder, local_coursegen {{/str}}" role="textbox"
                              aria-label="{{#str}} cpb_text, local_coursegen {{/str}}">{{{body}}}</div>
                         <button type="button" class="btn btn-link btn-sm p-0" data-action="local_coursegen/pe/ai" data-zone="body"
                                 title="{{#str}} pe_ai_zone, local_coursegen {{/str}}"><i class="fa fa-magic" aria-hidden="true"></i></button>
@@ -112,23 +137,25 @@
                     {{#aibody}}{{> local_coursegen/presentation_editor_ai}}{{/aibody}}
                 </div>
 
-                {{#showimage}}
                 <div class="pe-zone mb-3 p-3 bg-light rounded" data-zone="image">
                     <div class="d-flex align-items-center" style="gap: .5rem;">
                         <i class="fa fa-image text-muted" aria-hidden="true"></i>
                         {{#uploaded}}
                         <span class="flex-fill">{{#str}} pe_image_uploaded, local_coursegen {{/str}}</span>
+                        <button type="button" class="btn btn-link btn-sm p-0 text-danger" data-action="local_coursegen/pe/removeimage"
+                                title="{{#str}} cpb_image_remove, local_coursegen {{/str}}"><i class="fa fa-times" aria-hidden="true"></i></button>
                         {{/uploaded}}
                         {{^uploaded}}
                         <input type="text" class="form-control form-control-sm flex-fill" data-field="image_prompt" value="{{imageprompt}}"
                                placeholder="{{#str}} pe_image_prompt, local_coursegen {{/str}}">
+                        <button type="button" class="btn btn-link btn-sm p-0" data-action="local_coursegen/pe/uploadimage"
+                                title="{{#str}} cpb_image_upload, local_coursegen {{/str}}"><i class="fa fa-upload" aria-hidden="true"></i></button>
                         <button type="button" class="btn btn-link btn-sm p-0" data-action="local_coursegen/pe/ai" data-zone="image"
                                 title="{{#str}} pe_ai_zone, local_coursegen {{/str}}"><i class="fa fa-magic" aria-hidden="true"></i></button>
                         {{/uploaded}}
                     </div>
                     {{#aiimage}}{{> local_coursegen/presentation_editor_ai}}{{/aiimage}}
                 </div>
-                {{/showimage}}
 
                 {{#hasvideo}}
                 <div class="pe-zone mb-3 p-3 bg-light rounded" data-zone="video">

@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026101236
+
+### Changed
+- **Course Presentation opens straight into the editor, with no form first**  
+  Choosing Course Presentation now shows the editor at once, with three empty slides the person can start filling in by hand. On top there is a box to tell the AI what the presentation is about, with a button to attach a file and another to write all the slides with the AI, which asks before replacing slides that already have content. Each slide also lets the person describe an image for the AI to make or upload a picture of their own. The AI job only starts the first time the AI is needed, so entering and leaving the editor costs nothing. The form with the list of slides is gone.
+
 ## [2.0.10] - 2026101235
 
 ### Added

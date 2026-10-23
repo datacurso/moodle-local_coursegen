@@ -1319,3 +1319,16 @@ $string['pe_error_name'] = 'Write a name for the activity.';
 $string['pe_error_slides'] = 'The presentation needs at least three slides.';
 $string['pe_error_title'] = 'Every slide needs a title.';
 $string['pe_save_error'] = 'Something went wrong. Please try again.';
+
+$string['pe_brief_label'] = 'Tell the AI what the presentation is about';
+$string['pe_brief_placeholder'] = 'For example: The water cycle for 5th grade students, about 8 slides, with a question at the end.';
+$string['pe_attach'] = 'Attach a file';
+$string['pe_remove_file'] = 'Remove the file';
+$string['pe_generate'] = 'Write the slides with AI';
+$string['pe_title_placeholder'] = 'Title of the slide';
+$string['pe_body_placeholder'] = 'Write the content here, or ask the AI with the wand';
+$string['pe_slide_label'] = 'Slide';
+$string['pe_error_brief'] = 'Describe the presentation first, so the AI knows what to write.';
+$string['pe_regenerate_title'] = 'Write the slides again?';
+$string['pe_regenerate_body'] = 'The AI will replace all the slides with new ones. What you wrote will be lost.';
+$string['pe_regenerate_yes'] = 'Replace the slides';

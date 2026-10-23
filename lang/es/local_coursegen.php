@@ -1280,3 +1280,16 @@ $string['pe_error_name'] = 'Escribe un nombre para la actividad.';
 $string['pe_error_slides'] = 'La presentación necesita al menos tres diapositivas.';
 $string['pe_error_title'] = 'Todas las diapositivas necesitan un título.';
 $string['pe_save_error'] = 'Algo salió mal. Inténtalo de nuevo.';
+
+$string['pe_brief_label'] = 'Cuéntale a la IA de qué trata la presentación';
+$string['pe_brief_placeholder'] = 'Por ejemplo: El ciclo del agua para estudiantes de quinto grado, unas 8 diapositivas, con una pregunta al final.';
+$string['pe_attach'] = 'Adjuntar un archivo';
+$string['pe_remove_file'] = 'Quitar el archivo';
+$string['pe_generate'] = 'Escribir las diapositivas con IA';
+$string['pe_title_placeholder'] = 'Título de la diapositiva';
+$string['pe_body_placeholder'] = 'Escribe aquí el contenido, o pídeselo a la IA con la varita';
+$string['pe_slide_label'] = 'Diapositiva';
+$string['pe_error_brief'] = 'Describe primero la presentación, para que la IA sepa qué escribir.';
+$string['pe_regenerate_title'] = '¿Escribir las diapositivas de nuevo?';
+$string['pe_regenerate_body'] = 'La IA reemplazará todas las diapositivas por otras nuevas. Lo que escribiste se perderá.';
+$string['pe_regenerate_yes'] = 'Reemplazar las diapositivas';
