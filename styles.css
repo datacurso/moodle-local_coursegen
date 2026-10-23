@@ -655,3 +655,24 @@ span.local_coursegen-sparkles-icon.white {
     color: var(--pe-ai);
     font-weight: 600;
 }
+
+.local_coursegen_pe .pe-error {
+    margin: .35rem 0 0;
+    color: var(--pe-danger);
+    font-size: .8125rem;
+    font-weight: 600;
+}
+
+.local_coursegen_pe .pe-input.is-invalid,
+.local_coursegen_pe .pe-range input.is-invalid,
+.local_coursegen_pe .pe-add-element select.is-invalid {
+    border-color: var(--pe-danger);
+    box-shadow: 0 0 0 3px hsl(10 81% 48% / .15);
+}
+
+.local_coursegen_pe .pe-tab-add.is-invalid,
+.local_coursegen_pe .pe-link.is-invalid {
+    color: var(--pe-danger);
+    outline: 2px solid var(--pe-danger);
+    outline-offset: 2px;
+}
