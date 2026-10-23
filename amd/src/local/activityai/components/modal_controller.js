@@ -132,6 +132,7 @@ export default class extends BaseComponent {
             new PresentationEditor({
                 element: editorSlot,
                 reactive: this.reactive,
+                languages: languageItems,
                 footer: rootElement.querySelector('.modal-footer'),
             });
         }

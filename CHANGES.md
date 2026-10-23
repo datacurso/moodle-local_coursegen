@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026101241
+
+### Changed
+- **The Course Presentation editor is organized in three steps**  
+  The editor is now a clear sequence. In the first step the person writes the general instruction in a box like the one of the course chat, with the button to attach a reference file, the language and the Generate presentation button. In the second step the person reviews the slides, and chooses between defining them or letting the AI decide. In the third step the person writes the name and creates the activity, and the button stays off while a hint says what is still missing. The language selector moved from the footer of the window into the first step, and the footer form of the chat is hidden while the editor is shown.
+
 ## [2.0.10] - 2026101240
 
 ### Changed
