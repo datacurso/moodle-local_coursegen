@@ -1,0 +1,120 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+{{!
+    @template local_coursegen/presentation_editor_block
+
+    One element of a slide in the Course Presentation editor: an instruction for the AI or something fixed.
+
+    Example context (json):
+    {"id": "b1", "label": "Title", "isAi": true, "isFixed": false, "isHtml": false, "canHtml": false, "canFix": true,
+     "isTitle": true, "instr": "", "placeholder": "Tell the AI what the title says", "busy": false, "hasresult": false}
+}}
+<div class="pe-block {{#isAi}}is-ai{{/isAi}}{{^isAi}}is-fixed{{/isAi}}" data-block-id="{{id}}">
+    {{#busy}}{{> local_coursegen/presentation_editor_busy}}{{/busy}}
+    <div class="pe-bhead">
+        <span class="pe-blabel">{{label}}</span>
+        {{#canFix}}
+        <span class="pe-modes" role="group" aria-label="{{label}}">
+            <button type="button" data-action="local_coursegen/pe/mode" data-block="{{id}}" data-mode="ai" aria-pressed="{{#isAi}}true{{/isAi}}{{^isAi}}false{{/isAi}}">{{#str}} pe_mode_ai, local_coursegen {{/str}}</button>
+            <button type="button" data-action="local_coursegen/pe/mode" data-block="{{id}}" data-mode="fixed" aria-pressed="{{#isFixed}}true{{/isFixed}}{{^isFixed}}false{{/isFixed}}">{{#str}} pe_mode_fixed, local_coursegen {{/str}}</button>
+            {{#canHtml}}<button type="button" data-action="local_coursegen/pe/mode" data-block="{{id}}" data-mode="html" aria-pressed="{{#isHtml}}true{{/isHtml}}{{^isHtml}}false{{/isHtml}}">{{#str}} pe_mode_html, local_coursegen {{/str}}</button>{{/canHtml}}
+        </span>
+        {{/canFix}}
+        <span class="pe-btools">
+            <button type="button" class="pe-icon" data-action="local_coursegen/pe/bup" data-block="{{id}}" title="{{#str}} cpb_move_up, local_coursegen {{/str}}" aria-label="{{#str}} cpb_move_up, local_coursegen {{/str}}"><i class="fa fa-arrow-up" aria-hidden="true"></i></button>
+            <button type="button" class="pe-icon" data-action="local_coursegen/pe/bdown" data-block="{{id}}" title="{{#str}} cpb_move_down, local_coursegen {{/str}}" aria-label="{{#str}} cpb_move_down, local_coursegen {{/str}}"><i class="fa fa-arrow-down" aria-hidden="true"></i></button>
+            <button type="button" class="pe-icon" data-action="local_coursegen/pe/copyopen" data-block="{{id}}" title="{{#str}} pe_copy, local_coursegen {{/str}}" aria-label="{{#str}} pe_copy, local_coursegen {{/str}}"><i class="fa fa-clone" aria-hidden="true"></i></button>
+            <button type="button" class="pe-icon is-danger" data-action="local_coursegen/pe/bdel" data-block="{{id}}" title="{{#str}} cpb_remove, local_coursegen {{/str}}" aria-label="{{#str}} cpb_remove, local_coursegen {{/str}}"><i class="fa fa-trash" aria-hidden="true"></i></button>
+        </span>
+    </div>
+
+    {{#copyopen}}
+    <div class="pe-copy">
+        <span>{{#str}} pe_copy, local_coursegen {{/str}}</span>
+        <label><input type="checkbox" data-copyall> {{#str}} pe_copy_all, local_coursegen {{/str}}</label>
+        {{#copytargets}}<label><input type="checkbox" data-copy="{{index}}"> {{number}}</label>{{/copytargets}}
+        <button type="button" class="pe-btn pe-btn-small" data-action="local_coursegen/pe/copydo" data-block="{{id}}">{{#str}} pe_copy_do, local_coursegen {{/str}}</button>
+    </div>
+    {{/copyopen}}
+
+    {{#isTitle}}
+    {{#isAi}}<input type="text" class="pe-input" data-block="{{id}}" data-f="instr" value="{{instr}}" placeholder="{{placeholder}}" aria-label="{{label}}">{{/isAi}}
+    {{^isAi}}<input type="text" class="pe-input pe-input-title" data-block="{{id}}" data-f="value" value="{{value}}" placeholder="{{#str}} pe_fixed_title, local_coursegen {{/str}}" aria-label="{{label}}">{{/isAi}}
+    {{/isTitle}}
+
+    {{#isText}}
+    {{#isAi}}<textarea class="pe-input" rows="2" data-block="{{id}}" data-f="instr" placeholder="{{placeholder}}" aria-label="{{label}}">{{instr}}</textarea>{{/isAi}}
+    {{#isFixed}}<textarea class="pe-input" rows="3" data-block="{{id}}" data-f="fixedtext" placeholder="{{#str}} pe_fixed_text, local_coursegen {{/str}}" aria-label="{{label}}">{{fixedtext}}</textarea>{{/isFixed}}
+    {{#isHtml}}
+    <textarea class="pe-input pe-code" rows="5" data-block="{{id}}" data-f="html" placeholder="{{#str}} pe_html_placeholder, local_coursegen {{/str}}" aria-label="{{label}}">{{html}}</textarea>
+    <p class="pe-help">{{#str}} pe_html_help, local_coursegen {{/str}} {{#str}} pe_html_markers, local_coursegen {{/str}} <strong data-markers="{{id}}">{{markers}}</strong></p>
+    {{/isHtml}}
+    {{/isText}}
+
+    {{#isImage}}
+    {{#uploaded}}
+    <div class="pe-uploaded"><i class="fa fa-image" aria-hidden="true"></i><span class="pe-truncate">{{name}}</span>
+        <button type="button" class="pe-btn pe-btn-small" data-action="local_coursegen/pe/removeimage" data-block="{{id}}">{{#str}} pe_image_remove, local_coursegen {{/str}}</button></div>
+    <p class="pe-help">{{#str}} pe_image_fixed_help, local_coursegen {{/str}}</p>
+    {{/uploaded}}
+    {{^uploaded}}
+    {{#isAi}}<textarea class="pe-input" rows="2" data-block="{{id}}" data-f="instr" placeholder="{{placeholder}}" aria-label="{{label}}">{{instr}}</textarea>{{/isAi}}
+    <button type="button" class="pe-btn pe-btn-small" data-action="local_coursegen/pe/uploadimage" data-block="{{id}}"><i class="fa fa-upload" aria-hidden="true"></i>{{#str}} pe_image_upload, local_coursegen {{/str}}</button>
+    {{/uploaded}}
+    {{/isImage}}
+
+    {{#isVideo}}
+    <input type="url" class="pe-input" data-block="{{id}}" data-f="url" value="{{url}}" placeholder="https://www.youtube.com/watch?v=" aria-label="{{label}}">
+    <p class="pe-help">{{#str}} pe_video_help, local_coursegen {{/str}}</p>
+    {{/isVideo}}
+
+    {{#isQuestion}}
+    <div class="pe-kinds" role="group" aria-label="{{label}}">
+        {{#kinds}}<button type="button" data-action="local_coursegen/pe/qkind" data-block="{{id}}" data-kind="{{key}}" aria-pressed="{{#active}}true{{/active}}{{^active}}false{{/active}}">{{label}}</button>{{/kinds}}
+    </div>
+    {{#isAi}}<textarea class="pe-input" rows="2" data-block="{{id}}" data-f="instr" placeholder="{{placeholder}}" aria-label="{{label}}">{{instr}}</textarea>{{/isAi}}
+    {{^isAi}}
+    {{#hasquestion}}
+    <input type="text" class="pe-input" data-block="{{id}}" data-f="qprompt" value="{{qprompt}}" placeholder="{{#str}} pe_q_prompt, local_coursegen {{/str}}" aria-label="{{#str}} pe_q_prompt, local_coursegen {{/str}}">
+    {{#qmulti}}{{#qoptions}}
+    <label class="pe-option"><input type="radio" name="pe-correct-{{id}}" data-block="{{id}}" data-f="qcorrect" data-option="{{index}}" {{#correct}}checked{{/correct}} title="{{#str}} pe_correct, local_coursegen {{/str}}" aria-label="{{#str}} pe_correct, local_coursegen {{/str}}">
+        <input type="text" class="pe-input" data-block="{{id}}" data-f="qoption" data-option="{{index}}" value="{{text}}" aria-label="{{#str}} pe_option, local_coursegen {{/str}}"></label>
+    {{/qoptions}}{{/qmulti}}
+    {{#qtf}}<div class="pe-tf"><label><input type="radio" name="pe-tf-{{id}}" data-block="{{id}}" data-f="qtf" value="true" {{#qtrue}}checked{{/qtrue}}> {{#str}} pe_true, local_coursegen {{/str}}</label>
+        <label><input type="radio" name="pe-tf-{{id}}" data-block="{{id}}" data-f="qtf" value="false" {{^qtrue}}checked{{/qtrue}}> {{#str}} pe_false, local_coursegen {{/str}}</label></div>{{/qtf}}
+    {{#qfill}}<textarea class="pe-input" rows="3" data-block="{{id}}" data-f="qtext" aria-label="{{#str}} pe_kind_fill_in_the_blanks, local_coursegen {{/str}}">{{qtext}}</textarea>
+        <p class="pe-help">{{#str}} pe_fill_help, local_coursegen {{/str}}</p>{{/qfill}}
+    {{/hasquestion}}
+    {{/isAi}}
+    {{/isQuestion}}
+
+    {{#hasresult}}
+    <div class="pe-result">
+        <div class="pe-result-head">
+            <span><i class="fa fa-star" aria-hidden="true"></i>{{#str}} pe_result, local_coursegen {{/str}}</span>
+            <button type="button" class="pe-btn pe-btn-small" data-action="local_coursegen/pe/regen" data-block="{{id}}">{{#str}} pe_regen, local_coursegen {{/str}}</button>
+        </div>
+        {{#isTitle}}<strong>{{resulttext}}</strong>{{/isTitle}}
+        {{#isText}}<div class="pe-result-html">{{{resulthtml}}}</div>{{/isText}}
+        {{#isImage}}<span>{{prompt}}</span>{{/isImage}}
+        {{#isQuestion}}<strong>{{qprompt}}</strong>
+            {{#qmulti}}<ul>{{#qoptions}}<li class="{{#correct}}is-right{{/correct}}">{{text}}</li>{{/qoptions}}</ul>{{/qmulti}}
+            {{#qtf}}<span>{{#qtrue}}{{#str}} pe_true, local_coursegen {{/str}}{{/qtrue}}{{^qtrue}}{{#str}} pe_false, local_coursegen {{/str}}{{/qtrue}}</span>{{/qtf}}
+            {{#qfill}}<span>{{qtext}}</span>{{/qfill}}{{/isQuestion}}
+    </div>
+    {{/hasresult}}
+</div>

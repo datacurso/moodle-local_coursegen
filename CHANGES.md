@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026101240
+
+### Changed
+- **The Course Presentation editor works with instructions for the AI and fixed content in the same screen**  
+  Choosing Course Presentation opens an editor with the general instruction for the AI, the file it can base the presentation on, and the slides. Each slide has its elements, which are the title, the text, the image, the video and a question, and each element is either an instruction that the AI writes or something fixed. A fixed title or text is written by the person, a fixed image is uploaded, a fixed video is a YouTube link and a fixed question is written by hand. The text can also be fixed HTML with marks such as `[[coursegen:aiprompt: instruction]]`, and then the AI writes only the marked parts and the rest of the HTML stays as it is. A new slide starts from a layout, slides can be moved and duplicated, and an element can be copied to other slides. One button writes the whole presentation, the slides can also be decided by the AI between a minimum and a maximum, and what the AI wrote for one element can be written again from its instruction. The activity is made from what is on the screen, and it asks for the content to be generated first when something is still missing.
+
+## [2.0.10] - 2026101239
+
+### Changed
+- **The Course Presentation editor is for telling the AI what to write, with Moodle's own form components**  
+  The editor opens with a field for the topic, the file the AI bases the presentation on, and an optional number of slides. Each slide has a line to tell the AI what to write in each part, which are the title, the text, the image, the question and the whole slide. One button writes the whole presentation from the topic and those lines, and the line of a part, with its Apply button, rewrites only that part. If no slides are added, the AI decides how many it needs. What the AI wrote can still be edited by hand, and the activity is made from what is on the screen. The custom styles were reduced to the layout, and the look comes from the standard Moodle form components.
+
+## [2.0.10] - 2026101238
+
+### Changed
+- **The Course Presentation editor follows the look of the rest of the plugin**  
+  The editor now uses the same palette and shapes as the course-creation page: coral marks what is selected and what sends, the brand purple marks what the AI does, and the cards, borders, radius and shadows are the same. The description screen and the bar for the AI are built as the chat box of the course page, with the text field on top and its tools below, a round attach button and a round send button. The styles of the editor are written on the plugin's own colour variables instead of fixed colours.
+
 ## [2.0.10] - 2026101237
 
 ### Changed
