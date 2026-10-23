@@ -1,0 +1,129 @@
+{{!
+    @template local_coursegen/activity_type_picker
+
+    The first steps of the chat to create an activity, inside the chat itself: what was chosen so far, the types the
+    AI can create and, for H5P, its kinds. The tiles are Moodle's own chooser tiles.
+
+    Context variables required for this template:
+    * typeitems array  - The chooser items of the types the AI can create.
+    * kinditems array  - The chooser items of the H5P kinds.
+
+    Example context (json):
+    {
+        "typeitems": [
+            {"name": "forum", "title": "Forum", "link": "?add=forum", "icon": "<img class='icon' src='https://example.com/forum.svg' alt=''>", "componentname": "mod_forum", "purpose": "collaboration", "branded": 0, "legacyitem": true}
+        ],
+        "kinditems": []
+{{!
+    @template local_coursegen/course_presentation_slide
+
+    One slide of the form to lay out a Course Presentation, with only the parts its kind of slide has.
+
+    Context variables required for this template:
+    * index int             - Position of the slide, from 0.
+    * number int            - Position shown to the person, from 1.
+    * templates array       - The kinds of slide: value, label, selected.
+    * hastitle, hastext, hasimage, hasvideo, hasquestion bool - The parts this kind of slide has.
+    * title, text, image, video, question string - What was written.
+    * imagenone, imagegenerate, imageupload bool - Which way the image is made: none, generated or uploaded.
+    * imagename string      - The name of the picture uploaded for the slide.
+    * videoerror, imageerror string - What is wrong with the video address or the picture of the slide, if anything.
+    * canimages bool        - Whether the person may generate images.
+    * imageoptional bool    - Whether the slide may go without an image (not for the kinds that are a slide with an image).
+    * qtypes array          - The kinds of question: value, label, selected.
+    * qchosen bool          - Whether a question kind other than none is chosen.
+    * first, last bool      - Whether the slide is the first or the last.
+
+    Example context (json):
+    {
+        "index": 0, "number": 1, "templates": [{"value": "cover", "label": "Cover", "selected": true}],
+        "hastitle": true, "hastext": false, "hasimage": true, "hasvideo": false, "hasquestion": false,
+        "title": "", "text": "", "image": "", "video": "", "question": "", "imagenone": true, "imagegenerate": false, "imageupload": false, "imagename": "", "canimages": true, "imageoptional": true,
+        "qtypes": [], "qchosen": false, "first": true, "last": true
+    }
+}}
+<div class="card mb-3" data-region="local_coursegen/builder/slide" data-index="{{index}}">
+    <div class="card-header d-flex align-items-center justify-content-between flex-wrap" style="gap: .5rem;">
+        <strong>{{#str}} cpb_slide, local_coursegen, {{number}} {{/str}}</strong>
+        <div class="d-flex align-items-center" style="gap: .5rem;">
+            <select class="custom-select custom-select-sm" data-slide-field="template" aria-label="{{#str}} cpb_template, local_coursegen {{/str}}">
+                {{#templates}}<option value="{{value}}" {{#selected}}selected{{/selected}}>{{label}}</option>{{/templates}}
+            </select>
+            <button type="button" class="btn btn-sm btn-light" data-action="local_coursegen/builder/up" {{#first}}disabled{{/first}}
+                    title="{{#str}} cpb_move_up, local_coursegen {{/str}}"><i class="fa fa-arrow-up" aria-hidden="true"></i></button>
+            <button type="button" class="btn btn-sm btn-light" data-action="local_coursegen/builder/down" {{#last}}disabled{{/last}}
+                    title="{{#str}} cpb_move_down, local_coursegen {{/str}}"><i class="fa fa-arrow-down" aria-hidden="true"></i></button>
+            <button type="button" class="btn btn-sm btn-light" data-action="local_coursegen/builder/duplicate"
+                    title="{{#str}} cpb_duplicate, local_coursegen {{/str}}"><i class="fa fa-clone" aria-hidden="true"></i></button>
+            <button type="button" class="btn btn-sm btn-light text-danger" data-action="local_coursegen/builder/remove"
+                    title="{{#str}} cpb_remove, local_coursegen {{/str}}"><i class="fa fa-trash" aria-hidden="true"></i></button>
+        </div>
+    </div>
+    <div class="card-body">
+        {{#hastitle}}
+        <div class="form-group">
+            <label class="d-block">{{#str}} cpb_title, local_coursegen {{/str}}</label>
+            <input type="text" class="form-control" data-slide-field="title" value="{{title}}"
+                   placeholder="{{#str}} cpb_title_help, local_coursegen {{/str}}">
+        </div>
+        {{/hastitle}}
+        {{#hastext}}
+        <div class="form-group">
+            <label class="d-block">{{#str}} cpb_text, local_coursegen {{/str}}</label>
+            <textarea class="form-control" rows="2" data-slide-field="text"
+                      placeholder="{{#str}} cpb_text_help, local_coursegen {{/str}}">{{text}}</textarea>
+        </div>
+        {{/hastext}}
+        {{#hasimage}}
+        <div class="form-group">
+            <label class="d-block">{{#str}} cpb_image, local_coursegen {{/str}}</label>
+            <select class="custom-select mb-2" data-slide-field="imagemode">
+                {{#imageoptional}}<option value="none" {{#imagenone}}selected{{/imagenone}}>{{#str}} cpb_image_none, local_coursegen {{/str}}</option>{{/imageoptional}}
+                {{#canimages}}<option value="generate" {{#imagegenerate}}selected{{/imagegenerate}}>{{#str}} cpb_image_generate, local_coursegen {{/str}}</option>{{/canimages}}
+                <option value="upload" {{#imageupload}}selected{{/imageupload}}>{{#str}} cpb_image_upload, local_coursegen {{/str}}</option>
+            </select>
+            {{#imagegenerate}}
+            <input type="text" class="form-control" data-slide-field="image" value="{{image}}"
+                   placeholder="{{#str}} cpb_image_help, local_coursegen {{/str}}">
+            {{/imagegenerate}}
+            {{#imageupload}}
+            <div class="d-flex align-items-center flex-wrap" style="gap: .75rem;">
+                <button type="button" class="btn {{#imageerror}}btn-outline-danger{{/imageerror}}{{^imageerror}}btn-outline-secondary{{/imageerror}}"
+                        data-action="local_coursegen/builder/pickimage" {{#imageerror}}data-invalid="true"{{/imageerror}}>
+                    <i class="fa fa-image mr-1" aria-hidden="true"></i>{{#str}} cpb_image_choose, local_coursegen {{/str}}
+                </button>
+                {{#imagename}}
+                <span class="d-flex align-items-center">
+                    <i class="fa fa-file-image-o mr-2" aria-hidden="true"></i>
+                    <span class="text-truncate" style="max-width: 22rem;">{{imagename}}</span>
+                    <button type="button" class="btn btn-link p-0 ml-2" data-action="local_coursegen/builder/removeimage"
+                            aria-label="{{#str}} cpb_image_remove, local_coursegen {{/str}}" title="{{#str}} cpb_image_remove, local_coursegen {{/str}}">
+                        <i class="fa fa-times" aria-hidden="true"></i>
+                    </button>
+                </span>
+                {{/imagename}}
+            </div>
+            {{#imageerror}}<div class="text-danger small mt-1" role="alert">{{imageerror}}</div>{{/imageerror}}
+            {{/imageupload}}
+        </div>
+        {{/hasimage}}
+        {{#hasvideo}}
+        <div class="form-group">
+            <label class="d-block">{{#str}} cpb_video, local_coursegen {{/str}}</label>
+            <input type="url" class="form-control {{#videoerror}}is-invalid{{/videoerror}}" data-slide-field="video" value="{{video}}" placeholder="https://">
+            <div class="invalid-feedback">{{videoerror}}</div>
+            <small class="form-text text-muted">{{#str}} cpb_video_help, local_coursegen {{/str}}</small>
+        </div>
+        {{/hasvideo}}
+        {{#hasquestion}}
+        <div class="form-group">
+            <label class="d-block">{{#str}} cpb_question, local_coursegen {{/str}}</label>
+            <select class="custom-select mb-2" data-slide-field="qtype">
+                {{#qtypes}}<option value="{{value}}" {{#selected}}selected{{/selected}}>{{label}}</option>{{/qtypes}}
+            </select>
+            <input type="text" class="form-control {{^qchosen}}d-none{{/qchosen}}" data-slide-field="question" value="{{question}}"
+                   placeholder="{{#str}} cpb_question_help, local_coursegen {{/str}}">
+        </div>
+        {{/hasquestion}}
+    </div>
+</div>

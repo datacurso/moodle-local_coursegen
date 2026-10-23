@@ -2,35 +2,11 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
-## [2.0.10] - 2026101239
+## [2.0.10] - 2026101240
 
 ### Changed
-- **The Course Presentation editor is for telling the AI what to write, with Moodle's own form components**  
-  The editor opens with a field for the topic, the file the AI bases the presentation on, and an optional number of slides. Each slide has a line to tell the AI what to write in each part, which are the title, the text, the image, the question and the whole slide. One button writes the whole presentation from the topic and those lines, and the line of a part, with its Apply button, rewrites only that part. If no slides are added, the AI decides how many it needs. What the AI wrote can still be edited by hand, and the activity is made from what is on the screen. The custom styles were reduced to the layout, and the look comes from the standard Moodle form components.
-
-## [2.0.10] - 2026101238
-
-### Changed
-- **The Course Presentation editor follows the look of the rest of the plugin**  
-  The editor now uses the same palette and shapes as the course-creation page: coral marks what is selected and what sends, the brand purple marks what the AI does, and the cards, borders, radius and shadows are the same. The description screen and the bar for the AI are built as the chat box of the course page, with the text field on top and its tools below, a round attach button and a round send button. The styles of the editor are written on the plugin's own colour variables instead of fixed colours.
-
-## [2.0.10] - 2026101237
-
-### Changed
-- **A new look for the Course Presentation editor**  
-  The editor uses a wider window and shows the slides as thumbnails on the left, the selected slide on a canvas like a real slide, and a bar for the AI below it. The bar can be aimed at the whole slide or at its title, text, image or question, and the part being edited is highlighted and selected for it automatically. Ready-made instructions such as simplifying the language or adding an example apply with one click. Questions are added with buttons for each type, and the first screen is a clean panel to describe the presentation, with an option to start from scratch. The texts of the editor were rewritten in a neutral, professional tone, and the strings of the removed form were deleted.
-
-## [2.0.10] - 2026101236
-
-### Changed
-- **Course Presentation opens straight into the editor, with no form first**  
-  Choosing Course Presentation now shows the editor at once, with three empty slides the person can start filling in by hand. On top there is a box to tell the AI what the presentation is about, with a button to attach a file and another to write all the slides with the AI, which asks before replacing slides that already have content. Each slide also lets the person describe an image for the AI to make or upload a picture of their own. The AI job only starts the first time the AI is needed, so entering and leaving the editor costs nothing. The form with the list of slides is gone.
-
-## [2.0.10] - 2026101235
-
-### Added
-- **A Course Presentation is edited as a presentation before the activity is made**  
-  After the form of the presentation is filled in, the AI writes the slides and they are shown the way they will be seen: a strip with every slide, and the selected one in large. The title and the text are edited by typing on the slide, the question and its answers are changed in place, a question can be added or removed, and slides can be added, duplicated, moved and removed. Next to each part of a slide there is a way to ask the AI to change only that part, such as the title, the text, the image or the question, or the whole slide, while the rest stays as it is. The activity is only made when the person chooses to create it, from what is on the screen. A new set of web services sends the draft, the rewrite of a slide and the final build to the AI service.
+- **Course Presentation goes back to the form to lay out the slides**  
+  The editor that replaced the form was taken out, and choosing Course Presentation shows the form again: the topic, how the slides are decided, the slides one by one with the picture of each, and the file to base the presentation on. The instruction is sent to the chat as before.
 
 ## [2.0.10] - 2026101234
 
