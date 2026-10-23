@@ -163,3 +163,55 @@ export async function uploadActivitySlideImage({courseid, jobid, draftitemid, sl
         },
     ])[0];
 }
+
+/**
+ * Run an AJAX call of the Course Presentation editor and read the JSON the AI service answered.
+ *
+ * @param {string} methodname
+ * @param {Object} args
+ * @return {Promise<Object>} What the AI service answered.
+ */
+const presentationCall = async(methodname, args) => {
+    const response = await ajax.call([{methodname, args}])[0];
+    return JSON.parse(response.data);
+};
+
+/**
+ * Ask the AI to write the slides of a Course Presentation.
+ *
+ * @param {{courseid: number, jobid: string, instructions: string}} payload
+ * @return {Promise<{name: string, intro: string, slides: Object[]}>}
+ */
+export const presentationDraft = ({courseid, jobid, instructions}) => presentationCall(
+    'local_coursegen_activity_presentation_draft',
+    {courseid: Number(courseid) || 0, jobid, instructions: instructions || ''}
+);
+
+/**
+ * Ask the AI to write one slide, or one of its parts, again.
+ *
+ * @param {{courseid: number, jobid: string, slides: Object[], index: number, instruction: string, part: string}} payload
+ * @return {Promise<Object>} The slide written again.
+ */
+export const presentationSlide = ({courseid, jobid, slides, index, instruction, part}) => presentationCall(
+    'local_coursegen_activity_presentation_slide',
+    {
+        courseid: Number(courseid) || 0,
+        jobid,
+        slides: JSON.stringify(slides),
+        index: Number(index) || 0,
+        instruction,
+        part: part || '',
+    }
+);
+
+/**
+ * Ask the AI service to make the package from the slides as they were left.
+ *
+ * @param {{courseid: number, jobid: string, name: string, intro: string, slides: Object[]}} payload
+ * @return {Promise<Object>}
+ */
+export const presentationBuild = ({courseid, jobid, name, intro, slides}) => presentationCall(
+    'local_coursegen_activity_presentation_build',
+    {courseid: Number(courseid) || 0, jobid, name, intro: intro || '', slides: JSON.stringify(slides)}
+);

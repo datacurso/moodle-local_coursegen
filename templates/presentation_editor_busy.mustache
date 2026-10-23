@@ -1,0 +1,28 @@
+{{!
+    @template local_coursegen/activity_type_picker
+
+    The first steps of the chat to create an activity, inside the chat itself: what was chosen so far, the types the
+    AI can create and, for H5P, its kinds. The tiles are Moodle's own chooser tiles.
+
+    Context variables required for this template:
+    * typeitems array  - The chooser items of the types the AI can create.
+    * kinditems array  - The chooser items of the H5P kinds.
+
+    Example context (json):
+    {
+        "typeitems": [
+            {"name": "forum", "title": "Forum", "link": "?add=forum", "icon": "<img class='icon' src='https://example.com/forum.svg' alt=''>", "componentname": "mod_forum", "purpose": "collaboration", "branded": 0, "legacyitem": true}
+        ],
+        "kinditems": []
+{{!
+    @template local_coursegen/presentation_editor_busy
+
+    The veil over a part of a slide while the AI writes it.
+
+    Example context (json):
+    {}
+}}
+<div class="position-absolute d-flex align-items-center justify-content-center" style="inset: 0; background: rgba(255,255,255,.75); z-index: 2; gap: .5rem;" role="status">
+    <span class="spinner-border spinner-border-sm text-primary" aria-hidden="true"></span>
+    <span>{{#str}} pe_working, local_coursegen {{/str}}</span>
+</div>
