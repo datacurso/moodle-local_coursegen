@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026101235
+
+### Added
+- **A Course Presentation is edited as a presentation before the activity is made**  
+  After the form of the presentation is filled in, the AI writes the slides and they are shown the way they will be seen: a strip with every slide, and the selected one in large. The title and the text are edited by typing on the slide, the question and its answers are changed in place, a question can be added or removed, and slides can be added, duplicated, moved and removed. Next to each part of a slide there is a way to ask the AI to change only that part, such as the title, the text, the image or the question, or the whole slide, while the rest stays as it is. The activity is only made when the person chooses to create it, from what is on the screen. A new set of web services sends the draft, the rewrite of a slide and the final build to the AI service.
+
 ## [2.0.10] - 2026101234
 
 ### Added

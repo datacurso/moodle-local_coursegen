@@ -148,7 +148,7 @@ export default class extends BaseComponent {
         this.element.querySelector("[data-region='local_coursegen/activity/builder']")?.classList.toggle('d-none', !visible);
         const field = this.footer?.querySelector('.ai-prompt-container');
         const forThisKind = session.typestep === 'prompt' && session.activitytype === 'h5pactivity' &&
-            session.h5ptype === KIND && !session.jobid;
+            session.h5ptype === KIND;
         if (field) {
             // Inline and important: the field is a flex box, whose class would win over d-none and the hidden attribute.
             if (forThisKind) {
@@ -483,7 +483,7 @@ export default class extends BaseComponent {
 
         this._syncImages();
         try {
-            await this.reactive.dispatch('submitPrompt', {prompt: this._instruction(), slideImages: this._slideImages()});
+            await this.reactive.dispatch('beginPresentation', {prompt: this._instruction(), slideImages: this._slideImages()});
         } catch (exception) {
             Notification.exception(exception);
         }
