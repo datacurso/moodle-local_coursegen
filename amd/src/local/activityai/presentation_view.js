@@ -94,12 +94,8 @@ export const buildContext = (data, ui, strings, clean) => {
         hasfile: Boolean(ui.filename),
         filename: ui.filename,
         busy: ui.busy !== '',
-        busyall: ui.busy === 'all',
-        creating: ui.busy === 'create',
         name: data.name,
         languages: ui.languages,
-        hint: ui.hint,
-        nocreate: ui.hint !== '' || ui.busy !== '',
         total,
         slides: slides.map((slide, index) => ({
             index,

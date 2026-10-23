@@ -304,46 +304,29 @@ span.local_coursegen-sparkles-icon.white {
     color: var(--pe-fg);
 }
 
-/* The general instruction, as the box of the course chat. */
-.local_coursegen_pe .pe-composer {
-    border: 1px solid var(--pe-border);
-    border-radius: 1rem;
-    background: var(--pe-card);
-    overflow: hidden;
-}
-
-.local_coursegen_pe .pe-composer:focus-within {
-    border-color: var(--pe-muted-fg);
-}
-
-.local_coursegen_pe .pe-composer textarea {
-    display: block;
-    width: 100%;
-    padding: .8rem 1rem;
-    border: 0;
-    background: transparent;
-    outline: 0;
-    resize: none;
-}
-
-.local_coursegen_pe .pe-composer-tools {
+.local_coursegen_pe .pe-row {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
+    gap: .75rem;
+    margin-top: .5rem;
+}
+
+.local_coursegen_pe .pe-lang {
+    display: inline-flex;
+    align-items: center;
     gap: .5rem;
-    padding: .5rem .6rem;
-    border-top: 1px solid var(--pe-border);
-    background: var(--pe-bg);
+    margin: 0;
+    color: var(--pe-muted-fg);
+    font-size: .875rem;
 }
 
 .local_coursegen_pe .pe-lang select {
     padding: .3rem .5rem;
     border: 1px solid var(--pe-border);
-    border-radius: 999px;
+    border-radius: .5rem;
     background: var(--pe-card);
     color: var(--pe-fg);
-    font-size: .8125rem;
-    font-weight: 600;
 }
 
 .local_coursegen_pe .pe-file {
@@ -354,7 +337,7 @@ span.local_coursegen-sparkles-icon.white {
     padding: .15rem .3rem .15rem .7rem;
     border: 1px solid var(--pe-border);
     border-radius: 999px;
-    background: var(--pe-card);
+    background: var(--pe-muted);
     font-size: .8125rem;
     font-weight: 600;
 }
@@ -363,7 +346,7 @@ span.local_coursegen-sparkles-icon.white {
     display: flex;
     align-items: center;
     gap: .5rem;
-    margin: .6rem 0 0;
+    margin: 0 0 .75rem;
     font-size: .875rem;
 }
 
@@ -371,7 +354,7 @@ span.local_coursegen-sparkles-icon.white {
     display: flex;
     align-items: center;
     gap: .4rem;
-    margin-top: .5rem;
+    margin-bottom: .5rem;
     color: var(--pe-muted-fg);
     font-size: .875rem;
 }
@@ -656,24 +639,8 @@ span.local_coursegen-sparkles-icon.white {
     gap: 1rem;
 }
 
-.local_coursegen_pe .pe-name {
-    flex: 1;
-    min-width: 0;
-    padding: .5rem .75rem;
-    border: 1px solid var(--pe-border);
-    border-radius: .5rem;
-    background: var(--pe-card);
-}
-
-.local_coursegen_pe .pe-hint {
-    margin: .5rem 0 0;
-    color: var(--pe-muted-fg);
-    font-size: .8125rem;
-}
-
-.local_coursegen_pe .pe-hint.is-ready {
-    color: var(--pe-ok);
-    font-weight: 600;
+.local_coursegen_pe .pe-final .pe-alert {
+    margin: 0 0 .75rem;
 }
 
 .local_coursegen_pe .pe-veil {

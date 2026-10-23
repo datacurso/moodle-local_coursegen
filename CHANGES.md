@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026101243
+
+### Changed
+- **The Course Presentation editor has one main action**  
+  The editor now follows the order of a standard Moodle form: the activity name, which is optional and proposed by the AI when empty, the general instruction with the reference file and the language, and the slides. There is a single Create activity button at the end: it makes the AI write everything that is still an instruction and then creates the activity. A small link below lets the person only write the content to review it before creating. The box in the style of the chat, the second main button and the hint line were removed, and the errors show next to the button.
+
 ## [2.0.10] - 2026101242
 
 ### Changed
