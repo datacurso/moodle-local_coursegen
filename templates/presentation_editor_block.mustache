@@ -17,34 +17,34 @@
 {{!
     @template local_coursegen/presentation_editor_block
 
-    One element of a slide in the Course Presentation editor: an instruction for the AI or something fixed.
+    One element of a slide: a field where the person tells the AI what to write, or writes what stays fixed.
 
     Example context (json):
     {"id": "b1", "label": "Title", "isAi": true, "isFixed": false, "isHtml": false, "canHtml": false, "canFix": true,
-     "isTitle": true, "instr": "", "placeholder": "Tell the AI what the title says", "busy": false, "hasresult": false}
+     "isTitle": true, "instr": "", "placeholder": "Tell the AI what the title should say", "busy": false, "hasresult": false}
 }}
-<div class="pe-block {{#isAi}}is-ai{{/isAi}}{{^isAi}}is-fixed{{/isAi}}" data-block-id="{{id}}">
+<div class="pe-block" data-block-id="{{id}}">
     {{#busy}}{{> local_coursegen/presentation_editor_busy}}{{/busy}}
     <div class="pe-bhead">
-        <span class="pe-blabel">{{label}}</span>
-        {{#canFix}}
-        <span class="pe-modes" role="group" aria-label="{{label}}">
-            <button type="button" data-action="local_coursegen/pe/mode" data-block="{{id}}" data-mode="ai" aria-pressed="{{#isAi}}true{{/isAi}}{{^isAi}}false{{/isAi}}">{{#str}} pe_mode_ai, local_coursegen {{/str}}</button>
-            <button type="button" data-action="local_coursegen/pe/mode" data-block="{{id}}" data-mode="fixed" aria-pressed="{{#isFixed}}true{{/isFixed}}{{^isFixed}}false{{/isFixed}}">{{#str}} pe_mode_fixed, local_coursegen {{/str}}</button>
-            {{#canHtml}}<button type="button" data-action="local_coursegen/pe/mode" data-block="{{id}}" data-mode="html" aria-pressed="{{#isHtml}}true{{/isHtml}}{{^isHtml}}false{{/isHtml}}">{{#str}} pe_mode_html, local_coursegen {{/str}}</button>{{/canHtml}}
-        </span>
-        {{/canFix}}
-        <span class="pe-btools">
-            <button type="button" class="pe-icon" data-action="local_coursegen/pe/bup" data-block="{{id}}" title="{{#str}} cpb_move_up, local_coursegen {{/str}}" aria-label="{{#str}} cpb_move_up, local_coursegen {{/str}}"><i class="fa fa-arrow-up" aria-hidden="true"></i></button>
-            <button type="button" class="pe-icon" data-action="local_coursegen/pe/bdown" data-block="{{id}}" title="{{#str}} cpb_move_down, local_coursegen {{/str}}" aria-label="{{#str}} cpb_move_down, local_coursegen {{/str}}"><i class="fa fa-arrow-down" aria-hidden="true"></i></button>
-            <button type="button" class="pe-icon" data-action="local_coursegen/pe/copyopen" data-block="{{id}}" title="{{#str}} pe_copy, local_coursegen {{/str}}" aria-label="{{#str}} pe_copy, local_coursegen {{/str}}"><i class="fa fa-clone" aria-hidden="true"></i></button>
-            <button type="button" class="pe-icon is-danger" data-action="local_coursegen/pe/bdel" data-block="{{id}}" title="{{#str}} cpb_remove, local_coursegen {{/str}}" aria-label="{{#str}} cpb_remove, local_coursegen {{/str}}"><i class="fa fa-trash" aria-hidden="true"></i></button>
-        </span>
+        <label class="pe-label" for="pe-f-{{id}}">{{label}} <span class="pe-tag {{#isAi}}is-ai{{/isAi}}">{{#isAi}}{{#str}} pe_tag_ai, local_coursegen {{/str}}{{/isAi}}{{^isAi}}{{#str}} pe_tag_fixed, local_coursegen {{/str}}{{/isAi}}</span></label>
+        <details class="pe-menu">
+            <summary title="{{#str}} pe_options, local_coursegen {{/str}}" aria-label="{{#str}} pe_options, local_coursegen {{/str}}"><i class="fa fa-ellipsis-v" aria-hidden="true"></i></summary>
+            <div class="pe-menu-list">
+                {{#canFix}}
+                {{^isAi}}<button type="button" data-action="local_coursegen/pe/mode" data-block="{{id}}" data-mode="ai">{{#str}} pe_menu_ai, local_coursegen {{/str}}</button>{{/isAi}}
+                {{^isFixed}}<button type="button" data-action="local_coursegen/pe/mode" data-block="{{id}}" data-mode="fixed">{{#str}} pe_menu_fixed, local_coursegen {{/str}}</button>{{/isFixed}}
+                {{#canHtml}}{{^isHtml}}<button type="button" data-action="local_coursegen/pe/mode" data-block="{{id}}" data-mode="html">{{#str}} pe_menu_html, local_coursegen {{/str}}</button>{{/isHtml}}{{/canHtml}}
+                {{/canFix}}
+                <button type="button" data-action="local_coursegen/pe/bup" data-block="{{id}}">{{#str}} cpb_move_up, local_coursegen {{/str}}</button>
+                <button type="button" data-action="local_coursegen/pe/bdown" data-block="{{id}}">{{#str}} cpb_move_down, local_coursegen {{/str}}</button>
+                <button type="button" data-action="local_coursegen/pe/copyopen" data-block="{{id}}">{{#str}} pe_copy, local_coursegen {{/str}}</button>
+                <button type="button" data-action="local_coursegen/pe/bdel" data-block="{{id}}" class="is-danger">{{#str}} cpb_remove, local_coursegen {{/str}}</button>
+            </div>
+        </details>
     </div>
 
     {{#copyopen}}
     <div class="pe-copy">
-        <span>{{#str}} pe_copy, local_coursegen {{/str}}</span>
         <label><input type="checkbox" data-copyall> {{#str}} pe_copy_all, local_coursegen {{/str}}</label>
         {{#copytargets}}<label><input type="checkbox" data-copy="{{index}}"> {{number}}</label>{{/copytargets}}
         <button type="button" class="pe-btn pe-btn-small" data-action="local_coursegen/pe/copydo" data-block="{{id}}">{{#str}} pe_copy_do, local_coursegen {{/str}}</button>
@@ -52,15 +52,15 @@
     {{/copyopen}}
 
     {{#isTitle}}
-    {{#isAi}}<input type="text" class="pe-input" data-block="{{id}}" data-f="instr" value="{{instr}}" placeholder="{{placeholder}}" aria-label="{{label}}">{{/isAi}}
-    {{^isAi}}<input type="text" class="pe-input pe-input-title" data-block="{{id}}" data-f="value" value="{{value}}" placeholder="{{#str}} pe_fixed_title, local_coursegen {{/str}}" aria-label="{{label}}">{{/isAi}}
+    {{#isAi}}<input id="pe-f-{{id}}" type="text" class="pe-input" data-block="{{id}}" data-f="instr" value="{{instr}}" placeholder="{{placeholder}}">{{/isAi}}
+    {{^isAi}}<input id="pe-f-{{id}}" type="text" class="pe-input" data-block="{{id}}" data-f="value" value="{{value}}" placeholder="{{#str}} pe_fixed_title, local_coursegen {{/str}}">{{/isAi}}
     {{/isTitle}}
 
     {{#isText}}
-    {{#isAi}}<textarea class="pe-input" rows="2" data-block="{{id}}" data-f="instr" placeholder="{{placeholder}}" aria-label="{{label}}">{{instr}}</textarea>{{/isAi}}
-    {{#isFixed}}<textarea class="pe-input" rows="3" data-block="{{id}}" data-f="fixedtext" placeholder="{{#str}} pe_fixed_text, local_coursegen {{/str}}" aria-label="{{label}}">{{fixedtext}}</textarea>{{/isFixed}}
+    {{#isAi}}<textarea id="pe-f-{{id}}" class="pe-input" rows="2" data-block="{{id}}" data-f="instr" placeholder="{{placeholder}}">{{instr}}</textarea>{{/isAi}}
+    {{#isFixed}}<textarea id="pe-f-{{id}}" class="pe-input" rows="3" data-block="{{id}}" data-f="fixedtext" placeholder="{{#str}} pe_fixed_text, local_coursegen {{/str}}">{{fixedtext}}</textarea>{{/isFixed}}
     {{#isHtml}}
-    <textarea class="pe-input pe-code" rows="5" data-block="{{id}}" data-f="html" placeholder="{{#str}} pe_html_placeholder, local_coursegen {{/str}}" aria-label="{{label}}">{{html}}</textarea>
+    <textarea id="pe-f-{{id}}" class="pe-input pe-code" rows="5" data-block="{{id}}" data-f="html" placeholder="{{#str}} pe_html_placeholder, local_coursegen {{/str}}">{{html}}</textarea>
     <p class="pe-help">{{#str}} pe_html_help, local_coursegen {{/str}} {{#str}} pe_html_markers, local_coursegen {{/str}} <strong data-markers="{{id}}">{{markers}}</strong></p>
     {{/isHtml}}
     {{/isText}}
@@ -68,17 +68,16 @@
     {{#isImage}}
     {{#uploaded}}
     <div class="pe-uploaded"><i class="fa fa-image" aria-hidden="true"></i><span class="pe-truncate">{{name}}</span>
-        <button type="button" class="pe-btn pe-btn-small" data-action="local_coursegen/pe/removeimage" data-block="{{id}}">{{#str}} pe_image_remove, local_coursegen {{/str}}</button></div>
-    <p class="pe-help">{{#str}} pe_image_fixed_help, local_coursegen {{/str}}</p>
+        <button type="button" class="pe-link" data-action="local_coursegen/pe/removeimage" data-block="{{id}}">{{#str}} pe_image_remove, local_coursegen {{/str}}</button></div>
     {{/uploaded}}
     {{^uploaded}}
-    {{#isAi}}<textarea class="pe-input" rows="2" data-block="{{id}}" data-f="instr" placeholder="{{placeholder}}" aria-label="{{label}}">{{instr}}</textarea>{{/isAi}}
-    <button type="button" class="pe-btn pe-btn-small" data-action="local_coursegen/pe/uploadimage" data-block="{{id}}"><i class="fa fa-upload" aria-hidden="true"></i>{{#str}} pe_image_upload, local_coursegen {{/str}}</button>
+    {{#isAi}}<textarea id="pe-f-{{id}}" class="pe-input" rows="2" data-block="{{id}}" data-f="instr" placeholder="{{placeholder}}">{{instr}}</textarea>{{/isAi}}
+    <button type="button" class="pe-link" data-action="local_coursegen/pe/uploadimage" data-block="{{id}}"><i class="fa fa-upload" aria-hidden="true"></i> {{#str}} pe_image_upload, local_coursegen {{/str}}</button>
     {{/uploaded}}
     {{/isImage}}
 
     {{#isVideo}}
-    <input type="url" class="pe-input" data-block="{{id}}" data-f="url" value="{{url}}" placeholder="https://www.youtube.com/watch?v=" aria-label="{{label}}">
+    <input id="pe-f-{{id}}" type="url" class="pe-input" data-block="{{id}}" data-f="url" value="{{url}}" placeholder="https://www.youtube.com/watch?v=">
     <p class="pe-help">{{#str}} pe_video_help, local_coursegen {{/str}}</p>
     {{/isVideo}}
 
@@ -86,10 +85,10 @@
     <div class="pe-kinds" role="group" aria-label="{{label}}">
         {{#kinds}}<button type="button" data-action="local_coursegen/pe/qkind" data-block="{{id}}" data-kind="{{key}}" aria-pressed="{{#active}}true{{/active}}{{^active}}false{{/active}}">{{label}}</button>{{/kinds}}
     </div>
-    {{#isAi}}<textarea class="pe-input" rows="2" data-block="{{id}}" data-f="instr" placeholder="{{placeholder}}" aria-label="{{label}}">{{instr}}</textarea>{{/isAi}}
+    {{#isAi}}<textarea id="pe-f-{{id}}" class="pe-input" rows="2" data-block="{{id}}" data-f="instr" placeholder="{{placeholder}}">{{instr}}</textarea>{{/isAi}}
     {{^isAi}}
     {{#hasquestion}}
-    <input type="text" class="pe-input" data-block="{{id}}" data-f="qprompt" value="{{qprompt}}" placeholder="{{#str}} pe_q_prompt, local_coursegen {{/str}}" aria-label="{{#str}} pe_q_prompt, local_coursegen {{/str}}">
+    <input id="pe-f-{{id}}" type="text" class="pe-input" data-block="{{id}}" data-f="qprompt" value="{{qprompt}}" placeholder="{{#str}} pe_q_prompt, local_coursegen {{/str}}">
     {{#qmulti}}{{#qoptions}}
     <label class="pe-option"><input type="radio" name="pe-correct-{{id}}" data-block="{{id}}" data-f="qcorrect" data-option="{{index}}" {{#correct}}checked{{/correct}} title="{{#str}} pe_correct, local_coursegen {{/str}}" aria-label="{{#str}} pe_correct, local_coursegen {{/str}}">
         <input type="text" class="pe-input" data-block="{{id}}" data-f="qoption" data-option="{{index}}" value="{{text}}" aria-label="{{#str}} pe_option, local_coursegen {{/str}}"></label>
@@ -104,10 +103,6 @@
 
     {{#hasresult}}
     <div class="pe-result">
-        <div class="pe-result-head">
-            <span><i class="fa fa-star" aria-hidden="true"></i>{{#str}} pe_result, local_coursegen {{/str}}</span>
-            <button type="button" class="pe-btn pe-btn-small" data-action="local_coursegen/pe/regen" data-block="{{id}}">{{#str}} pe_regen, local_coursegen {{/str}}</button>
-        </div>
         {{#isTitle}}<strong>{{resulttext}}</strong>{{/isTitle}}
         {{#isText}}<div class="pe-result-html">{{{resulthtml}}}</div>{{/isText}}
         {{#isImage}}<span>{{prompt}}</span>{{/isImage}}
@@ -115,6 +110,7 @@
             {{#qmulti}}<ul>{{#qoptions}}<li class="{{#correct}}is-right{{/correct}}">{{text}}</li>{{/qoptions}}</ul>{{/qmulti}}
             {{#qtf}}<span>{{#qtrue}}{{#str}} pe_true, local_coursegen {{/str}}{{/qtrue}}{{^qtrue}}{{#str}} pe_false, local_coursegen {{/str}}{{/qtrue}}</span>{{/qtf}}
             {{#qfill}}<span>{{qtext}}</span>{{/qfill}}{{/isQuestion}}
+        <button type="button" class="pe-link" data-action="local_coursegen/pe/regen" data-block="{{id}}">{{#str}} pe_regen, local_coursegen {{/str}}</button>
     </div>
     {{/hasresult}}
 </div>
