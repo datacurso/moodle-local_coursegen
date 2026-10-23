@@ -46,6 +46,7 @@ const blockContext = (block, ui, strings) => {
         instr: block.instr,
         placeholder: strings['pe_ph_' + block.type],
         busy: ui.busy === block.id,
+        error: ui.errors.blocks[block.id] || '',
         copyopen: ui.copyFor === block.id,
         value: block.value,
         fixedtext: block.fixedtext,
@@ -87,6 +88,9 @@ export const buildContext = (data, ui, strings, clean) => {
     const context = {
         error: ui.error,
         topic: ui.topic,
+        topicError: ui.errors.topic || '',
+        rangeError: ui.errors.range || '',
+        slidesError: ui.errors.slides || '',
         manual: data.mode === 'manual',
         auto: data.mode === 'auto',
         min: data.min,
@@ -117,6 +121,7 @@ export const buildContext = (data, ui, strings, clean) => {
                     .filter((target) => target.index !== data.current);
                 return item;
             }),
+            slideError: ui.errors.slide[data.current] || '',
             addchips: TYPES.filter((type) => !blockOf(current, type)).map((type) => ({type, label: strings['pe_type_' + type]})),
         };
     }

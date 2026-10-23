@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026101244
+
+### Changed
+- **The Course Presentation editor marks the field that has the problem**  
+  When something is missing, the editor no longer shows a message at the bottom. It marks each field that has the problem in red with its own message below it, goes to the first one and puts the focus on it. The checks are the general instruction, the range of slides, the number of slides, a title in each slide, an instruction in every element that the AI writes, the fixed title, text, HTML and question, a YouTube link in a video, and an image in a fixed image. If the problem is in another slide, the editor opens that slide. The mark goes away as soon as the person works on the field.
+
 ## [2.0.10] - 2026101243
 
 ### Changed
