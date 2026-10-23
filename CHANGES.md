@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026101242
+
+### Changed
+- **The Course Presentation editor is a plain form**  
+  The editor was simplified to the minimum. It has the general instruction, a checkbox to let the AI decide how many slides, the slides as numbered tabs, the name and the Create activity button. Each element of a slide is one labeled field with a tag that says whether the AI writes it or it is fixed, and a single options menu to change who writes it, move it, copy it to other slides or remove it. The slide has its own menu to move, duplicate or remove it, and new elements are added from one list. The numbered steps, thumbnails, layouts and buttons that repeated on every element were removed.
+
 ## [2.0.10] - 2026101241
 
 ### Changed

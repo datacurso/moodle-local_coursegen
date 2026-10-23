@@ -26,23 +26,6 @@ import * as model from 'local_coursegen/local/activityai/presentation_model';
 
 const {MODE_AI, MODE_FIXED, MODE_HTML, QUESTION_KINDS, TYPES, blockOf, markersOf, plain} = model;
 
-export const LAYOUT_KEYS = ['cover', 'content', 'split', 'question', 'blank'];
-
-/**
- * @param {Object} block
- * @returns {string} The class that says whose the element is: the AI's or fixed.
- */
-const whose = (block) => block ? (block.mode === MODE_AI ? 'is-ai' : 'is-fixed') : '';
-
-/**
- * @param {Object} slide
- * @returns {Object} What the thumbnail of the slide draws.
- */
-const wireframe = (slide) => {
-    const part = (type) => whose(blockOf(slide, type));
-    return {title: part('title'), text: part('text'), image: part('image'), question: part('question'), video: part('video')};
-};
-
 /**
  * @param {Object} block
  * @param {Object} ui
@@ -118,13 +101,10 @@ export const buildContext = (data, ui, strings, clean) => {
         hint: ui.hint,
         nocreate: ui.hint !== '' || ui.busy !== '',
         total,
-        addopen: ui.addOpen,
-        layouts: LAYOUT_KEYS.map((key) => ({key, label: strings['pe_layout_' + key]})),
         slides: slides.map((slide, index) => ({
             index,
             number: index + 1,
             current: index === data.current,
-            wf: wireframe(slide),
             title: blockOf(slide, 'title') && blockOf(slide, 'title').value || strings.pe_slide_label + ' ' + (index + 1),
         })),
     };

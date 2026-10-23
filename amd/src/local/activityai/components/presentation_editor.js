@@ -36,7 +36,7 @@ import * as repository from 'local_coursegen/local/activityai/repository';
 import {loadActivityaiStrings} from 'local_coursegen/local/activityai/i18n';
 import {createActivityFromJob} from 'local_coursegen/local/activityai/activity-creation';
 import * as model from 'local_coursegen/local/activityai/presentation_model';
-import {buildContext, LAYOUT_KEYS} from 'local_coursegen/local/activityai/presentation_view';
+import {buildContext} from 'local_coursegen/local/activityai/presentation_view';
 
 const COMPONENT = 'local_coursegen';
 const KIND = 'course_presentation';
@@ -62,7 +62,6 @@ const STRING_KEYS = [
     ...model.TYPES.map((type) => 'pe_type_' + type),
     ...model.QUESTION_KINDS.map((kind) => 'pe_kind_' + kind),
     ...model.TYPES.map((type) => 'pe_ph_' + type),
-    ...LAYOUT_KEYS.map((key) => 'pe_layout_' + key),
 ];
 
 /**
@@ -89,7 +88,7 @@ export default class extends BaseComponent {
         this.footer = descriptor.footer || null;
         this.model = null;
         this.ui = {
-            busy: '', error: '', topic: '', addOpen: false, copyFor: null, filename: '', hint: '',
+            busy: '', error: '', topic: '', copyFor: null, filename: '', hint: '',
             languages: descriptor.languages || [],
         };
         this.sentFile = null;
@@ -127,7 +126,7 @@ export default class extends BaseComponent {
         if (visible && !this.model) {
             this.model = {
                 mode: 'manual', min: 5, max: 8, name: '', intro: '', current: 0,
-                slides: ['cover', 'content', 'content'].map(model.newSlide),
+                slides: ['content', 'content', 'content'].map(model.newSlide),
             };
             await this._render();
         } else if (!visible && !session.jobid) {
@@ -204,13 +203,7 @@ export default class extends BaseComponent {
     _change(action, button) {
         const handlers = {
             select: () => this._select(Number(button.dataset.index)),
-            setmode: () => {
-                this.model.mode = button.dataset.mode;
-            },
-            addopen: () => {
-                this.ui.addOpen = !this.ui.addOpen;
-            },
-            addslide: () => this._addSlide(button.dataset.layout),
+            addslide: () => this._addSlide('content'),
             sup: () => this._moveSlide(-1),
             sdown: () => this._moveSlide(1),
             sdup: () => this._duplicateSlide(),
@@ -267,7 +260,6 @@ export default class extends BaseComponent {
             this.model.slides.splice(this.model.current + 1, 0, model.newSlide(layout));
             this.model.current++;
         }
-        this.ui.addOpen = false;
     }
 
     _moveSlide(step) {
@@ -657,7 +649,7 @@ export default class extends BaseComponent {
     _refreshHint() {
         const hint = this._problem();
         this.ui.hint = hint;
-        const help = this.element.querySelector('.pe-final .pe-step-help');
+        const help = this.element.querySelector('.pe-final .pe-hint');
         const create = this.element.querySelector(".pe-final [data-action$='/create']");
         if (help) {
             help.textContent = hint || this.strings.pe_ready_hint;
@@ -729,9 +721,22 @@ export default class extends BaseComponent {
      *
      * @param {Event} event
      */
-    _handleChange(event) {
+    async _handleChange(event) {
         const target = event.target;
-        const block = this.model && target.dataset.block ? this._block(target.dataset.block) : null;
+        if (!this.model) {
+            return;
+        }
+        if (target.dataset.field === 'auto') {
+            this.model.mode = target.checked ? 'auto' : 'manual';
+            await this._render();
+            return;
+        }
+        if (target.dataset.field === 'addtype' && target.value) {
+            this._addBlock(target.value);
+            await this._render();
+            return;
+        }
+        const block = target.dataset.block ? this._block(target.dataset.block) : null;
         if (target.dataset.copyall !== undefined) {
             this.element.querySelectorAll('[data-copy]').forEach((box) => {
                 box.checked = target.checked;
