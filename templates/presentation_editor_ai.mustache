@@ -1,0 +1,31 @@
+{{!
+    @template local_coursegen/activity_type_picker
+
+    The first steps of the chat to create an activity, inside the chat itself: what was chosen so far, the types the
+    AI can create and, for H5P, its kinds. The tiles are Moodle's own chooser tiles.
+
+    Context variables required for this template:
+    * typeitems array  - The chooser items of the types the AI can create.
+    * kinditems array  - The chooser items of the H5P kinds.
+
+    Example context (json):
+    {
+        "typeitems": [
+            {"name": "forum", "title": "Forum", "link": "?add=forum", "icon": "<img class='icon' src='https://example.com/forum.svg' alt=''>", "componentname": "mod_forum", "purpose": "collaboration", "branded": 0, "legacyitem": true}
+        ],
+        "kinditems": []
+{{!
+    @template local_coursegen/presentation_editor_ai
+
+    The bar to ask the AI to change a part of a slide.
+
+    Example context (json):
+    {}
+}}
+<div class="d-flex align-items-center my-2 p-2 rounded" style="gap: .5rem; background: #f3f0ff;" data-region="local_coursegen/pe/aibar">
+    <i class="fa fa-magic text-primary" aria-hidden="true"></i>
+    <input type="text" class="form-control form-control-sm flex-fill" data-region="local_coursegen/pe/aiinput"
+           placeholder="{{#str}} pe_ai_placeholder, local_coursegen {{/str}}" aria-label="{{#str}} pe_ai_zone, local_coursegen {{/str}}">
+    <button type="button" class="btn btn-primary btn-sm" data-action="local_coursegen/pe/aiapply">{{#str}} pe_ai_apply, local_coursegen {{/str}}</button>
+    <button type="button" class="btn btn-light btn-sm" data-action="local_coursegen/pe/aicancel" aria-label="{{#str}} pe_ai_cancel, local_coursegen {{/str}}"><i class="fa fa-times" aria-hidden="true"></i></button>
+</div>
