@@ -1,3 +1,11 @@
+## [2.0.11] - 2026-10-26
+
+**Compatibility note:** This version is compatible from **Moodle 4.5** to **Moodle 5.2**.
+
+## Changed
+- **Requires the provider that sends the build number**
+  The course service now validates the plugin by its build number, which `aiprovider_datacurso` sends in `X-Plugin-Build` from `1.6.4`. The dependency on `aiprovider_datacurso` is raised to that build, so this plugin cannot be installed or run with a provider that does not send it.
+
 ## [2.0.10] - 2026-10-26
 
 **Compatibility note:** This version is compatible from **Moodle 4.5** to **Moodle 5.2**.
