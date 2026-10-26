@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file. Each change
 
 ### Changed
 - **The Course Presentation editor looks like a presentation editor**  
-  The editor now lays the slide out as it will look. The general instruction, the language, the reference file and the choice to let the AI decide the number of slides are in a panel at the top. Below it, a rail with a miniature of each slide sits on the left, and the selected slide is shown on the right as a 16:9 canvas with one zone per element, marked as written by the AI or fixed. The Create activity button stays visible at the bottom while the person scrolls.
+  The editor now lays the slide out as it will look. The general instruction, the language, the reference file and the choice to let the AI decide the number of slides are in a panel at the top. Below it, a rail with a miniature of each slide sits on the left, and the selected slide is shown on the right as a 16:9 canvas with one zone per element, marked as written by the AI or fixed. The Create activity button stays visible at the bottom while the person scrolls. The editor starts with no slides: the person adds the first one and decides how many there are.
 
 ## [2.0.10] - 2026101244
 
