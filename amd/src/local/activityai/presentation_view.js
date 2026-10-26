@@ -106,6 +106,13 @@ export const buildContext = (data, ui, strings, clean) => {
             number: index + 1,
             current: index === data.current,
             title: blockOf(slide, 'title') && blockOf(slide, 'title').value || strings.pe_slide_label + ' ' + (index + 1),
+            mini: {
+                hastitle: Boolean(blockOf(slide, 'title')),
+                hastext: Boolean(blockOf(slide, 'text')),
+                hasimage: Boolean(blockOf(slide, 'image')),
+                hasvideo: Boolean(blockOf(slide, 'video')),
+                hasquestion: Boolean(blockOf(slide, 'question')),
+            },
         })),
     };
     if (current && data.mode === 'manual') {

@@ -23,7 +23,7 @@
     {"id": "b1", "label": "Title", "isAi": true, "isFixed": false, "isHtml": false, "canHtml": false, "canFix": true,
      "isTitle": true, "instr": "", "placeholder": "Tell the AI what the title should say", "busy": false, "hasresult": false}
 }}
-<div class="pe-block" data-block-id="{{id}}">
+<div class="pe-block {{#isText}}pe-block-text{{/isText}}{{#isImage}}pe-block-image{{/isImage}}" data-block-id="{{id}}">
     {{#busy}}{{> local_coursegen/presentation_editor_busy}}{{/busy}}
     <div class="pe-bhead">
         <label class="pe-label" for="pe-f-{{id}}">{{label}} <span class="pe-tag {{#isAi}}is-ai{{/isAi}}">{{#isAi}}{{#str}} pe_tag_ai, local_coursegen {{/str}}{{/isAi}}{{^isAi}}{{#str}} pe_tag_fixed, local_coursegen {{/str}}{{/isAi}}</span></label>
