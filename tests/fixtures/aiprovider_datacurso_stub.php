@@ -111,11 +111,6 @@ if (!class_exists(ai_course_api::class)) {
         }
 
         /**
-         * Mirror of datacurso_api_base::is_for_ue().
-         *
-         * @return bool
-         */
-        /**
          * Mirror of datacurso_api_base::get_plugin_headers().
          *
          * @return string[]
@@ -124,6 +119,11 @@ if (!class_exists(ai_course_api::class)) {
             throw new \coding_exception('aiprovider_datacurso stub: real provider behaviour required.');
         }
 
+        /**
+         * Mirror of datacurso_api_base::is_for_ue().
+         *
+         * @return bool
+         */
         public function is_for_ue(): bool {
             throw new \coding_exception('aiprovider_datacurso stub: real provider behaviour required.');
         }
