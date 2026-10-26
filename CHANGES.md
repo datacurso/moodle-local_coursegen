@@ -1,4 +1,4 @@
-## 2.1.0-wp
+## 2.0.10-wp
 
 **Released on:** Unreleased
 
