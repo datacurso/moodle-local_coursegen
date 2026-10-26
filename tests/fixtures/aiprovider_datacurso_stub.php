@@ -55,8 +55,14 @@ if (!class_exists(ai_course_api::class)) {
          * @param string|null $licensekey License key override.
          * @param string|null $baseurl Base URL override.
          * @param string|null $baseurleu EU base URL override.
+         * @param string|null $callercomponent Plugin that makes the requests.
          */
-        public function __construct(?string $licensekey = null, ?string $baseurl = null, ?string $baseurleu = null) {
+        public function __construct(
+            ?string $licensekey = null,
+            ?string $baseurl = null,
+            ?string $baseurleu = null,
+            ?string $callercomponent = null
+        ) {
         }
 
         /**
@@ -101,6 +107,15 @@ if (!class_exists(ai_course_api::class)) {
          * @return array|null
          */
         public function upload_file(string $path, \stored_file $file, array $extraparams = []): ?array {
+            throw new \coding_exception('aiprovider_datacurso stub: real provider behaviour required.');
+        }
+
+        /**
+         * Mirror of datacurso_api_base::get_plugin_headers().
+         *
+         * @return string[]
+         */
+        public function get_plugin_headers(): array {
             throw new \coding_exception('aiprovider_datacurso stub: real provider behaviour required.');
         }
 
