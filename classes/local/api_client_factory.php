@@ -54,7 +54,7 @@ class api_client_factory {
             }
         }
 
-        return (new ai_course_api(null, $baseurl, $baseurleu))->set_caller_component(self::COMPONENT);
+        return new ai_course_api(null, $baseurl, $baseurleu, self::COMPONENT);
     }
 
     /**
