@@ -1,3 +1,12 @@
+## [2.0.10] - 2026-10-26
+
+**Compatibility note:** This version is compatible from **Moodle 4.5** to **Moodle 5.2**.
+
+## Changed
+
+- **The course service is told which release of this plugin is calling**
+  Every call to the course service now carries `X-Plugin-Name: local_coursegen` and `X-Plugin-Version` (this release). The service can then ask for an update when the release is too old, and the person sees the message from the Datacurso provider instead of a generic error. All the clients are built through `api_client_factory`; a test fails if a class builds one by hand. Requires `aiprovider_datacurso` 1.6.3 or later.
+
 ## [2.0.9] - 2026-10-21
 
 **Compatibility note:** This version is compatible from **Moodle 4.5** to **Moodle 5.2**.
