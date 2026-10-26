@@ -78,7 +78,8 @@
     </div>
 
     {{#manual}}
-    <div class="pe-work">
+    <div class="pe-work {{^total}}is-empty{{/total}}">
+        {{#total}}
         <div class="pe-rail" role="group" aria-label="{{#str}} pe_strip, local_coursegen {{/str}}">
             {{#slides}}
             <button type="button" class="pe-thumb {{#current}}is-active{{/current}}" data-action="local_coursegen/pe/select" data-index="{{index}}"
@@ -97,6 +98,7 @@
                 <i class="fa fa-plus" aria-hidden="true"></i>{{#str}} pe_add, local_coursegen {{/str}}
             </button>
         </div>
+        {{/total}}
 
         <div class="pe-stage">
             {{#slidesError}}<p class="pe-error" data-error-for="slides">{{.}}</p>{{/slidesError}}
@@ -126,6 +128,14 @@
                 </select>
             </label>
             {{#slideError}}<p class="pe-error" data-error-for="slide">{{.}}</p>{{/slideError}}
+            {{/current}}
+            {{^current}}
+            <div class="pe-empty">
+                <p>{{#str}} pe_empty, local_coursegen {{/str}}</p>
+                <button type="button" class="pe-btn pe-btn-primary {{#slidesError}}is-invalid{{/slidesError}}" {{#slidesError}}aria-invalid="true"{{/slidesError}} data-action="local_coursegen/pe/addslide">
+                    <i class="fa fa-plus" aria-hidden="true"></i>{{#str}} pe_add_first, local_coursegen {{/str}}
+                </button>
+            </div>
             {{/current}}
         </div>
     </div>
