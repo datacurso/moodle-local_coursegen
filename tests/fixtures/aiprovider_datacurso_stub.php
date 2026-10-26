@@ -63,7 +63,6 @@ if (!class_exists(ai_course_api::class)) {
             ?string $baseurleu = null,
             ?string $callercomponent = null
         ) {
-            $this->callercomponent = $callercomponent;
         }
 
         /**
@@ -116,25 +115,13 @@ if (!class_exists(ai_course_api::class)) {
          *
          * @return bool
          */
-        /** @var string|null Plugin that makes the requests, like the provider's client. */
-        private ?string $callercomponent;
-
         /**
-         * Same output as the provider's client: the plugin name and its release, none without a component.
+         * Mirror of datacurso_api_base::get_plugin_headers().
          *
          * @return string[]
          */
         public function get_plugin_headers(): array {
-            if ($this->callercomponent === null) {
-                return [];
-            }
-            $headers = ['X-Plugin-Name: ' . $this->callercomponent];
-            $plugin = \core_plugin_manager::instance()->get_plugin_info($this->callercomponent);
-            $release = trim((string) ($plugin->release ?? ''));
-            if ($release !== '') {
-                $headers[] = 'X-Plugin-Version: ' . $release;
-            }
-            return $headers;
+            throw new \coding_exception('aiprovider_datacurso stub: real provider behaviour required.');
         }
 
         public function is_for_ue(): bool {
