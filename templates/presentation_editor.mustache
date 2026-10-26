@@ -17,7 +17,7 @@
 {{!
     @template local_coursegen/presentation_editor
 
-    The editor of a Course Presentation: the general instruction for the AI, the slides, and the name of the activity.
+    The editor of a Course Presentation: the general instruction for the AI and the slides laid out as they will look.
     Each element of a slide is an instruction for the AI or something fixed.
 
     Context variables required for this template:
@@ -25,7 +25,7 @@
     * manual bool, auto bool, min int, max int, languages array (code, name, selected)
     * hasfile bool, filename string
     * busy bool, busyall bool, creating bool
-    * slides array          - The tabs: index, number, current, title.
+    * slides array          - The thumbnails: index, number, current, title, mini (hastitle, hastext, hasimage, hasquestion, hasvideo).
     * current object        - The selected slide: number, total, first, last, blocks, addchips.
 
     Example context (json):
@@ -33,18 +33,37 @@
      "languages": [], "hasfile": false, "filename": "", "busy": false, "busyall": false, "creating": false, "slides": [], "total": 0}
 }}
 <div class="local_coursegen_pe">
-    <div class="pe-field">
-        <label class="pe-label" for="pe-name">{{#str}} pe_name_label, local_coursegen {{/str}}</label>
-        <input id="pe-name" type="text" class="pe-input" data-field="name" value="{{name}}">
-        <p class="pe-help">{{#str}} pe_name_help, local_coursegen {{/str}}</p>
-    </div>
-
-    <div class="pe-field">
-        <label class="pe-label" for="pe-topic">{{#str}} pe_ctx_label, local_coursegen {{/str}}</label>
-        <textarea id="pe-topic" class="pe-input {{#topicError}}is-invalid{{/topicError}}" rows="3" data-field="topic" {{#topicError}}aria-invalid="true" aria-describedby="pe-topic-error"{{/topicError}}
-                  placeholder="{{#str}} pe_ctx_placeholder, local_coursegen {{/str}}">{{topic}}</textarea>
-        {{#topicError}}<p class="pe-error" id="pe-topic-error" data-error-for="topic">{{.}}</p>{{/topicError}}
-        <div class="pe-row">
+    <div class="pe-context">
+        <div class="pe-ctx-main">
+            <label class="pe-cap" for="pe-topic"><i class="fa fa-magic" aria-hidden="true"></i>{{#str}} pe_ctx_label, local_coursegen {{/str}}</label>
+            <textarea id="pe-topic" class="pe-input pe-prompt {{#topicError}}is-invalid{{/topicError}}" rows="2" data-field="topic" {{#topicError}}aria-invalid="true" aria-describedby="pe-topic-error"{{/topicError}}
+                      placeholder="{{#str}} pe_ctx_placeholder, local_coursegen {{/str}}">{{topic}}</textarea>
+            {{#topicError}}<p class="pe-error" id="pe-topic-error" data-error-for="topic">{{.}}</p>{{/topicError}}
+            <label class="pe-name">
+                <span>{{#str}} pe_name_label, local_coursegen {{/str}}</span>
+                <input id="pe-name" type="text" class="pe-input" data-field="name" value="{{name}}" placeholder="{{#str}} pe_name_help, local_coursegen {{/str}}">
+            </label>
+        </div>
+        <div class="pe-ctx-side">
+            <label class="pe-check">
+                <input type="checkbox" data-field="auto" {{#auto}}checked{{/auto}}> {{#str}} pe_auto_check, local_coursegen {{/str}}
+            </label>
+            {{#auto}}
+            <div class="pe-range">
+                <span>{{#str}} pe_range_between, local_coursegen {{/str}}</span>
+                <input type="number" min="3" max="30" data-field="min" class="{{#rangeError}}is-invalid{{/rangeError}}" {{#rangeError}}aria-invalid="true"{{/rangeError}} value="{{min}}" aria-label="{{#str}} pe_range_min, local_coursegen {{/str}}">
+                <span>{{#str}} pe_range_and, local_coursegen {{/str}}</span>
+                <input type="number" min="3" max="30" data-field="max" class="{{#rangeError}}is-invalid{{/rangeError}}" {{#rangeError}}aria-invalid="true"{{/rangeError}} value="{{max}}" aria-label="{{#str}} pe_range_max, local_coursegen {{/str}}">
+                <span>{{#str}} pe_range_unit, local_coursegen {{/str}}</span>
+            </div>
+            {{#rangeError}}<p class="pe-error" data-error-for="range">{{.}}</p>{{/rangeError}}
+            {{/auto}}
+            <label class="pe-lang">
+                {{#str}} pe_lang, local_coursegen {{/str}}
+                <select data-field="lang">
+                    {{#languages}}<option value="{{code}}" {{#selected}}selected{{/selected}}>{{name}}</option>{{/languages}}
+                </select>
+            </label>
             {{^hasfile}}
             <button type="button" class="pe-btn pe-btn-small" data-action="local_coursegen/pe/attach"><i class="fa fa-paperclip" aria-hidden="true"></i>{{#str}} pe_attach, local_coursegen {{/str}}</button>
             {{/hasfile}}
@@ -55,56 +74,52 @@
                         title="{{#str}} pe_remove_file, local_coursegen {{/str}}" aria-label="{{#str}} pe_remove_file, local_coursegen {{/str}}"><i class="fa fa-times" aria-hidden="true"></i></button>
             </span>
             {{/hasfile}}
-            <label class="pe-lang">
-                {{#str}} pe_lang, local_coursegen {{/str}}
-                <select data-field="lang">
-                    {{#languages}}<option value="{{code}}" {{#selected}}selected{{/selected}}>{{name}}</option>{{/languages}}
-                </select>
-            </label>
         </div>
     </div>
 
-    <div class="pe-field">
-        <span class="pe-label">{{#str}} pe_strip, local_coursegen {{/str}}</span>
-        <label class="pe-check">
-            <input type="checkbox" data-field="auto" {{#auto}}checked{{/auto}}> {{#str}} pe_auto_check, local_coursegen {{/str}}
-        </label>
-        {{#auto}}
-        <div class="pe-range">
-            <span>{{#str}} pe_range_between, local_coursegen {{/str}}</span>
-            <input type="number" min="3" max="30" data-field="min" class="{{#rangeError}}is-invalid{{/rangeError}}" {{#rangeError}}aria-invalid="true"{{/rangeError}} value="{{min}}" aria-label="{{#str}} pe_range_min, local_coursegen {{/str}}">
-            <span>{{#str}} pe_range_and, local_coursegen {{/str}}</span>
-            <input type="number" min="3" max="30" data-field="max" class="{{#rangeError}}is-invalid{{/rangeError}}" {{#rangeError}}aria-invalid="true"{{/rangeError}} value="{{max}}" aria-label="{{#str}} pe_range_max, local_coursegen {{/str}}">
-            <span>{{#str}} pe_range_unit, local_coursegen {{/str}}</span>
-        </div>
-        {{#rangeError}}<p class="pe-error" data-error-for="range">{{.}}</p>{{/rangeError}}
-        {{/auto}}
-        {{#manual}}
-        <div class="pe-tabs" role="group" aria-label="{{#str}} pe_strip, local_coursegen {{/str}}">
+    {{#manual}}
+    <div class="pe-work {{^total}}is-empty{{/total}}">
+        {{#total}}
+        <div class="pe-rail" role="group" aria-label="{{#str}} pe_strip, local_coursegen {{/str}}">
             {{#slides}}
-            <button type="button" class="pe-tab {{#current}}is-active{{/current}}" data-action="local_coursegen/pe/select" data-index="{{index}}"
-                    title="{{title}}" {{#current}}aria-current="true"{{/current}}>{{number}}</button>
+            <button type="button" class="pe-thumb {{#current}}is-active{{/current}}" data-action="local_coursegen/pe/select" data-index="{{index}}"
+                    title="{{title}}" {{#current}}aria-current="true"{{/current}}>
+                <span class="pe-thumb-no">{{number}}</span>
+                <span class="pe-mini">
+                    {{#mini.hastitle}}<i class="pe-sk pe-sk-title"></i>{{/mini.hastitle}}
+                    {{#mini.hastext}}<i class="pe-sk"></i><i class="pe-sk pe-sk-short"></i>{{/mini.hastext}}
+                    {{#mini.hasimage}}<i class="pe-sk pe-sk-image"></i>{{/mini.hasimage}}
+                    {{#mini.hasvideo}}<i class="pe-sk pe-sk-image"></i>{{/mini.hasvideo}}
+                    {{#mini.hasquestion}}<i class="pe-sk pe-sk-box"></i>{{/mini.hasquestion}}
+                </span>
+            </button>
             {{/slides}}
-            <button type="button" class="pe-tab pe-tab-add {{#slidesError}}is-invalid{{/slidesError}}" {{#slidesError}}aria-invalid="true"{{/slidesError}} data-action="local_coursegen/pe/addslide"
-                    title="{{#str}} pe_add, local_coursegen {{/str}}" aria-label="{{#str}} pe_add, local_coursegen {{/str}}"><i class="fa fa-plus" aria-hidden="true"></i></button>
-            <span class="pe-grow"></span>
-            {{#current}}
-            <details class="pe-menu">
-                <summary title="{{#str}} pe_slide_options, local_coursegen {{/str}}" aria-label="{{#str}} pe_slide_options, local_coursegen {{/str}}"><i class="fa fa-ellipsis-v" aria-hidden="true"></i></summary>
-                <div class="pe-menu-list">
-                    <button type="button" data-action="local_coursegen/pe/sup" {{#first}}disabled{{/first}}>{{#str}} pe_move_left, local_coursegen {{/str}}</button>
-                    <button type="button" data-action="local_coursegen/pe/sdown" {{#last}}disabled{{/last}}>{{#str}} pe_move_right, local_coursegen {{/str}}</button>
-                    <button type="button" data-action="local_coursegen/pe/sdup">{{#str}} cpb_duplicate, local_coursegen {{/str}}</button>
-                    <button type="button" data-action="local_coursegen/pe/sdel" class="is-danger">{{#str}} cpb_remove, local_coursegen {{/str}}</button>
-                </div>
-            </details>
-            {{/current}}
+            <button type="button" class="pe-addslide {{#slidesError}}is-invalid{{/slidesError}}" {{#slidesError}}aria-invalid="true"{{/slidesError}} data-action="local_coursegen/pe/addslide">
+                <i class="fa fa-plus" aria-hidden="true"></i>{{#str}} pe_add, local_coursegen {{/str}}
+            </button>
         </div>
-        {{#slidesError}}<p class="pe-error" data-error-for="slides">{{.}}</p>{{/slidesError}}
+        {{/total}}
 
-        {{#current}}
-        <div class="pe-slide">
-            {{#blocks}}{{> local_coursegen/presentation_editor_block}}{{/blocks}}
+        <div class="pe-stage">
+            {{#slidesError}}<p class="pe-error" data-error-for="slides">{{.}}</p>{{/slidesError}}
+            {{#current}}
+            <div class="pe-slidebar">
+                <span class="pe-count">{{#str}} pe_slide_of, local_coursegen, {"number": {{number}}, "total": {{total}}} {{/str}}</span>
+                <details class="pe-menu">
+                    <summary title="{{#str}} pe_slide_options, local_coursegen {{/str}}" aria-label="{{#str}} pe_slide_options, local_coursegen {{/str}}"><i class="fa fa-ellipsis-v" aria-hidden="true"></i></summary>
+                    <div class="pe-menu-list">
+                        <button type="button" data-action="local_coursegen/pe/sup" {{#first}}disabled{{/first}}>{{#str}} pe_move_left, local_coursegen {{/str}}</button>
+                        <button type="button" data-action="local_coursegen/pe/sdown" {{#last}}disabled{{/last}}>{{#str}} pe_move_right, local_coursegen {{/str}}</button>
+                        <button type="button" data-action="local_coursegen/pe/sdup">{{#str}} cpb_duplicate, local_coursegen {{/str}}</button>
+                        <button type="button" data-action="local_coursegen/pe/sdel" class="is-danger">{{#str}} cpb_remove, local_coursegen {{/str}}</button>
+                    </div>
+                </details>
+            </div>
+            <div class="pe-canvas">
+                <div class="pe-slide">
+                    {{#blocks}}{{> local_coursegen/presentation_editor_block}}{{/blocks}}
+                </div>
+            </div>
             <label class="pe-add-element">
                 <span class="sr-only">{{#str}} pe_add_element, local_coursegen {{/str}}</span>
                 <select data-field="addtype" class="{{#slideError}}is-invalid{{/slideError}}" {{#slideError}}aria-invalid="true"{{/slideError}}>
@@ -113,17 +128,28 @@
                 </select>
             </label>
             {{#slideError}}<p class="pe-error" data-error-for="slide">{{.}}</p>{{/slideError}}
+            {{/current}}
+            {{^current}}
+            <div class="pe-empty">
+                <p>{{#str}} pe_empty, local_coursegen {{/str}}</p>
+                <button type="button" class="pe-btn pe-btn-primary {{#slidesError}}is-invalid{{/slidesError}}" {{#slidesError}}aria-invalid="true"{{/slidesError}} data-action="local_coursegen/pe/addslide">
+                    <i class="fa fa-plus" aria-hidden="true"></i>{{#str}} pe_add_first, local_coursegen {{/str}}
+                </button>
+            </div>
+            {{/current}}
         </div>
-        {{/current}}
-        {{/manual}}
     </div>
+    {{/manual}}
+    {{#auto}}
+    <div class="pe-auto"><i class="fa fa-magic" aria-hidden="true"></i><p>{{#str}} pe_auto_note, local_coursegen {{/str}}</p></div>
+    {{/auto}}
 
     <div class="pe-final">
         {{#error}}<div class="pe-alert" role="alert" data-region="local_coursegen/pe/error">{{error}}</div>{{/error}}
-        <p class="pe-help">{{#str}} pe_create_help, local_coursegen {{/str}}</p>
         <div class="pe-final-row">
-            <button type="button" class="pe-link" data-action="local_coursegen/pe/generate" {{#busy}}disabled{{/busy}}>{{#str}} pe_review_link, local_coursegen {{/str}}</button>
+            <p class="pe-help">{{#str}} pe_create_help, local_coursegen {{/str}}</p>
             <span class="pe-grow"></span>
+            <button type="button" class="pe-link" data-action="local_coursegen/pe/generate" {{#busy}}disabled{{/busy}}>{{#str}} pe_review_link, local_coursegen {{/str}}</button>
             <button type="button" class="pe-btn pe-btn-primary" data-action="local_coursegen/pe/create" {{#busy}}disabled{{/busy}}>
                 {{#busy}}<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>{{/busy}}
                 {{#str}} pe_create, local_coursegen {{/str}}

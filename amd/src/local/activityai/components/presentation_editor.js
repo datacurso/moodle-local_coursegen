@@ -127,7 +127,7 @@ export default class extends BaseComponent {
         if (visible && !this.model) {
             this.model = {
                 mode: 'manual', min: 5, max: 8, name: '', intro: '', current: 0,
-                slides: ['content', 'content', 'content'].map(model.newSlide),
+                slides: [],
             };
             await this._render();
         } else if (!visible && !session.jobid) {
@@ -258,8 +258,9 @@ export default class extends BaseComponent {
 
     _addSlide(layout) {
         if (this.model.slides.length < model.MAX_SLIDES) {
-            this.model.slides.splice(this.model.current + 1, 0, model.newSlide(layout));
-            this.model.current++;
+            const at = this.model.slides.length ? this.model.current + 1 : 0;
+            this.model.slides.splice(at, 0, model.newSlide(layout));
+            this.model.current = at;
         }
     }
 
@@ -281,9 +282,9 @@ export default class extends BaseComponent {
     }
 
     _removeSlide() {
-        if (this.model.slides.length > 1) {
+        if (this.model.slides.length) {
             this.model.slides.splice(this.model.current, 1);
-            this.model.current = Math.min(this.model.current, this.model.slides.length - 1);
+            this.model.current = Math.max(0, Math.min(this.model.current, this.model.slides.length - 1));
         }
     }
 
