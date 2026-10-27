@@ -467,24 +467,22 @@ span.local_coursegen-sparkles-icon.white {
 
 .local_coursegen_pe .pe-work {
     display: grid;
-    grid-template-columns: 9.5rem minmax(0, 1fr);
-    border: 1px solid var(--pe-border);
-    border-radius: .75rem;
-    overflow: hidden;
+    grid-template-columns: 8rem minmax(0, 1fr);
+    gap: 1.5rem;
+    align-items: start;
 }
 
 .local_coursegen_pe .pe-work.is-empty {
     grid-template-columns: 1fr;
-    border-style: dashed;
 }
 
 .local_coursegen_pe .pe-rail {
+    position: sticky;
+    top: 0;
     display: flex;
     flex-direction: column;
-    gap: .6rem;
-    padding: .75rem;
-    border-right: 1px solid var(--pe-border);
-    background: var(--pe-bg);
+    gap: .75rem;
+    max-height: 70vh;
     overflow-y: auto;
 }
 
@@ -582,9 +580,8 @@ span.local_coursegen-sparkles-icon.white {
 .local_coursegen_pe .pe-stage {
     display: flex;
     flex-direction: column;
-    gap: .75rem;
+    gap: 1rem;
     min-width: 0;
-    padding: .75rem 1rem 1rem;
 }
 
 .local_coursegen_pe .pe-slidebar {
@@ -600,30 +597,13 @@ span.local_coursegen-sparkles-icon.white {
 }
 
 .local_coursegen_pe .pe-canvas {
-    padding: 1rem;
-    border-radius: .75rem;
-    background: hsl(214, 32%, 95%);
+    padding: 0;
 }
 
 .local_coursegen_pe .pe-slide {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    align-content: start;
-    gap: .75rem;
-    aspect-ratio: 16 / 9;
-    padding: 1.25rem 1.5rem;
-    border-radius: .35rem;
-    background: var(--pe-card);
-    box-shadow: 0 8px 28px -10px hsl(215 28% 17% / .3);
-}
-
-.local_coursegen_pe .pe-slide > .pe-block {
-    grid-column: 1 / -1;
-}
-
-.local_coursegen_pe .pe-slide > .pe-block-text:not(:last-child),
-.local_coursegen_pe .pe-slide > .pe-block-image:not(:last-child) {
-    grid-column: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
 }
 
 .local_coursegen_pe .pe-empty {
@@ -707,10 +687,6 @@ span.local_coursegen-sparkles-icon.white {
     display: flex;
     flex-direction: column;
     gap: .4rem;
-    padding: .6rem .75rem;
-    border: 1.5px dashed hsl(260, 30%, 84%);
-    border-radius: .6rem;
-    background: var(--pe-ai-soft);
 }
 
 .local_coursegen_pe .pe-bhead {
@@ -940,10 +916,9 @@ span.local_coursegen-sparkles-icon.white {
     }
 
     .local_coursegen_pe .pe-rail {
+        position: static;
         flex-direction: row;
         max-height: none;
-        border-right: 0;
-        border-bottom: 1px solid var(--pe-border);
         overflow-x: auto;
     }
 
