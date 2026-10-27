@@ -104,6 +104,7 @@ export default class extends BaseComponent {
         this.addEventListener(this.element, 'click', this._handleClick);
         this.addEventListener(this.element, 'input', this._handleInput);
         this.addEventListener(this.element, 'change', this._handleChange);
+        this.addEventListener(this.element, 'keydown', this._handleKeydown);
         this._sync();
     }
 
@@ -781,6 +782,22 @@ export default class extends BaseComponent {
             question.text = target.value;
         } else if (question && field === 'qoption') {
             question.options[Number(target.dataset.option)].text = target.value;
+        }
+    }
+
+    /**
+     * Escape closes the open menu and nothing else: the modal must stay open with what the person wrote.
+     *
+     * @param {KeyboardEvent} event
+     */
+    _handleKeydown(event) {
+        const open = event.key === 'Escape' ? this.element.querySelector('.dropdown-menu.show') : null;
+        if (open) {
+            const toggle = open.parentElement.querySelector('[data-toggle="dropdown"]');
+            event.stopPropagation();
+            event.preventDefault();
+            toggle.click();
+            toggle.focus();
         }
     }
 
