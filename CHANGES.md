@@ -2,11 +2,11 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
-## [2.0.10] - 2026102611
+## [2.0.10] - 2026102612
 
 ### Changed
 - **The Course Presentation editor has more room and fewer frames**  
-  The slide is no longer drawn inside a fixed 16:9 frame with its own scroll. The elements of the selected slide are stacked in full width as one form, each with its label and its field, so they can all be seen and edited without scrolling inside a box. The frame inside a frame, the gray background and the dashed boxes around each element were removed; only one border around the slides area and the line that separates the list of slides remain. The Add element selector keeps its dashed border.
+  The slide is no longer drawn inside a fixed 16:9 frame with its own scroll. The elements of the selected slide are stacked in full width as one form, each with its label and its field, so they can all be seen and edited without scrolling inside a box. The frame inside a frame, the gray background and the dashed border around each element were removed, while each element keeps its light purple background; only one border around the slides area and the line that separates the list of slides remain. The Add element selector keeps its dashed border.
 
 ## [2.0.10] - 2026102609
 

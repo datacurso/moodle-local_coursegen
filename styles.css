@@ -483,6 +483,7 @@ span.local_coursegen-sparkles-icon.white {
     gap: .75rem;
     padding: .75rem;
     border-right: 1px solid var(--pe-border);
+    background: var(--pe-bg);
 }
 
 .local_coursegen_pe .pe-thumb {
@@ -687,6 +688,9 @@ span.local_coursegen-sparkles-icon.white {
     display: flex;
     flex-direction: column;
     gap: .4rem;
+    padding: .75rem 1rem;
+    border-radius: .6rem;
+    background: var(--pe-ai-soft);
 }
 
 .local_coursegen_pe .pe-bhead {
