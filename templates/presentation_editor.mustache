@@ -36,7 +36,7 @@
     <div class="pe-brief">
         <label class="pe-cap" for="pe-topic"><i class="fa fa-magic" aria-hidden="true"></i>{{#str}} pe_ctx_label, local_coursegen {{/str}}</label>
         <div class="pe-composer {{#topicError}}is-invalid{{/topicError}}">
-            <textarea id="pe-topic" class="pe-composer-text" rows="2" data-field="topic" {{#topicError}}aria-invalid="true" aria-describedby="pe-topic-error"{{/topicError}}
+            <textarea id="pe-topic" class="pe-composer-text" rows="3" data-field="topic" {{#topicError}}aria-invalid="true" aria-describedby="pe-topic-error"{{/topicError}}
                       placeholder="{{#str}} pe_ctx_placeholder, local_coursegen {{/str}}">{{topic}}</textarea>
             <div class="pe-composer-bar">
                 <button type="button" class="pe-round" data-action="local_coursegen/pe/attach"
@@ -48,8 +48,6 @@
                             title="{{#str}} pe_remove_file, local_coursegen {{/str}}" aria-label="{{#str}} pe_remove_file, local_coursegen {{/str}}"><i class="fa fa-times" aria-hidden="true"></i></button>
                 </span>
                 {{/hasfile}}
-                {{^hasfile}}<span class="pe-composer-hint">{{#str}} pe_attach, local_coursegen {{/str}}</span>{{/hasfile}}
-                <span class="pe-grow"></span>
                 <label class="pe-lang">
                     <i class="fa fa-globe" aria-hidden="true"></i>
                     <select data-field="lang" aria-label="{{#str}} pe_lang, local_coursegen {{/str}}">

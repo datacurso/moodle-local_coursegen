@@ -2,11 +2,11 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
-## [2.0.10] - 2026102606
+## [2.0.10] - 2026102607
 
 ### Changed
 - **The general instruction of the Course Presentation editor looks like the rest of the AI boxes**  
-  The instruction is a rounded box like the chat of the other AI interfaces: the text on top and, in its bottom row, the round button to attach a reference file on the left and the language on the right.
+  The instruction is a rounded box like the chat of the other AI interfaces: the text on top and, in its bottom row, the round button to attach a reference file and the language together on the left, with the text taller.
 
 ## [2.0.10] - 2026102605
 
