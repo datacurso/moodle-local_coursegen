@@ -34,28 +34,30 @@
 }}
 <div class="local_coursegen_pe">
     <div class="pe-brief">
-        <div class="pe-brief-head">
-            <label class="pe-cap" for="pe-topic"><i class="fa fa-magic" aria-hidden="true"></i>{{#str}} pe_ctx_label, local_coursegen {{/str}}</label>
-            <span class="pe-grow"></span>
-            {{^hasfile}}
-            <button type="button" class="pe-link" data-action="local_coursegen/pe/attach"><i class="fa fa-paperclip" aria-hidden="true"></i> {{#str}} pe_attach, local_coursegen {{/str}}</button>
-            {{/hasfile}}
-            {{#hasfile}}
-            <span class="pe-file">
-                <i class="fa fa-paperclip" aria-hidden="true"></i><span class="pe-truncate">{{filename}}</span>
-                <button type="button" class="pe-icon" data-action="local_coursegen/pe/removefile"
-                        title="{{#str}} pe_remove_file, local_coursegen {{/str}}" aria-label="{{#str}} pe_remove_file, local_coursegen {{/str}}"><i class="fa fa-times" aria-hidden="true"></i></button>
-            </span>
-            {{/hasfile}}
-            <label class="pe-lang">
-                <i class="fa fa-globe" aria-hidden="true"></i>
-                <select data-field="lang" aria-label="{{#str}} pe_lang, local_coursegen {{/str}}">
-                    {{#languages}}<option value="{{code}}" {{#selected}}selected{{/selected}}>{{name}}</option>{{/languages}}
-                </select>
-            </label>
+        <label class="pe-cap" for="pe-topic"><i class="fa fa-magic" aria-hidden="true"></i>{{#str}} pe_ctx_label, local_coursegen {{/str}}</label>
+        <div class="pe-composer {{#topicError}}is-invalid{{/topicError}}">
+            <textarea id="pe-topic" class="pe-composer-text" rows="2" data-field="topic" {{#topicError}}aria-invalid="true" aria-describedby="pe-topic-error"{{/topicError}}
+                      placeholder="{{#str}} pe_ctx_placeholder, local_coursegen {{/str}}">{{topic}}</textarea>
+            <div class="pe-composer-bar">
+                <button type="button" class="pe-round" data-action="local_coursegen/pe/attach"
+                        title="{{#str}} pe_attach, local_coursegen {{/str}}" aria-label="{{#str}} pe_attach, local_coursegen {{/str}}"><i class="fa fa-paperclip" aria-hidden="true"></i></button>
+                {{#hasfile}}
+                <span class="pe-file">
+                    <span class="pe-truncate">{{filename}}</span>
+                    <button type="button" class="pe-icon" data-action="local_coursegen/pe/removefile"
+                            title="{{#str}} pe_remove_file, local_coursegen {{/str}}" aria-label="{{#str}} pe_remove_file, local_coursegen {{/str}}"><i class="fa fa-times" aria-hidden="true"></i></button>
+                </span>
+                {{/hasfile}}
+                {{^hasfile}}<span class="pe-composer-hint">{{#str}} pe_attach, local_coursegen {{/str}}</span>{{/hasfile}}
+                <span class="pe-grow"></span>
+                <label class="pe-lang">
+                    <i class="fa fa-globe" aria-hidden="true"></i>
+                    <select data-field="lang" aria-label="{{#str}} pe_lang, local_coursegen {{/str}}">
+                        {{#languages}}<option value="{{code}}" {{#selected}}selected{{/selected}}>{{name}}</option>{{/languages}}
+                    </select>
+                </label>
+            </div>
         </div>
-        <textarea id="pe-topic" class="pe-input pe-prompt {{#topicError}}is-invalid{{/topicError}}" rows="2" data-field="topic" {{#topicError}}aria-invalid="true" aria-describedby="pe-topic-error"{{/topicError}}
-                  placeholder="{{#str}} pe_ctx_placeholder, local_coursegen {{/str}}">{{topic}}</textarea>
         {{#topicError}}<p class="pe-error" id="pe-topic-error" data-error-for="topic">{{.}}</p>{{/topicError}}
     </div>
 
