@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
-## [2.0.10] - 2026102607
+## [2.0.10] - 2026102608
 
 ### Changed
 - **The general instruction of the Course Presentation editor looks like the rest of the AI boxes**  
