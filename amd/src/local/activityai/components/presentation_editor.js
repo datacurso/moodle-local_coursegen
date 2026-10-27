@@ -143,8 +143,9 @@ export default class extends BaseComponent {
      */
     _syncFooter(hidden) {
         const form = this.footer?.querySelector('form');
-        if (form) {
-            form.classList.toggle('d-none', hidden);
+        const chat = form?.closest('[data-region="local_coursegen/activity/chat"]') || form;
+        if (chat) {
+            chat.classList.toggle('d-none', hidden);
         }
     }
 
@@ -203,7 +204,7 @@ export default class extends BaseComponent {
     _change(action, button) {
         const handlers = {
             select: () => this._select(Number(button.dataset.index)),
-            addslide: () => this._addSlide('content'),
+            addslide: () => this._addSlide(button.dataset.layout || 'content'),
             sup: () => this._moveSlide(-1),
             sdown: () => this._moveSlide(1),
             sdup: () => this._duplicateSlide(),

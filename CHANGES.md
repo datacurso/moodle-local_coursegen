@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026102604
+
+### Changed
+- **The Course Presentation editor is organized in two blocks**  
+  The general instruction is a wide box with the reference file, the language and the optional activity name in one row under it. The slides come next, with the choice to let the AI decide the number at the right of their title. With no slides, the editor offers four ways to start the first one (cover, title and text, text and image, question). The empty space of the chat footer was removed.
+
 ## [2.0.10] - 2026102603
 
 ### Changed
