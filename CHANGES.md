@@ -1,6 +1,16 @@
+## 2.0.11-wp
+
+**Released on:** 2026-10-26
+
+**Compatibility note:** This version is compatible only with **Moodle Workplace 4.5**.
+
+## Changed
+- **Requires the provider that sends the build number**
+  The course service now validates the plugin by its build number, which `aiprovider_datacurso` sends in `X-Plugin-Build` from `1.6.4-wp`. The dependency on `aiprovider_datacurso` is raised to `2026102601`, so this plugin cannot be installed or run with a provider older than the release that sends it.
+
 ## 2.0.10-wp
 
-**Released on:** Unreleased
+**Released on:** 2026-10-26
 
 **Compatibility note:** This version is compatible only with **Moodle Workplace 4.5**.
 
