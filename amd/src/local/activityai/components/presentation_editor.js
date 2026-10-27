@@ -905,8 +905,8 @@ export default class extends BaseComponent {
     }
 
     /**
-     * The item being dragged is moved in the list while the pointer goes over the others, so the empty slot always shows where
-     * it will stay.
+     * The item being dragged is moved in the list as soon as the pointer passes the middle of another item, wherever the pointer
+     * is, so the empty slot always shows where it will stay.
      *
      * @param {DragEvent} event
      */
@@ -917,15 +917,15 @@ export default class extends BaseComponent {
         }
         event.preventDefault();
         event.dataTransfer.dropEffect = 'move';
-        const over = event.target.closest(drag.type === 'slide' ? '[data-drag-slide]' : '[data-drag-block]');
-        if (!over || over === drag.item) {
-            return;
-        }
-        const rect = over.getBoundingClientRect();
-        const after = event.clientY > rect.top + rect.height / 2;
-        const next = after ? over.nextElementSibling : over;
-        if (next !== drag.item && drag.item.nextElementSibling !== next) {
-            this._moveInList(drag.item, next);
+        const others = [...drag.item.parentElement.children]
+            .filter((node) => node !== drag.item && (node.dataset.dragSlide !== undefined || node.dataset.dragBlock !== undefined));
+        const next = others.find((node) => {
+            const rect = node.getBoundingClientRect();
+            return event.clientY < rect.top + rect.height / 2;
+        });
+        const target = next || (others.length ? others[others.length - 1].nextElementSibling : null);
+        if (drag.item.nextElementSibling !== target) {
+            this._moveInList(drag.item, target);
         }
     }
 
