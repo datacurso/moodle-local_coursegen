@@ -96,6 +96,7 @@ export default class extends BaseComponent {
             languages: descriptor.languages || [],
         };
         this.sentFile = null;
+        this.drag = null;
         this.strings = {};
     }
 
@@ -108,6 +109,9 @@ export default class extends BaseComponent {
         this.addEventListener(this.element, 'input', this._handleInput);
         this.addEventListener(this.element, 'change', this._handleChange);
         this.addEventListener(this.element, 'keydown', this._handleKeydown);
+        ['pointerdown', 'pointerup', 'dragstart', 'dragover', 'drop', 'dragend'].forEach((name) => {
+            this.addEventListener(this.element, name, this._handleDrag);
+        });
         const shown = 'show.bs.dropdown.' + COMPONENT;
         $(document).off(shown).on(shown, '.local_coursegen_pe .dropdown', (event) => {
             this._placeMenu(event.target.querySelector('[data-toggle="dropdown"]'));
@@ -835,11 +839,132 @@ export default class extends BaseComponent {
     }
 
     /**
+     * The keyboard way to move what the mouse drags: Alt with the arrows on a slide miniature or inside an element.
+     *
+     * @param {KeyboardEvent} event
+     * @param {number} step
+     */
+    async _moveWithKeyboard(event, step) {
+        const slide = event.target.closest('[data-drag-slide]');
+        const block = event.target.closest('[data-drag-block]');
+        if (!this.model || !(slide || block)) {
+            return;
+        }
+        event.preventDefault();
+        if (slide) {
+            this._select(Number(slide.dataset.dragSlide));
+            this._moveSlide(step);
+            await this._render();
+            this.element.querySelector('[data-drag-slide="' + this.model.current + '"] .pe-thumb').focus();
+            return;
+        }
+        const id = block.dataset.dragBlock;
+        this._moveBlock(id, step);
+        await this._render();
+        this.element.querySelector('[data-drag-block="' + id + '"] [data-f]')?.focus();
+    }
+
+    /**
+     * Slides are moved by dragging their miniature and elements by dragging their header; the text of the fields can still be
+     * selected with the mouse because an element only becomes draggable when the press starts on its header.
+     *
+     * @param {Event} event
+     */
+    _handleDrag(event) {
+        const steps = {
+            pointerdown: () => this._allowBlockDrag(event),
+            pointerup: () => this._endDrag(),
+            dragstart: () => this._startDrag(event),
+            dragover: () => this._overDrag(event),
+            drop: () => this._dropDrag(event),
+            dragend: () => this._endDrag(),
+        };
+        steps[event.type]();
+    }
+
+    _allowBlockDrag(event) {
+        const head = event.target.closest('.pe-bhead');
+        if (head && !event.target.closest('[data-toggle="dropdown"]')) {
+            head.closest('[data-drag-block]').draggable = true;
+        }
+    }
+
+    _startDrag(event) {
+        const slide = event.target.closest('[data-drag-slide]');
+        const block = event.target.closest('[data-drag-block]');
+        const item = slide || (block && block.draggable ? block : null);
+        if (!item) {
+            return;
+        }
+        this.drag = slide ? {type: 'slide', key: Number(slide.dataset.dragSlide)} : {type: 'block', key: block.dataset.dragBlock};
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData('text/plain', String(this.drag.key));
+        item.classList.add('is-dragging');
+    }
+
+    _overDrag(event) {
+        if (!this.drag) {
+            return;
+        }
+        const over = event.target.closest(this.drag.type === 'slide' ? '[data-drag-slide]' : '[data-drag-block]');
+        this._clearMarks();
+        if (!over) {
+            this.drag.over = null;
+            return;
+        }
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'move';
+        const rect = over.getBoundingClientRect();
+        const after = event.clientY > rect.top + rect.height / 2;
+        over.classList.add(after ? 'is-drop-after' : 'is-drop-before');
+        this.drag.over = {key: this.drag.type === 'slide' ? Number(over.dataset.dragSlide) : over.dataset.dragBlock, after};
+    }
+
+    async _dropDrag(event) {
+        const drag = this.drag;
+        if (!drag || !drag.over) {
+            return;
+        }
+        event.preventDefault();
+        const list = drag.type === 'slide' ? this.model.slides : this._slide().blocks;
+        const find = (key) => (drag.type === 'slide' ? key : list.findIndex((item) => item.id === key));
+        const from = find(drag.key);
+        let to = find(drag.over.key) + (drag.over.after ? 1 : 0);
+        if (from < to) {
+            to--;
+        }
+        this._endDrag();
+        if (to !== from) {
+            const current = this._slide();
+            list.splice(to, 0, list.splice(from, 1)[0]);
+            this.model.current = this.model.slides.indexOf(current);
+            await this._render();
+        }
+    }
+
+    _clearMarks() {
+        this.element.querySelectorAll('.is-drop-before, .is-drop-after').forEach((node) => {
+            node.classList.remove('is-drop-before', 'is-drop-after');
+        });
+    }
+
+    _endDrag() {
+        this._clearMarks();
+        this.element.querySelectorAll('.is-dragging').forEach((node) => node.classList.remove('is-dragging'));
+        this.element.querySelectorAll('[data-drag-block][draggable]').forEach((node) => node.removeAttribute('draggable'));
+        this.drag = null;
+    }
+
+    /**
      * Escape closes the open menu and nothing else: the modal must stay open with what the person wrote.
      *
      * @param {KeyboardEvent} event
      */
     _handleKeydown(event) {
+        if (event.altKey && (event.key === 'ArrowUp' || event.key === 'ArrowDown')) {
+            this._moveWithKeyboard(event, event.key === 'ArrowUp' ? -1 : 1);
+            return;
+        }
         const open = event.key === 'Escape' ? this.element.querySelector('.dropdown-menu.show') : null;
         if (open) {
             const toggle = open.parentElement.querySelector('[data-toggle="dropdown"]');

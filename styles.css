@@ -486,6 +486,22 @@ span.local_coursegen-sparkles-icon.white {
     background: var(--pe-bg);
 }
 
+.local_coursegen_pe .pe-thumb-wrap {
+    cursor: grab;
+}
+
+.local_coursegen_pe .is-dragging {
+    opacity: .4;
+}
+
+.local_coursegen_pe .is-drop-before {
+    box-shadow: 0 -3px 0 var(--pe-primary);
+}
+
+.local_coursegen_pe .is-drop-after {
+    box-shadow: 0 3px 0 var(--pe-primary);
+}
+
 .local_coursegen_pe .pe-thumb {
     display: grid;
     grid-template-columns: 1rem minmax(0, 1fr);
@@ -697,6 +713,7 @@ span.local_coursegen-sparkles-icon.white {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    cursor: grab;
 }
 
 .local_coursegen_pe .pe-bhead .pe-label {

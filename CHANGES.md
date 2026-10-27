@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026102616
+
+### Changed
+- **Slides and elements are reordered by dragging**  
+  A slide is moved by dragging its miniature in the list, and an element by dragging its header inside the slide. A line shows where it will land. The options to move up and down were removed from the menus. For the keyboard, Alt with the up and down arrows moves the slide miniature or the element where the focus is.
+
 ## [2.0.10] - 2026102615
 
 ### Fixed

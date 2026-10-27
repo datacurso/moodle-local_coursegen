@@ -23,7 +23,7 @@
     {"id": "b1", "label": "Title", "isAi": true, "isFixed": false, "isHtml": false, "canHtml": false, "canFix": true,
      "isTitle": true, "instr": "", "placeholder": "Tell the AI what the title should say", "busy": false, "hasresult": false}
 }}
-<div class="pe-block {{#isText}}pe-block-text{{/isText}}{{#isImage}}pe-block-image{{/isImage}}" data-block-id="{{id}}">
+<div class="pe-block {{#isText}}pe-block-text{{/isText}}{{#isImage}}pe-block-image{{/isImage}}" data-block-id="{{id}}" data-drag-block="{{id}}">
     {{#busy}}{{> local_coursegen/presentation_editor_busy}}{{/busy}}
     <div class="pe-bhead">
         <label class="pe-label" for="pe-f-{{id}}">{{label}} <span class="pe-tag {{#isAi}}is-ai{{/isAi}}">{{#isAi}}{{#str}} pe_tag_ai, local_coursegen {{/str}}{{/isAi}}{{^isAi}}{{#str}} pe_tag_fixed, local_coursegen {{/str}}{{/isAi}}</span></label>
@@ -36,8 +36,6 @@
                 {{^isFixed}}<button type="button" class="dropdown-item" data-action="local_coursegen/pe/mode" data-block="{{id}}" data-mode="fixed">{{#str}} pe_menu_fixed, local_coursegen {{/str}}</button>{{/isFixed}}
                 {{#canHtml}}{{^isHtml}}<button type="button" class="dropdown-item" data-action="local_coursegen/pe/mode" data-block="{{id}}" data-mode="html">{{#str}} pe_menu_html, local_coursegen {{/str}}</button>{{/isHtml}}{{/canHtml}}
                 {{/canFix}}
-                <button type="button" class="dropdown-item" data-action="local_coursegen/pe/bup" data-block="{{id}}">{{#str}} cpb_move_up, local_coursegen {{/str}}</button>
-                <button type="button" class="dropdown-item" data-action="local_coursegen/pe/bdown" data-block="{{id}}">{{#str}} cpb_move_down, local_coursegen {{/str}}</button>
                 <button type="button" class="dropdown-item" data-action="local_coursegen/pe/copyopen" data-block="{{id}}">{{#str}} pe_copy, local_coursegen {{/str}}</button>
                 <button type="button" class="dropdown-item text-danger" data-action="local_coursegen/pe/bdel" data-block="{{id}}">{{#str}} cpb_remove, local_coursegen {{/str}}</button>
             </div>
