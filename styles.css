@@ -491,15 +491,14 @@ span.local_coursegen-sparkles-icon.white {
 }
 
 .local_coursegen_pe .is-dragging {
-    opacity: .4;
+    border-radius: .6rem;
+    outline: 2px dashed var(--pe-primary);
+    outline-offset: -2px;
+    background: var(--pe-primary-soft);
 }
 
-.local_coursegen_pe .is-drop-before {
-    box-shadow: 0 -3px 0 var(--pe-primary);
-}
-
-.local_coursegen_pe .is-drop-after {
-    box-shadow: 0 3px 0 var(--pe-primary);
+.local_coursegen_pe .is-dragging > * {
+    visibility: hidden;
 }
 
 .local_coursegen_pe .pe-thumb {

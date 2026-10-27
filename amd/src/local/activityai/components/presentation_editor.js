@@ -40,6 +40,7 @@ import * as model from 'local_coursegen/local/activityai/presentation_model';
 import {buildContext} from 'local_coursegen/local/activityai/presentation_view';
 
 const COMPONENT = 'local_coursegen';
+const DRAG_MS = 150;
 const MENU_ITEM_HEIGHT = 40;
 const MENU_PADDING = 16;
 const KIND = 'course_presentation';
@@ -896,63 +897,89 @@ export default class extends BaseComponent {
         if (!item) {
             return;
         }
-        this.drag = slide ? {type: 'slide', key: Number(slide.dataset.dragSlide)} : {type: 'block', key: block.dataset.dragBlock};
+        this.drag = {type: slide ? 'slide' : 'block', item, committed: false};
         event.dataTransfer.effectAllowed = 'move';
-        event.dataTransfer.setData('text/plain', String(this.drag.key));
-        item.classList.add('is-dragging');
+        event.dataTransfer.setData('text/plain', 'move');
+        // The browser takes the picture that follows the pointer now; the item becomes the empty slot after that.
+        setTimeout(() => item.classList.add('is-dragging'), 0);
     }
 
+    /**
+     * The item being dragged is moved in the list while the pointer goes over the others, so the empty slot always shows where
+     * it will stay.
+     *
+     * @param {DragEvent} event
+     */
     _overDrag(event) {
-        if (!this.drag) {
-            return;
-        }
-        const over = event.target.closest(this.drag.type === 'slide' ? '[data-drag-slide]' : '[data-drag-block]');
-        this._clearMarks();
-        if (!over) {
-            this.drag.over = null;
+        const drag = this.drag;
+        if (!drag) {
             return;
         }
         event.preventDefault();
         event.dataTransfer.dropEffect = 'move';
+        const over = event.target.closest(drag.type === 'slide' ? '[data-drag-slide]' : '[data-drag-block]');
+        if (!over || over === drag.item) {
+            return;
+        }
         const rect = over.getBoundingClientRect();
         const after = event.clientY > rect.top + rect.height / 2;
-        over.classList.add(after ? 'is-drop-after' : 'is-drop-before');
-        this.drag.over = {key: this.drag.type === 'slide' ? Number(over.dataset.dragSlide) : over.dataset.dragBlock, after};
+        const next = after ? over.nextElementSibling : over;
+        if (next !== drag.item && drag.item.nextElementSibling !== next) {
+            this._moveInList(drag.item, next);
+        }
+    }
+
+    /**
+     * @param {HTMLElement} item
+     * @param {HTMLElement|null} next The element the item goes before.
+     */
+    _moveInList(item, next) {
+        const parent = item.parentElement;
+        const siblings = [...parent.children].filter((node) => node !== item);
+        const before = new Map(siblings.map((node) => [node, node.getBoundingClientRect().top]));
+        parent.insertBefore(item, next);
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            return;
+        }
+        siblings.forEach((node) => {
+            const delta = before.get(node) - node.getBoundingClientRect().top;
+            if (delta) {
+                const slide = [{transform: 'translateY(' + delta + 'px)'}, {transform: 'none'}];
+                node.animate(slide, {duration: DRAG_MS, easing: 'ease'});
+            }
+        });
     }
 
     async _dropDrag(event) {
         const drag = this.drag;
-        if (!drag || !drag.over) {
+        if (!drag) {
             return;
         }
         event.preventDefault();
-        const list = drag.type === 'slide' ? this.model.slides : this._slide().blocks;
-        const find = (key) => (drag.type === 'slide' ? key : list.findIndex((item) => item.id === key));
-        const from = find(drag.key);
-        let to = find(drag.over.key) + (drag.over.after ? 1 : 0);
-        if (from < to) {
-            to--;
-        }
+        drag.committed = true;
+        const slides = drag.type === 'slide';
+        const list = slides ? this.model.slides : this._slide().blocks;
+        const keys = [...drag.item.parentElement.querySelectorAll(slides ? '[data-drag-slide]' : '[data-drag-block]')]
+            .map((node) => (slides ? Number(node.dataset.dragSlide) : node.dataset.dragBlock));
+        const ordered = keys.map((key) => (slides ? list[key] : list.find((item) => item.id === key)));
+        const current = this._slide();
+        list.splice(0, list.length, ...ordered);
+        this.model.current = this.model.slides.indexOf(current);
         this._endDrag();
-        if (to !== from) {
-            const current = this._slide();
-            list.splice(to, 0, list.splice(from, 1)[0]);
-            this.model.current = this.model.slides.indexOf(current);
-            await this._render();
-        }
+        await this._render();
     }
 
-    _clearMarks() {
-        this.element.querySelectorAll('.is-drop-before, .is-drop-after').forEach((node) => {
-            node.classList.remove('is-drop-before', 'is-drop-after');
-        });
-    }
-
+    /**
+     * When the item is dropped out of the list the list goes back to how it was.
+     */
     _endDrag() {
-        this._clearMarks();
+        const drag = this.drag;
+        this.drag = null;
         this.element.querySelectorAll('.is-dragging').forEach((node) => node.classList.remove('is-dragging'));
         this.element.querySelectorAll('[data-drag-block][draggable]').forEach((node) => node.removeAttribute('draggable'));
-        this.drag = null;
+        if (drag && !drag.committed) {
+            this._render();
+        }
     }
 
     /**
