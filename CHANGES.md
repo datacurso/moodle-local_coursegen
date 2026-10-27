@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026102603
+
+### Changed
+- **The build number is above the one the other plugins require**  
+  The build was raised so the plugins that need a recent build of this one can be installed again. Nothing else changed.
+
 ## [2.0.10] - 2026101245
 
 ### Changed
