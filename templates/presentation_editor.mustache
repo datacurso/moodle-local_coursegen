@@ -49,7 +49,7 @@
                 </span>
                 {{/hasfile}}
                 <label class="pe-lang">
-                    <select data-field="lang" aria-label="{{#str}} pe_lang, local_coursegen {{/str}}">
+                    <select class="custom-select custom-select-sm" data-field="lang" aria-label="{{#str}} pe_lang, local_coursegen {{/str}}">
                         {{#languages}}<option value="{{code}}" {{#selected}}selected{{/selected}}>{{name}}</option>{{/languages}}
                     </select>
                 </label>
@@ -67,9 +67,9 @@
         {{#auto}}
         <div class="pe-range">
             <span>{{#str}} pe_range_between, local_coursegen {{/str}}</span>
-            <input type="number" min="3" max="30" data-field="min" class="{{#rangeError}}is-invalid{{/rangeError}}" {{#rangeError}}aria-invalid="true"{{/rangeError}} value="{{min}}" aria-label="{{#str}} pe_range_min, local_coursegen {{/str}}">
+            <input type="number" min="3" max="30" data-field="min" class="form-control form-control-sm {{#rangeError}}is-invalid{{/rangeError}}" {{#rangeError}}aria-invalid="true"{{/rangeError}} value="{{min}}" aria-label="{{#str}} pe_range_min, local_coursegen {{/str}}">
             <span>{{#str}} pe_range_and, local_coursegen {{/str}}</span>
-            <input type="number" min="3" max="30" data-field="max" class="{{#rangeError}}is-invalid{{/rangeError}}" {{#rangeError}}aria-invalid="true"{{/rangeError}} value="{{max}}" aria-label="{{#str}} pe_range_max, local_coursegen {{/str}}">
+            <input type="number" min="3" max="30" data-field="max" class="form-control form-control-sm {{#rangeError}}is-invalid{{/rangeError}}" {{#rangeError}}aria-invalid="true"{{/rangeError}} value="{{max}}" aria-label="{{#str}} pe_range_max, local_coursegen {{/str}}">
             <span>{{#str}} pe_range_unit, local_coursegen {{/str}}</span>
         </div>
         {{/auto}}
@@ -121,7 +121,7 @@
             </div>
             <label class="pe-add-element">
                 <span class="sr-only">{{#str}} pe_add_element, local_coursegen {{/str}}</span>
-                <select data-field="addtype" class="{{#slideError}}is-invalid{{/slideError}}" {{#slideError}}aria-invalid="true"{{/slideError}}>
+                <select data-field="addtype" class="custom-select custom-select-sm {{#slideError}}is-invalid{{/slideError}}" {{#slideError}}aria-invalid="true"{{/slideError}}>
                     <option value="">{{#str}} pe_add_element, local_coursegen {{/str}}</option>
                     {{#addchips}}<option value="{{type}}">{{label}}</option>{{/addchips}}
                 </select>

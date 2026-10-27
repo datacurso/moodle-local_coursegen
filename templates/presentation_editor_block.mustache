@@ -52,15 +52,15 @@
     {{/copyopen}}
 
     {{#isTitle}}
-    {{#isAi}}<input id="pe-f-{{id}}" type="text" class="pe-input {{#error}}is-invalid{{/error}}" {{#error}}aria-invalid="true"{{/error}} data-block="{{id}}" data-f="instr" value="{{instr}}" placeholder="{{placeholder}}">{{/isAi}}
-    {{^isAi}}<input id="pe-f-{{id}}" type="text" class="pe-input {{#error}}is-invalid{{/error}}" {{#error}}aria-invalid="true"{{/error}} data-block="{{id}}" data-f="value" value="{{value}}" placeholder="{{#str}} pe_fixed_title, local_coursegen {{/str}}">{{/isAi}}
+    {{#isAi}}<input id="pe-f-{{id}}" type="text" class="form-control pe-input {{#error}}is-invalid{{/error}}" {{#error}}aria-invalid="true"{{/error}} data-block="{{id}}" data-f="instr" value="{{instr}}" placeholder="{{placeholder}}">{{/isAi}}
+    {{^isAi}}<input id="pe-f-{{id}}" type="text" class="form-control pe-input {{#error}}is-invalid{{/error}}" {{#error}}aria-invalid="true"{{/error}} data-block="{{id}}" data-f="value" value="{{value}}" placeholder="{{#str}} pe_fixed_title, local_coursegen {{/str}}">{{/isAi}}
     {{/isTitle}}
 
     {{#isText}}
-    {{#isAi}}<textarea id="pe-f-{{id}}" class="pe-input {{#error}}is-invalid{{/error}}" {{#error}}aria-invalid="true"{{/error}} rows="2" data-block="{{id}}" data-f="instr" placeholder="{{placeholder}}">{{instr}}</textarea>{{/isAi}}
-    {{#isFixed}}<textarea id="pe-f-{{id}}" class="pe-input {{#error}}is-invalid{{/error}}" {{#error}}aria-invalid="true"{{/error}} rows="3" data-block="{{id}}" data-f="fixedtext" placeholder="{{#str}} pe_fixed_text, local_coursegen {{/str}}">{{fixedtext}}</textarea>{{/isFixed}}
+    {{#isAi}}<textarea id="pe-f-{{id}}" class="form-control pe-input {{#error}}is-invalid{{/error}}" {{#error}}aria-invalid="true"{{/error}} rows="2" data-block="{{id}}" data-f="instr" placeholder="{{placeholder}}">{{instr}}</textarea>{{/isAi}}
+    {{#isFixed}}<textarea id="pe-f-{{id}}" class="form-control pe-input {{#error}}is-invalid{{/error}}" {{#error}}aria-invalid="true"{{/error}} rows="3" data-block="{{id}}" data-f="fixedtext" placeholder="{{#str}} pe_fixed_text, local_coursegen {{/str}}">{{fixedtext}}</textarea>{{/isFixed}}
     {{#isHtml}}
-    <textarea id="pe-f-{{id}}" class="pe-input pe-code {{#error}}is-invalid{{/error}}" {{#error}}aria-invalid="true"{{/error}} rows="5" data-block="{{id}}" data-f="html" placeholder="{{#str}} pe_html_placeholder, local_coursegen {{/str}}">{{html}}</textarea>
+    <textarea id="pe-f-{{id}}" class="form-control pe-input pe-code {{#error}}is-invalid{{/error}}" {{#error}}aria-invalid="true"{{/error}} rows="5" data-block="{{id}}" data-f="html" placeholder="{{#str}} pe_html_placeholder, local_coursegen {{/str}}">{{html}}</textarea>
     <p class="pe-help">{{#str}} pe_html_help, local_coursegen {{/str}} {{#str}} pe_html_markers, local_coursegen {{/str}} <strong data-markers="{{id}}">{{markers}}</strong></p>
     {{/isHtml}}
     {{/isText}}
@@ -71,13 +71,13 @@
         <button type="button" class="pe-link" data-action="local_coursegen/pe/removeimage" data-block="{{id}}">{{#str}} pe_image_remove, local_coursegen {{/str}}</button></div>
     {{/uploaded}}
     {{^uploaded}}
-    {{#isAi}}<textarea id="pe-f-{{id}}" class="pe-input {{#error}}is-invalid{{/error}}" {{#error}}aria-invalid="true"{{/error}} rows="2" data-block="{{id}}" data-f="instr" placeholder="{{placeholder}}">{{instr}}</textarea>{{/isAi}}
+    {{#isAi}}<textarea id="pe-f-{{id}}" class="form-control pe-input {{#error}}is-invalid{{/error}}" {{#error}}aria-invalid="true"{{/error}} rows="2" data-block="{{id}}" data-f="instr" placeholder="{{placeholder}}">{{instr}}</textarea>{{/isAi}}
     <button type="button" class="pe-link {{#error}}is-invalid{{/error}}" {{#error}}aria-invalid="true"{{/error}} data-action="local_coursegen/pe/uploadimage" data-block="{{id}}"><i class="fa fa-upload" aria-hidden="true"></i> {{#str}} pe_image_upload, local_coursegen {{/str}}</button>
     {{/uploaded}}
     {{/isImage}}
 
     {{#isVideo}}
-    <input id="pe-f-{{id}}" type="url" class="pe-input {{#error}}is-invalid{{/error}}" {{#error}}aria-invalid="true"{{/error}} data-block="{{id}}" data-f="url" value="{{url}}" placeholder="https://www.youtube.com/watch?v=">
+    <input id="pe-f-{{id}}" type="url" class="form-control pe-input {{#error}}is-invalid{{/error}}" {{#error}}aria-invalid="true"{{/error}} data-block="{{id}}" data-f="url" value="{{url}}" placeholder="https://www.youtube.com/watch?v=">
     <p class="pe-help">{{#str}} pe_video_help, local_coursegen {{/str}}</p>
     {{/isVideo}}
 
@@ -85,17 +85,17 @@
     <div class="pe-kinds" role="group" aria-label="{{label}}">
         {{#kinds}}<button type="button" data-action="local_coursegen/pe/qkind" data-block="{{id}}" data-kind="{{key}}" aria-pressed="{{#active}}true{{/active}}{{^active}}false{{/active}}">{{label}}</button>{{/kinds}}
     </div>
-    {{#isAi}}<textarea id="pe-f-{{id}}" class="pe-input {{#error}}is-invalid{{/error}}" {{#error}}aria-invalid="true"{{/error}} rows="2" data-block="{{id}}" data-f="instr" placeholder="{{placeholder}}">{{instr}}</textarea>{{/isAi}}
+    {{#isAi}}<textarea id="pe-f-{{id}}" class="form-control pe-input {{#error}}is-invalid{{/error}}" {{#error}}aria-invalid="true"{{/error}} rows="2" data-block="{{id}}" data-f="instr" placeholder="{{placeholder}}">{{instr}}</textarea>{{/isAi}}
     {{^isAi}}
     {{#hasquestion}}
-    <input id="pe-f-{{id}}" type="text" class="pe-input {{#error}}is-invalid{{/error}}" {{#error}}aria-invalid="true"{{/error}} data-block="{{id}}" data-f="qprompt" value="{{qprompt}}" placeholder="{{#str}} pe_q_prompt, local_coursegen {{/str}}">
+    <input id="pe-f-{{id}}" type="text" class="form-control pe-input {{#error}}is-invalid{{/error}}" {{#error}}aria-invalid="true"{{/error}} data-block="{{id}}" data-f="qprompt" value="{{qprompt}}" placeholder="{{#str}} pe_q_prompt, local_coursegen {{/str}}">
     {{#qmulti}}{{#qoptions}}
     <label class="pe-option"><input type="radio" name="pe-correct-{{id}}" data-block="{{id}}" data-f="qcorrect" data-option="{{index}}" {{#correct}}checked{{/correct}} title="{{#str}} pe_correct, local_coursegen {{/str}}" aria-label="{{#str}} pe_correct, local_coursegen {{/str}}">
-        <input type="text" class="pe-input" data-block="{{id}}" data-f="qoption" data-option="{{index}}" value="{{text}}" aria-label="{{#str}} pe_option, local_coursegen {{/str}}"></label>
+        <input type="text" class="form-control pe-input" data-block="{{id}}" data-f="qoption" data-option="{{index}}" value="{{text}}" aria-label="{{#str}} pe_option, local_coursegen {{/str}}"></label>
     {{/qoptions}}{{/qmulti}}
     {{#qtf}}<div class="pe-tf"><label><input type="radio" name="pe-tf-{{id}}" data-block="{{id}}" data-f="qtf" value="true" {{#qtrue}}checked{{/qtrue}}> {{#str}} pe_true, local_coursegen {{/str}}</label>
         <label><input type="radio" name="pe-tf-{{id}}" data-block="{{id}}" data-f="qtf" value="false" {{^qtrue}}checked{{/qtrue}}> {{#str}} pe_false, local_coursegen {{/str}}</label></div>{{/qtf}}
-    {{#qfill}}<textarea class="pe-input" rows="3" data-block="{{id}}" data-f="qtext" aria-label="{{#str}} pe_kind_fill_in_the_blanks, local_coursegen {{/str}}">{{qtext}}</textarea>
+    {{#qfill}}<textarea class="form-control pe-input" rows="3" data-block="{{id}}" data-f="qtext" aria-label="{{#str}} pe_kind_fill_in_the_blanks, local_coursegen {{/str}}">{{qtext}}</textarea>
         <p class="pe-help">{{#str}} pe_fill_help, local_coursegen {{/str}}</p>{{/qfill}}
     {{/hasquestion}}
     {{/isAi}}

@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026102609
+
+### Changed
+- **The Course Presentation editor uses the standard Moodle form styles**  
+  The text fields, selects and number fields of the editor are now the standard Moodle form controls, so the focus ring and the colours are the ones of the theme and keep their accessibility. The frame that surrounded a whole element when one of its fields had the focus was removed.
+
 ## [2.0.10] - 2026102608
 
 ### Changed

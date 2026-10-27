@@ -321,15 +321,6 @@ span.local_coursegen-sparkles-icon.white {
     font-size: .875rem;
 }
 
-.local_coursegen_pe .pe-lang select {
-    max-width: 11rem;
-    padding: .3rem .5rem;
-    border: 1px solid var(--pe-border);
-    border-radius: .5rem;
-    background: var(--pe-card);
-    color: var(--pe-fg);
-}
-
 .local_coursegen_pe .pe-file {
     display: inline-flex;
     align-items: center;
@@ -358,13 +349,6 @@ span.local_coursegen-sparkles-icon.white {
     margin-bottom: .5rem;
     color: var(--pe-muted-fg);
     font-size: .875rem;
-}
-
-.local_coursegen_pe .pe-range input {
-    width: 4rem;
-    padding: .25rem .4rem;
-    border: 1px solid var(--pe-border);
-    border-radius: .4rem;
 }
 
 /* The editor lays the slide out as it will look: the brief on top, then a rail of slides and the selected one. */
@@ -399,8 +383,8 @@ span.local_coursegen-sparkles-icon.white {
 }
 
 .local_coursegen_pe .pe-composer:focus-within {
-    border-color: var(--pe-ai);
-    box-shadow: 0 0 0 3px var(--pe-ai-soft);
+    border-color: #0f6cbf;
+    box-shadow: 0 0 0 .2rem rgba(15, 108, 191, .25);
 }
 
 .local_coursegen_pe .pe-composer:has([aria-invalid="true"]) {
@@ -729,12 +713,6 @@ span.local_coursegen-sparkles-icon.white {
     background: var(--pe-ai-soft);
 }
 
-.local_coursegen_pe .pe-block:focus-within {
-    border-style: solid;
-    border-color: var(--pe-ai);
-    background: var(--pe-card);
-}
-
 .local_coursegen_pe .pe-bhead {
     display: flex;
     align-items: center;
@@ -823,19 +801,7 @@ span.local_coursegen-sparkles-icon.white {
 }
 
 .local_coursegen_pe .pe-input {
-    display: block;
-    width: 100%;
-    padding: .5rem .7rem;
-    border: 1px solid var(--pe-border);
-    border-radius: .5rem;
-    background: var(--pe-card);
-    color: var(--pe-fg);
     resize: none;
-}
-
-.local_coursegen_pe .pe-input:focus {
-    border-color: var(--pe-muted-fg);
-    outline: 0;
 }
 
 .local_coursegen_pe .pe-code {
@@ -942,16 +908,6 @@ span.local_coursegen-sparkles-icon.white {
 
 .local_coursegen_pe .pe-result-html > :last-child {
     margin-bottom: 0;
-}
-
-.local_coursegen_pe .pe-add-element select {
-    padding: .4rem .7rem;
-    border: 1px dashed var(--pe-muted-fg);
-    border-radius: .5rem;
-    background: transparent;
-    color: var(--pe-muted-fg);
-    font-weight: 600;
-    cursor: pointer;
 }
 
 .local_coursegen_pe .pe-final {
