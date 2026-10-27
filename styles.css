@@ -504,6 +504,7 @@ span.local_coursegen-sparkles-icon.white {
 
 .local_coursegen_pe .pe-thumb {
     display: grid;
+    width: 100%;
     grid-template-columns: 1rem minmax(0, 1fr);
     gap: .4rem;
     padding: 0;

@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026102617
+
+### Fixed
+- **The miniature of a slide has its size again**  
+  The miniature collapsed to an empty small box after it was made draggable. It fills the width of the list again.
+
 ## [2.0.10] - 2026102616
 
 ### Changed
