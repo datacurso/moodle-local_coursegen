@@ -25,6 +25,7 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+import $ from 'jquery';
 import {BaseComponent} from 'core/reactive';
 import Templates from 'core/templates';
 import Notification from 'core/notification';
@@ -39,6 +40,8 @@ import * as model from 'local_coursegen/local/activityai/presentation_model';
 import {buildContext} from 'local_coursegen/local/activityai/presentation_view';
 
 const COMPONENT = 'local_coursegen';
+const MENU_ITEM_HEIGHT = 40;
+const MENU_PADDING = 16;
 const KIND = 'course_presentation';
 
 /** The part of a slide the AI writes again for each element. */
@@ -105,6 +108,10 @@ export default class extends BaseComponent {
         this.addEventListener(this.element, 'input', this._handleInput);
         this.addEventListener(this.element, 'change', this._handleChange);
         this.addEventListener(this.element, 'keydown', this._handleKeydown);
+        const shown = 'show.bs.dropdown.' + COMPONENT;
+        $(document).off(shown).on(shown, '.local_coursegen_pe .dropdown', (event) => {
+            this._placeMenu(event.target.querySelector('[data-toggle="dropdown"]'));
+        });
         this._sync();
     }
 
@@ -783,6 +790,48 @@ export default class extends BaseComponent {
         } else if (question && field === 'qoption') {
             question.options[Number(target.dataset.option)].text = target.value;
         }
+    }
+
+    /**
+     * Opens the menu upwards when it does not fit below the button in the part of the window that can be seen: the modal
+     * scrolls and the bar with the main action stays in front.
+     *
+     * @param {HTMLElement} toggle The button of the menu.
+     */
+    _placeMenu(toggle) {
+        const dropdown = toggle.parentElement;
+        const menu = dropdown.querySelector('.dropdown-menu');
+        if (!menu) {
+            return;
+        }
+        const bar = this.element.querySelector('.pe-final');
+        const view = this._visibleArea(toggle);
+        const rect = toggle.getBoundingClientRect();
+        const bottom = Math.min(view.bottom, bar ? bar.getBoundingClientRect().top : Infinity);
+        const below = bottom - rect.bottom - MENU_PADDING;
+        const above = rect.top - view.top - MENU_PADDING;
+        const needed = menu.children.length * MENU_ITEM_HEIGHT + MENU_PADDING;
+        const up = below < needed && above > below;
+        const room = up ? above : below;
+        dropdown.classList.toggle('dropup', up);
+        menu.style.maxHeight = needed > room ? Math.max(room, MENU_ITEM_HEIGHT * 2) + 'px' : '';
+    }
+
+    /**
+     * @param {HTMLElement} element
+     * @returns {{top: number, bottom: number}} The part of the window where the element can be seen: the window cut by every
+     *     ancestor that scrolls or clips.
+     */
+    _visibleArea(element) {
+        const area = {top: 0, bottom: window.innerHeight};
+        for (let node = element.parentElement; node && node !== document.body; node = node.parentElement) {
+            if (/(auto|scroll|hidden)/.test(getComputedStyle(node).overflowY)) {
+                const rect = node.getBoundingClientRect();
+                area.top = Math.max(area.top, rect.top);
+                area.bottom = Math.min(area.bottom, rect.bottom);
+            }
+        }
+        return area;
     }
 
     /**

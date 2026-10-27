@@ -717,6 +717,10 @@ span.local_coursegen-sparkles-icon.white {
     color: var(--pe-ai);
 }
 
+.local_coursegen_pe .pe-menu .dropdown-menu {
+    overflow-y: auto;
+}
+
 .local_coursegen_pe .pe-menu-toggle::after {
     display: none;
 }

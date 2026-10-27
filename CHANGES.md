@@ -2,11 +2,11 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
-## [2.0.10] - 2026102613
+## [2.0.10] - 2026102614
 
 ### Fixed
 - **The menus of the Course Presentation editor are accessible**  
-  The options menus of the slides and of each element are now the standard Moodle dropdown menus. Only one is open at a time, they close when the person clicks outside or presses Escape, and they can be used with the keyboard. Before, several could stay open at once and cover the fields. Pressing Escape with a menu open closes only the menu and no longer the whole window.
+  The options menus of the slides and of each element are now the standard Moodle dropdown menus. Only one is open at a time, they close when the person clicks outside or presses Escape, and they can be used with the keyboard. Before, several could stay open at once and cover the fields. Pressing Escape with a menu open closes only the menu and no longer the whole window. A menu opens upwards when it does not fit below the button in the part of the window that can be seen, and it scrolls when there is little room on both sides.
 
 ## [2.0.10] - 2026102612
 
