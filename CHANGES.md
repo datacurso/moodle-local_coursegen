@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026102615
+
+### Fixed
+- **The menu of a slide says Move up and Move down**  
+  The slides are listed vertically, so the options to move a slide now say Move up and Move down instead of Move left and Move right.
+
 ## [2.0.10] - 2026102614
 
 ### Fixed
