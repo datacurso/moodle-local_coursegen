@@ -240,7 +240,6 @@ export default class extends BaseComponent {
      */
     async _run(action, button) {
         const handlers = {
-            generate: () => this._generate(),
             create: () => this._create(),
             regen: () => this._regenerate(button.dataset.block),
             attach: () => this._attach(),
@@ -495,15 +494,6 @@ export default class extends BaseComponent {
      */
     _rewrite(index, instruction, part) {
         return repository.rewriteSlide(this._job({slides: this._serviceSlides(), index, instruction, part}));
-    }
-
-    /**
-     * Write all the presentation from the general instruction and what each element asks for.
-     */
-    async _generate() {
-        if (await this._confirmRewrite()) {
-            await this._write();
-        }
     }
 
     /**
@@ -804,8 +794,8 @@ export default class extends BaseComponent {
         if (!this.model) {
             return;
         }
-        if (target.dataset.field === 'auto') {
-            this.model.mode = target.checked ? 'auto' : 'manual';
+        if (target.dataset.field === 'mode') {
+            this.model.mode = target.value;
             await this._render();
             return;
         }

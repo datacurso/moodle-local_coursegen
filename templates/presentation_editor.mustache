@@ -34,13 +34,11 @@
 }}
 <div class="local_coursegen_pe">
     <div class="pe-brief">
-        <label class="pe-cap" for="pe-topic"><i class="fa fa-magic" aria-hidden="true"></i>{{#str}} pe_ctx_label, local_coursegen {{/str}}</label>
-        <textarea id="pe-topic" class="pe-input pe-prompt {{#topicError}}is-invalid{{/topicError}}" rows="3" data-field="topic" {{#topicError}}aria-invalid="true" aria-describedby="pe-topic-error"{{/topicError}}
-                  placeholder="{{#str}} pe_ctx_placeholder, local_coursegen {{/str}}">{{topic}}</textarea>
-        {{#topicError}}<p class="pe-error" id="pe-topic-error" data-error-for="topic">{{.}}</p>{{/topicError}}
-        <div class="pe-tools">
+        <div class="pe-brief-head">
+            <label class="pe-cap" for="pe-topic"><i class="fa fa-magic" aria-hidden="true"></i>{{#str}} pe_ctx_label, local_coursegen {{/str}}</label>
+            <span class="pe-grow"></span>
             {{^hasfile}}
-            <button type="button" class="pe-btn pe-btn-small" data-action="local_coursegen/pe/attach"><i class="fa fa-paperclip" aria-hidden="true"></i>{{#str}} pe_attach, local_coursegen {{/str}}</button>
+            <button type="button" class="pe-link" data-action="local_coursegen/pe/attach"><i class="fa fa-paperclip" aria-hidden="true"></i> {{#str}} pe_attach, local_coursegen {{/str}}</button>
             {{/hasfile}}
             {{#hasfile}}
             <span class="pe-file">
@@ -50,23 +48,23 @@
             </span>
             {{/hasfile}}
             <label class="pe-lang">
-                <span class="sr-only">{{#str}} pe_lang, local_coursegen {{/str}}</span>
                 <i class="fa fa-globe" aria-hidden="true"></i>
                 <select data-field="lang" aria-label="{{#str}} pe_lang, local_coursegen {{/str}}">
                     {{#languages}}<option value="{{code}}" {{#selected}}selected{{/selected}}>{{name}}</option>{{/languages}}
                 </select>
             </label>
-            <input id="pe-name" type="text" class="pe-input pe-name" data-field="name" value="{{name}}"
-                   placeholder="{{#str}} pe_name_label, local_coursegen {{/str}}" aria-label="{{#str}} pe_name_label, local_coursegen {{/str}}"
-                   title="{{#str}} pe_name_help, local_coursegen {{/str}}">
         </div>
+        <textarea id="pe-topic" class="pe-input pe-prompt {{#topicError}}is-invalid{{/topicError}}" rows="2" data-field="topic" {{#topicError}}aria-invalid="true" aria-describedby="pe-topic-error"{{/topicError}}
+                  placeholder="{{#str}} pe_ctx_placeholder, local_coursegen {{/str}}">{{topic}}</textarea>
+        {{#topicError}}<p class="pe-error" id="pe-topic-error" data-error-for="topic">{{.}}</p>{{/topicError}}
     </div>
 
     <div class="pe-slides-head">
         <h3 class="pe-h">{{#str}} pe_strip, local_coursegen {{/str}}</h3>
-        <label class="pe-check">
-            <input type="checkbox" data-field="auto" {{#auto}}checked{{/auto}}> {{#str}} pe_auto_check, local_coursegen {{/str}}
-        </label>
+        <div class="pe-seg" role="radiogroup" aria-label="{{#str}} pe_strip, local_coursegen {{/str}}">
+            <label class="{{#manual}}is-on{{/manual}}"><input type="radio" name="pe-mode" data-field="mode" value="manual" {{#manual}}checked{{/manual}}>{{#str}} pe_mode_manual, local_coursegen {{/str}}</label>
+            <label class="{{#auto}}is-on{{/auto}}"><input type="radio" name="pe-mode" data-field="mode" value="auto" {{#auto}}checked{{/auto}}>{{#str}} pe_mode_auto, local_coursegen {{/str}}</label>
+        </div>
         {{#auto}}
         <div class="pe-range">
             <span>{{#str}} pe_range_between, local_coursegen {{/str}}</span>
@@ -160,9 +158,7 @@
     <div class="pe-final">
         {{#error}}<div class="pe-alert" role="alert" data-region="local_coursegen/pe/error">{{error}}</div>{{/error}}
         <div class="pe-final-row">
-            <p class="pe-help">{{#str}} pe_create_help, local_coursegen {{/str}}</p>
             <span class="pe-grow"></span>
-            <button type="button" class="pe-btn" data-action="local_coursegen/pe/generate" {{#busy}}disabled{{/busy}}>{{#str}} pe_review_link, local_coursegen {{/str}}</button>
             <button type="button" class="pe-btn pe-btn-primary" data-action="local_coursegen/pe/create" {{#busy}}disabled{{/busy}}>
                 {{#busy}}<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>{{/busy}}
                 {{#str}} pe_create, local_coursegen {{/str}}

@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026102605
+
+### Changed
+- **The Course Presentation editor only has what it needs**  
+  The activity name field and the button to only write the content were removed: the AI proposes the name and there is one main action, Create activity. The reference file and the language are in the line of the general instruction. The number of slides is chosen with a two-option switch, I add the slides or The AI decides, instead of a checkbox.
+
 ## [2.0.10] - 2026102604
 
 ### Changed
