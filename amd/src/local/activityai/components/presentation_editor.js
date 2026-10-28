@@ -731,7 +731,10 @@ export default class extends BaseComponent {
                 slides: this._serviceSlides(),
             }));
             await this._dropDraft(true);
-            await createActivityFromJob(this.reactive, await loadActivityaiStrings());
+            if (!await createActivityFromJob(this.reactive, await loadActivityaiStrings())) {
+                // The activity was not created: the work goes on and is saved again.
+                this.autosave.ready = true;
+            }
         } catch (error) {
             this.autosave.last = '';
             this.autosave.ready = true;
@@ -1289,7 +1292,8 @@ export default class extends BaseComponent {
 
     /**
      * Delete the saved work. It has no use once the activity is created or the person starts again. When the activity is about
-     * to be created the files stay: if the creation fails the person goes on, and the daily task deletes them later.
+     * to be created the files stay: if the creation fails the person goes on, and the daily task deletes them later. Nothing is
+     * saved again until it is known that the activity was not created, or the page leaving would bring the draft back.
      *
      * @param {boolean} keepfiles
      */
@@ -1305,7 +1309,7 @@ export default class extends BaseComponent {
             window.console.warn(error);
         }
         save.last = '';
-        save.ready = true;
+        save.ready = !keepfiles;
     }
 
     /**

@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026102628
+
+### Fixed
+- **The AI saying "null" for a video no longer stops the activity**  
+  When the AI decides the slides and it answered with a word such as null instead of an empty video address, the editor made a video element that asked for a YouTube link in a slide the person could not see. Now only a YouTube address makes a video element. The creation also works with a presentation of a single slide.
+
 ## [2.0.10] - 2026102627
 
 ### Fixed

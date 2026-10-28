@@ -228,9 +228,10 @@ export const slideFromWritten = (written) => {
             block.prompt = written.image_prompt;
         });
     }
-    if (written.video_url) {
+    // The AI sometimes answers "null" or another word for no video: only a YouTube address makes an element.
+    if (typeof written.video_url === 'string' && YOUTUBE.test(written.video_url.trim())) {
         add('video', (block) => {
-            block.url = written.video_url;
+            block.url = written.video_url.trim();
         });
     }
     if (written.question) {
