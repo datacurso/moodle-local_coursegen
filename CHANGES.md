@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026102624
+
+### Changed
+- **Nothing goes to the AI service until the activity is written, and the files stay in the draft**  
+  Adding a picture to an element or a reference file used to open a job in the AI service and send the file right away. Now the file is kept in Moodle, in the area of the person, and goes to the service only when the person asks the AI to write the activity or to create it. The pictures and the reference file are part of the draft: after reloading the page, Continue brings them back as they were. The files a draft no longer refers to are deleted, they are all deleted when the person starts over or the person or the course is deleted, and the daily task deletes the ones left without a draft after two days. The window to choose a picture now shows and accepts only PNG, JPEG and GIF images of up to 10 MB, and the server checks it again.
+
 ## [2.0.10] - 2026102623
 
 ### Changed

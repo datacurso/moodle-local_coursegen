@@ -57,6 +57,7 @@ export const newBlock = (type) => ({
     prompt: '',
     uploaded: false,
     slot: null,
+    fileKey: '',
     name: '',
     url: '',
     kind: QUESTION_KINDS[0],
@@ -362,15 +363,28 @@ export const hasContent = (slide) => slide.blocks.some((block) => {
 export const DRAFT_VERSION = 1;
 
 /**
- * @param {{topic: string, lang: string, model: Object}} state What the editor holds.
+ * @param {{topic: string, lang: string, reference: Object|null, model: Object}} state What the editor holds.
  * @returns {string|null} What is saved while the person edits, or null while there is nothing to save.
  */
-export const toDraft = ({topic, lang, model}) => {
-    if (!topic.trim() && !model.slides.length) {
+export const toDraft = ({topic, lang, reference, model}) => {
+    if (!topic.trim() && !model.slides.length && !reference) {
         return null;
     }
     const {mode, min, max, name, intro, current, slides} = model;
-    return JSON.stringify({v: DRAFT_VERSION, topic, lang, model: {mode, min, max, name, intro, current, slides}});
+    return JSON.stringify({v: DRAFT_VERSION, topic, lang, reference, model: {mode, min, max, name, intro, current, slides}});
+};
+
+/** What the key of a file kept by the draft looks like: the server accepts only this. */
+const FILE_KEY = /^[A-Za-z0-9_-]{8,64}\.[A-Za-z0-9]{2,5}$/;
+
+/**
+ * @param {string} extension The extension of the file, with or without the dot.
+ * @returns {string} A key for a file the draft keeps.
+ */
+export const newFileKey = (extension) => {
+    const random = Array.from(crypto.getRandomValues(new Uint8Array(12)), (byte) => byte.toString(16).padStart(2, '0')).join('');
+    const ext = String(extension).replace(/^\./, '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 5) || 'bin';
+    return random + '.' + (ext.length < 2 ? 'bin' : ext);
 };
 
 const text = (value, limit = 20000) => (typeof value === 'string' ? value.slice(0, limit) : '');
@@ -410,13 +424,18 @@ const blockFromDraft = (raw) => {
     });
     block.kind = QUESTION_KINDS.includes(raw.kind) ? raw.kind : block.kind;
     block.question = question(raw.question);
+    if (raw.uploaded === true && typeof raw.fileKey === 'string' && FILE_KEY.test(raw.fileKey)) {
+        block.uploaded = true;
+        block.fileKey = raw.fileKey;
+        block.slot = Number.isInteger(raw.slot) && raw.slot >= 1 && raw.slot <= MAX_SLIDES ? raw.slot : null;
+    }
     return block;
 };
 
 /**
  * @param {string} json What was saved.
- * @returns {{topic: string, lang: string, lost: boolean, model: Object}|null} The state to go on with, or null when the draft
- *     is not of this version or is not usable. Uploaded images are not part of it: they have to be uploaded again.
+ * @returns {{topic: string, lang: string, reference: Object|null, lost: boolean, model: Object}|null} The state to go on with,
+ *     or null when the draft is not of this version or is not usable. A file whose key is not valid is dropped and counted as lost.
  */
 export const fromDraft = (json) => {
     let raw;
@@ -431,15 +450,20 @@ export const fromDraft = (json) => {
     let lost = false;
     const slides = (Array.isArray(raw.model.slides) ? raw.model.slides : []).slice(0, MAX_SLIDES).map((slide) => ({
         blocks: (slide && Array.isArray(slide.blocks) ? slide.blocks : []).map((block) => {
-            lost = lost || Boolean(block && block.uploaded);
-            return blockFromDraft(block);
+            const restored = blockFromDraft(block);
+            lost = lost || Boolean(block && block.uploaded && restored && !restored.uploaded);
+            return restored;
         }).filter(Boolean),
     }));
     const whole = (value, fallback) => (Number.isInteger(value) ? Math.min(Math.max(value, MIN_SLIDES), MAX_SLIDES) : fallback);
+    const ref = raw.reference;
+    const valid = ref && typeof ref.key === 'string' && FILE_KEY.test(ref.key);
+    const reference = valid ? {key: ref.key, name: text(ref.name, 255)} : null;
     return {
         topic: text(raw.topic, 4000),
         lang: text(raw.lang, 10),
-        lost,
+        reference,
+        lost: lost || Boolean(raw.reference && !reference),
         model: {
             mode: raw.model.mode === 'auto' ? 'auto' : 'manual',
             min: whole(raw.model.min, 5),

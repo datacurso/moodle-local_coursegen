@@ -110,9 +110,10 @@ export async function sendActivityFeedback({courseid, jobid, approvalstatus, ins
  * @param {{courseid: number}} payload
  * @return {Promise<Object>} response
  */
-export async function initActivityFilepicker({courseid}) {
+export async function initActivityFilepicker({courseid, role = ''}) {
     const args = {
         courseid: Number(courseid) || 0,
+        role,
     };
 
     return ajax.call([
@@ -129,11 +130,13 @@ export async function initActivityFilepicker({courseid}) {
  * @param {{courseid: number, jobid: string, draftitemid: number}} payload
  * @return {Promise<Object>} response
  */
-export async function uploadActivityFile({courseid, jobid, draftitemid}) {
+export async function uploadActivityFile({courseid, jobid, draftitemid = 0, filekey = '', kind = ''}) {
     const args = {
         courseid: Number(courseid) || 0,
         jobid,
         draftitemid: Number(draftitemid) || 0,
+        filekey,
+        kind,
     };
 
     return ajax.call([
@@ -150,7 +153,7 @@ export async function uploadActivityFile({courseid, jobid, draftitemid}) {
  * @param {{courseid: number, jobid: string, draftitemid: number, slide: number}} payload
  * @return {Promise<Object>} response
  */
-export async function uploadActivitySlideImage({courseid, jobid, draftitemid, slide}) {
+export async function uploadActivitySlideImage({courseid, jobid, draftitemid = 0, slide, filekey = '', kind = ''}) {
     return ajax.call([
         {
             methodname: 'local_coursegen_activity_slide_image_upload',
@@ -159,6 +162,8 @@ export async function uploadActivitySlideImage({courseid, jobid, draftitemid, sl
                 jobid,
                 draftitemid: Number(draftitemid) || 0,
                 slide: Number(slide) || 0,
+                filekey,
+                kind,
             },
         },
     ])[0];
@@ -241,10 +246,21 @@ export const draftUpdate = ({courseid, kind, data}) => ajax.call([{
 /**
  * Discard the saved work of the person in the activity editor.
  *
- * @param {{courseid: number, kind: string}} payload
+ * @param {{courseid: number, kind: string, keepfiles: boolean}} payload
  * @return {Promise<Object>}
  */
-export const draftReset = ({courseid, kind}) => ajax.call([{
+export const draftReset = ({courseid, kind, keepfiles = false}) => ajax.call([{
     methodname: 'local_coursegen_activity_draft_reset',
-    args: {courseid: Number(courseid) || 0, kind},
+    args: {courseid: Number(courseid) || 0, kind, keepfiles},
+}])[0];
+
+/**
+ * Keep a file the person added in the activity editor, in Moodle, until the activity is created.
+ *
+ * @param {{courseid: number, kind: string, key: string, draftitemid: number, role: string}} payload
+ * @return {Promise<{saved: boolean}>}
+ */
+export const draftFileSave = ({courseid, kind, key, draftitemid, role}) => ajax.call([{
+    methodname: 'local_coursegen_activity_draft_file_save',
+    args: {courseid: Number(courseid) || 0, kind, key, draftitemid: Number(draftitemid) || 0, role},
 }])[0];

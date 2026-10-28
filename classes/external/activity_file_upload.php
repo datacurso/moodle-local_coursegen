@@ -31,6 +31,7 @@ use external_api;
 use external_function_parameters;
 use external_single_structure;
 use external_value;
+use local_coursegen\local\draft_files;
 use local_coursegen\local\service\ai_course_api_service;
 use local_coursegen\local\service\module_job_service;
 
@@ -51,7 +52,9 @@ class activity_file_upload extends external_api {
         return new external_function_parameters([
             'courseid' => new external_value(PARAM_INT, 'Course id where the activity is being generated'),
             'jobid' => new external_value(PARAM_TEXT, 'Activity generation job/thread id'),
-            'draftitemid' => new external_value(PARAM_INT, 'Draft item id containing the uploaded file'),
+            'draftitemid' => new external_value(PARAM_INT, 'Draft item id containing the uploaded file', VALUE_DEFAULT, 0),
+            'filekey' => new external_value(PARAM_RAW, 'Key of a file kept by the draft of the editor', VALUE_DEFAULT, ''),
+            'kind' => new external_value(PARAM_ALPHANUMEXT, 'Kind of activity of that draft', VALUE_DEFAULT, ''),
         ]);
     }
 
@@ -61,15 +64,25 @@ class activity_file_upload extends external_api {
      * @param int $courseid Course id where the activity is being generated
      * @param string $jobid Activity generation job id
      * @param int $draftitemid Draft item id containing the uploaded file
+     * @param string $filekey Key of a file kept by the draft of the editor, instead of a draft item
+     * @param string $kind Kind of activity of that draft
      * @return array
      */
-    public static function execute(int $courseid, string $jobid, int $draftitemid): array {
+    public static function execute(
+        int $courseid,
+        string $jobid,
+        int $draftitemid = 0,
+        string $filekey = '',
+        string $kind = ''
+    ): array {
         global $USER;
 
         $params = self::validate_parameters(self::execute_parameters(), [
             'courseid' => $courseid,
             'jobid' => $jobid,
             'draftitemid' => $draftitemid,
+            'filekey' => $filekey,
+            'kind' => $kind,
         ]);
 
         $courseid = $params['courseid'];
@@ -91,23 +104,19 @@ class activity_file_upload extends external_api {
             throw new \moodle_exception('error_no_session_found', 'local_coursegen');
         }
 
-        $fs = get_file_storage();
-        $usercontext = context_user::instance($USER->id);
-
-        $files = $fs->get_area_files(
-            $usercontext->id,
-            'user',
-            'draft',
-            $draftitemid,
-            'id',
-            false
-        );
-
-        if (empty($files)) {
-            throw new \moodle_exception('nofile', 'error');
+        if ($params['filekey'] !== '') {
+            $file = draft_files::get($USER->id, $courseid, $params['kind'], $params['filekey']);
+        } else {
+            $files = get_file_storage()->get_area_files(
+                context_user::instance($USER->id)->id,
+                'user',
+                'draft',
+                $draftitemid,
+                'id',
+                false
+            );
+            $file = reset($files);
         }
-
-        $file = reset($files);
         if (!$file instanceof \stored_file) {
             throw new \moodle_exception('nofile', 'error');
         }

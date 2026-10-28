@@ -32,6 +32,7 @@ class draft_observer {
     public static function user_deleted(\core\event\user_deleted $event): void {
         global $DB;
         $DB->delete_records('local_coursegen_activity_draft', ['userid' => $event->objectid]);
+        draft_files::delete_for_user($event->objectid);
     }
 
     /**
@@ -42,5 +43,6 @@ class draft_observer {
     public static function course_deleted(\core\event\course_deleted $event): void {
         global $DB;
         $DB->delete_records('local_coursegen_activity_draft', ['courseid' => $event->objectid]);
+        draft_files::delete_for_course($event->objectid);
     }
 }

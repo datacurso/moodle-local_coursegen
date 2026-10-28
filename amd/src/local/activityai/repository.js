@@ -36,6 +36,7 @@ import {
     draftResume,
     draftUpdate,
     draftReset,
+    draftFileSave,
 } from 'local_coursegen/repository/activity';
 
 export const startSession = async(payload) => {
@@ -84,4 +85,8 @@ export const saveDraft = async(payload) => {
 
 export const discardDraft = async(payload) => {
     return draftReset(payload);
+};
+
+export const saveDraftFile = async(payload) => {
+    return draftFileSave(payload);
 };

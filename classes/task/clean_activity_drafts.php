@@ -17,6 +17,7 @@
 namespace local_coursegen\task;
 
 use core\task\scheduled_task;
+use local_coursegen\local\draft_files;
 use local_coursegen\local\models\activity_draft;
 
 /**
@@ -37,12 +38,21 @@ class clean_activity_drafts extends scheduled_task {
     }
 
     /**
-     * Delete the old drafts in one query on the indexed time of change.
+     * Delete the old drafts with their files, and the files left without a draft. The drafts are found by their indexed time of
+     * change.
      */
     public function execute(): void {
         global $DB;
-        $DB->delete_records_select('local_coursegen_activity_draft', 'timemodified < :limit', [
+
+        $old = $DB->get_recordset_select('local_coursegen_activity_draft', 'timemodified < :limit', [
             'limit' => time() - activity_draft::LIFETIME,
-        ]);
+        ], '', 'id, userid, courseid, kind');
+        foreach ($old as $draft) {
+            draft_files::delete_all($draft->userid, $draft->courseid, $draft->kind);
+            $DB->delete_records('local_coursegen_activity_draft', ['id' => $draft->id]);
+        }
+        $old->close();
+
+        draft_files::delete_orphans();
     }
 }

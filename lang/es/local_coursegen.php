@@ -1307,3 +1307,7 @@ $string['pe_delete_title'] = '¿Eliminar la diapositiva {$a}?';
 $string['pe_delete_body'] = 'Se eliminarán la diapositiva y todo lo que escribiste en ella.';
 $string['pe_delete_yes'] = 'Eliminar';
 $string['pe_image_own_help'] = 'Se usa tu imagen tal como está. La IA no crea otra para esta diapositiva.';
+$string['error_draft_filetoolarge'] = 'El archivo es demasiado grande. Puede pesar hasta 10 MB.';
+$string['error_draft_notimage'] = 'El archivo no es una imagen PNG, JPEG o GIF.';
+$string['error_draft_toomanyfiles'] = 'Hay demasiados archivos en este borrador.';
+$string['error_draft_notavailable'] = 'No se pueden añadir archivos mientras has entrado como otro usuario.';

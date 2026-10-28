@@ -158,6 +158,15 @@ $functions = [
         'capabilities' => 'moodle/course:manageactivities,local/coursegen:createactivitywithai',
         'loginrequired' => true,
     ],
+    'local_coursegen_activity_draft_file_save' => [
+        'classname' => 'local_coursegen\\external\\activity_draft',
+        'methodname' => 'file_save',
+        'description' => 'Keep a file the user added in the AI activity editor until the activity is created',
+        'type' => 'write',
+        'ajax' => true,
+        'capabilities' => 'moodle/course:manageactivities,local/coursegen:createactivitywithai',
+        'loginrequired' => true,
+    ],
     'local_coursegen_manage_image_generation' => [
         'classname' => 'local_coursegen\\external\\manage_image_generation',
         'methodname' => 'execute',

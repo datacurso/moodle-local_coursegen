@@ -22,6 +22,7 @@ use external_api;
 use external_function_parameters;
 use external_single_structure;
 use external_value;
+use local_coursegen\local\draft_files;
 use local_coursegen\local\models\activity_draft as draft_model;
 
 defined('MOODLE_INTERNAL') || die();
@@ -149,6 +150,8 @@ class activity_draft extends external_api {
             // Two saves of the same draft at once: the other one won, and the next save will go through.
             return ['saved' => false];
         }
+        // The files the draft no longer refers to go away, unless they are so new that the draft may not mention them yet.
+        draft_files::prune($USER->id, $params['courseid'], $params['kind'], self::file_keys($params['data']), time() - 600);
         return ['saved' => true];
     }
 
@@ -169,25 +172,35 @@ class activity_draft extends external_api {
      * @return external_function_parameters
      */
     public static function reset_parameters(): external_function_parameters {
-        return self::resume_parameters();
+        return new external_function_parameters([
+            'courseid' => new external_value(PARAM_INT, 'The course'),
+            'kind' => new external_value(PARAM_ALPHANUMEXT, 'The kind of activity being edited'),
+            'keepfiles' => new external_value(PARAM_BOOL, 'Keep the files, the activity may still need them', VALUE_DEFAULT, false),
+        ]);
     }
 
     /**
-     * Discard the draft of the user.
+     * Discard the draft of the user, and its files unless they are asked to stay.
      *
      * @param int $courseid
      * @param string $kind
+     * @param bool $keepfiles
      * @return array
      */
-    public static function reset(int $courseid, string $kind): array {
+    public static function reset(int $courseid, string $kind, bool $keepfiles = false): array {
         global $USER;
 
-        $params = self::validate_parameters(self::reset_parameters(), ['courseid' => $courseid, 'kind' => $kind]);
+        $params = self::validate_parameters(self::reset_parameters(), [
+            'courseid' => $courseid, 'kind' => $kind, 'keepfiles' => $keepfiles,
+        ]);
         self::check_access($params['courseid']);
 
         $draft = draft_model::get_record(['userid' => $USER->id, 'courseid' => $params['courseid'], 'kind' => $params['kind']]);
         if ($draft) {
             $draft->delete();
+        }
+        if (!$params['keepfiles']) {
+            draft_files::delete_all($USER->id, $params['courseid'], $params['kind']);
         }
         return [];
     }
@@ -199,6 +212,79 @@ class activity_draft extends external_api {
      */
     public static function reset_returns(): external_single_structure {
         return new external_single_structure([]);
+    }
+
+    /**
+     * Describes the parameters of file_save().
+     *
+     * @return external_function_parameters
+     */
+    public static function file_save_parameters(): external_function_parameters {
+        return new external_function_parameters([
+            'courseid' => new external_value(PARAM_INT, 'The course'),
+            'kind' => new external_value(PARAM_ALPHANUMEXT, 'The kind of activity being edited'),
+            'key' => new external_value(PARAM_RAW, 'The name the draft will use for the file'),
+            'draftitemid' => new external_value(PARAM_INT, 'The draft area of the file picker that has the file'),
+            'role' => new external_value(PARAM_ALPHA, 'image or reference'),
+        ]);
+    }
+
+    /**
+     * Keep a file the person added, in Moodle, until the activity is created. Nothing is sent to the AI service.
+     *
+     * @param int $courseid
+     * @param string $kind
+     * @param string $key
+     * @param int $draftitemid
+     * @param string $role
+     * @return array
+     */
+    public static function file_save(int $courseid, string $kind, string $key, int $draftitemid, string $role): array {
+        global $USER;
+
+        $params = self::validate_parameters(self::file_save_parameters(), [
+            'courseid' => $courseid, 'kind' => $kind, 'key' => $key, 'draftitemid' => $draftitemid, 'role' => $role,
+        ]);
+        self::check_access($params['courseid']);
+        if (manager::is_loggedinas()) {
+            throw new \moodle_exception('error_draft_notavailable', 'local_coursegen');
+        }
+
+        draft_files::save($USER->id, $params['courseid'], $params['kind'], $params['key'], $params['draftitemid'], $params['role']);
+        return ['saved' => true];
+    }
+
+    /**
+     * Describes the return of file_save().
+     *
+     * @return external_single_structure
+     */
+    public static function file_save_returns(): external_single_structure {
+        return new external_single_structure([
+            'saved' => new external_value(PARAM_BOOL, 'Whether the file was kept'),
+        ]);
+    }
+
+    /**
+     * The keys of the files a draft refers to: its reference file and the picture of each element.
+     *
+     * @param string $data The draft as JSON.
+     * @return string[]
+     */
+    private static function file_keys(string $data): array {
+        $draft = json_decode($data, true);
+        $keys = [];
+        if (is_array($draft['reference'] ?? null) && is_string($draft['reference']['key'] ?? null)) {
+            $keys[] = $draft['reference']['key'];
+        }
+        foreach ((array) ($draft['model']['slides'] ?? []) as $slide) {
+            foreach ((array) ($slide['blocks'] ?? []) as $block) {
+                if (is_array($block) && is_string($block['fileKey'] ?? null)) {
+                    $keys[] = $block['fileKey'];
+                }
+            }
+        }
+        return $keys;
     }
 
     /**

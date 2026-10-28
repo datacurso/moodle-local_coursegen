@@ -30,12 +30,13 @@ import * as repository from 'local_coursegen/local/activityai/repository';
  *
  * @param {Object} options
  * @param {number} options.courseid The course of the activity.
+ * @param {string} [options.role] image to pick only pictures; the server limits what the picker shows and accepts.
  * @param {string[]|null} [options.acceptedTypes] The extensions that can be chosen, such as ['.png'], or null for any.
  * @param {Function} options.onPicked Called with {draftitemid, filename} when a file is chosen.
  * @returns {Promise<void>}
  */
-export const pickFile = async({courseid, acceptedTypes = null, onPicked}) => {
-    const pickerdata = await repository.initFilepicker({courseid});
+export const pickFile = async({courseid, role = '', acceptedTypes = null, onPicked}) => {
+    const pickerdata = await repository.initFilepicker({courseid, role});
     if (!pickerdata || !pickerdata.clientid || !pickerdata.draftitemid || !pickerdata.options) {
         return;
     }

@@ -99,10 +99,10 @@ export default class extends BaseComponent {
         this.footer = descriptor.footer || null;
         this.model = null;
         this.ui = {
-            busy: '', error: '', errors: {blocks: {}, slide: {}}, topic: '', copyFor: null, filename: '',
+            busy: '', error: '', errors: {blocks: {}, slide: {}}, topic: '', copyFor: null, filename: '', reference: null,
             languages: descriptor.languages || [],
         };
-        this.sentFile = null;
+        this.sent = new Set();
         this.autosave = {ready: false, last: '', idle: null, most: null, sending: false, again: false, found: null};
         this.leave = () => {
             if (document.visibilityState !== 'visible') {
@@ -187,7 +187,6 @@ export default class extends BaseComponent {
     }
 
     _refreshFile() {
-        this.ui.filename = this.reactive.state.upload.filename || '';
         if (this.model) {
             this._render();
         }
@@ -259,8 +258,9 @@ export default class extends BaseComponent {
                 this.ui.copyFor = this.ui.copyFor === button.dataset.block ? null : button.dataset.block;
             },
             copydo: () => this._copyBlock(button.dataset.block),
-            removeimage: () => Object.assign(this._block(button.dataset.block), {uploaded: false, slot: null, name: ''}),
-            removefile: () => this.reactive.dispatch('setUpload', {draftitemid: null, filename: ''}),
+            removeimage: () => Object.assign(
+                this._block(button.dataset.block), {uploaded: false, slot: null, name: '', fileKey: ''}),
+            removefile: () => this._setReference(null),
             draftcontinue: () => this._continueDraft(),
             draftdiscard: () => this._discardDraft(),
         };
@@ -458,10 +458,36 @@ export default class extends BaseComponent {
     }
 
     async _attach() {
-        const state = this.reactive.state;
-        if (!state.upload.draftitemid) {
-            await pickFile({courseid: state.page.courseid, onPicked: (file) => this.reactive.dispatch('setUpload', file)});
+        if (this.ui.reference) {
+            return;
         }
+        const courseid = this.reactive.state.page.courseid;
+        await pickFile({
+            courseid,
+            onPicked: async(file) => {
+                try {
+                    const key = model.newFileKey(file.filename.split('.').pop());
+                    const draftitemid = file.draftitemid;
+                    await repository.saveDraftFile({courseid, kind: KIND, key, draftitemid, role: 'reference'});
+                    this._setReference({key, name: file.filename});
+                    this.ui.error = '';
+                } catch (error) {
+                    this.ui.error = this._messageOf(error);
+                }
+                await this._render();
+            },
+        });
+    }
+
+    /**
+     * The reference file is kept in Moodle with the draft; the AI service gets it only when the activity is written.
+     *
+     * @param {{key: string, name: string}|null} reference
+     */
+    _setReference(reference) {
+        this.ui.reference = reference;
+        this.ui.filename = reference ? reference.name : '';
+        this.sent.delete('reference');
     }
 
     /**
@@ -476,20 +502,18 @@ export default class extends BaseComponent {
         for (let candidate = 1; !slot && candidate <= model.MAX_SLIDES; candidate++) {
             slot = used.includes(candidate) ? null : candidate;
         }
-        const state = this.reactive.state;
+        const courseid = this.reactive.state.page.courseid;
         await pickFile({
-            courseid: state.page.courseid,
+            courseid,
+            role: 'image',
             acceptedTypes: ['.png', '.jpg', '.jpeg', '.gif'],
             onPicked: async(file) => {
                 try {
-                    await this._ensureSession();
-                    await repository.uploadSlideImage({
-                        courseid: state.page.courseid,
-                        jobid: String(state.session.jobid),
-                        draftitemid: file.draftitemid,
-                        slide: slot,
+                    const key = model.newFileKey(file.filename.split('.').pop());
+                    await repository.saveDraftFile({courseid, kind: KIND, key, draftitemid: file.draftitemid, role: 'image'});
+                    Object.assign(block, {
+                        uploaded: true, slot, name: file.filename, fileKey: key, prompt: '', mode: model.MODE_FIXED,
                     });
-                    Object.assign(block, {uploaded: true, slot, name: file.filename, prompt: '', mode: model.MODE_FIXED});
                     this.ui.error = '';
                 } catch (error) {
                     this.ui.error = this._messageOf(error);
@@ -515,17 +539,25 @@ export default class extends BaseComponent {
     }
 
     /**
-     * The file attached after the job started has to be sent on its own; the one attached before goes with the job.
-     *
-     * @param {boolean} started Whether the job already existed before this call.
+     * Send to the AI service the reference file and the pictures of the slides, which until now were only kept in Moodle. A file
+     * goes once for each job.
      */
-    async _sendFile(started) {
+    async _sendFiles() {
         const state = this.reactive.state;
-        const file = state.upload.draftitemid;
-        if (started && file && this.sentFile !== file) {
-            await repository.uploadFile({courseid: state.page.courseid, jobid: String(state.session.jobid), draftitemid: file});
+        const base = {courseid: state.page.courseid, jobid: String(state.session.jobid), kind: KIND};
+        const job = base.jobid + ':';
+        if (this.ui.reference && !this.sent.has(job + 'reference')) {
+            await repository.uploadFile({...base, filekey: this.ui.reference.key});
+            this.sent.add(job + 'reference');
         }
-        this.sentFile = file;
+        const images = this.model.slides.map((slide) => model.blockOf(slide, 'image')).filter((block) => block && block.uploaded);
+        for (const block of images) {
+            const id = job + block.fileKey + ':' + block.slot;
+            if (block.fileKey && !this.sent.has(id)) {
+                await repository.uploadSlideImage({...base, filekey: block.fileKey, slide: block.slot});
+                this.sent.add(id);
+            }
+        }
     }
 
     /**
@@ -591,9 +623,8 @@ export default class extends BaseComponent {
         await this._render();
         let written = false;
         try {
-            const started = Boolean(this.reactive.state.session.jobid);
             await this._ensureSession();
-            await this._sendFile(started);
+            await this._sendFiles();
             const instructions = model.compileInstructions({
                 topic: this.ui.topic,
                 mode: this.model.mode,
@@ -689,12 +720,13 @@ export default class extends BaseComponent {
         await this._render();
         try {
             await this._ensureSession();
+            await this._sendFiles();
             await repository.buildPresentation(this._job({
                 name: (this.model.name.trim() || this.ui.topic.trim().slice(0, 60)),
                 intro: this.model.intro,
                 slides: this._serviceSlides(),
             }));
-            await this._dropDraft();
+            await this._dropDraft(true);
             await createActivityFromJob(this.reactive, await loadActivityaiStrings());
         } catch (error) {
             this.autosave.last = '';
@@ -1130,7 +1162,7 @@ export default class extends BaseComponent {
             return;
         }
         const lang = this.reactive.state.session.lang || '';
-        const data = model.toDraft({topic: this.ui.topic, lang, model: this.model});
+        const data = model.toDraft({topic: this.ui.topic, lang, reference: this.ui.reference, model: this.model});
         if (data === null || data === save.last) {
             return;
         }
@@ -1207,6 +1239,7 @@ export default class extends BaseComponent {
         const {draft, data} = save.found;
         this.model = draft.model;
         this.ui.topic = draft.topic;
+        this._setReference(draft.reference);
         if (draft.lang && this.ui.languages.some((language) => language.code === draft.lang)) {
             this.reactive.dispatch('setLang', draft.lang);
         }
@@ -1229,16 +1262,19 @@ export default class extends BaseComponent {
     }
 
     /**
-     * Delete the saved work. It has no use once the activity is created or the person starts again.
+     * Delete the saved work. It has no use once the activity is created or the person starts again. When the activity is about
+     * to be created the files stay: if the creation fails the person goes on, and the daily task deletes them later.
+     *
+     * @param {boolean} keepfiles
      */
-    async _dropDraft() {
+    async _dropDraft(keepfiles = false) {
         const save = this.autosave;
         clearTimeout(save.idle);
         clearTimeout(save.most);
         save.idle = save.most = null;
         save.ready = false;
         try {
-            await repository.discardDraft({courseid: this.reactive.state.page.courseid, kind: KIND});
+            await repository.discardDraft({courseid: this.reactive.state.page.courseid, kind: KIND, keepfiles});
         } catch (error) {
             window.console.warn(error);
         }

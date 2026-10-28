@@ -1346,3 +1346,7 @@ $string['pe_delete_title'] = 'Delete slide {$a}?';
 $string['pe_delete_body'] = 'The slide and everything you wrote in it will be deleted.';
 $string['pe_delete_yes'] = 'Delete';
 $string['pe_image_own_help'] = 'Your image is used as it is. The AI does not create one for this slide.';
+$string['error_draft_filetoolarge'] = 'The file is too big. It can weigh up to 10 MB.';
+$string['error_draft_notimage'] = 'The file is not a PNG, JPEG or GIF image.';
+$string['error_draft_toomanyfiles'] = 'There are too many files in this draft.';
+$string['error_draft_notavailable'] = 'Files cannot be added while you are logged in as another user.';

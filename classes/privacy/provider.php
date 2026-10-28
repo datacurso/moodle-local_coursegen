@@ -140,6 +140,19 @@ class provider implements
             }
             $records->close();
         }
+
+        $courses = $DB->get_fieldset_select(
+            'local_coursegen_activity_draft',
+            'courseid',
+            'userid = :userid',
+            ['userid' => $user->id]
+        );
+        foreach (array_unique($courses) as $courseid) {
+            writer::with_context($context)->export_area_files([
+                get_string('privacy:metadata:local_coursegen', 'local_coursegen'),
+                get_string('privacy:metadata:local_coursegen_activity_draft', 'local_coursegen'),
+            ], 'local_coursegen', \local_coursegen\local\draft_files::AREA, $courseid);
+        }
     }
 
     /**
@@ -218,6 +231,7 @@ class provider implements
         foreach ($tables as $table => $filterparams) {
             $DB->delete_records($table, $filterparams);
         }
+        \local_coursegen\local\draft_files::delete_for_user($userid);
     }
 
     /**

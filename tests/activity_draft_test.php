@@ -17,6 +17,7 @@
 namespace local_coursegen;
 
 use local_coursegen\external\activity_draft;
+use local_coursegen\local\draft_files;
 use local_coursegen\local\models\activity_draft as draft_model;
 
 defined('MOODLE_INTERNAL') || die();
@@ -204,5 +205,123 @@ final class activity_draft_test extends \advanced_testcase {
 
         $left = $DB->get_fieldset_select('local_coursegen_activity_draft', 'courseid', '1 = 1');
         $this->assertSame([(int) $second->id], array_map('intval', $left));
+    }
+
+    /** A picture of one pixel. */
+    private const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgYGD4DwABBAEAHr9ZJQAAAABJRU5ErkJggg==';
+
+    /**
+     * Put a file in the draft area of the current user, as the file picker does.
+     *
+     * @param string $filename
+     * @param string $content
+     * @return int The draft item.
+     */
+    private function in_draft_area(string $filename, string $content): int {
+        global $USER;
+        $itemid = file_get_unused_draft_itemid();
+        get_file_storage()->create_file_from_string([
+            'contextid' => \context_user::instance($USER->id)->id,
+            'component' => 'user',
+            'filearea' => 'draft',
+            'itemid' => $itemid,
+            'filepath' => '/',
+            'filename' => $filename,
+        ], $content);
+        return $itemid;
+    }
+
+    /**
+     * A picture is kept for the user, readable only by the user, and nothing else is needed to send it later.
+     */
+    public function test_keeps_a_file_for_its_user(): void {
+        $this->resetAfterTest();
+        $course = $this->getDataGenerator()->create_course();
+        $owner = $this->teacher();
+        $key = 'abcdef123456.png';
+
+        $item = $this->in_draft_area('mine.png', base64_decode(self::PNG));
+        $this->assertTrue(activity_draft::file_save($course->id, self::KIND, $key, $item, 'image')['saved']);
+        $this->assertNotNull(draft_files::get($owner->id, $course->id, self::KIND, $key));
+
+        $other = $this->teacher();
+        $this->assertNull(draft_files::get($other->id, $course->id, self::KIND, $key));
+    }
+
+    /**
+     * What is not a picture, or is too big, is not kept as a picture.
+     */
+    public function test_refuses_what_is_not_a_picture(): void {
+        $this->resetAfterTest();
+        $course = $this->getDataGenerator()->create_course();
+        $this->teacher();
+
+        $item = $this->in_draft_area('fake.png', 'this is not an image');
+        $this->expectException(\moodle_exception::class);
+        activity_draft::file_save($course->id, self::KIND, 'abcdef123456.png', $item, 'image');
+    }
+
+    /**
+     * A key that is not a plain name is refused, so no path can be built from it.
+     */
+    public function test_refuses_a_key_that_is_not_plain(): void {
+        $this->resetAfterTest();
+        $course = $this->getDataGenerator()->create_course();
+        $this->teacher();
+
+        $item = $this->in_draft_area('mine.png', base64_decode(self::PNG));
+        $this->expectException(\moodle_exception::class);
+        activity_draft::file_save($course->id, self::KIND, '../../x.png', $item, 'image');
+    }
+
+    /**
+     * Saving the draft deletes the old files it no longer refers to; resetting deletes all, unless they are asked to stay.
+     */
+    public function test_files_follow_the_draft(): void {
+        global $DB;
+        $this->resetAfterTest();
+        $course = $this->getDataGenerator()->create_course();
+        $user = $this->teacher();
+        $used = 'aaaaaaaa1111.png';
+        $unused = 'bbbbbbbb2222.png';
+        foreach ([$used, $unused] as $key) {
+            $item = $this->in_draft_area('x.png', base64_decode(self::PNG));
+            activity_draft::file_save($course->id, self::KIND, $key, $item, 'image');
+        }
+        $DB->set_field('files', 'timecreated', time() - 3600, ['component' => 'local_coursegen']);
+
+        $data = json_encode(['v' => 1, 'topic' => 'a', 'model' => ['slides' => [['blocks' => [['fileKey' => $used]]]]]]);
+        activity_draft::update($course->id, self::KIND, $data);
+        $this->assertNotNull(draft_files::get($user->id, $course->id, self::KIND, $used));
+        $this->assertNull(draft_files::get($user->id, $course->id, self::KIND, $unused));
+
+        activity_draft::reset($course->id, self::KIND, true);
+        $this->assertNotNull(draft_files::get($user->id, $course->id, self::KIND, $used));
+        activity_draft::reset($course->id, self::KIND);
+        $this->assertNull(draft_files::get($user->id, $course->id, self::KIND, $used));
+    }
+
+    /**
+     * The files go with the user and with the course, and the task deletes the ones left without a draft.
+     */
+    public function test_files_are_deleted_with_their_owner_and_when_orphaned(): void {
+        global $DB;
+        $this->resetAfterTest();
+        $course = $this->getDataGenerator()->create_course();
+        $other = $this->getDataGenerator()->create_course();
+        $user = $this->teacher();
+        foreach ([[$course, 'cccccccc3333.png'], [$other, 'dddddddd4444.png']] as [$where, $key]) {
+            $item = $this->in_draft_area('x.png', base64_decode(self::PNG));
+            activity_draft::file_save($where->id, self::KIND, $key, $item, 'image');
+        }
+
+        delete_course($course, false);
+        $this->assertNull(draft_files::get($user->id, $course->id, self::KIND, 'cccccccc3333.png'));
+        $this->assertNotNull(draft_files::get($user->id, $other->id, self::KIND, 'dddddddd4444.png'));
+
+        // Without a draft and old, the file is left over.
+        $DB->set_field('files', 'timecreated', time() - draft_files::ORPHAN_LIFETIME - 10, ['component' => 'local_coursegen']);
+        (new \local_coursegen\task\clean_activity_drafts())->execute();
+        $this->assertNull(draft_files::get($user->id, $other->id, self::KIND, 'dddddddd4444.png'));
     }
 }
