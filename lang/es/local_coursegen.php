@@ -1302,3 +1302,7 @@ $string['pe_draft_found'] = 'Tienes un borrador sin terminar del {$a}.';
 $string['pe_draft_continue'] = 'Continuar';
 $string['pe_draft_discard'] = 'Empezar de cero';
 $string['pe_draft_lostfiles'] = 'El archivo de referencia y las imágenes que subiste hay que añadirlos de nuevo.';
+$string['pe_slide_delete'] = 'Eliminar la diapositiva {$a}';
+$string['pe_delete_title'] = '¿Eliminar la diapositiva {$a}?';
+$string['pe_delete_body'] = 'Se eliminarán la diapositiva y todo lo que escribiste en ella.';
+$string['pe_delete_yes'] = 'Eliminar';

@@ -68,7 +68,7 @@ const SAFE_FIXED = {
 const STRING_KEYS = [
     'pe_error_slides', 'pe_error_brief', 'pe_error_range', 'pe_error_notitle', 'pe_error_instr', 'pe_error_title',
     'pe_error_text', 'pe_error_html', 'pe_error_video', 'pe_error_image', 'pe_error_question', 'pe_error_notwritten',
-    'pe_regenerate_title', 'pe_draft_found', 'pe_draft_lostfiles',
+    'pe_regenerate_title', 'pe_draft_found', 'pe_draft_lostfiles', 'pe_delete_title', 'pe_delete_body', 'pe_delete_yes',
     'pe_regenerate_body', 'pe_regenerate_yes', 'pe_slide_label', 'pe_option', 'pe_save_error',
     ...model.TYPES.map((type) => 'pe_type_' + type),
     ...model.QUESTION_KINDS.map((kind) => 'pe_kind_' + kind),
@@ -226,6 +226,9 @@ export default class extends BaseComponent {
             return;
         }
         const action = button.dataset.action.replace('local_coursegen/pe/', '');
+        if (!action.startsWith('draft')) {
+            this._startedFresh();
+        }
         const redraw = this._change(action, button) || await this._run(action, button);
         if (redraw !== false) {
             await this._render();
@@ -246,7 +249,6 @@ export default class extends BaseComponent {
             sup: () => this._moveSlide(-1),
             sdown: () => this._moveSlide(1),
             sdup: () => this._duplicateSlide(),
-            sdel: () => this._removeSlide(),
             badd: () => this._addBlock(button.dataset.type),
             bdel: () => this._removeBlock(button.dataset.block),
             bup: () => this._moveBlock(button.dataset.block, -1),
@@ -283,6 +285,8 @@ export default class extends BaseComponent {
             create: () => this._create(),
             regen: () => this._regenerate(button.dataset.block),
             attach: () => this._attach(),
+            sdel: () => this._confirmRemove(this.model.current),
+            sdelat: () => this._confirmRemove(Number(button.dataset.index)),
             uploadimage: () => this._uploadImage(button.dataset.block),
         };
         if (handlers[action]) {
@@ -321,11 +325,31 @@ export default class extends BaseComponent {
         }
     }
 
-    _removeSlide() {
-        if (this.model.slides.length) {
-            this.model.slides.splice(this.model.current, 1);
-            this.model.current = Math.max(0, Math.min(this.model.current, this.model.slides.length - 1));
+    /**
+     * Delete a slide, after asking when the person has put something in it.
+     *
+     * @param {number} index
+     */
+    async _confirmRemove(index) {
+        const slide = this.model.slides[index];
+        if (!slide) {
+            return;
         }
+        if (model.hasContent(slide)) {
+            try {
+                const title = this.strings.pe_delete_title.replace('{$a}', index + 1);
+                await Notification.deleteCancelPromise(title, this.strings.pe_delete_body, this.strings.pe_delete_yes);
+            } catch (cancelled) {
+                return;
+            }
+        }
+        this.model.slides.splice(index, 1);
+        if (index < this.model.current) {
+            this.model.current--;
+        }
+        this.model.current = Math.max(0, Math.min(this.model.current, this.model.slides.length - 1));
+        this.ui.copyFor = null;
+        await this._render();
     }
 
     _addBlock(type) {
@@ -784,6 +808,7 @@ export default class extends BaseComponent {
         if (target.tagName === 'TEXTAREA') {
             grow(target);
         }
+        this._startedFresh();
         this._touch();
         if (target.dataset.field === 'lang') {
             this.reactive.dispatch('setLang', String(target.value || '').toLowerCase());
@@ -1159,6 +1184,22 @@ export default class extends BaseComponent {
     }
 
     /**
+     * Working on the editor without choosing is starting over: the draft that was offered is replaced by this work when it is
+     * saved, and the offer goes away.
+     */
+    _startedFresh() {
+        const save = this.autosave;
+        if (!save.found) {
+            return;
+        }
+        save.found = null;
+        save.last = '';
+        save.ready = true;
+        this.ui.draft = null;
+        this.element.querySelector('.pe-draft')?.remove();
+    }
+
+    /**
      * Go on with the work that was saved.
      */
     _continueDraft() {
@@ -1235,6 +1276,7 @@ export default class extends BaseComponent {
         if (!this.model) {
             return;
         }
+        this._startedFresh();
         if (target.dataset.field === 'mode') {
             this.model.mode = target.value;
             await this._render();

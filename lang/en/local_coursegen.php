@@ -1341,3 +1341,7 @@ $string['pe_draft_found'] = 'You have an unfinished draft from {$a}.';
 $string['pe_draft_continue'] = 'Continue';
 $string['pe_draft_discard'] = 'Start over';
 $string['pe_draft_lostfiles'] = 'The reference file and the images you uploaded have to be added again.';
+$string['pe_slide_delete'] = 'Delete slide {$a}';
+$string['pe_delete_title'] = 'Delete slide {$a}?';
+$string['pe_delete_body'] = 'The slide and everything you wrote in it will be deleted.';
+$string['pe_delete_yes'] = 'Delete';

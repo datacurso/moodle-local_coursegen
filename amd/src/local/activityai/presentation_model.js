@@ -347,6 +347,17 @@ export const blockProblem = (block, written) => {
     return empty[block.type] ? block.type : '';
 };
 
+/**
+ * @param {Object} slide
+ * @returns {boolean} Whether the person has put something in the slide: deleting it would lose work.
+ */
+export const hasContent = (slide) => slide.blocks.some((block) => {
+    const question = block.question || {};
+    const asked = question.prompt || question.text || (question.options || []).some((option) => option.text);
+    const typed = [block.instr, block.value, block.fixedtext, block.html, block.url].some((value) => value.trim());
+    return Boolean(block.uploaded || typed || asked);
+});
+
 /** The version of the draft the editor saves. Drafts of another version are not used. */
 export const DRAFT_VERSION = 1;
 

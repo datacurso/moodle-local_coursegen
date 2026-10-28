@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026102622
+
+### Changed
+- **New slide offers the layouts, and slides can be deleted from their miniature**  
+  The New slide button in the list of slides now opens the same four ways to start a slide that are offered when there are none (cover, title and text, text and image, question), instead of always adding a title and text. Each miniature has a small trash button, visible when the pointer is over it or when it has the focus, that deletes the slide. When the slide already has content it asks for confirmation first, and the Remove option of the slide menu asks the same. If the person works on the editor without choosing Continue or Start over in the draft notice, it counts as starting over: the notice goes away and the new work replaces the old draft when it is saved.
+
 ## [2.0.10] - 2026102621
 
 ### Added

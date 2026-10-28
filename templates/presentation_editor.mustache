@@ -89,25 +89,38 @@
     {{#manual}}
     <div class="pe-work {{^total}}is-empty{{/total}}">
         {{#total}}
-        <div class="pe-rail" role="group" aria-label="{{#str}} pe_strip, local_coursegen {{/str}}">
-            {{#slides}}
-            <div class="pe-thumb-wrap" draggable="true" data-drag-slide="{{index}}">
-                <button type="button" class="pe-thumb {{#current}}is-active{{/current}}" data-action="local_coursegen/pe/select" data-index="{{index}}"
-                        title="{{title}}" {{#current}}aria-current="true"{{/current}}>
-                    <span class="pe-thumb-no">{{number}}</span>
-                    <span class="pe-mini">
-                        {{#mini.hastitle}}<i class="pe-sk pe-sk-title"></i>{{/mini.hastitle}}
-                        {{#mini.hastext}}<i class="pe-sk"></i><i class="pe-sk pe-sk-short"></i>{{/mini.hastext}}
-                        {{#mini.hasimage}}<i class="pe-sk pe-sk-image"></i>{{/mini.hasimage}}
-                        {{#mini.hasvideo}}<i class="pe-sk pe-sk-image"></i>{{/mini.hasvideo}}
-                        {{#mini.hasquestion}}<i class="pe-sk pe-sk-box"></i>{{/mini.hasquestion}}
-                    </span>
-                </button>
+        <div class="pe-rail">
+            <div class="pe-rail-list" role="group" aria-label="{{#str}} pe_strip, local_coursegen {{/str}}">
+                {{#slides}}
+                <div class="pe-thumb-wrap" draggable="true" data-drag-slide="{{index}}">
+                    <button type="button" class="pe-thumb {{#current}}is-active{{/current}}" data-action="local_coursegen/pe/select" data-index="{{index}}"
+                            title="{{title}}" {{#current}}aria-current="true"{{/current}}>
+                        <span class="pe-thumb-no">{{number}}</span>
+                        <span class="pe-mini">
+                            {{#mini.hastitle}}<i class="pe-sk pe-sk-title"></i>{{/mini.hastitle}}
+                            {{#mini.hastext}}<i class="pe-sk"></i><i class="pe-sk pe-sk-short"></i>{{/mini.hastext}}
+                            {{#mini.hasimage}}<i class="pe-sk pe-sk-image"></i>{{/mini.hasimage}}
+                            {{#mini.hasvideo}}<i class="pe-sk pe-sk-image"></i>{{/mini.hasvideo}}
+                            {{#mini.hasquestion}}<i class="pe-sk pe-sk-box"></i>{{/mini.hasquestion}}
+                        </span>
+                    </button>
+                    <button type="button" class="pe-thumb-del" data-action="local_coursegen/pe/sdelat" data-index="{{index}}"
+                            title="{{#str}} pe_slide_delete, local_coursegen, {{number}} {{/str}}" aria-label="{{#str}} pe_slide_delete, local_coursegen, {{number}} {{/str}}"><i class="fa fa-trash-o" aria-hidden="true"></i></button>
+                </div>
+                {{/slides}}
             </div>
-            {{/slides}}
-            <button type="button" class="pe-addslide {{#slidesError}}is-invalid{{/slidesError}}" {{#slidesError}}aria-invalid="true"{{/slidesError}} data-action="local_coursegen/pe/addslide">
-                <i class="fa fa-plus" aria-hidden="true"></i>{{#str}} pe_add, local_coursegen {{/str}}
-            </button>
+            <div class="dropdown pe-menu">
+                <button type="button" class="pe-addslide dropdown-toggle no-caret {{#slidesError}}is-invalid{{/slidesError}}" {{#slidesError}}aria-invalid="true"{{/slidesError}}
+                        data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    <i class="fa fa-plus" aria-hidden="true"></i>{{#str}} pe_add, local_coursegen {{/str}}
+                </button>
+                <div class="dropdown-menu">
+                    <button type="button" class="dropdown-item" data-action="local_coursegen/pe/addslide" data-layout="cover">{{#str}} pe_layout_cover, local_coursegen {{/str}}</button>
+                    <button type="button" class="dropdown-item" data-action="local_coursegen/pe/addslide" data-layout="content">{{#str}} pe_layout_content, local_coursegen {{/str}}</button>
+                    <button type="button" class="dropdown-item" data-action="local_coursegen/pe/addslide" data-layout="split">{{#str}} pe_layout_split, local_coursegen {{/str}}</button>
+                    <button type="button" class="dropdown-item" data-action="local_coursegen/pe/addslide" data-layout="question">{{#str}} pe_layout_question, local_coursegen {{/str}}</button>
+                </div>
+            </div>
         </div>
         {{/total}}
 

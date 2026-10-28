@@ -499,8 +499,52 @@ span.local_coursegen-sparkles-icon.white {
     background: var(--pe-bg);
 }
 
+.local_coursegen_pe .pe-rail-list {
+    display: flex;
+    flex-direction: column;
+    gap: .75rem;
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
 .local_coursegen_pe .pe-thumb-wrap {
+    position: relative;
     cursor: grab;
+}
+
+.local_coursegen_pe .pe-thumb-del {
+    position: absolute;
+    top: .25rem;
+    right: .25rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    padding: 0;
+    border: 1px solid var(--pe-border);
+    border-radius: 50%;
+    background: var(--pe-card);
+    color: var(--pe-muted-fg);
+    font-size: .75rem;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.local_coursegen_pe .pe-thumb-wrap:hover .pe-thumb-del,
+.local_coursegen_pe .pe-thumb-del:focus-visible {
+    opacity: 1;
+}
+
+.local_coursegen_pe .pe-thumb-del:hover {
+    border-color: var(--pe-danger);
+    color: var(--pe-danger);
+}
+
+@media (hover: none) {
+    .local_coursegen_pe .pe-thumb-del {
+        opacity: 1;
+    }
 }
 
 .local_coursegen_pe .is-dragging {
@@ -588,6 +632,7 @@ span.local_coursegen-sparkles-icon.white {
 
 .local_coursegen_pe .pe-addslide {
     display: flex;
+    width: 100%;
     align-items: center;
     justify-content: center;
     gap: .4rem;
