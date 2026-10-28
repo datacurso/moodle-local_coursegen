@@ -202,6 +202,44 @@ class draft_files {
     }
 
     /**
+     * Where the pictures of a draft can be seen by their owner: the address ends where the key of a file goes.
+     *
+     * @param int $userid
+     * @param int $courseid
+     * @param string $kind
+     * @return string
+     */
+    public static function base_url(int $userid, int $courseid, string $kind): string {
+        $contextid = \context_user::instance($userid)->id;
+        $path = "/pluginfile.php/{$contextid}/local_coursegen/" . self::AREA . "/{$courseid}/{$kind}/";
+        return (new \moodle_url($path))->out(false);
+    }
+
+    /**
+     * Show a picture of a draft to its owner, and to nobody else. Only pictures are shown, never another kind of file.
+     *
+     * @param \context $context
+     * @param array $args The course, the kind of activity and the key.
+     * @param array $options
+     * @return bool False when there is nothing to show; otherwise the file is sent and the script ends.
+     */
+    public static function serve(\context $context, array $args, array $options): bool {
+        global $USER;
+
+        if ($context->contextlevel != CONTEXT_USER || isguestuser() || (int) $context->instanceid !== (int) $USER->id
+                || count($args) !== 3) {
+            return false;
+        }
+        [$courseid, $kind, $key] = $args;
+        $file = self::get($USER->id, (int) $courseid, clean_param($kind, PARAM_ALPHANUMEXT), $key);
+        if (!$file || !in_array($file->get_mimetype(), self::IMAGE_TYPES, true)) {
+            return false;
+        }
+        send_stored_file($file, 0, 0, false, $options);
+        return true;
+    }
+
+    /**
      * Where a file of a draft is, in the order the file storage asks for it.
      *
      * @param int $userid

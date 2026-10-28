@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026102625
+
+### Changed
+- **The picture added to an element can be seen**  
+  Below the name of the picture there is now a small preview. Clicking it opens the picture in a new tab. The preview comes from the file kept in Moodle, and only the person who added it can see it; other kinds of files are never shown this way.
+
 ## [2.0.10] - 2026102624
 
 ### Changed

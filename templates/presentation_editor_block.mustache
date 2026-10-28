@@ -66,6 +66,7 @@
 
     {{#isImage}}
     {{#uploaded}}
+    {{#previewurl}}<a class="pe-preview" href="{{previewurl}}" target="_blank" rel="noopener"><img src="{{previewurl}}" alt="{{name}}"></a>{{/previewurl}}
     <div class="pe-uploaded"><i class="fa fa-image" aria-hidden="true"></i><span class="pe-truncate">{{name}}</span>
         <button type="button" class="pe-link" data-action="local_coursegen/pe/removeimage" data-block="{{id}}">{{#str}} pe_image_remove, local_coursegen {{/str}}</button></div>
     <p class="pe-help">{{#str}} pe_image_own_help, local_coursegen {{/str}}</p>

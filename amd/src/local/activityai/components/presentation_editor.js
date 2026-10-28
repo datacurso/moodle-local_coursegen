@@ -99,7 +99,8 @@ export default class extends BaseComponent {
         this.footer = descriptor.footer || null;
         this.model = null;
         this.ui = {
-            busy: '', error: '', errors: {blocks: {}, slide: {}}, topic: '', copyFor: null, filename: '', reference: null,
+            busy: '', error: '', errors: {blocks: {}, slide: {}}, topic: '', copyFor: null, filename: '',
+            reference: null, fileBase: '',
             languages: descriptor.languages || [],
         };
         this.sent = new Set();
@@ -510,7 +511,10 @@ export default class extends BaseComponent {
             onPicked: async(file) => {
                 try {
                     const key = model.newFileKey(file.filename.split('.').pop());
-                    await repository.saveDraftFile({courseid, kind: KIND, key, draftitemid: file.draftitemid, role: 'image'});
+                    const saved = await repository.saveDraftFile({
+                        courseid, kind: KIND, key, draftitemid: file.draftitemid, role: 'image',
+                    });
+                    this.ui.fileBase = saved.baseurl;
                     Object.assign(block, {
                         uploaded: true, slot, name: file.filename, fileKey: key, prompt: '', mode: model.MODE_FIXED,
                     });
@@ -1207,7 +1211,7 @@ export default class extends BaseComponent {
         }
         const when = new Intl.DateTimeFormat(document.documentElement.lang || undefined, {dateStyle: 'medium', timeStyle: 'short'})
             .format(new Date(found.timemodified * 1000));
-        save.found = {draft, data: found.data};
+        save.found = {draft, data: found.data, baseurl: found.baseurl};
         this.ui.draft = {
             text: this.strings.pe_draft_found.replace('{$a}', when),
             lost: draft.lost ? this.strings.pe_draft_lostfiles : '',
@@ -1236,7 +1240,8 @@ export default class extends BaseComponent {
      */
     _continueDraft() {
         const save = this.autosave;
-        const {draft, data} = save.found;
+        const {draft, data, baseurl} = save.found;
+        this.ui.fileBase = baseurl;
         this.model = draft.model;
         this.ui.topic = draft.topic;
         this._setReference(draft.reference);

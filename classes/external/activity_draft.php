@@ -67,12 +67,13 @@ class activity_draft extends external_api {
 
         $draft = draft_model::find_for_user($USER->id, $params['courseid'], $params['kind']);
         if (!$draft || (int) $draft->get('schemaver') !== draft_model::SCHEMA_VERSION) {
-            return ['exists' => false, 'data' => '', 'timemodified' => 0];
+            return ['exists' => false, 'data' => '', 'timemodified' => 0, 'baseurl' => ''];
         }
         return [
             'exists' => true,
             'data' => (string) $draft->get('data'),
             'timemodified' => (int) $draft->get('timemodified'),
+            'baseurl' => draft_files::base_url($USER->id, $params['courseid'], $params['kind']),
         ];
     }
 
@@ -86,6 +87,7 @@ class activity_draft extends external_api {
             'exists' => new external_value(PARAM_BOOL, 'Whether the user has a draft'),
             'data' => new external_value(PARAM_RAW, 'The state of the editor as JSON'),
             'timemodified' => new external_value(PARAM_INT, 'When the draft changed last'),
+            'baseurl' => new external_value(PARAM_URL, 'Where the pictures of the draft are, its owner only'),
         ]);
     }
 
@@ -251,7 +253,7 @@ class activity_draft extends external_api {
         }
 
         draft_files::save($USER->id, $params['courseid'], $params['kind'], $params['key'], $params['draftitemid'], $params['role']);
-        return ['saved' => true];
+        return ['saved' => true, 'baseurl' => draft_files::base_url($USER->id, $params['courseid'], $params['kind'])];
     }
 
     /**
@@ -262,6 +264,7 @@ class activity_draft extends external_api {
     public static function file_save_returns(): external_single_structure {
         return new external_single_structure([
             'saved' => new external_value(PARAM_BOOL, 'Whether the file was kept'),
+            'baseurl' => new external_value(PARAM_URL, 'Where the pictures of the draft are, its owner only'),
         ]);
     }
 

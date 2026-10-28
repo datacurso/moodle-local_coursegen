@@ -54,6 +54,7 @@ const blockContext = (block, ui, strings) => {
         markers: markersOf(block.html).length,
         prompt: block.prompt,
         uploaded: block.uploaded,
+        previewurl: block.uploaded && block.fileKey && ui.fileBase ? ui.fileBase + block.fileKey : '',
         name: block.name,
         url: block.url,
         qprompt: question ? question.prompt || '' : '',
