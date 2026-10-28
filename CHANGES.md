@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026102623
+
+### Changed
+- **The image element says what its upload button is for**  
+  The button under the description of an image now says Use my own image instead, and once an image is uploaded the element explains that it is used as it is and that the AI does not create one for that slide.
+
 ## [2.0.10] - 2026102622
 
 ### Changed

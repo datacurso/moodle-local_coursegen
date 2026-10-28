@@ -68,6 +68,7 @@
     {{#uploaded}}
     <div class="pe-uploaded"><i class="fa fa-image" aria-hidden="true"></i><span class="pe-truncate">{{name}}</span>
         <button type="button" class="pe-link" data-action="local_coursegen/pe/removeimage" data-block="{{id}}">{{#str}} pe_image_remove, local_coursegen {{/str}}</button></div>
+    <p class="pe-help">{{#str}} pe_image_own_help, local_coursegen {{/str}}</p>
     {{/uploaded}}
     {{^uploaded}}
     {{#isAi}}<textarea id="pe-f-{{id}}" class="form-control pe-input {{#error}}is-invalid{{/error}}" {{#error}}aria-invalid="true"{{/error}} rows="2" data-block="{{id}}" data-f="instr" placeholder="{{placeholder}}">{{instr}}</textarea>{{/isAi}}
