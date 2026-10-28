@@ -1167,7 +1167,11 @@ export default class extends BaseComponent {
         }
         const lang = this.reactive.state.session.lang || '';
         const data = model.toDraft({topic: this.ui.topic, lang, reference: this.ui.reference, model: this.model});
-        if (data === null || data === save.last) {
+        if (data === null) {
+            await this._forgetEmptyDraft();
+            return;
+        }
+        if (data === save.last) {
             return;
         }
         if (save.sending) {
@@ -1185,6 +1189,23 @@ export default class extends BaseComponent {
         if (save.again) {
             save.again = false;
             this._touch();
+        }
+    }
+
+    /**
+     * The person emptied the editor: there is nothing to resume, so the draft saved before is deleted instead of being offered
+     * again.
+     */
+    async _forgetEmptyDraft() {
+        const save = this.autosave;
+        if (!save.last || save.sending) {
+            return;
+        }
+        save.last = '';
+        try {
+            await repository.discardDraft({courseid: this.reactive.state.page.courseid, kind: KIND, keepfiles: false});
+        } catch (error) {
+            window.console.warn(error);
         }
     }
 

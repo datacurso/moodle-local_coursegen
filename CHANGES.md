@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026102627
+
+### Fixed
+- **An emptied editor does not offer an old draft**  
+  When the person deleted all the slides and the general instruction, the draft saved before stayed and was offered again after a reload. Now the draft is deleted when the editor is left with nothing in it.
+
 ## [2.0.10] - 2026102626
 
 ### Changed
