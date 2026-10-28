@@ -29,7 +29,7 @@ export const MODE_AI = 'ai';
 export const MODE_FIXED = 'fixed';
 export const MODE_HTML = 'html';
 
-export const MIN_SLIDES = 3;
+export const MIN_SLIDES = 1;
 export const MAX_SLIDES = 30;
 
 /** The elements a slide can have, one of each. */
@@ -455,7 +455,9 @@ export const fromDraft = (json) => {
             return restored;
         }).filter(Boolean),
     }));
-    const whole = (value, fallback) => (Number.isInteger(value) ? Math.min(Math.max(value, MIN_SLIDES), MAX_SLIDES) : fallback);
+    const whole = (value, fallback) => {
+        return Number.isInteger(value) ? Math.min(Math.max(value, MIN_SLIDES), MAX_SLIDES) : fallback;
+    };
     const ref = raw.reference;
     const valid = ref && typeof ref.key === 'string' && FILE_KEY.test(ref.key);
     const reference = valid ? {key: ref.key, name: text(ref.name, 255)} : null;

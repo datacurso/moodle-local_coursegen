@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026102626
+
+### Changed
+- **A presentation can have any number of slides, from one**  
+  The editor no longer asks for at least three slides: a presentation needs one slide, and the person decides how many there are. When the AI decides, the range can also start at one slide.
+
 ## [2.0.10] - 2026102625
 
 ### Changed
