@@ -29,7 +29,7 @@ export const MODE_AI = 'ai';
 export const MODE_FIXED = 'fixed';
 export const MODE_HTML = 'html';
 
-export const MIN_SLIDES = 3;
+export const MIN_SLIDES = 1;
 export const MAX_SLIDES = 30;
 
 /** The elements a slide can have, one of each. */
@@ -57,6 +57,7 @@ export const newBlock = (type) => ({
     prompt: '',
     uploaded: false,
     slot: null,
+    fileKey: '',
     name: '',
     url: '',
     kind: QUESTION_KINDS[0],
@@ -227,9 +228,10 @@ export const slideFromWritten = (written) => {
             block.prompt = written.image_prompt;
         });
     }
-    if (written.video_url) {
+    // The AI sometimes answers "null" or another word for no video: only a YouTube address makes an element.
+    if (typeof written.video_url === 'string' && YOUTUBE.test(written.video_url.trim())) {
         add('video', (block) => {
-            block.url = written.video_url;
+            block.url = written.video_url.trim();
         });
     }
     if (written.question) {
@@ -345,4 +347,134 @@ export const blockProblem = (block, written) => {
         return block.mode === MODE_HTML ? 'html' : 'text';
     }
     return empty[block.type] ? block.type : '';
+};
+
+/**
+ * @param {Object} slide
+ * @returns {boolean} Whether the person has put something in the slide: deleting it would lose work.
+ */
+export const hasContent = (slide) => slide.blocks.some((block) => {
+    const question = block.question || {};
+    const asked = question.prompt || question.text || (question.options || []).some((option) => option.text);
+    const typed = [block.instr, block.value, block.fixedtext, block.html, block.url].some((value) => value.trim());
+    return Boolean(block.uploaded || typed || asked);
+});
+
+/** The version of the draft the editor saves. Drafts of another version are not used. */
+export const DRAFT_VERSION = 1;
+
+/**
+ * @param {{topic: string, lang: string, reference: Object|null, model: Object}} state What the editor holds.
+ * @returns {string|null} What is saved while the person edits, or null while there is nothing to save.
+ */
+export const toDraft = ({topic, lang, reference, model}) => {
+    if (!topic.trim() && !model.slides.length && !reference) {
+        return null;
+    }
+    const {mode, min, max, name, intro, current, slides} = model;
+    return JSON.stringify({v: DRAFT_VERSION, topic, lang, reference, model: {mode, min, max, name, intro, current, slides}});
+};
+
+/** What the key of a file kept by the draft looks like: the server accepts only this. */
+const FILE_KEY = /^[A-Za-z0-9_-]{8,64}\.[A-Za-z0-9]{2,5}$/;
+
+/**
+ * @param {string} extension The extension of the file, with or without the dot.
+ * @returns {string} A key for a file the draft keeps.
+ */
+export const newFileKey = (extension) => {
+    const random = Array.from(crypto.getRandomValues(new Uint8Array(12)), (byte) => byte.toString(16).padStart(2, '0')).join('');
+    const ext = String(extension).replace(/^\./, '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 5) || 'bin';
+    return random + '.' + (ext.length < 2 ? 'bin' : ext);
+};
+
+const text = (value, limit = 20000) => (typeof value === 'string' ? value.slice(0, limit) : '');
+
+const question = (raw) => {
+    if (!raw || typeof raw !== 'object') {
+        return null;
+    }
+    return {
+        type: QUESTION_KINDS.includes(raw.type) ? raw.type : QUESTION_KINDS[0],
+        prompt: text(raw.prompt, 2000),
+        text: text(raw.text, 4000),
+        correct: raw.correct === true || raw.correct === 'true',
+        options: (Array.isArray(raw.options) ? raw.options.slice(0, 10) : []).map((option) => ({
+            text: text(option && option.text, 1000),
+            correct: Boolean(option && (option.correct === true || option.correct === 'true')),
+        })),
+    };
+};
+
+/**
+ * The saved data is not trusted: each element is made from a new one and only the known fields are copied, with their type.
+ *
+ * @param {Object} raw
+ * @returns {Object|null} The element, or null when it is not one.
+ */
+const blockFromDraft = (raw) => {
+    if (!raw || !TYPES.includes(raw.type)) {
+        return null;
+    }
+    const block = newBlock(raw.type);
+    const allowed = {video: [MODE_FIXED], text: [MODE_AI, MODE_FIXED, MODE_HTML]};
+    const modes = allowed[raw.type] || [MODE_AI, MODE_FIXED];
+    block.mode = modes.includes(raw.mode) ? raw.mode : block.mode;
+    ['instr', 'value', 'fixedtext', 'html', 'prompt', 'url', 'name'].forEach((field) => {
+        block[field] = text(raw[field]);
+    });
+    block.kind = QUESTION_KINDS.includes(raw.kind) ? raw.kind : block.kind;
+    block.question = question(raw.question);
+    if (raw.uploaded === true && typeof raw.fileKey === 'string' && FILE_KEY.test(raw.fileKey)) {
+        block.uploaded = true;
+        block.fileKey = raw.fileKey;
+        block.slot = Number.isInteger(raw.slot) && raw.slot >= 1 && raw.slot <= MAX_SLIDES ? raw.slot : null;
+    }
+    return block;
+};
+
+/**
+ * @param {string} json What was saved.
+ * @returns {{topic: string, lang: string, reference: Object|null, lost: boolean, model: Object}|null} The state to go on with,
+ *     or null when the draft is not of this version or is not usable. A file whose key is not valid is dropped and counted as lost.
+ */
+export const fromDraft = (json) => {
+    let raw;
+    try {
+        raw = JSON.parse(json);
+    } catch (error) {
+        return null;
+    }
+    if (!raw || raw.v !== DRAFT_VERSION || !raw.model || typeof raw.model !== 'object') {
+        return null;
+    }
+    let lost = false;
+    const slides = (Array.isArray(raw.model.slides) ? raw.model.slides : []).slice(0, MAX_SLIDES).map((slide) => ({
+        blocks: (slide && Array.isArray(slide.blocks) ? slide.blocks : []).map((block) => {
+            const restored = blockFromDraft(block);
+            lost = lost || Boolean(block && block.uploaded && restored && !restored.uploaded);
+            return restored;
+        }).filter(Boolean),
+    }));
+    const whole = (value, fallback) => {
+        return Number.isInteger(value) ? Math.min(Math.max(value, MIN_SLIDES), MAX_SLIDES) : fallback;
+    };
+    const ref = raw.reference;
+    const valid = ref && typeof ref.key === 'string' && FILE_KEY.test(ref.key);
+    const reference = valid ? {key: ref.key, name: text(ref.name, 255)} : null;
+    return {
+        topic: text(raw.topic, 4000),
+        lang: text(raw.lang, 10),
+        reference,
+        lost: lost || Boolean(raw.reference && !reference),
+        model: {
+            mode: raw.model.mode === 'auto' ? 'auto' : 'manual',
+            min: whole(raw.model.min, 5),
+            max: whole(raw.model.max, 8),
+            name: text(raw.model.name, 255),
+            intro: text(raw.model.intro, 2000),
+            current: Math.min(Math.max(Number(raw.model.current) || 0, 0), Math.max(slides.length - 1, 0)),
+            slides,
+        },
+    };
 };

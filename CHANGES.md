@@ -2,6 +2,128 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026102630
+
+### Changed
+- **A document is enough to write a presentation**  
+  The general instruction is no longer required when a document is attached. The error asking for a description only appears when there is neither text nor document.
+- **The AI writes the slides and stops for review**  
+  When the AI decides the slides, or writes what the person left as instructions, the activity is no longer created at once. The slides appear written, with a progress message while the AI works and a notice when it is done. Each written element shows its content and a field to ask the AI for a change, taking the whole presentation and the attached document as context. The person can still add, delete, reorder or edit slides and elements; new elements written by the AI are written without touching the rest. The main button reads "Write the slides" until everything is written and then "Create activity".
+
+## [2.0.10] - 2026102628
+
+### Fixed
+- **The AI saying "null" for a video no longer stops the activity**  
+  When the AI decides the slides and it answered with a word such as null instead of an empty video address, the editor made a video element that asked for a YouTube link in a slide the person could not see. Now only a YouTube address makes a video element. The creation also works with a presentation of a single slide.
+
+## [2.0.10] - 2026102627
+
+### Fixed
+- **An emptied editor does not offer an old draft**  
+  When the person deleted all the slides and the general instruction, the draft saved before stayed and was offered again after a reload. Now the draft is deleted when the editor is left with nothing in it.
+
+## [2.0.10] - 2026102626
+
+### Changed
+- **A presentation can have any number of slides, from one**  
+  The editor no longer asks for at least three slides: a presentation needs one slide, and the person decides how many there are. When the AI decides, the range can also start at one slide.
+
+## [2.0.10] - 2026102625
+
+### Changed
+- **The picture added to an element can be seen**  
+  Below the name of the picture there is now a small preview. Clicking it opens the picture in a new tab. The preview comes from the file kept in Moodle, and only the person who added it can see it; other kinds of files are never shown this way.
+
+## [2.0.10] - 2026102624
+
+### Changed
+- **Nothing goes to the AI service until the activity is written, and the files stay in the draft**  
+  Adding a picture to an element or a reference file used to open a job in the AI service and send the file right away. Now the file is kept in Moodle, in the area of the person, and goes to the service only when the person asks the AI to write the activity or to create it. The pictures and the reference file are part of the draft: after reloading the page, Continue brings them back as they were. The files a draft no longer refers to are deleted, they are all deleted when the person starts over or the person or the course is deleted, and the daily task deletes the ones left without a draft after two days. The window to choose a picture now shows and accepts only PNG, JPEG and GIF images of up to 10 MB, and the server checks it again.
+
+## [2.0.10] - 2026102623
+
+### Changed
+- **The image element says what its upload button is for**  
+  The button under the description of an image now says Use my own image instead, and once an image is uploaded the element explains that it is used as it is and that the AI does not create one for that slide.
+
+## [2.0.10] - 2026102622
+
+### Changed
+- **New slide offers the layouts, and slides can be deleted from their miniature**  
+  The New slide button in the list of slides now opens the same four ways to start a slide that are offered when there are none (cover, title and text, text and image, question), instead of always adding a title and text. Each miniature has a small trash button, visible when the pointer is over it or when it has the focus, that deletes the slide. When the slide already has content it asks for confirmation first, and the Remove option of the slide menu asks the same. If the person works on the editor without choosing Continue or Start over in the draft notice, it counts as starting over: the notice goes away and the new work replaces the old draft when it is saved.
+
+## [2.0.10] - 2026102621
+
+### Added
+- **The Course Presentation editor keeps the work of the person**  
+  What the person writes in the editor is saved in the server while editing, so if the page is reloaded or closed by mistake, the work can be resumed. When the person opens Course Presentation in the course again, the editor offers to continue where it was left or to start over. The work is saved when the person stops for a moment and at least every few seconds while going on, and nothing is sent when it has not changed, so the database is not written on every key. Each person has one draft per course, which only that person can read, change or delete, and only if the person can create activities with AI in the course. The draft is deleted when the activity is created, when the person starts over, when the person or the course is deleted, and after 30 days without changes. Uploaded images and the reference file are not kept: they have to be added again. The new table is included in the privacy export and deletion.
+
+## [2.0.10] - 2026102620
+
+### Changed
+- **Dragging shows where the slide or element will stay**  
+  While a slide or an element is dragged, the others make room with a short movement and an empty dashed slot marks the place where it will land. The empty slot moves as soon as the pointer enters the next element, without having to reach its edge, and it does not go back and forth when the elements have different heights. When the item is dragged close to the top or bottom edge of the window, the window scrolls by itself so it can be taken to a place that is not visible. Dropping it there keeps the new order, and dropping it outside the list leaves everything as it was. The line that marked the place before was removed.
+
+## [2.0.10] - 2026102617
+
+### Fixed
+- **The miniature of a slide has its size again**  
+  The miniature collapsed to an empty small box after it was made draggable. It fills the width of the list again.
+
+## [2.0.10] - 2026102616
+
+### Changed
+- **Slides and elements are reordered by dragging**  
+  A slide is moved by dragging its miniature in the list, and an element by dragging its header inside the slide. A line shows where it will land. The options to move up and down were removed from the menus. For the keyboard, Alt with the up and down arrows moves the slide miniature or the element where the focus is.
+
+## [2.0.10] - 2026102615
+
+### Fixed
+- **The menu of a slide says Move up and Move down**  
+  The slides are listed vertically, so the options to move a slide now say Move up and Move down instead of Move left and Move right.
+
+## [2.0.10] - 2026102614
+
+### Fixed
+- **The menus of the Course Presentation editor are accessible**  
+  The options menus of the slides and of each element are now the standard Moodle dropdown menus. Only one is open at a time, they close when the person clicks outside or presses Escape, and they can be used with the keyboard. Before, several could stay open at once and cover the fields. Pressing Escape with a menu open closes only the menu and no longer the whole window. A menu opens upwards when it does not fit below the button in the part of the window that can be seen, and it scrolls when there is little room on both sides.
+
+## [2.0.10] - 2026102612
+
+### Changed
+- **The Course Presentation editor has more room and fewer frames**  
+  The slide is no longer drawn inside a fixed 16:9 frame with its own scroll. The elements of the selected slide are stacked in full width as one form, each with its label and its field, so they can all be seen and edited without scrolling inside a box. The frame inside a frame, the gray background and the dashed border around each element were removed, while each element keeps its light purple background; only one border around the slides area and the line that separates the list of slides remain. The Add element selector keeps its dashed border.
+
+## [2.0.10] - 2026102609
+
+### Changed
+- **The Course Presentation editor uses the standard Moodle form styles**  
+  The text fields, selects and number fields of the editor are now the standard Moodle form controls, so the focus ring and the colours are the ones of the theme and keep their accessibility. The frame that surrounded a whole element when one of its fields had the focus was removed.
+
+## [2.0.10] - 2026102608
+
+### Changed
+- **The general instruction of the Course Presentation editor looks like the rest of the AI boxes**  
+  The instruction is a rounded box like the chat of the other AI interfaces: the text on top and, in its bottom row, the round button to attach a reference file and the language together on the left, with the text taller.
+
+## [2.0.10] - 2026102605
+
+### Changed
+- **The Course Presentation editor only has what it needs**  
+  The activity name field and the button to only write the content were removed: the AI proposes the name and there is one main action, Create activity. The reference file and the language are in the line of the general instruction. The number of slides is chosen with a two-option switch, I add the slides or The AI decides, instead of a checkbox.
+
+## [2.0.10] - 2026102604
+
+### Changed
+- **The Course Presentation editor is organized in two blocks**  
+  The general instruction is a wide box with the reference file, the language and the optional activity name in one row under it. The slides come next, with the choice to let the AI decide the number at the right of their title. With no slides, the editor offers four ways to start the first one (cover, title and text, text and image, question). The empty space of the chat footer was removed.
+
+## [2.0.10] - 2026102603
+
+### Changed
+- **The build number is above the one the other plugins require**  
+  The build was raised so the plugins that need a recent build of this one can be installed again. Nothing else changed.
+
 ## [2.0.10] - 2026101245
 
 ### Changed

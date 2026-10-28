@@ -25,6 +25,7 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+import $ from 'jquery';
 import {BaseComponent} from 'core/reactive';
 import Templates from 'core/templates';
 import Notification from 'core/notification';
@@ -39,7 +40,16 @@ import * as model from 'local_coursegen/local/activityai/presentation_model';
 import {buildContext} from 'local_coursegen/local/activityai/presentation_view';
 
 const COMPONENT = 'local_coursegen';
+const DRAG_MS = 150;
+const DRAG_MARGIN = 8;
+const SCROLL_ZONE = 70;
+const SCROLL_MAX = 22;
+const MENU_ITEM_HEIGHT = 40;
+const MENU_PADDING = 16;
 const KIND = 'course_presentation';
+/** The work is saved when the person stops for this long, and at least this often while the person goes on. */
+const SAVE_IDLE = 2000;
+const SAVE_MOST = 15000;
 
 /** The part of a slide the AI writes again for each element. */
 const PART = {title: 'title', text: 'body', image: 'image', question: 'question'};
@@ -58,8 +68,9 @@ const SAFE_FIXED = {
 const STRING_KEYS = [
     'pe_error_slides', 'pe_error_brief', 'pe_error_range', 'pe_error_notitle', 'pe_error_instr', 'pe_error_title',
     'pe_error_text', 'pe_error_html', 'pe_error_video', 'pe_error_image', 'pe_error_question', 'pe_error_notwritten',
-    'pe_regenerate_title',
-    'pe_regenerate_body', 'pe_regenerate_yes', 'pe_slide_label', 'pe_option', 'pe_save_error',
+    'pe_generate', 'pe_change_ph', 'pe_change_apply', 'pe_writing', 'pe_review',
+    'pe_draft_found', 'pe_draft_lostfiles', 'pe_delete_title', 'pe_delete_body', 'pe_delete_yes',
+    'pe_slide_label', 'pe_option', 'pe_save_error',
     ...model.TYPES.map((type) => 'pe_type_' + type),
     ...model.QUESTION_KINDS.map((kind) => 'pe_kind_' + kind),
     ...model.TYPES.map((type) => 'pe_ph_' + type),
@@ -90,9 +101,17 @@ export default class extends BaseComponent {
         this.model = null;
         this.ui = {
             busy: '', error: '', errors: {blocks: {}, slide: {}}, topic: '', copyFor: null, filename: '',
+            reference: null, fileBase: '', change: {},
             languages: descriptor.languages || [],
         };
-        this.sentFile = null;
+        this.sent = new Set();
+        this.autosave = {ready: false, last: '', idle: null, most: null, sending: false, again: false, found: null};
+        this.leave = () => {
+            if (document.visibilityState !== 'visible') {
+                this._saveDraft();
+            }
+        };
+        this.drag = null;
         this.strings = {};
     }
 
@@ -104,7 +123,23 @@ export default class extends BaseComponent {
         this.addEventListener(this.element, 'click', this._handleClick);
         this.addEventListener(this.element, 'input', this._handleInput);
         this.addEventListener(this.element, 'change', this._handleChange);
+        this.addEventListener(this.element, 'keydown', this._handleKeydown);
+        ['pointerdown', 'pointerup', 'dragstart', 'dragover', 'drop', 'dragend'].forEach((name) => {
+            this.addEventListener(this.element, name, this._handleDrag);
+        });
+        const shown = 'show.bs.dropdown.' + COMPONENT;
+        $(document).off(shown).on(shown, '.local_coursegen_pe .dropdown', (event) => {
+            this._placeMenu(event.target.querySelector('[data-toggle="dropdown"]'));
+        });
+        document.addEventListener('visibilitychange', this.leave);
+        window.addEventListener('pagehide', this.leave);
         this._sync();
+    }
+
+    destroy() {
+        document.removeEventListener('visibilitychange', this.leave);
+        window.removeEventListener('pagehide', this.leave);
+        super.destroy();
     }
 
     getWatchers() {
@@ -130,9 +165,13 @@ export default class extends BaseComponent {
                 slides: [],
             };
             await this._render();
+            this._offerDraft();
         } else if (!visible && !session.jobid) {
+            await this._saveDraft();
             this.model = null;
             this.ui.topic = '';
+            this.ui.draft = null;
+            this.autosave.ready = false;
         }
     }
 
@@ -143,13 +182,13 @@ export default class extends BaseComponent {
      */
     _syncFooter(hidden) {
         const form = this.footer?.querySelector('form');
-        if (form) {
-            form.classList.toggle('d-none', hidden);
+        const chat = form?.closest('[data-region="local_coursegen/activity/chat"]') || form;
+        if (chat) {
+            chat.classList.toggle('d-none', hidden);
         }
     }
 
     _refreshFile() {
-        this.ui.filename = this.reactive.state.upload.filename || '';
         if (this.model) {
             this._render();
         }
@@ -160,6 +199,7 @@ export default class extends BaseComponent {
         const {html, js} = await Templates.renderForPromise('local_coursegen/presentation_editor', context);
         Templates.replaceNodeContents(this.element, html, js);
         this.element.querySelectorAll('textarea').forEach(grow);
+        this._touch();
     }
 
     /**
@@ -187,6 +227,9 @@ export default class extends BaseComponent {
             return;
         }
         const action = button.dataset.action.replace('local_coursegen/pe/', '');
+        if (!action.startsWith('draft')) {
+            this._startedFresh();
+        }
         const redraw = this._change(action, button) || await this._run(action, button);
         if (redraw !== false) {
             await this._render();
@@ -203,11 +246,10 @@ export default class extends BaseComponent {
     _change(action, button) {
         const handlers = {
             select: () => this._select(Number(button.dataset.index)),
-            addslide: () => this._addSlide('content'),
+            addslide: () => this._addSlide(button.dataset.layout || 'content'),
             sup: () => this._moveSlide(-1),
             sdown: () => this._moveSlide(1),
             sdup: () => this._duplicateSlide(),
-            sdel: () => this._removeSlide(),
             badd: () => this._addBlock(button.dataset.type),
             bdel: () => this._removeBlock(button.dataset.block),
             bup: () => this._moveBlock(button.dataset.block, -1),
@@ -218,8 +260,11 @@ export default class extends BaseComponent {
                 this.ui.copyFor = this.ui.copyFor === button.dataset.block ? null : button.dataset.block;
             },
             copydo: () => this._copyBlock(button.dataset.block),
-            removeimage: () => Object.assign(this._block(button.dataset.block), {uploaded: false, slot: null, name: ''}),
-            removefile: () => this.reactive.dispatch('setUpload', {draftitemid: null, filename: ''}),
+            removeimage: () => Object.assign(
+                this._block(button.dataset.block), {uploaded: false, slot: null, name: '', fileKey: ''}),
+            removefile: () => this._setReference(null),
+            draftcontinue: () => this._continueDraft(),
+            draftdiscard: () => this._discardDraft(),
         };
         if (!handlers[action]) {
             return false;
@@ -239,10 +284,11 @@ export default class extends BaseComponent {
      */
     async _run(action, button) {
         const handlers = {
-            generate: () => this._generate(),
             create: () => this._create(),
             regen: () => this._regenerate(button.dataset.block),
             attach: () => this._attach(),
+            sdel: () => this._confirmRemove(this.model.current),
+            sdelat: () => this._confirmRemove(Number(button.dataset.index)),
             uploadimage: () => this._uploadImage(button.dataset.block),
         };
         if (handlers[action]) {
@@ -281,11 +327,31 @@ export default class extends BaseComponent {
         }
     }
 
-    _removeSlide() {
-        if (this.model.slides.length) {
-            this.model.slides.splice(this.model.current, 1);
-            this.model.current = Math.max(0, Math.min(this.model.current, this.model.slides.length - 1));
+    /**
+     * Delete a slide, after asking when the person has put something in it.
+     *
+     * @param {number} index
+     */
+    async _confirmRemove(index) {
+        const slide = this.model.slides[index];
+        if (!slide) {
+            return;
         }
+        if (model.hasContent(slide)) {
+            try {
+                const title = this.strings.pe_delete_title.replace('{$a}', index + 1);
+                await Notification.deleteCancelPromise(title, this.strings.pe_delete_body, this.strings.pe_delete_yes);
+            } catch (cancelled) {
+                return;
+            }
+        }
+        this.model.slides.splice(index, 1);
+        if (index < this.model.current) {
+            this.model.current--;
+        }
+        this.model.current = Math.max(0, Math.min(this.model.current, this.model.slides.length - 1));
+        this.ui.copyFor = null;
+        await this._render();
     }
 
     _addBlock(type) {
@@ -394,10 +460,36 @@ export default class extends BaseComponent {
     }
 
     async _attach() {
-        const state = this.reactive.state;
-        if (!state.upload.draftitemid) {
-            await pickFile({courseid: state.page.courseid, onPicked: (file) => this.reactive.dispatch('setUpload', file)});
+        if (this.ui.reference) {
+            return;
         }
+        const courseid = this.reactive.state.page.courseid;
+        await pickFile({
+            courseid,
+            onPicked: async(file) => {
+                try {
+                    const key = model.newFileKey(file.filename.split('.').pop());
+                    const draftitemid = file.draftitemid;
+                    await repository.saveDraftFile({courseid, kind: KIND, key, draftitemid, role: 'reference'});
+                    this._setReference({key, name: file.filename});
+                    this.ui.error = '';
+                } catch (error) {
+                    this.ui.error = this._messageOf(error);
+                }
+                await this._render();
+            },
+        });
+    }
+
+    /**
+     * The reference file is kept in Moodle with the draft; the AI service gets it only when the activity is written.
+     *
+     * @param {{key: string, name: string}|null} reference
+     */
+    _setReference(reference) {
+        this.ui.reference = reference;
+        this.ui.filename = reference ? reference.name : '';
+        this.sent.delete('reference');
     }
 
     /**
@@ -412,20 +504,21 @@ export default class extends BaseComponent {
         for (let candidate = 1; !slot && candidate <= model.MAX_SLIDES; candidate++) {
             slot = used.includes(candidate) ? null : candidate;
         }
-        const state = this.reactive.state;
+        const courseid = this.reactive.state.page.courseid;
         await pickFile({
-            courseid: state.page.courseid,
+            courseid,
+            role: 'image',
             acceptedTypes: ['.png', '.jpg', '.jpeg', '.gif'],
             onPicked: async(file) => {
                 try {
-                    await this._ensureSession();
-                    await repository.uploadSlideImage({
-                        courseid: state.page.courseid,
-                        jobid: String(state.session.jobid),
-                        draftitemid: file.draftitemid,
-                        slide: slot,
+                    const key = model.newFileKey(file.filename.split('.').pop());
+                    const saved = await repository.saveDraftFile({
+                        courseid, kind: KIND, key, draftitemid: file.draftitemid, role: 'image',
                     });
-                    Object.assign(block, {uploaded: true, slot, name: file.filename, prompt: '', mode: model.MODE_FIXED});
+                    this.ui.fileBase = saved.baseurl;
+                    Object.assign(block, {
+                        uploaded: true, slot, name: file.filename, fileKey: key, prompt: '', mode: model.MODE_FIXED,
+                    });
                     this.ui.error = '';
                 } catch (error) {
                     this.ui.error = this._messageOf(error);
@@ -451,17 +544,25 @@ export default class extends BaseComponent {
     }
 
     /**
-     * The file attached after the job started has to be sent on its own; the one attached before goes with the job.
-     *
-     * @param {boolean} started Whether the job already existed before this call.
+     * Send to the AI service the reference file and the pictures of the slides, which until now were only kept in Moodle. A file
+     * goes once for each job.
      */
-    async _sendFile(started) {
+    async _sendFiles() {
         const state = this.reactive.state;
-        const file = state.upload.draftitemid;
-        if (started && file && this.sentFile !== file) {
-            await repository.uploadFile({courseid: state.page.courseid, jobid: String(state.session.jobid), draftitemid: file});
+        const base = {courseid: state.page.courseid, jobid: String(state.session.jobid), kind: KIND};
+        const job = base.jobid + ':';
+        if (this.ui.reference && !this.sent.has(job + 'reference')) {
+            await repository.uploadFile({...base, filekey: this.ui.reference.key});
+            this.sent.add(job + 'reference');
         }
-        this.sentFile = file;
+        const images = this.model.slides.map((slide) => model.blockOf(slide, 'image')).filter((block) => block && block.uploaded);
+        for (const block of images) {
+            const id = job + block.fileKey + ':' + block.slot;
+            if (block.fileKey && !this.sent.has(id)) {
+                await repository.uploadSlideImage({...base, filekey: block.fileKey, slide: block.slot});
+                this.sent.add(id);
+            }
+        }
     }
 
     /**
@@ -497,31 +598,6 @@ export default class extends BaseComponent {
     }
 
     /**
-     * Write all the presentation from the general instruction and what each element asks for.
-     */
-    async _generate() {
-        if (await this._confirmRewrite()) {
-            await this._write();
-        }
-    }
-
-    /**
-     * @returns {Promise<boolean>} Whether to go on: the AI is about to replace what it wrote before.
-     */
-    async _confirmRewrite() {
-        if (this.model.mode !== 'manual' || !model.hasResults(this.model.slides)) {
-            return true;
-        }
-        try {
-            await Notification.saveCancelPromise(
-                this.strings.pe_regenerate_title, this.strings.pe_regenerate_body, this.strings.pe_regenerate_yes);
-        } catch (cancelled) {
-            return false;
-        }
-        return true;
-    }
-
-    /**
      * Ask the AI to write everything that is an instruction.
      *
      * @returns {Promise<boolean>} Whether it was written.
@@ -536,9 +612,8 @@ export default class extends BaseComponent {
         await this._render();
         let written = false;
         try {
-            const started = Boolean(this.reactive.state.session.jobid);
             await this._ensureSession();
-            await this._sendFile(started);
+            await this._sendFiles();
             const instructions = model.compileInstructions({
                 topic: this.ui.topic,
                 mode: this.model.mode,
@@ -549,6 +624,40 @@ export default class extends BaseComponent {
             });
             this._takeDraft(await repository.draftPresentation(this._job({instructions})));
             await this._fillMarkers();
+            written = true;
+        } catch (error) {
+            this.ui.error = this._messageOf(error);
+        }
+        this.ui.busy = '';
+        await this._render();
+        return written;
+    }
+
+    /**
+     * Write only what is still waiting, in slides the AI already wrote: the rest is left as the person has it.
+     *
+     * @returns {Promise<boolean>} Whether it was written.
+     */
+    async _writePending() {
+        if (!await this._showErrors(this._validate(false))) {
+            return false;
+        }
+        this.ui.busy = 'all';
+        this.ui.error = '';
+        await this._render();
+        let written = false;
+        try {
+            await this._ensureSession();
+            await this._sendFiles();
+            const slides = this.model.slides;
+            for (let index = 0; index < slides.length; index++) {
+                for (const block of slides[index].blocks) {
+                    if (block.mode === model.MODE_AI && !model.isReady(block) && block.instr.trim()) {
+                        model.applyWritten(block, await this._rewrite(index, block.instr.trim(), PART[block.type]));
+                    }
+                }
+            }
+            await this._fillMarkers(true);
             written = true;
         } catch (error) {
             this.ui.error = this._messageOf(error);
@@ -576,12 +685,14 @@ export default class extends BaseComponent {
 
     /**
      * In the elements with HTML, the AI writes only what the markers ask for and the rest stays as it is.
+     *
+     * @param {boolean} [only] Whether to leave the elements that are already written as they are.
      */
-    async _fillMarkers() {
+    async _fillMarkers(only) {
         const slides = this.model.slides;
         for (let index = 0; index < slides.length; index++) {
             const block = model.blockOf(slides[index], 'text');
-            if (block && block.mode === model.MODE_HTML) {
+            if (block && block.mode === model.MODE_HTML && (!only || !model.isReady(block))) {
                 block.value = await model.fillMarkers(block.html, async(prompt) => {
                     const ask = 'Write only this piece of text, in one short paragraph and with no title: ' + prompt;
                     const written = await this._rewrite(index, ask, 'body');
@@ -592,14 +703,17 @@ export default class extends BaseComponent {
     }
 
     /**
-     * Write one element again from its instruction.
+     * Write one element: from its instruction, or, when it is already written, changing it as the person asks.
      *
      * @param {string} id
      */
     async _regenerate(id) {
         const block = this._block(id);
-        if (!block.instr.trim()) {
-            this.element.querySelector(`[data-block='${id}'][data-f='instr']`)?.focus();
+        const written = model.hasResults([{blocks: [block]}]);
+        const change = (this.ui.change[id] || '').trim();
+        const instruction = written ? change : block.instr.trim();
+        if (!instruction) {
+            this.element.querySelector(`[data-block='${id}'][data-f='${written ? 'change' : 'instr'}']`)?.focus();
             return;
         }
         this.ui.busy = id;
@@ -607,8 +721,9 @@ export default class extends BaseComponent {
         await this._render();
         try {
             await this._ensureSession();
-            const written = await this._rewrite(this.model.current, block.instr.trim(), PART[block.type]);
-            model.applyWritten(block, written);
+            const answer = await this._rewrite(this.model.current, instruction, PART[block.type]);
+            model.applyWritten(block, answer);
+            this.ui.change[id] = '';
         } catch (error) {
             this.ui.error = this._messageOf(error);
         }
@@ -617,13 +732,14 @@ export default class extends BaseComponent {
     }
 
     /**
-     * Write what is still an instruction, build the activity from the slides and go to it.
+     * Build the activity from the slides, once they are written, and go to it. If something is still an instruction, the AI
+     * writes it first and the person reviews the result.
      */
     async _create() {
         if (this.model.mode !== 'manual' || model.hasPending(this.model.slides)) {
-            if (!await this._confirmRewrite() || !await this._write()) {
-                return;
-            }
+            // The AI writes and stops: the person looks at the slides and changes what they want before the activity exists.
+            await (this.model.mode === 'manual' && model.hasResults(this.model.slides) ? this._writePending() : this._write());
+            return;
         }
         if (!await this._showErrors(this._validate(true))) {
             return;
@@ -634,13 +750,20 @@ export default class extends BaseComponent {
         await this._render();
         try {
             await this._ensureSession();
+            await this._sendFiles();
             await repository.buildPresentation(this._job({
                 name: (this.model.name.trim() || this.ui.topic.trim().slice(0, 60)),
                 intro: this.model.intro,
                 slides: this._serviceSlides(),
             }));
-            await createActivityFromJob(this.reactive, await loadActivityaiStrings());
+            await this._dropDraft(true);
+            if (!await createActivityFromJob(this.reactive, await loadActivityaiStrings())) {
+                // The activity was not created: the work goes on and is saved again.
+                this.autosave.ready = true;
+            }
         } catch (error) {
+            this.autosave.last = '';
+            this.autosave.ready = true;
             this.ui.error = this._messageOf(error);
             Notification.exception(error);
         }
@@ -665,7 +788,7 @@ export default class extends BaseComponent {
         const errors = this._noErrors();
         const text = this.strings;
         const {slides, mode, min, max} = this.model;
-        if (!written && !this.ui.topic.trim()) {
+        if (!written && !this.ui.topic.trim() && !this.ui.reference) {
             errors.topic = text.pe_error_brief;
         }
         if (mode === 'auto') {
@@ -750,6 +873,8 @@ export default class extends BaseComponent {
         if (target.tagName === 'TEXTAREA') {
             grow(target);
         }
+        this._startedFresh();
+        this._touch();
         if (target.dataset.field === 'lang') {
             this.reactive.dispatch('setLang', String(target.value || '').toLowerCase());
             return;
@@ -782,6 +907,8 @@ export default class extends BaseComponent {
             if (count) {
                 count.textContent = String(model.markersOf(block.html).length);
             }
+        } else if (field === 'change') {
+            this.ui.change[block.id] = target.value;
         } else if (field === 'instr' || field === 'url' || field === 'value') {
             block[field] = target.value;
         } else if (question && field === 'qprompt') {
@@ -790,6 +917,446 @@ export default class extends BaseComponent {
             question.text = target.value;
         } else if (question && field === 'qoption') {
             question.options[Number(target.dataset.option)].text = target.value;
+        }
+    }
+
+    /**
+     * Opens the menu upwards when it does not fit below the button in the part of the window that can be seen: the modal
+     * scrolls and the bar with the main action stays in front.
+     *
+     * @param {HTMLElement} toggle The button of the menu.
+     */
+    _placeMenu(toggle) {
+        const dropdown = toggle.parentElement;
+        const menu = dropdown.querySelector('.dropdown-menu');
+        if (!menu) {
+            return;
+        }
+        const bar = this.element.querySelector('.pe-final');
+        const view = this._visibleArea(toggle);
+        const rect = toggle.getBoundingClientRect();
+        const bottom = Math.min(view.bottom, bar ? bar.getBoundingClientRect().top : Infinity);
+        const below = bottom - rect.bottom - MENU_PADDING;
+        const above = rect.top - view.top - MENU_PADDING;
+        const needed = menu.children.length * MENU_ITEM_HEIGHT + MENU_PADDING;
+        const up = below < needed && above > below;
+        const room = up ? above : below;
+        dropdown.classList.toggle('dropup', up);
+        menu.style.maxHeight = needed > room ? Math.max(room, MENU_ITEM_HEIGHT * 2) + 'px' : '';
+    }
+
+    /**
+     * @param {HTMLElement} element
+     * @returns {{top: number, bottom: number}} The part of the window where the element can be seen: the window cut by every
+     *     ancestor that scrolls or clips.
+     */
+    _visibleArea(element) {
+        const area = {top: 0, bottom: window.innerHeight};
+        for (let node = element.parentElement; node && node !== document.body; node = node.parentElement) {
+            if (/(auto|scroll|hidden)/.test(getComputedStyle(node).overflowY)) {
+                const rect = node.getBoundingClientRect();
+                area.top = Math.max(area.top, rect.top);
+                area.bottom = Math.min(area.bottom, rect.bottom);
+            }
+        }
+        return area;
+    }
+
+    /**
+     * The keyboard way to move what the mouse drags: Alt with the arrows on a slide miniature or inside an element.
+     *
+     * @param {KeyboardEvent} event
+     * @param {number} step
+     */
+    async _moveWithKeyboard(event, step) {
+        const slide = event.target.closest('[data-drag-slide]');
+        const block = event.target.closest('[data-drag-block]');
+        if (!this.model || !(slide || block)) {
+            return;
+        }
+        event.preventDefault();
+        if (slide) {
+            this._select(Number(slide.dataset.dragSlide));
+            this._moveSlide(step);
+            await this._render();
+            this.element.querySelector('[data-drag-slide="' + this.model.current + '"] .pe-thumb').focus();
+            return;
+        }
+        const id = block.dataset.dragBlock;
+        this._moveBlock(id, step);
+        await this._render();
+        this.element.querySelector('[data-drag-block="' + id + '"] [data-f]')?.focus();
+    }
+
+    /**
+     * Slides are moved by dragging their miniature and elements by dragging their header; the text of the fields can still be
+     * selected with the mouse because an element only becomes draggable when the press starts on its header.
+     *
+     * @param {Event} event
+     */
+    _handleDrag(event) {
+        const steps = {
+            pointerdown: () => this._allowBlockDrag(event),
+            pointerup: () => this._endDrag(),
+            dragstart: () => this._startDrag(event),
+            dragover: () => this._overDrag(event),
+            drop: () => this._dropDrag(event),
+            dragend: () => this._endDrag(),
+        };
+        steps[event.type]();
+    }
+
+    _allowBlockDrag(event) {
+        const head = event.target.closest('.pe-bhead');
+        if (head && !event.target.closest('[data-toggle="dropdown"]')) {
+            head.closest('[data-drag-block]').draggable = true;
+        }
+    }
+
+    _startDrag(event) {
+        const slide = event.target.closest('[data-drag-slide]');
+        const block = event.target.closest('[data-drag-block]');
+        const item = slide || (block && block.draggable ? block : null);
+        if (!item) {
+            return;
+        }
+        this.drag = {type: slide ? 'slide' : 'block', item, committed: false, y: event.clientY};
+        this.drag.timer = setInterval(() => this._autoScroll(), 16);
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData('text/plain', 'move');
+        // The browser takes the picture that follows the pointer now; the item becomes the empty slot after that.
+        setTimeout(() => item.classList.add('is-dragging'), 0);
+    }
+
+    /**
+     * @param {DragEvent} event
+     */
+    _overDrag(event) {
+        const drag = this.drag;
+        if (!drag) {
+            return;
+        }
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'move';
+        drag.y = event.clientY;
+        this._placeSlot();
+    }
+
+    /**
+     * The item being dragged is moved in the list as soon as the pointer enters the next one. The elements it just went over
+     * are locked until the pointer leaves them: without it the empty slot would go back and forth when the elements have
+     * different heights.
+     */
+    _placeSlot() {
+        const drag = this.drag;
+        const items = [...drag.item.parentElement.children]
+            .filter((node) => node.dataset.dragSlide !== undefined || node.dataset.dragBlock !== undefined);
+        const own = items.indexOf(drag.item);
+        drag.locked = (drag.locked || []).filter((node) => {
+            const rect = node.getBoundingClientRect();
+            return drag.y >= rect.top && drag.y <= rect.bottom;
+        });
+        const next = items.find((node, index) => {
+            if (node === drag.item) {
+                return false;
+            }
+            if (drag.locked.includes(node)) {
+                return index > own;
+            }
+            const rect = node.getBoundingClientRect();
+            const margin = Math.min(rect.height / 2, DRAG_MARGIN);
+            return index < own ? drag.y <= rect.bottom - margin : drag.y <= rect.top + margin;
+        });
+        const target = next || items[items.length - 1].nextElementSibling;
+        if (target === drag.item || drag.item.nextElementSibling === target) {
+            return;
+        }
+        const destination = next ? items.indexOf(next) : items.length;
+        drag.locked = destination > own ? items.slice(own + 1, destination) : items.slice(destination, own);
+        this._moveInList(drag.item, target);
+    }
+
+    /**
+     * Scrolls the window that holds the list while an item is dragged close to its top or bottom edge, so an item can be taken
+     * to a place that is not visible.
+     */
+    _autoScroll() {
+        const drag = this.drag;
+        const scroller = drag ? this._scrollParent(drag.item) : null;
+        if (!scroller) {
+            return;
+        }
+        const rect = scroller.getBoundingClientRect();
+        const top = Math.max(rect.top, 0);
+        const bottom = Math.min(rect.bottom, window.innerHeight);
+        const near = (distance) => Math.ceil(SCROLL_MAX * Math.min(1, (SCROLL_ZONE - distance) / SCROLL_ZONE));
+        let step = 0;
+        if (drag.y < top + SCROLL_ZONE) {
+            step = -near(Math.max(drag.y - top, 0));
+        } else if (drag.y > bottom - SCROLL_ZONE) {
+            step = near(Math.max(bottom - drag.y, 0));
+        }
+        if (step) {
+            scroller.scrollTop += step;
+            this._placeSlot();
+        }
+    }
+
+    /**
+     * @param {HTMLElement} element
+     * @returns {HTMLElement|null} The closest ancestor that scrolls and has something to scroll.
+     */
+    _scrollParent(element) {
+        for (let node = element.parentElement; node && node !== document.body; node = node.parentElement) {
+            if (/(auto|scroll)/.test(getComputedStyle(node).overflowY) && node.scrollHeight > node.clientHeight + 1) {
+                return node;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * @param {HTMLElement} item
+     * @param {HTMLElement|null} next The element the item goes before.
+     */
+    _moveInList(item, next) {
+        const parent = item.parentElement;
+        const siblings = [...parent.children].filter((node) => node !== item);
+        const before = new Map(siblings.map((node) => [node, node.getBoundingClientRect().top]));
+        parent.insertBefore(item, next);
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            return;
+        }
+        siblings.forEach((node) => {
+            const delta = before.get(node) - node.getBoundingClientRect().top;
+            if (delta) {
+                const slide = [{transform: 'translateY(' + delta + 'px)'}, {transform: 'none'}];
+                node.animate(slide, {duration: DRAG_MS, easing: 'ease'});
+            }
+        });
+    }
+
+    async _dropDrag(event) {
+        const drag = this.drag;
+        if (!drag) {
+            return;
+        }
+        event.preventDefault();
+        drag.committed = true;
+        const slides = drag.type === 'slide';
+        const list = slides ? this.model.slides : this._slide().blocks;
+        const keys = [...drag.item.parentElement.querySelectorAll(slides ? '[data-drag-slide]' : '[data-drag-block]')]
+            .map((node) => (slides ? Number(node.dataset.dragSlide) : node.dataset.dragBlock));
+        const ordered = keys.map((key) => (slides ? list[key] : list.find((item) => item.id === key)));
+        const current = this._slide();
+        list.splice(0, list.length, ...ordered);
+        this.model.current = this.model.slides.indexOf(current);
+        this._endDrag();
+        await this._render();
+    }
+
+    /**
+     * When the item is dropped out of the list the list goes back to how it was.
+     */
+    _endDrag() {
+        const drag = this.drag;
+        if (drag) {
+            clearInterval(drag.timer);
+        }
+        this.drag = null;
+        this.element.querySelectorAll('.is-dragging').forEach((node) => node.classList.remove('is-dragging'));
+        this.element.querySelectorAll('[data-drag-block][draggable]').forEach((node) => node.removeAttribute('draggable'));
+        if (drag && !drag.committed) {
+            this._render();
+        }
+    }
+
+    /**
+     * The work is saved while the person edits, not on every key: when the person stops for a moment, and at least every few
+     * seconds while the person goes on. What has not changed is not sent, and only one save travels at a time.
+     */
+    _touch() {
+        const save = this.autosave;
+        if (!this.model || !save.ready) {
+            return;
+        }
+        clearTimeout(save.idle);
+        save.idle = setTimeout(() => this._saveDraft(), SAVE_IDLE);
+        save.most = save.most || setTimeout(() => this._saveDraft(), SAVE_MOST);
+    }
+
+    /**
+     * Save the work now, unless it is the same that is saved. A failure is ignored: the draft is a help, never an obstacle.
+     */
+    async _saveDraft() {
+        const save = this.autosave;
+        clearTimeout(save.idle);
+        clearTimeout(save.most);
+        save.idle = save.most = null;
+        if (!this.model || !save.ready) {
+            return;
+        }
+        const lang = this.reactive.state.session.lang || '';
+        const data = model.toDraft({topic: this.ui.topic, lang, reference: this.ui.reference, model: this.model});
+        if (data === null) {
+            await this._forgetEmptyDraft();
+            return;
+        }
+        if (data === save.last) {
+            return;
+        }
+        if (save.sending) {
+            save.again = true;
+            return;
+        }
+        save.sending = true;
+        try {
+            await repository.saveDraft({courseid: this.reactive.state.page.courseid, kind: KIND, data});
+            save.last = data;
+        } catch (error) {
+            window.console.warn(error);
+        }
+        save.sending = false;
+        if (save.again) {
+            save.again = false;
+            this._touch();
+        }
+    }
+
+    /**
+     * The person emptied the editor: there is nothing to resume, so the draft saved before is deleted instead of being offered
+     * again.
+     */
+    async _forgetEmptyDraft() {
+        const save = this.autosave;
+        if (!save.last || save.sending) {
+            return;
+        }
+        save.last = '';
+        try {
+            await repository.discardDraft({courseid: this.reactive.state.page.courseid, kind: KIND, keepfiles: false});
+        } catch (error) {
+            window.console.warn(error);
+        }
+    }
+
+    /**
+     * Ask whether the person has work left from before. Nothing is saved until the person has chosen what to do with it.
+     */
+    async _offerDraft() {
+        const save = this.autosave;
+        save.ready = false;
+        save.last = '';
+        let found = null;
+        try {
+            found = await repository.resumeDraft({courseid: this.reactive.state.page.courseid, kind: KIND});
+        } catch (error) {
+            window.console.warn(error);
+        }
+        if (!this.model) {
+            return;
+        }
+        const draft = found && found.exists ? model.fromDraft(found.data) : null;
+        if (!draft || this.ui.topic.trim() || this.model.slides.length) {
+            save.ready = true;
+            return;
+        }
+        const when = new Intl.DateTimeFormat(document.documentElement.lang || undefined, {dateStyle: 'medium', timeStyle: 'short'})
+            .format(new Date(found.timemodified * 1000));
+        save.found = {draft, data: found.data, baseurl: found.baseurl};
+        this.ui.draft = {
+            text: this.strings.pe_draft_found.replace('{$a}', when),
+            lost: draft.lost ? this.strings.pe_draft_lostfiles : '',
+        };
+        await this._render();
+    }
+
+    /**
+     * Working on the editor without choosing is starting over: the draft that was offered is replaced by this work when it is
+     * saved, and the offer goes away.
+     */
+    _startedFresh() {
+        const save = this.autosave;
+        if (!save.found) {
+            return;
+        }
+        save.found = null;
+        save.last = '';
+        save.ready = true;
+        this.ui.draft = null;
+        this.element.querySelector('.pe-draft')?.remove();
+    }
+
+    /**
+     * Go on with the work that was saved.
+     */
+    _continueDraft() {
+        const save = this.autosave;
+        const {draft, data, baseurl} = save.found;
+        this.ui.fileBase = baseurl;
+        this.model = draft.model;
+        this.ui.topic = draft.topic;
+        this._setReference(draft.reference);
+        if (draft.lang && this.ui.languages.some((language) => language.code === draft.lang)) {
+            this.reactive.dispatch('setLang', draft.lang);
+        }
+        this.ui.draft = null;
+        save.found = null;
+        save.last = data;
+        save.ready = true;
+    }
+
+    /**
+     * Start from nothing: the work that was saved is deleted.
+     */
+    _discardDraft() {
+        const save = this.autosave;
+        save.found = null;
+        save.last = '';
+        save.ready = true;
+        this.ui.draft = null;
+        this._dropDraft();
+    }
+
+    /**
+     * Delete the saved work. It has no use once the activity is created or the person starts again. When the activity is about
+     * to be created the files stay: if the creation fails the person goes on, and the daily task deletes them later. Nothing is
+     * saved again until it is known that the activity was not created, or the page leaving would bring the draft back.
+     *
+     * @param {boolean} keepfiles
+     */
+    async _dropDraft(keepfiles = false) {
+        const save = this.autosave;
+        clearTimeout(save.idle);
+        clearTimeout(save.most);
+        save.idle = save.most = null;
+        save.ready = false;
+        try {
+            await repository.discardDraft({courseid: this.reactive.state.page.courseid, kind: KIND, keepfiles});
+        } catch (error) {
+            window.console.warn(error);
+        }
+        save.last = '';
+        save.ready = !keepfiles;
+    }
+
+    /**
+     * Escape closes the open menu and nothing else: the modal must stay open with what the person wrote.
+     *
+     * @param {KeyboardEvent} event
+     */
+    _handleKeydown(event) {
+        if (event.altKey && (event.key === 'ArrowUp' || event.key === 'ArrowDown')) {
+            this._moveWithKeyboard(event, event.key === 'ArrowUp' ? -1 : 1);
+            return;
+        }
+        const open = event.key === 'Escape' ? this.element.querySelector('.dropdown-menu.show') : null;
+        if (open) {
+            const toggle = open.parentElement.querySelector('[data-toggle="dropdown"]');
+            event.stopPropagation();
+            event.preventDefault();
+            toggle.click();
+            toggle.focus();
         }
     }
 
@@ -803,8 +1370,9 @@ export default class extends BaseComponent {
         if (!this.model) {
             return;
         }
-        if (target.dataset.field === 'auto') {
-            this.model.mode = target.checked ? 'auto' : 'manual';
+        this._startedFresh();
+        if (target.dataset.field === 'mode') {
+            this.model.mode = target.value;
             await this._render();
             return;
         }
