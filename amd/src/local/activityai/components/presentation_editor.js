@@ -41,6 +41,9 @@ import {buildContext} from 'local_coursegen/local/activityai/presentation_view';
 
 const COMPONENT = 'local_coursegen';
 const DRAG_MS = 150;
+const DRAG_MARGIN = 8;
+const SCROLL_ZONE = 70;
+const SCROLL_MAX = 22;
 const MENU_ITEM_HEIGHT = 40;
 const MENU_PADDING = 16;
 const KIND = 'course_presentation';
@@ -897,7 +900,8 @@ export default class extends BaseComponent {
         if (!item) {
             return;
         }
-        this.drag = {type: slide ? 'slide' : 'block', item, committed: false};
+        this.drag = {type: slide ? 'slide' : 'block', item, committed: false, y: event.clientY};
+        this.drag.timer = setInterval(() => this._autoScroll(), 16);
         event.dataTransfer.effectAllowed = 'move';
         event.dataTransfer.setData('text/plain', 'move');
         // The browser takes the picture that follows the pointer now; the item becomes the empty slot after that.
@@ -905,9 +909,6 @@ export default class extends BaseComponent {
     }
 
     /**
-     * The item being dragged is moved in the list as soon as the pointer passes the middle of another item, wherever the pointer
-     * is, so the empty slot always shows where it will stay.
-     *
      * @param {DragEvent} event
      */
     _overDrag(event) {
@@ -917,16 +918,81 @@ export default class extends BaseComponent {
         }
         event.preventDefault();
         event.dataTransfer.dropEffect = 'move';
-        const others = [...drag.item.parentElement.children]
-            .filter((node) => node !== drag.item && (node.dataset.dragSlide !== undefined || node.dataset.dragBlock !== undefined));
-        const next = others.find((node) => {
+        drag.y = event.clientY;
+        this._placeSlot();
+    }
+
+    /**
+     * The item being dragged is moved in the list as soon as the pointer enters the next one. The elements it just went over
+     * are locked until the pointer leaves them: without it the empty slot would go back and forth when the elements have
+     * different heights.
+     */
+    _placeSlot() {
+        const drag = this.drag;
+        const items = [...drag.item.parentElement.children]
+            .filter((node) => node.dataset.dragSlide !== undefined || node.dataset.dragBlock !== undefined);
+        const own = items.indexOf(drag.item);
+        drag.locked = (drag.locked || []).filter((node) => {
             const rect = node.getBoundingClientRect();
-            return event.clientY < rect.top + rect.height / 2;
+            return drag.y >= rect.top && drag.y <= rect.bottom;
         });
-        const target = next || (others.length ? others[others.length - 1].nextElementSibling : null);
-        if (drag.item.nextElementSibling !== target) {
-            this._moveInList(drag.item, target);
+        const next = items.find((node, index) => {
+            if (node === drag.item) {
+                return false;
+            }
+            if (drag.locked.includes(node)) {
+                return index > own;
+            }
+            const rect = node.getBoundingClientRect();
+            const margin = Math.min(rect.height / 2, DRAG_MARGIN);
+            return index < own ? drag.y <= rect.bottom - margin : drag.y <= rect.top + margin;
+        });
+        const target = next || items[items.length - 1].nextElementSibling;
+        if (target === drag.item || drag.item.nextElementSibling === target) {
+            return;
         }
+        const destination = next ? items.indexOf(next) : items.length;
+        drag.locked = destination > own ? items.slice(own + 1, destination) : items.slice(destination, own);
+        this._moveInList(drag.item, target);
+    }
+
+    /**
+     * Scrolls the window that holds the list while an item is dragged close to its top or bottom edge, so an item can be taken
+     * to a place that is not visible.
+     */
+    _autoScroll() {
+        const drag = this.drag;
+        const scroller = drag ? this._scrollParent(drag.item) : null;
+        if (!scroller) {
+            return;
+        }
+        const rect = scroller.getBoundingClientRect();
+        const top = Math.max(rect.top, 0);
+        const bottom = Math.min(rect.bottom, window.innerHeight);
+        const near = (distance) => Math.ceil(SCROLL_MAX * Math.min(1, (SCROLL_ZONE - distance) / SCROLL_ZONE));
+        let step = 0;
+        if (drag.y < top + SCROLL_ZONE) {
+            step = -near(Math.max(drag.y - top, 0));
+        } else if (drag.y > bottom - SCROLL_ZONE) {
+            step = near(Math.max(bottom - drag.y, 0));
+        }
+        if (step) {
+            scroller.scrollTop += step;
+            this._placeSlot();
+        }
+    }
+
+    /**
+     * @param {HTMLElement} element
+     * @returns {HTMLElement|null} The closest ancestor that scrolls and has something to scroll.
+     */
+    _scrollParent(element) {
+        for (let node = element.parentElement; node && node !== document.body; node = node.parentElement) {
+            if (/(auto|scroll)/.test(getComputedStyle(node).overflowY) && node.scrollHeight > node.clientHeight + 1) {
+                return node;
+            }
+        }
+        return null;
     }
 
     /**
@@ -974,6 +1040,9 @@ export default class extends BaseComponent {
      */
     _endDrag() {
         const drag = this.drag;
+        if (drag) {
+            clearInterval(drag.timer);
+        }
         this.drag = null;
         this.element.querySelectorAll('.is-dragging').forEach((node) => node.classList.remove('is-dragging'));
         this.element.querySelectorAll('[data-drag-block][draggable]').forEach((node) => node.removeAttribute('draggable'));

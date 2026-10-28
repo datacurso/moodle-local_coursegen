@@ -2,11 +2,11 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
-## [2.0.10] - 2026102619
+## [2.0.10] - 2026102620
 
 ### Changed
 - **Dragging shows where the slide or element will stay**  
-  While a slide or an element is dragged, the others make room with a short movement and an empty dashed slot marks the place where it will land. The empty slot moves as soon as the pointer passes the middle of a neighbouring element, without having to reach its edge. Dropping it there keeps the new order, and dropping it outside the list leaves everything as it was. The line that marked the place before was removed.
+  While a slide or an element is dragged, the others make room with a short movement and an empty dashed slot marks the place where it will land. The empty slot moves as soon as the pointer enters the next element, without having to reach its edge, and it does not go back and forth when the elements have different heights. When the item is dragged close to the top or bottom edge of the window, the window scrolls by itself so it can be taken to a place that is not visible. Dropping it there keeps the new order, and dropping it outside the list leaves everything as it was. The line that marked the place before was removed.
 
 ## [2.0.10] - 2026102617
 
