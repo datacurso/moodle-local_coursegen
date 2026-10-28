@@ -49,76 +49,6 @@ class Mutations {
         stateManager.state.session.sectionnum = Number(payload.sectionnum);
         stateManager.state.session.beforemod = payload.beforemod === null ? null : Number(payload.beforemod);
         stateManager.state.modal.open = true;
-        if (!stateManager.state.session.jobid) {
-            // A new conversation starts from the chooser of types.
-            stateManager.state.session.activitytype = '';
-            stateManager.state.session.h5ptype = '';
-            stateManager.state.session.typestep = 'type';
-        }
-        stateManager.setReadOnly(true);
-    }
-
-    /**
-     * The teacher picked a type of activity from the list.
-     *
-     * H5P asks for its kind next; any other type goes straight to the chat.
-     *
-     * @param {StateManager} stateManager
-     * @param {{modname: string}} payload
-     */
-    chooseActivityType(stateManager, payload) {
-        const modname = String(payload.modname || '');
-        const offered = stateManager.state.page.activitytypes.some((type) => type.modname === modname);
-        if (!modname || !offered || stateManager.state.session.jobid) {
-            return;
-        }
-
-        stateManager.setReadOnly(false);
-        stateManager.state.session.activitytype = modname;
-        stateManager.state.session.h5ptype = '';
-        stateManager.state.session.typestep = modname === 'h5pactivity' ? 'h5p' : 'prompt';
-        stateManager.setReadOnly(true);
-    }
-
-    /**
-     * The teacher picked the kind of H5P.
-     *
-     * @param {StateManager} stateManager
-     * @param {{type: string}} payload
-     */
-    chooseH5pType(stateManager, payload) {
-        const type = String(payload.type || '');
-        const known = stateManager.state.page.h5ptypes.some((kind) => kind.type === type);
-        if (!known || stateManager.state.session.jobid) {
-            return;
-        }
-
-        stateManager.setReadOnly(false);
-        stateManager.state.session.h5ptype = type;
-        stateManager.state.session.typestep = 'prompt';
-        stateManager.setReadOnly(true);
-    }
-
-    /**
-     * One step back, while the conversation has not started: from the chat to the kinds of H5P, or to the types.
-     *
-     * @param {StateManager} stateManager
-     */
-    goBack(stateManager) {
-        const session = stateManager.state.session;
-        if (session.jobid) {
-            return;
-        }
-
-        stateManager.setReadOnly(false);
-        if (session.typestep === 'prompt' && session.activitytype === 'h5pactivity') {
-            session.h5ptype = '';
-            session.typestep = 'h5p';
-        } else {
-            session.activitytype = '';
-            session.h5ptype = '';
-            session.typestep = 'type';
-        }
         stateManager.setReadOnly(true);
     }
 
@@ -194,61 +124,10 @@ class Mutations {
     }
 
     /**
-     * Open the session of the Course Presentation editor: the job is started and the document and the pictures the
-     * teacher chose are sent, but nothing is generated yet; the editor asks for the draft once the job exists.
-     *
-     * @param {StateManager} stateManager
-     * @param {{prompt: string}} payload
-     */
-    async beginPresentation(stateManager, payload) {
-        await ensureUiTexts();
-
-        const state = stateManager.state;
-        const courseid = Number(state.page.courseid) || 0;
-        stateManager.setReadOnly(false);
-        state.session.locked = true;
-        state.session.phase = 'editing_starting';
-        stateManager.setReadOnly(true);
-
-        try {
-            const response = await repository.startSession({
-                courseid,
-                sectionnum: state.session.sectionnum,
-                beforemod: state.session.beforemod,
-                prompt: String(payload.prompt || ''),
-                generateimages: state.session.generateimages,
-                lang: String(state.session.lang || state.page.defaultlang || 'en'),
-                modname: String(state.session.activitytype || ''),
-                h5ptype: String(state.session.h5ptype || ''),
-            });
-            const jobid = response && response.job_id ? String(response.job_id) : '';
-            if (!jobid) {
-                throw new Error(response && response.message ? response.message : 'Missing session response');
-            }
-
-            if (state.upload.draftitemid) {
-                await repository.uploadFile({courseid, jobid, draftitemid: state.upload.draftitemid});
-            }
-
-            stateManager.setReadOnly(false);
-            state.session.jobid = jobid;
-            state.session.locked = false;
-            state.session.phase = 'editing';
-            stateManager.setReadOnly(true);
-        } catch (error) {
-            stateManager.setReadOnly(false);
-            state.session.locked = false;
-            state.session.phase = 'idle';
-            stateManager.setReadOnly(true);
-            throw error;
-        }
-    }
-
-    /**
      * Submit the initial prompt (creates session) OR a feedback prompt (adjust).
      *
      * @param {StateManager} stateManager
-     * @param {{prompt: string, slideImages: (Array<{slide: number, draftitemid: number}>|undefined)}} payload
+     * @param {{prompt: string}} payload
      */
     async submitPrompt(stateManager, payload) {
         await ensureUiTexts();
@@ -291,8 +170,6 @@ class Mutations {
                     prompt,
                     generateimages: state.session.generateimages,
                     lang: String(state.session.lang || state.page.defaultlang || 'en'),
-                    modname: String(state.session.activitytype || ''),
-                    h5ptype: String(state.session.h5ptype || ''),
                 });
 
                 const jobid = response && response.job_id ? String(response.job_id) : '';
@@ -317,16 +194,6 @@ class Mutations {
                         state.upload.filename = '';
                         stateManager.setReadOnly(true);
                     }
-                }
-
-                // The pictures the teacher chose for the slides go to the service before the run starts, one by one.
-                for (const image of payload.slideImages || []) {
-                    await repository.uploadSlideImage({
-                        courseid,
-                        jobid,
-                        draftitemid: image.draftitemid,
-                        slide: image.slide,
-                    });
                 }
 
                 stateManager.setReadOnly(false);

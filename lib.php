@@ -52,11 +52,6 @@ function local_coursegen_pluginfile(
         return \local_coursegen\local\service\generated_file_server::serve($context, $args, $forcedownload, $options);
     }
 
-    // The pictures a person added to the draft of the AI activity editor, shown only to that person.
-    if ($filearea === \local_coursegen\local\draft_files::AREA) {
-        return \local_coursegen\local\draft_files::serve($context, $args, $options);
-    }
-
     // Check the contextlevel is as expected - if your plugin is a block, this becomes CONTEXT_BLOCK, etc.
     if ($context->contextlevel != CONTEXT_COURSE) {
         return false;

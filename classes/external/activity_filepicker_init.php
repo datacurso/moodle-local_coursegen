@@ -28,7 +28,6 @@ namespace local_coursegen\external;
 use context_course;
 use external_api;
 use external_function_parameters;
-use local_coursegen\local\draft_files;
 use external_single_structure;
 use external_value;
 
@@ -49,7 +48,6 @@ class activity_filepicker_init extends external_api {
     public static function execute_parameters(): external_function_parameters {
         return new external_function_parameters([
             'courseid' => new external_value(PARAM_INT, 'Course id where the activity is being generated'),
-            'role' => new external_value(PARAM_ALPHA, 'image to pick a picture, anything else for any file', VALUE_DEFAULT, ''),
         ]);
     }
 
@@ -59,12 +57,11 @@ class activity_filepicker_init extends external_api {
      * @param int $courseid Course id.
      * @return array
      */
-    public static function execute(int $courseid, string $role = ''): array {
+    public static function execute(int $courseid): array {
         global $PAGE;
 
         $params = self::validate_parameters(self::execute_parameters(), [
             'courseid' => $courseid,
-            'role' => $role,
         ]);
 
         $courseid = $params['courseid'];
@@ -82,12 +79,12 @@ class activity_filepicker_init extends external_api {
 
         $args = (object) [
             'context' => $context,
-            'accepted_types' => $params['role'] === 'image' ? ['.png', '.jpg', '.jpeg', '.gif'] : '*',
+            'accepted_types' => '*',
             'return_types' => FILE_INTERNAL,
             'env' => 'filepicker',
             'client_id' => $clientid,
             'itemid' => $draftitemid,
-            'maxbytes' => $params['role'] === 'image' ? draft_files::MAX_BYTES : 0,
+            'maxbytes' => 0,
             'maxfiles' => 1,
             'subdirs' => 0,
         ];

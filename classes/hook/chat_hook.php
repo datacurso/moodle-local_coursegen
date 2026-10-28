@@ -17,8 +17,6 @@
 namespace local_coursegen\hook;
 
 use core\hook\output\before_footer_html_generation;
-use local_coursegen\local\activity_type_catalog;
-use local_coursegen\local\h5p_content_types;
 
 /**
  * Hook to load the floating chat
@@ -99,8 +97,6 @@ class chat_hook {
                 $languageoptions,
                 self::get_default_language_code($languageoptions),
                 $canimages,
-                activity_type_catalog::for_modal(),
-                h5p_content_types::for_modal(),
             ]);
         }
     }

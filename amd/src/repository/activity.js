@@ -27,10 +27,10 @@ import ajax from 'core/ajax';
  * Start streaming job to create a module with AI.
  *
  * @param {{courseid: number, sectionnum: (number|null), beforemod: (number|null),
- *     prompt: string, generateimages: number, lang: string, modname: string, h5ptype: string}} payload
+ *     prompt: string, generateimages: number, lang: string}} payload
  * @return {Promise<Object>} response
  */
-export async function createModStream({courseid, sectionnum, beforemod, prompt, generateimages, lang, modname, h5ptype}) {
+export async function createModStream({courseid, sectionnum, beforemod, prompt, generateimages, lang}) {
     const args = {
         courseid: Number(courseid) || 0,
         sectionnum: typeof sectionnum === 'number' ? sectionnum : null,
@@ -42,14 +42,6 @@ export async function createModStream({courseid, sectionnum, beforemod, prompt, 
     const language = String(lang || '').toLowerCase();
     if (language) {
         args.lang = language;
-    }
-
-    // The type the teacher picked from the list; without it the service decides.
-    if (modname) {
-        args.modname = String(modname);
-    }
-    if (h5ptype) {
-        args.h5ptype = String(h5ptype);
     }
 
     return ajax.call([
@@ -110,10 +102,9 @@ export async function sendActivityFeedback({courseid, jobid, approvalstatus, ins
  * @param {{courseid: number}} payload
  * @return {Promise<Object>} response
  */
-export async function initActivityFilepicker({courseid, role = ''}) {
+export async function initActivityFilepicker({courseid}) {
     const args = {
         courseid: Number(courseid) || 0,
-        role,
     };
 
     return ajax.call([
@@ -130,13 +121,11 @@ export async function initActivityFilepicker({courseid, role = ''}) {
  * @param {{courseid: number, jobid: string, draftitemid: number}} payload
  * @return {Promise<Object>} response
  */
-export async function uploadActivityFile({courseid, jobid, draftitemid = 0, filekey = '', kind = ''}) {
+export async function uploadActivityFile({courseid, jobid, draftitemid}) {
     const args = {
         courseid: Number(courseid) || 0,
         jobid,
         draftitemid: Number(draftitemid) || 0,
-        filekey,
-        kind,
     };
 
     return ajax.call([
@@ -146,121 +135,3 @@ export async function uploadActivityFile({courseid, jobid, draftitemid = 0, file
         },
     ])[0];
 }
-
-/**
- * Upload the picture a teacher chose for one slide of a Course Presentation.
- *
- * @param {{courseid: number, jobid: string, draftitemid: number, slide: number}} payload
- * @return {Promise<Object>} response
- */
-export async function uploadActivitySlideImage({courseid, jobid, draftitemid = 0, slide, filekey = '', kind = ''}) {
-    return ajax.call([
-        {
-            methodname: 'local_coursegen_activity_slide_image_upload',
-            args: {
-                courseid: Number(courseid) || 0,
-                jobid,
-                draftitemid: Number(draftitemid) || 0,
-                slide: Number(slide) || 0,
-                filekey,
-                kind,
-            },
-        },
-    ])[0];
-}
-
-/**
- * Run an AJAX call of the Course Presentation editor and read the JSON the AI service answered.
- *
- * @param {string} methodname
- * @param {Object} args
- * @return {Promise<Object>} What the AI service answered.
- */
-const presentationCall = async(methodname, args) => {
-    const response = await ajax.call([{methodname, args}])[0];
-    return JSON.parse(response.data);
-};
-
-/**
- * Ask the AI to write the slides of a Course Presentation.
- *
- * @param {{courseid: number, jobid: string, instructions: string}} payload
- * @return {Promise<{name: string, intro: string, slides: Object[]}>}
- */
-export const presentationDraft = ({courseid, jobid, instructions}) => presentationCall(
-    'local_coursegen_activity_presentation_draft',
-    {courseid: Number(courseid) || 0, jobid, instructions: instructions || ''}
-);
-
-/**
- * Ask the AI to write one slide, or one of its parts, again.
- *
- * @param {{courseid: number, jobid: string, slides: Object[], index: number, instruction: string, part: string}} payload
- * @return {Promise<Object>} The slide written again.
- */
-export const presentationSlide = ({courseid, jobid, slides, index, instruction, part}) => presentationCall(
-    'local_coursegen_activity_presentation_slide',
-    {
-        courseid: Number(courseid) || 0,
-        jobid,
-        slides: JSON.stringify(slides),
-        index: Number(index) || 0,
-        instruction,
-        part: part || '',
-    }
-);
-
-/**
- * Ask the AI service to make the package from the slides as they were left.
- *
- * @param {{courseid: number, jobid: string, name: string, intro: string, slides: Object[]}} payload
- * @return {Promise<Object>}
- */
-export const presentationBuild = ({courseid, jobid, name, intro, slides}) => presentationCall(
-    'local_coursegen_activity_presentation_build',
-    {courseid: Number(courseid) || 0, jobid, name, intro: intro || '', slides: JSON.stringify(slides)}
-);
-
-/**
- * The unfinished work of the person in the activity editor.
- *
- * @param {{courseid: number, kind: string}} payload
- * @return {Promise<{exists: boolean, data: string, timemodified: number}>}
- */
-export const draftResume = ({courseid, kind}) => ajax.call([{
-    methodname: 'local_coursegen_activity_draft_resume',
-    args: {courseid: Number(courseid) || 0, kind},
-}])[0];
-
-/**
- * Save the work of the person in the activity editor.
- *
- * @param {{courseid: number, kind: string, data: string}} payload
- * @return {Promise<{saved: boolean}>}
- */
-export const draftUpdate = ({courseid, kind, data}) => ajax.call([{
-    methodname: 'local_coursegen_activity_draft_update',
-    args: {courseid: Number(courseid) || 0, kind, data},
-}])[0];
-
-/**
- * Discard the saved work of the person in the activity editor.
- *
- * @param {{courseid: number, kind: string, keepfiles: boolean}} payload
- * @return {Promise<Object>}
- */
-export const draftReset = ({courseid, kind, keepfiles = false}) => ajax.call([{
-    methodname: 'local_coursegen_activity_draft_reset',
-    args: {courseid: Number(courseid) || 0, kind, keepfiles},
-}])[0];
-
-/**
- * Keep a file the person added in the activity editor, in Moodle, until the activity is created.
- *
- * @param {{courseid: number, kind: string, key: string, draftitemid: number, role: string}} payload
- * @return {Promise<{saved: boolean}>}
- */
-export const draftFileSave = ({courseid, kind, key, draftitemid, role}) => ajax.call([{
-    methodname: 'local_coursegen_activity_draft_file_save',
-    args: {courseid: Number(courseid) || 0, kind, key, draftitemid: Number(draftitemid) || 0, role},
-}])[0];

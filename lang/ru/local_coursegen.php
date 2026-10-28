@@ -93,6 +93,7 @@ $string['addactivityai_faildefault'] = 'Не удалось создать ре�
 $string['addactivityai_label'] = 'Опишите, что вам нужно';
 $string['addactivityai_modaltitle'] = 'Создайте ресурс/деятельность с помощью AI';
 $string['addactivityai_placeholder'] = 'Опишите, какой ресурс или деятельность вы хотите создать.';
+$string['addactivityai_welcome'] = 'Привет! Скажите мне, какой ресурс или занятие вам нужно, и я создам его в вашем курсе. 😊';
 $string['addactivitywithia'] = 'Добавьте действие или ресурс с помощью AI';
 $string['addcourseai_arialabel'] = 'AI помощник для создания курсов';
 $string['addcourseai_done'] = 'Сделанный! Курс создан успешно.';

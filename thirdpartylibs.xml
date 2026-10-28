@@ -25,14 +25,4 @@
       <copyright>2015-2026 Cure53 and other contributors</copyright>
     </copyrights>
   </library>
-  <library>
-    <location>pix/h5p</location>
-    <name>H5P content type icons</name>
-    <description>The pictures that H5P gives its content types, shown in the list of H5P kinds.</description>
-    <license>MIT</license>
-    <repository>https://github.com/h5p</repository>
-    <copyrights>
-      <copyright>Joubel AS</copyright>
-    </copyrights>
-  </library>
 </libraries>

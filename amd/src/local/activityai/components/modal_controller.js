@@ -32,14 +32,17 @@ import {get_string as getString} from 'core/str';
 
 import ChatForm from 'local_coursegen/local/activityai/components/chat_form';
 import StreamOutput from 'local_coursegen/local/activityai/components/stream_output';
-import TypePicker from 'local_coursegen/local/activityai/components/type_picker';
-import PresentationEditor from 'local_coursegen/local/activityai/components/presentation_editor';
-import {fetchSupportedItems, kindItems} from 'local_coursegen/local/template/template_space_chooser';
 
 export default class extends BaseComponent {
     create() {
         this.name = 'local_coursegen_activityai_modal_controller';
         this.modal = null;
+    }
+
+    getWatchers() {
+        return [
+            {watch: 'modal.open:updated', handler: this._handleOpenChange},
+        ];
     }
 
     async _handleOpenChange({element}) {
@@ -61,18 +64,6 @@ export default class extends BaseComponent {
         }
 
         const bodyHTML = await Templates.render('local_coursegen/add_activity_ai_modal', {});
-        const typeItems = await fetchSupportedItems(
-            this.reactive.state.page.courseid,
-            this.reactive.state.page.activitytypes.map((type) => type.modname)
-        );
-        const kindList = kindItems(
-            this.reactive.state.page.h5ptypes,
-            await getString('h5ptype_usesimages', 'local_coursegen')
-        );
-        const pickerHTML = await Templates.render('local_coursegen/activity_type_picker', {
-            typeitems: typeItems,
-            kinditems: kindList,
-        });
 
         const state = this.reactive.state;
         const selectedlang = String(state?.session?.lang || state?.page?.defaultlang || 'en').toLowerCase();
@@ -108,33 +99,10 @@ export default class extends BaseComponent {
 
         this.modal.getRoot().addClass('local_coursegen_course_ai_modal');
         this.modal.show();
-        this._addHeaderBack(await getString('activitytype_back', 'local_coursegen'));
 
         const rootElement = this.modal.getRoot()[0];
         if (!rootElement) {
             return;
-        }
-
-        const slot = rootElement.querySelector("[data-region='local_coursegen/activity/typepicker_slot']");
-        if (slot) {
-            slot.innerHTML = pickerHTML;
-            new TypePicker({
-                element: slot,
-                reactive: this.reactive,
-                footer: rootElement.querySelector('.modal-footer'),
-                typeItems,
-                kindItems: kindList,
-            });
-
-            const editorSlot = document.createElement('div');
-            editorSlot.className = 'd-none';
-            slot.append(editorSlot);
-            new PresentationEditor({
-                element: editorSlot,
-                reactive: this.reactive,
-                languages: languageItems,
-                footer: rootElement.querySelector('.modal-footer'),
-            });
         }
 
         new StreamOutput({
@@ -150,47 +118,6 @@ export default class extends BaseComponent {
         this.modal.getRoot().on(ModalEvents.hidden, () => {
             this.reactive.dispatch('closeModal');
         });
-    }
-
-    getWatchers() {
-        return [
-            {watch: 'modal.open:updated', handler: this._handleOpenChange},
-            {watch: 'session.typestep:updated', handler: this._syncBack},
-            {watch: 'session.jobid:updated', handler: this._syncBack},
-        ];
-    }
-
-    /**
-     * The Back button is for before the conversation starts and after the first step: there is nothing before the
-     * types, and once the conversation has started the type cannot change.
-     */
-    _syncBack() {
-        const session = this.reactive.state.session;
-        const button = this.modal?.getRoot()[0].querySelector('[data-region="local_coursegen/activity/back"]');
-        button?.classList.toggle('d-none', Boolean(session.jobid) || session.typestep === 'type');
-    }
-
-    /**
-     * A Back button at the start of the header of the chat, in sight while the conversation has not started.
-     *
-     * @param {string} label The text of the button.
-     */
-    _addHeaderBack(label) {
-        const header = this.modal.getRoot()[0].querySelector('.modal-header');
-        if (!header) {
-            return;
-        }
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.className = 'btn btn-link p-0 mr-3 text-nowrap';
-        button.dataset.region = 'local_coursegen/activity/back';
-        const arrow = document.createElement('span');
-        arrow.className = 'fa fa-arrow-left mr-1';
-        arrow.setAttribute('aria-hidden', 'true');
-        button.append(arrow, document.createTextNode(label));
-        button.addEventListener('click', () => this.reactive.dispatch('goBack'));
-        header.prepend(button);
-        this._syncBack();
     }
 
     async _close() {

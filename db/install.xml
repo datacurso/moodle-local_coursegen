@@ -85,30 +85,6 @@
             </KEYS>
         </TABLE>
 
-        <TABLE NAME="local_coursegen_activity_draft" COMMENT="Unfinished work of the AI activity editor: one per user, course and kind of activity">
-            <FIELDS>
-                <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true" />
-                <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="The only user that can read or change the draft" />
-                <FIELD NAME="courseid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
-                <FIELD NAME="kind" TYPE="char" LENGTH="64" NOTNULL="true" SEQUENCE="false" COMMENT="The kind of activity being edited, e.g. course_presentation" />
-                <FIELD NAME="schemaver" TYPE="int" LENGTH="4" NOTNULL="true" DEFAULT="1" SEQUENCE="false" COMMENT="Version of the editor model the data was saved with" />
-                <FIELD NAME="contenthash" TYPE="char" LENGTH="40" NOTNULL="true" SEQUENCE="false" COMMENT="SHA-1 of the data, to skip writes that change nothing" />
-                <FIELD NAME="data" TYPE="text" LENGTH="big" NOTNULL="true" SEQUENCE="false" COMMENT="The state of the editor as JSON" />
-                <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
-                <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
-                <FIELD NAME="usermodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" />
-            </FIELDS>
-            <KEYS>
-                <KEY NAME="primary" TYPE="primary" FIELDS="id" />
-                <KEY NAME="userid" TYPE="foreign" FIELDS="userid" REFTABLE="user" REFFIELDS="id" />
-                <KEY NAME="courseid" TYPE="foreign" FIELDS="courseid" REFTABLE="course" REFFIELDS="id" />
-                <KEY NAME="usercoursekind" TYPE="unique" FIELDS="userid, courseid, kind" />
-            </KEYS>
-            <INDEXES>
-                <INDEX NAME="timemodified" UNIQUE="false" FIELDS="timemodified" />
-            </INDEXES>
-        </TABLE>
-
         <TABLE NAME="local_coursegen_template" COMMENT="Course templates for AI generation">
             <FIELDS>
                 <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true" />

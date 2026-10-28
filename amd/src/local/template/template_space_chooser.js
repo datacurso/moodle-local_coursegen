@@ -89,7 +89,7 @@ const supportedItemsOf = (items, supportedTypes) => {
  * @param {string[]} supportedTypes Module names a space can be made for.
  * @returns {Promise<Array>} Content items, each flagged so no favourite star is drawn.
  */
-export const fetchSupportedItems = async(courseId, supportedTypes) => {
+const fetchSupportedItems = async(courseId, supportedTypes) => {
     const data = await Repository.activityModules(courseId, 0);
     const supported = supportedItemsOf(data.content_items, supportedTypes);
     return withoutFavouriteStars(supported);
@@ -317,42 +317,4 @@ export const chooseActivityType = async({courseId, supportedTypes}) => {
         throw error;
     }
     return selection.promise;
-};
-
-/**
- * Plain text as HTML.
- *
- * @param {string} text
- * @returns {string}
- */
-const escapeHtml = (text) => {
-    const holder = document.createElement('div');
-    holder.textContent = text;
-    return holder.innerHTML;
-};
-
-/**
- * The kinds as the items of Moodle's chooser: a tile with the picture and the name; the description goes in the help.
- *
- * @param {Array} kinds What to offer.
- * @param {string} usesImagesLabel The note shown for the kinds that use images.
- * @returns {Array}
- */
-export const kindItems = (kinds, usesImagesLabel) => {
-    return kinds.map((kind) => {
-        const note = kind.usesimages ? ' ' + escapeHtml('(' + usesImagesLabel + ')') : '';
-        return {
-            name: kind.type,
-            title: kind.name,
-            link: '?add=' + encodeURIComponent(kind.type),
-            icon: '<img class="icon" alt="" style="width: 64px; height: 40px; max-width: none; object-fit: contain;" src="' +
-                escapeHtml(kind.iconurl) + '">',
-            help: '<p>' + escapeHtml(kind.description) + note + '</p>',
-            purpose: '',
-            branded: 1,
-            componentname: 'mod_h5pactivity',
-            archetype: ARCHETYPE_ACTIVITY,
-            legacyitem: true,
-        };
-    });
 };

@@ -29,14 +29,6 @@ import {
     sendActivityFeedback,
     initActivityFilepicker,
     uploadActivityFile,
-    uploadActivitySlideImage,
-    presentationDraft,
-    presentationSlide,
-    presentationBuild,
-    draftResume,
-    draftUpdate,
-    draftReset,
-    draftFileSave,
 } from 'local_coursegen/repository/activity';
 
 export const startSession = async(payload) => {
@@ -57,36 +49,4 @@ export const initFilepicker = async(payload) => {
 
 export const uploadFile = async(payload) => {
     return uploadActivityFile(payload);
-};
-
-export const uploadSlideImage = async(payload) => {
-    return uploadActivitySlideImage(payload);
-};
-
-export const draftPresentation = async(payload) => {
-    return presentationDraft(payload);
-};
-
-export const rewriteSlide = async(payload) => {
-    return presentationSlide(payload);
-};
-
-export const buildPresentation = async(payload) => {
-    return presentationBuild(payload);
-};
-
-export const resumeDraft = async(payload) => {
-    return draftResume(payload);
-};
-
-export const saveDraft = async(payload) => {
-    return draftUpdate(payload);
-};
-
-export const discardDraft = async(payload) => {
-    return draftReset(payload);
-};
-
-export const saveDraftFile = async(payload) => {
-    return draftFileSave(payload);
 };

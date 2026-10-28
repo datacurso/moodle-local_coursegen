@@ -30,9 +30,13 @@
     }
 }}
 <div class="local_coursegen_ai_chat pb-4 container" aria-label="{{#str}} addactivityai_arialabel, local_coursegen {{/str}}" data-region="local_coursegen/activity/root">
-    <!-- Step before the chat: the type of the activity -->
+    <!-- Welcome Message -->
     <div class="row justify-content-center">
-        <div class="col-lg-10" data-region="local_coursegen/activity/typepicker_slot"></div>
+        <div class="col-lg-10">
+            <div class="activity-welcome-message p-3 mb-3 bg-light rounded">
+                <p class="mb-0">{{#str}} addactivityai_welcome, local_coursegen {{/str}}</p>
+            </div>
+        </div>
     </div>
 
     <!-- User Messages Section -->

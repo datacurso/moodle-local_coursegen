@@ -24,7 +24,9 @@
 import {BaseComponent} from 'core/reactive';
 import Notification from 'core/notification';
 
-import {pickFile} from 'local_coursegen/local/activityai/filepicker';
+import YUI from 'core/yui';
+
+import * as repository from 'local_coursegen/local/activityai/repository';
 
 export default class extends BaseComponent {
     create() {
@@ -184,9 +186,40 @@ export default class extends BaseComponent {
         }
 
         try {
-            await pickFile({
-                courseid: state.page.courseid,
-                onPicked: (file) => this.reactive.dispatch('setUpload', file),
+            const pickerdata = await repository.initFilepicker({courseid: state.page.courseid});
+            if (!pickerdata || !pickerdata.clientid || !pickerdata.draftitemid || !pickerdata.options) {
+                return;
+            }
+
+            const pickerOptions = JSON.parse(pickerdata.options);
+            const clientIdKey = 'client_id';
+            pickerOptions[clientIdKey] = pickerdata.clientid;
+            pickerOptions.itemid = pickerdata.draftitemid;
+
+            YUI.use('core_filepicker', 'node', 'node-event-simulate', 'core_dndupload', (Y) => {
+                if (pickerdata.templates) {
+                    try {
+                        const templates = JSON.parse(pickerdata.templates);
+                        if (templates && typeof templates === 'object') {
+                            M.core_filepicker.set_templates(Y, templates);
+                        }
+                    } catch (ex) {
+                        // Ignore.
+                    }
+                }
+
+                pickerOptions.formcallback = (fileinfo) => {
+                    this.reactive.dispatch('setUpload', {
+                        draftitemid: pickerOptions.itemid,
+                        filename: fileinfo && fileinfo.file ? String(fileinfo.file) : '',
+                    });
+                };
+
+                if (!M.core_filepicker.instances[pickerOptions[clientIdKey]]) {
+                    M.core_filepicker.init(Y, pickerOptions);
+                }
+
+                M.core_filepicker.instances[pickerOptions[clientIdKey]].show();
             });
         } catch (error) {
             Notification.exception(error);

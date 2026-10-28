@@ -29,7 +29,7 @@ import * as repository from 'local_coursegen/local/activityai/repository';
  *
  * @param {StateManager} stateManager
  * @param {Object} uiTexts Texts of the interface.
- * @returns {Promise<boolean>} Whether the activity was created and the page is going to it.
+ * @returns {Promise<void>}
  */
 export const createActivityFromJob = async(stateManager, uiTexts) => {
     const state = stateManager.state;
@@ -37,7 +37,7 @@ export const createActivityFromJob = async(stateManager, uiTexts) => {
     const jobid = String(state.session.jobid || '');
 
     if (!courseid || !jobid) {
-        return false;
+        return;
     }
 
     const sectionnum = state.session.sectionnum;
@@ -53,7 +53,7 @@ export const createActivityFromJob = async(stateManager, uiTexts) => {
 
         if (!result || !result.ok) {
             notification.alert('', result?.message || uiTexts.activityai_error_create_activity, 'close');
-            return false;
+            return;
         }
 
         const activityUrl = result?.data?.activityurl || null;
@@ -62,9 +62,7 @@ export const createActivityFromJob = async(stateManager, uiTexts) => {
         } else {
             window.location.reload();
         }
-        return true;
     } catch (error) {
         notification.exception(error);
-        return false;
     }
 };
