@@ -226,8 +226,8 @@ class draft_files {
     public static function serve(\context $context, array $args, array $options): bool {
         global $USER;
 
-        if ($context->contextlevel != CONTEXT_USER || isguestuser() || (int) $context->instanceid !== (int) $USER->id
-                || count($args) !== 3) {
+        $owned = $context->contextlevel == CONTEXT_USER && (int) $context->instanceid === (int) $USER->id;
+        if (!$owned || isguestuser() || count($args) !== 3) {
             return false;
         }
         [$courseid, $kind, $key] = $args;
