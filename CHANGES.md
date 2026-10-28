@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026102621
+
+### Added
+- **The Course Presentation editor keeps the work of the person**  
+  What the person writes in the editor is saved in the server while editing, so if the page is reloaded or closed by mistake, the work can be resumed. When the person opens Course Presentation in the course again, the editor offers to continue where it was left or to start over. The work is saved when the person stops for a moment and at least every few seconds while going on, and nothing is sent when it has not changed, so the database is not written on every key. Each person has one draft per course, which only that person can read, change or delete, and only if the person can create activities with AI in the course. The draft is deleted when the activity is created, when the person starts over, when the person or the course is deleted, and after 30 days without changes. Uploaded images and the reference file are not kept: they have to be added again. The new table is included in the privacy export and deletion.
+
 ## [2.0.10] - 2026102620
 
 ### Changed

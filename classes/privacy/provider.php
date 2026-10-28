@@ -69,6 +69,9 @@ class provider implements
                 'context_type', 'system_instruction_name', 'sectionnum', 'beforemod',
                 'timecreated', 'timemodified',
             ],
+            'local_coursegen_activity_draft' => [
+                'courseid', 'userid', 'kind', 'data', 'timecreated', 'timemodified',
+            ],
         ];
 
         foreach ($tables as $table => $fields) {
@@ -230,6 +233,7 @@ class provider implements
             'local_coursegen_course_context' => ['usermodified' => $user->id],
             'local_coursegen_course_sessions' => ['userid' => $user->id],
             'local_coursegen_module_jobs' => ['userid' => $user->id],
+            'local_coursegen_activity_draft' => ['userid' => $user->id],
         ];
         return $tables;
     }

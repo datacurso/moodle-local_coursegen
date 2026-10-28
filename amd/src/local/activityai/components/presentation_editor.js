@@ -47,6 +47,9 @@ const SCROLL_MAX = 22;
 const MENU_ITEM_HEIGHT = 40;
 const MENU_PADDING = 16;
 const KIND = 'course_presentation';
+/** The work is saved when the person stops for this long, and at least this often while the person goes on. */
+const SAVE_IDLE = 2000;
+const SAVE_MOST = 15000;
 
 /** The part of a slide the AI writes again for each element. */
 const PART = {title: 'title', text: 'body', image: 'image', question: 'question'};
@@ -65,7 +68,7 @@ const SAFE_FIXED = {
 const STRING_KEYS = [
     'pe_error_slides', 'pe_error_brief', 'pe_error_range', 'pe_error_notitle', 'pe_error_instr', 'pe_error_title',
     'pe_error_text', 'pe_error_html', 'pe_error_video', 'pe_error_image', 'pe_error_question', 'pe_error_notwritten',
-    'pe_regenerate_title',
+    'pe_regenerate_title', 'pe_draft_found', 'pe_draft_lostfiles',
     'pe_regenerate_body', 'pe_regenerate_yes', 'pe_slide_label', 'pe_option', 'pe_save_error',
     ...model.TYPES.map((type) => 'pe_type_' + type),
     ...model.QUESTION_KINDS.map((kind) => 'pe_kind_' + kind),
@@ -100,6 +103,12 @@ export default class extends BaseComponent {
             languages: descriptor.languages || [],
         };
         this.sentFile = null;
+        this.autosave = {ready: false, last: '', idle: null, most: null, sending: false, again: false, found: null};
+        this.leave = () => {
+            if (document.visibilityState !== 'visible') {
+                this._saveDraft();
+            }
+        };
         this.drag = null;
         this.strings = {};
     }
@@ -120,7 +129,15 @@ export default class extends BaseComponent {
         $(document).off(shown).on(shown, '.local_coursegen_pe .dropdown', (event) => {
             this._placeMenu(event.target.querySelector('[data-toggle="dropdown"]'));
         });
+        document.addEventListener('visibilitychange', this.leave);
+        window.addEventListener('pagehide', this.leave);
         this._sync();
+    }
+
+    destroy() {
+        document.removeEventListener('visibilitychange', this.leave);
+        window.removeEventListener('pagehide', this.leave);
+        super.destroy();
     }
 
     getWatchers() {
@@ -146,9 +163,13 @@ export default class extends BaseComponent {
                 slides: [],
             };
             await this._render();
+            this._offerDraft();
         } else if (!visible && !session.jobid) {
+            await this._saveDraft();
             this.model = null;
             this.ui.topic = '';
+            this.ui.draft = null;
+            this.autosave.ready = false;
         }
     }
 
@@ -177,6 +198,7 @@ export default class extends BaseComponent {
         const {html, js} = await Templates.renderForPromise('local_coursegen/presentation_editor', context);
         Templates.replaceNodeContents(this.element, html, js);
         this.element.querySelectorAll('textarea').forEach(grow);
+        this._touch();
     }
 
     /**
@@ -237,6 +259,8 @@ export default class extends BaseComponent {
             copydo: () => this._copyBlock(button.dataset.block),
             removeimage: () => Object.assign(this._block(button.dataset.block), {uploaded: false, slot: null, name: ''}),
             removefile: () => this.reactive.dispatch('setUpload', {draftitemid: null, filename: ''}),
+            draftcontinue: () => this._continueDraft(),
+            draftdiscard: () => this._discardDraft(),
         };
         if (!handlers[action]) {
             return false;
@@ -646,8 +670,11 @@ export default class extends BaseComponent {
                 intro: this.model.intro,
                 slides: this._serviceSlides(),
             }));
+            await this._dropDraft();
             await createActivityFromJob(this.reactive, await loadActivityaiStrings());
         } catch (error) {
+            this.autosave.last = '';
+            this.autosave.ready = true;
             this.ui.error = this._messageOf(error);
             Notification.exception(error);
         }
@@ -757,6 +784,7 @@ export default class extends BaseComponent {
         if (target.tagName === 'TEXTAREA') {
             grow(target);
         }
+        this._touch();
         if (target.dataset.field === 'lang') {
             this.reactive.dispatch('setLang', String(target.value || '').toLowerCase());
             return;
@@ -1049,6 +1077,132 @@ export default class extends BaseComponent {
         if (drag && !drag.committed) {
             this._render();
         }
+    }
+
+    /**
+     * The work is saved while the person edits, not on every key: when the person stops for a moment, and at least every few
+     * seconds while the person goes on. What has not changed is not sent, and only one save travels at a time.
+     */
+    _touch() {
+        const save = this.autosave;
+        if (!this.model || !save.ready) {
+            return;
+        }
+        clearTimeout(save.idle);
+        save.idle = setTimeout(() => this._saveDraft(), SAVE_IDLE);
+        save.most = save.most || setTimeout(() => this._saveDraft(), SAVE_MOST);
+    }
+
+    /**
+     * Save the work now, unless it is the same that is saved. A failure is ignored: the draft is a help, never an obstacle.
+     */
+    async _saveDraft() {
+        const save = this.autosave;
+        clearTimeout(save.idle);
+        clearTimeout(save.most);
+        save.idle = save.most = null;
+        if (!this.model || !save.ready) {
+            return;
+        }
+        const lang = this.reactive.state.session.lang || '';
+        const data = model.toDraft({topic: this.ui.topic, lang, model: this.model});
+        if (data === null || data === save.last) {
+            return;
+        }
+        if (save.sending) {
+            save.again = true;
+            return;
+        }
+        save.sending = true;
+        try {
+            await repository.saveDraft({courseid: this.reactive.state.page.courseid, kind: KIND, data});
+            save.last = data;
+        } catch (error) {
+            window.console.warn(error);
+        }
+        save.sending = false;
+        if (save.again) {
+            save.again = false;
+            this._touch();
+        }
+    }
+
+    /**
+     * Ask whether the person has work left from before. Nothing is saved until the person has chosen what to do with it.
+     */
+    async _offerDraft() {
+        const save = this.autosave;
+        save.ready = false;
+        save.last = '';
+        let found = null;
+        try {
+            found = await repository.resumeDraft({courseid: this.reactive.state.page.courseid, kind: KIND});
+        } catch (error) {
+            window.console.warn(error);
+        }
+        if (!this.model) {
+            return;
+        }
+        const draft = found && found.exists ? model.fromDraft(found.data) : null;
+        if (!draft || this.ui.topic.trim() || this.model.slides.length) {
+            save.ready = true;
+            return;
+        }
+        const when = new Intl.DateTimeFormat(document.documentElement.lang || undefined, {dateStyle: 'medium', timeStyle: 'short'})
+            .format(new Date(found.timemodified * 1000));
+        save.found = {draft, data: found.data};
+        this.ui.draft = {
+            text: this.strings.pe_draft_found.replace('{$a}', when),
+            lost: draft.lost ? this.strings.pe_draft_lostfiles : '',
+        };
+        await this._render();
+    }
+
+    /**
+     * Go on with the work that was saved.
+     */
+    _continueDraft() {
+        const save = this.autosave;
+        const {draft, data} = save.found;
+        this.model = draft.model;
+        this.ui.topic = draft.topic;
+        if (draft.lang && this.ui.languages.some((language) => language.code === draft.lang)) {
+            this.reactive.dispatch('setLang', draft.lang);
+        }
+        this.ui.draft = null;
+        save.found = null;
+        save.last = data;
+        save.ready = true;
+    }
+
+    /**
+     * Start from nothing: the work that was saved is deleted.
+     */
+    _discardDraft() {
+        const save = this.autosave;
+        save.found = null;
+        save.last = '';
+        save.ready = true;
+        this.ui.draft = null;
+        this._dropDraft();
+    }
+
+    /**
+     * Delete the saved work. It has no use once the activity is created or the person starts again.
+     */
+    async _dropDraft() {
+        const save = this.autosave;
+        clearTimeout(save.idle);
+        clearTimeout(save.most);
+        save.idle = save.most = null;
+        save.ready = false;
+        try {
+            await repository.discardDraft({courseid: this.reactive.state.page.courseid, kind: KIND});
+        } catch (error) {
+            window.console.warn(error);
+        }
+        save.last = '';
+        save.ready = true;
     }
 
     /**

@@ -352,6 +352,19 @@ span.local_coursegen-sparkles-icon.white {
 }
 
 /* The editor lays the slide out as it will look: the brief on top, then a rail of slides and the selected one. */
+.local_coursegen_pe .pe-draft {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: .5rem 1rem;
+}
+
+.local_coursegen_pe .pe-draft-actions {
+    display: flex;
+    gap: .5rem;
+}
+
 .local_coursegen_pe .pe-brief {
     display: flex;
     flex-direction: column;

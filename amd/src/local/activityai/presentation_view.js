@@ -87,6 +87,7 @@ export const buildContext = (data, ui, strings, clean) => {
     const current = slides[data.current];
     const context = {
         error: ui.error,
+        draft: ui.draft || null,
         topic: ui.topic,
         topicError: ui.errors.topic || '',
         rangeError: ui.errors.range || '',

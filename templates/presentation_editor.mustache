@@ -25,6 +25,7 @@
     * manual bool, auto bool, min int, max int, languages array (code, name, selected)
     * hasfile bool, filename string
     * busy bool, busyall bool, creating bool
+    * draft object          - Work saved before: text, lost.
     * slides array          - The thumbnails: index, number, current, title, mini (hastitle, hastext, hasimage, hasquestion, hasvideo).
     * current object        - The selected slide: number, total, first, last, blocks, addchips.
 
@@ -33,6 +34,15 @@
      "languages": [], "hasfile": false, "filename": "", "busy": false, "busyall": false, "creating": false, "slides": [], "total": 0}
 }}
 <div class="local_coursegen_pe">
+    {{#draft}}
+    <div class="alert alert-info pe-draft" role="status">
+        <span>{{text}}{{#lost}} {{.}}{{/lost}}</span>
+        <span class="pe-draft-actions">
+            <button type="button" class="btn btn-primary btn-sm" data-action="local_coursegen/pe/draftcontinue">{{#str}} pe_draft_continue, local_coursegen {{/str}}</button>
+            <button type="button" class="btn btn-secondary btn-sm" data-action="local_coursegen/pe/draftdiscard">{{#str}} pe_draft_discard, local_coursegen {{/str}}</button>
+        </span>
+    </div>
+    {{/draft}}
     <div class="pe-brief">
         <label class="pe-cap" for="pe-topic"><i class="fa fa-magic" aria-hidden="true"></i>{{#str}} pe_ctx_label, local_coursegen {{/str}}</label>
         <div class="pe-composer {{#topicError}}is-invalid{{/topicError}}">

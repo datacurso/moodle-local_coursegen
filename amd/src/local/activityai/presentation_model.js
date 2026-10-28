@@ -346,3 +346,97 @@ export const blockProblem = (block, written) => {
     }
     return empty[block.type] ? block.type : '';
 };
+
+/** The version of the draft the editor saves. Drafts of another version are not used. */
+export const DRAFT_VERSION = 1;
+
+/**
+ * @param {{topic: string, lang: string, model: Object}} state What the editor holds.
+ * @returns {string|null} What is saved while the person edits, or null while there is nothing to save.
+ */
+export const toDraft = ({topic, lang, model}) => {
+    if (!topic.trim() && !model.slides.length) {
+        return null;
+    }
+    const {mode, min, max, name, intro, current, slides} = model;
+    return JSON.stringify({v: DRAFT_VERSION, topic, lang, model: {mode, min, max, name, intro, current, slides}});
+};
+
+const text = (value, limit = 20000) => (typeof value === 'string' ? value.slice(0, limit) : '');
+
+const question = (raw) => {
+    if (!raw || typeof raw !== 'object') {
+        return null;
+    }
+    return {
+        type: QUESTION_KINDS.includes(raw.type) ? raw.type : QUESTION_KINDS[0],
+        prompt: text(raw.prompt, 2000),
+        text: text(raw.text, 4000),
+        correct: raw.correct === true || raw.correct === 'true',
+        options: (Array.isArray(raw.options) ? raw.options.slice(0, 10) : []).map((option) => ({
+            text: text(option && option.text, 1000),
+            correct: Boolean(option && (option.correct === true || option.correct === 'true')),
+        })),
+    };
+};
+
+/**
+ * The saved data is not trusted: each element is made from a new one and only the known fields are copied, with their type.
+ *
+ * @param {Object} raw
+ * @returns {Object|null} The element, or null when it is not one.
+ */
+const blockFromDraft = (raw) => {
+    if (!raw || !TYPES.includes(raw.type)) {
+        return null;
+    }
+    const block = newBlock(raw.type);
+    const allowed = {video: [MODE_FIXED], text: [MODE_AI, MODE_FIXED, MODE_HTML]};
+    const modes = allowed[raw.type] || [MODE_AI, MODE_FIXED];
+    block.mode = modes.includes(raw.mode) ? raw.mode : block.mode;
+    ['instr', 'value', 'fixedtext', 'html', 'prompt', 'url', 'name'].forEach((field) => {
+        block[field] = text(raw[field]);
+    });
+    block.kind = QUESTION_KINDS.includes(raw.kind) ? raw.kind : block.kind;
+    block.question = question(raw.question);
+    return block;
+};
+
+/**
+ * @param {string} json What was saved.
+ * @returns {{topic: string, lang: string, lost: boolean, model: Object}|null} The state to go on with, or null when the draft
+ *     is not of this version or is not usable. Uploaded images are not part of it: they have to be uploaded again.
+ */
+export const fromDraft = (json) => {
+    let raw;
+    try {
+        raw = JSON.parse(json);
+    } catch (error) {
+        return null;
+    }
+    if (!raw || raw.v !== DRAFT_VERSION || !raw.model || typeof raw.model !== 'object') {
+        return null;
+    }
+    let lost = false;
+    const slides = (Array.isArray(raw.model.slides) ? raw.model.slides : []).slice(0, MAX_SLIDES).map((slide) => ({
+        blocks: (slide && Array.isArray(slide.blocks) ? slide.blocks : []).map((block) => {
+            lost = lost || Boolean(block && block.uploaded);
+            return blockFromDraft(block);
+        }).filter(Boolean),
+    }));
+    const whole = (value, fallback) => (Number.isInteger(value) ? Math.min(Math.max(value, MIN_SLIDES), MAX_SLIDES) : fallback);
+    return {
+        topic: text(raw.topic, 4000),
+        lang: text(raw.lang, 10),
+        lost,
+        model: {
+            mode: raw.model.mode === 'auto' ? 'auto' : 'manual',
+            min: whole(raw.model.min, 5),
+            max: whole(raw.model.max, 8),
+            name: text(raw.model.name, 255),
+            intro: text(raw.model.intro, 2000),
+            current: Math.min(Math.max(Number(raw.model.current) || 0, 0), Math.max(slides.length - 1, 0)),
+            slides,
+        },
+    };
+};

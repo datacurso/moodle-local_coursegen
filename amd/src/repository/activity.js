@@ -215,3 +215,36 @@ export const presentationBuild = ({courseid, jobid, name, intro, slides}) => pre
     'local_coursegen_activity_presentation_build',
     {courseid: Number(courseid) || 0, jobid, name, intro: intro || '', slides: JSON.stringify(slides)}
 );
+
+/**
+ * The unfinished work of the person in the activity editor.
+ *
+ * @param {{courseid: number, kind: string}} payload
+ * @return {Promise<{exists: boolean, data: string, timemodified: number}>}
+ */
+export const draftResume = ({courseid, kind}) => ajax.call([{
+    methodname: 'local_coursegen_activity_draft_resume',
+    args: {courseid: Number(courseid) || 0, kind},
+}])[0];
+
+/**
+ * Save the work of the person in the activity editor.
+ *
+ * @param {{courseid: number, kind: string, data: string}} payload
+ * @return {Promise<{saved: boolean}>}
+ */
+export const draftUpdate = ({courseid, kind, data}) => ajax.call([{
+    methodname: 'local_coursegen_activity_draft_update',
+    args: {courseid: Number(courseid) || 0, kind, data},
+}])[0];
+
+/**
+ * Discard the saved work of the person in the activity editor.
+ *
+ * @param {{courseid: number, kind: string}} payload
+ * @return {Promise<Object>}
+ */
+export const draftReset = ({courseid, kind}) => ajax.call([{
+    methodname: 'local_coursegen_activity_draft_reset',
+    args: {courseid: Number(courseid) || 0, kind},
+}])[0];
