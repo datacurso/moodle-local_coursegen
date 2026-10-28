@@ -68,8 +68,9 @@ const SAFE_FIXED = {
 const STRING_KEYS = [
     'pe_error_slides', 'pe_error_brief', 'pe_error_range', 'pe_error_notitle', 'pe_error_instr', 'pe_error_title',
     'pe_error_text', 'pe_error_html', 'pe_error_video', 'pe_error_image', 'pe_error_question', 'pe_error_notwritten',
-    'pe_regenerate_title', 'pe_draft_found', 'pe_draft_lostfiles', 'pe_delete_title', 'pe_delete_body', 'pe_delete_yes',
-    'pe_regenerate_body', 'pe_regenerate_yes', 'pe_slide_label', 'pe_option', 'pe_save_error',
+    'pe_generate', 'pe_change_ph', 'pe_change_apply', 'pe_writing', 'pe_review',
+    'pe_draft_found', 'pe_draft_lostfiles', 'pe_delete_title', 'pe_delete_body', 'pe_delete_yes',
+    'pe_slide_label', 'pe_option', 'pe_save_error',
     ...model.TYPES.map((type) => 'pe_type_' + type),
     ...model.QUESTION_KINDS.map((kind) => 'pe_kind_' + kind),
     ...model.TYPES.map((type) => 'pe_ph_' + type),
@@ -100,7 +101,7 @@ export default class extends BaseComponent {
         this.model = null;
         this.ui = {
             busy: '', error: '', errors: {blocks: {}, slide: {}}, topic: '', copyFor: null, filename: '',
-            reference: null, fileBase: '',
+            reference: null, fileBase: '', change: {},
             languages: descriptor.languages || [],
         };
         this.sent = new Set();
@@ -597,22 +598,6 @@ export default class extends BaseComponent {
     }
 
     /**
-     * @returns {Promise<boolean>} Whether to go on: the AI is about to replace what it wrote before.
-     */
-    async _confirmRewrite() {
-        if (this.model.mode !== 'manual' || !model.hasResults(this.model.slides)) {
-            return true;
-        }
-        try {
-            await Notification.saveCancelPromise(
-                this.strings.pe_regenerate_title, this.strings.pe_regenerate_body, this.strings.pe_regenerate_yes);
-        } catch (cancelled) {
-            return false;
-        }
-        return true;
-    }
-
-    /**
      * Ask the AI to write everything that is an instruction.
      *
      * @returns {Promise<boolean>} Whether it was written.
@@ -649,6 +634,40 @@ export default class extends BaseComponent {
     }
 
     /**
+     * Write only what is still waiting, in slides the AI already wrote: the rest is left as the person has it.
+     *
+     * @returns {Promise<boolean>} Whether it was written.
+     */
+    async _writePending() {
+        if (!await this._showErrors(this._validate(false))) {
+            return false;
+        }
+        this.ui.busy = 'all';
+        this.ui.error = '';
+        await this._render();
+        let written = false;
+        try {
+            await this._ensureSession();
+            await this._sendFiles();
+            const slides = this.model.slides;
+            for (let index = 0; index < slides.length; index++) {
+                for (const block of slides[index].blocks) {
+                    if (block.mode === model.MODE_AI && !model.isReady(block) && block.instr.trim()) {
+                        model.applyWritten(block, await this._rewrite(index, block.instr.trim(), PART[block.type]));
+                    }
+                }
+            }
+            await this._fillMarkers(true);
+            written = true;
+        } catch (error) {
+            this.ui.error = this._messageOf(error);
+        }
+        this.ui.busy = '';
+        await this._render();
+        return written;
+    }
+
+    /**
      * @param {Object} draft What the AI service answered.
      */
     _takeDraft(draft) {
@@ -666,12 +685,14 @@ export default class extends BaseComponent {
 
     /**
      * In the elements with HTML, the AI writes only what the markers ask for and the rest stays as it is.
+     *
+     * @param {boolean} [only] Whether to leave the elements that are already written as they are.
      */
-    async _fillMarkers() {
+    async _fillMarkers(only) {
         const slides = this.model.slides;
         for (let index = 0; index < slides.length; index++) {
             const block = model.blockOf(slides[index], 'text');
-            if (block && block.mode === model.MODE_HTML) {
+            if (block && block.mode === model.MODE_HTML && (!only || !model.isReady(block))) {
                 block.value = await model.fillMarkers(block.html, async(prompt) => {
                     const ask = 'Write only this piece of text, in one short paragraph and with no title: ' + prompt;
                     const written = await this._rewrite(index, ask, 'body');
@@ -682,14 +703,17 @@ export default class extends BaseComponent {
     }
 
     /**
-     * Write one element again from its instruction.
+     * Write one element: from its instruction, or, when it is already written, changing it as the person asks.
      *
      * @param {string} id
      */
     async _regenerate(id) {
         const block = this._block(id);
-        if (!block.instr.trim()) {
-            this.element.querySelector(`[data-block='${id}'][data-f='instr']`)?.focus();
+        const written = model.hasResults([{blocks: [block]}]);
+        const change = (this.ui.change[id] || '').trim();
+        const instruction = written ? change : block.instr.trim();
+        if (!instruction) {
+            this.element.querySelector(`[data-block='${id}'][data-f='${written ? 'change' : 'instr'}']`)?.focus();
             return;
         }
         this.ui.busy = id;
@@ -697,8 +721,9 @@ export default class extends BaseComponent {
         await this._render();
         try {
             await this._ensureSession();
-            const written = await this._rewrite(this.model.current, block.instr.trim(), PART[block.type]);
-            model.applyWritten(block, written);
+            const answer = await this._rewrite(this.model.current, instruction, PART[block.type]);
+            model.applyWritten(block, answer);
+            this.ui.change[id] = '';
         } catch (error) {
             this.ui.error = this._messageOf(error);
         }
@@ -707,13 +732,14 @@ export default class extends BaseComponent {
     }
 
     /**
-     * Write what is still an instruction, build the activity from the slides and go to it.
+     * Build the activity from the slides, once they are written, and go to it. If something is still an instruction, the AI
+     * writes it first and the person reviews the result.
      */
     async _create() {
         if (this.model.mode !== 'manual' || model.hasPending(this.model.slides)) {
-            if (!await this._confirmRewrite() || !await this._write()) {
-                return;
-            }
+            // The AI writes and stops: the person looks at the slides and changes what they want before the activity exists.
+            await (this.model.mode === 'manual' && model.hasResults(this.model.slides) ? this._writePending() : this._write());
+            return;
         }
         if (!await this._showErrors(this._validate(true))) {
             return;
@@ -762,7 +788,7 @@ export default class extends BaseComponent {
         const errors = this._noErrors();
         const text = this.strings;
         const {slides, mode, min, max} = this.model;
-        if (!written && !this.ui.topic.trim()) {
+        if (!written && !this.ui.topic.trim() && !this.ui.reference) {
             errors.topic = text.pe_error_brief;
         }
         if (mode === 'auto') {
@@ -881,6 +907,8 @@ export default class extends BaseComponent {
             if (count) {
                 count.textContent = String(model.markersOf(block.html).length);
             }
+        } else if (field === 'change') {
+            this.ui.change[block.id] = target.value;
         } else if (field === 'instr' || field === 'url' || field === 'value') {
             block[field] = target.value;
         } else if (question && field === 'qprompt') {

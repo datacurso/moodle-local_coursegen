@@ -926,6 +926,35 @@ span.local_coursegen-sparkles-icon.white {
     font-weight: 600;
 }
 
+.local_coursegen_pe .pe-result-image {
+    color: var(--pe-muted-fg);
+    font-style: italic;
+}
+
+.local_coursegen_pe .pe-change {
+    display: flex;
+    gap: .5rem;
+    align-items: center;
+    margin-top: .5rem;
+}
+
+.local_coursegen_pe .pe-change .pe-input {
+    flex: 1;
+}
+
+.local_coursegen_pe .pe-progress,
+.local_coursegen_pe .pe-review {
+    display: flex;
+    gap: .5rem;
+    align-items: center;
+    margin: 0 0 .75rem;
+    color: var(--pe-muted-fg);
+}
+
+.local_coursegen_pe .pe-review .fa {
+    color: var(--pe-ok);
+}
+
 .local_coursegen_pe .pe-result-html > :last-child {
     margin-bottom: 0;
 }

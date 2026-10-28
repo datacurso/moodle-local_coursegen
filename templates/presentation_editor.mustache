@@ -179,12 +179,15 @@
     {{/auto}}
 
     <div class="pe-final">
+        {{#writing}}<div class="pe-progress" role="status"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+            <span>{{#str}} pe_writing, local_coursegen {{/str}}</span></div>{{/writing}}
+        {{#review}}<p class="pe-review" role="status"><i class="fa fa-check-circle" aria-hidden="true"></i> {{text}}</p>{{/review}}
         {{#error}}<div class="pe-alert" role="alert" data-region="local_coursegen/pe/error">{{error}}</div>{{/error}}
         <div class="pe-final-row">
             <span class="pe-grow"></span>
             <button type="button" class="pe-btn pe-btn-primary" data-action="local_coursegen/pe/create" {{#busy}}disabled{{/busy}}>
                 {{#busy}}<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>{{/busy}}
-                {{#str}} pe_create, local_coursegen {{/str}}
+                {{#needswrite}}{{#str}} pe_generate, local_coursegen {{/str}}{{/needswrite}}{{^needswrite}}{{#str}} pe_create, local_coursegen {{/str}}{{/needswrite}}
             </button>
         </div>
     </div>

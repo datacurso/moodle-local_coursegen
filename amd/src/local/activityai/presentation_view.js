@@ -47,6 +47,7 @@ const blockContext = (block, ui, strings) => {
         placeholder: strings['pe_ph_' + block.type],
         busy: ui.busy === block.id,
         error: ui.errors.blocks[block.id] || '',
+        change: ui.change[block.id] || '',
         copyopen: ui.copyFor === block.id,
         value: block.value,
         fixedtext: block.fixedtext,
@@ -71,6 +72,7 @@ const blockContext = (block, ui, strings) => {
     };
     context['is' + block.type.charAt(0).toUpperCase() + block.type.slice(1)] = true;
     context.hasresult = block.mode === MODE_AI && Boolean(plain(block.value) || block.prompt || question);
+    context.showinstr = context.isAi && !context.hasresult;
     context.resulttext = block.type === 'text' ? plain(block.value) : block.value;
     return context;
 };
@@ -100,6 +102,12 @@ export const buildContext = (data, ui, strings, clean) => {
         hasfile: Boolean(ui.filename),
         filename: ui.filename,
         busy: ui.busy !== '',
+        writing: ui.busy === 'all',
+        needswrite: data.mode !== 'manual' || model.hasPending(slides),
+        review: data.mode === 'manual' && model.hasResults(slides) && ui.busy === '' ? {
+            count: total,
+            text: strings.pe_review.replace('{count}', total),
+        } : null,
         name: data.name,
         languages: ui.languages,
         total,

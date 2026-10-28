@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026102630
+
+### Changed
+- **A document is enough to write a presentation**  
+  The general instruction is no longer required when a document is attached. The error asking for a description only appears when there is neither text nor document.
+- **The AI writes the slides and stops for review**  
+  When the AI decides the slides, or writes what the person left as instructions, the activity is no longer created at once. The slides appear written, with a progress message while the AI works and a notice when it is done. Each written element shows its content and a field to ask the AI for a change, taking the whole presentation and the attached document as context. The person can still add, delete, reorder or edit slides and elements; new elements written by the AI are written without touching the rest. The main button reads "Write the slides" until everything is written and then "Create activity".
+
 ## [2.0.10] - 2026102628
 
 ### Fixed

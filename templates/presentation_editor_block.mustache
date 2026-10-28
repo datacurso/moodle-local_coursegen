@@ -21,7 +21,7 @@
 
     Example context (json):
     {"id": "b1", "label": "Title", "isAi": true, "isFixed": false, "isHtml": false, "canHtml": false, "canFix": true,
-     "isTitle": true, "instr": "", "placeholder": "Tell the AI what the title should say", "busy": false, "hasresult": false}
+     "isTitle": true, "instr": "", "placeholder": "Tell the AI what the title should say", "busy": false, "hasresult": false, "showinstr": true, "change": ""}
 }}
 <div class="pe-block {{#isText}}pe-block-text{{/isText}}{{#isImage}}pe-block-image{{/isImage}}" data-block-id="{{id}}" data-drag-block="{{id}}">
     {{#busy}}{{> local_coursegen/presentation_editor_busy}}{{/busy}}
@@ -51,12 +51,12 @@
     {{/copyopen}}
 
     {{#isTitle}}
-    {{#isAi}}<input id="pe-f-{{id}}" type="text" class="form-control pe-input {{#error}}is-invalid{{/error}}" {{#error}}aria-invalid="true"{{/error}} data-block="{{id}}" data-f="instr" value="{{instr}}" placeholder="{{placeholder}}">{{/isAi}}
+    {{#showinstr}}<input id="pe-f-{{id}}" type="text" class="form-control pe-input {{#error}}is-invalid{{/error}}" {{#error}}aria-invalid="true"{{/error}} data-block="{{id}}" data-f="instr" value="{{instr}}" placeholder="{{placeholder}}">{{/showinstr}}
     {{^isAi}}<input id="pe-f-{{id}}" type="text" class="form-control pe-input {{#error}}is-invalid{{/error}}" {{#error}}aria-invalid="true"{{/error}} data-block="{{id}}" data-f="value" value="{{value}}" placeholder="{{#str}} pe_fixed_title, local_coursegen {{/str}}">{{/isAi}}
     {{/isTitle}}
 
     {{#isText}}
-    {{#isAi}}<textarea id="pe-f-{{id}}" class="form-control pe-input {{#error}}is-invalid{{/error}}" {{#error}}aria-invalid="true"{{/error}} rows="2" data-block="{{id}}" data-f="instr" placeholder="{{placeholder}}">{{instr}}</textarea>{{/isAi}}
+    {{#showinstr}}<textarea id="pe-f-{{id}}" class="form-control pe-input {{#error}}is-invalid{{/error}}" {{#error}}aria-invalid="true"{{/error}} rows="2" data-block="{{id}}" data-f="instr" placeholder="{{placeholder}}">{{instr}}</textarea>{{/showinstr}}
     {{#isFixed}}<textarea id="pe-f-{{id}}" class="form-control pe-input {{#error}}is-invalid{{/error}}" {{#error}}aria-invalid="true"{{/error}} rows="3" data-block="{{id}}" data-f="fixedtext" placeholder="{{#str}} pe_fixed_text, local_coursegen {{/str}}">{{fixedtext}}</textarea>{{/isFixed}}
     {{#isHtml}}
     <textarea id="pe-f-{{id}}" class="form-control pe-input pe-code {{#error}}is-invalid{{/error}}" {{#error}}aria-invalid="true"{{/error}} rows="5" data-block="{{id}}" data-f="html" placeholder="{{#str}} pe_html_placeholder, local_coursegen {{/str}}">{{html}}</textarea>
@@ -72,7 +72,7 @@
     <p class="pe-help">{{#str}} pe_image_own_help, local_coursegen {{/str}}</p>
     {{/uploaded}}
     {{^uploaded}}
-    {{#isAi}}<textarea id="pe-f-{{id}}" class="form-control pe-input {{#error}}is-invalid{{/error}}" {{#error}}aria-invalid="true"{{/error}} rows="2" data-block="{{id}}" data-f="instr" placeholder="{{placeholder}}">{{instr}}</textarea>{{/isAi}}
+    {{#showinstr}}<textarea id="pe-f-{{id}}" class="form-control pe-input {{#error}}is-invalid{{/error}}" {{#error}}aria-invalid="true"{{/error}} rows="2" data-block="{{id}}" data-f="instr" placeholder="{{placeholder}}">{{instr}}</textarea>{{/showinstr}}
     <button type="button" class="pe-link {{#error}}is-invalid{{/error}}" {{#error}}aria-invalid="true"{{/error}} data-action="local_coursegen/pe/uploadimage" data-block="{{id}}"><i class="fa fa-upload" aria-hidden="true"></i> {{#str}} pe_image_upload, local_coursegen {{/str}}</button>
     {{/uploaded}}
     {{/isImage}}
@@ -86,7 +86,7 @@
     <div class="pe-kinds" role="group" aria-label="{{label}}">
         {{#kinds}}<button type="button" data-action="local_coursegen/pe/qkind" data-block="{{id}}" data-kind="{{key}}" aria-pressed="{{#active}}true{{/active}}{{^active}}false{{/active}}">{{label}}</button>{{/kinds}}
     </div>
-    {{#isAi}}<textarea id="pe-f-{{id}}" class="form-control pe-input {{#error}}is-invalid{{/error}}" {{#error}}aria-invalid="true"{{/error}} rows="2" data-block="{{id}}" data-f="instr" placeholder="{{placeholder}}">{{instr}}</textarea>{{/isAi}}
+    {{#showinstr}}<textarea id="pe-f-{{id}}" class="form-control pe-input {{#error}}is-invalid{{/error}}" {{#error}}aria-invalid="true"{{/error}} rows="2" data-block="{{id}}" data-f="instr" placeholder="{{placeholder}}">{{instr}}</textarea>{{/showinstr}}
     {{^isAi}}
     {{#hasquestion}}
     <input id="pe-f-{{id}}" type="text" class="form-control pe-input {{#error}}is-invalid{{/error}}" {{#error}}aria-invalid="true"{{/error}} data-block="{{id}}" data-f="qprompt" value="{{qprompt}}" placeholder="{{#str}} pe_q_prompt, local_coursegen {{/str}}">
@@ -108,12 +108,16 @@
     <div class="pe-result">
         {{#isTitle}}<strong>{{resulttext}}</strong>{{/isTitle}}
         {{#isText}}<div class="pe-result-html">{{{resulthtml}}}</div>{{/isText}}
-        {{#isImage}}<span>{{prompt}}</span>{{/isImage}}
+        {{#isImage}}<span class="pe-result-image"><i class="fa fa-image" aria-hidden="true"></i> {{prompt}}</span>{{/isImage}}
         {{#isQuestion}}<strong>{{qprompt}}</strong>
             {{#qmulti}}<ul>{{#qoptions}}<li class="{{#correct}}is-right{{/correct}}">{{text}}</li>{{/qoptions}}</ul>{{/qmulti}}
             {{#qtf}}<span>{{#qtrue}}{{#str}} pe_true, local_coursegen {{/str}}{{/qtrue}}{{^qtrue}}{{#str}} pe_false, local_coursegen {{/str}}{{/qtrue}}</span>{{/qtf}}
             {{#qfill}}<span>{{qtext}}</span>{{/qfill}}{{/isQuestion}}
-        <button type="button" class="pe-link" data-action="local_coursegen/pe/regen" data-block="{{id}}">{{#str}} pe_regen, local_coursegen {{/str}}</button>
+    </div>
+    <div class="pe-change">
+        <input type="text" class="form-control pe-input" data-block="{{id}}" data-f="change" value="{{change}}"
+               aria-label="{{#str}} pe_change_ph, local_coursegen {{/str}}" placeholder="{{#str}} pe_change_ph, local_coursegen {{/str}}">
+        <button type="button" class="pe-btn pe-btn-small" data-action="local_coursegen/pe/regen" data-block="{{id}}">{{#str}} pe_change_apply, local_coursegen {{/str}}</button>
     </div>
     {{/hasresult}}
 </div>
