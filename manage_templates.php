@@ -44,6 +44,16 @@ $PAGE->set_url('/local/coursegen/manage_templates.php');
 $PAGE->set_title(get_string('managetemplates', 'local_coursegen'));
 $PAGE->set_heading(get_string('managetemplates', 'local_coursegen'));
 
+// Hide a template from the creation of a course, or show it again.
+if (in_array($action, ['hide', 'show'], true) && $id > 0) {
+    require_capability('local/coursegen:edittemplates', $context);
+    require_sesskey();
+    $tpl = new template($id);
+    $tpl->set('visible', $action === 'show' ? 1 : 0);
+    $tpl->update();
+    redirect($PAGE->url);
+}
+
 // Handle delete action.
 if ($action === 'delete' && $id > 0) {
     require_capability('local/coursegen:deletetemplates', $context);

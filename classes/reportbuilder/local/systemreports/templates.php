@@ -45,7 +45,7 @@ class templates extends system_report {
 
         $this->set_main_table('local_coursegen_template', $alias);
         $this->add_entity($entity);
-        $this->add_base_fields("{$alias}.id, {$alias}.name");
+        $this->add_base_fields("{$alias}.id, {$alias}.name, {$alias}.visible");
 
         $this->add_columns();
         $this->add_filters();
@@ -70,6 +70,7 @@ class templates extends system_report {
     protected function add_columns(): void {
         $this->add_column_from_entity('template:name');
         $this->add_column_from_entity('template:coursefullname');
+        $this->add_column_from_entity('template:visible');
         $this->add_column_from_entity('template:timemodified');
         $this->set_initial_sort_column('template:timemodified', SORT_DESC);
     }
@@ -88,6 +89,7 @@ class templates extends system_report {
         $context = $this->get_context();
         if (has_capability('local/coursegen:edittemplates', $context)) {
             $this->add_edit_action();
+            $this->add_visibility_actions();
             $this->add_export_action();
         }
         if (has_capability('local/coursegen:deletetemplates', $context)) {
@@ -104,6 +106,20 @@ class templates extends system_report {
         $title = new lang_string('edit');
         $action = new action($url, $icon, [], false, $title);
         $this->add_action($action);
+    }
+
+    /**
+     * Add the row actions that hide a template from the creation of a course and show it again; each row gets the
+     * one that changes it.
+     */
+    private function add_visibility_actions(): void {
+        foreach (['hide' => 0, 'show' => 1] as $action => $makesvisible) {
+            $urlparams = ['action' => $action, 'id' => ':id', 'sesskey' => sesskey()];
+            $url = new moodle_url('/local/coursegen/manage_templates.php', $urlparams);
+            $row = new action($url, new pix_icon('t/' . $action, ''), [], false, new lang_string($action));
+            $row->add_callback(static fn(\stdClass $template): bool => (int) $template->visible !== $makesvisible);
+            $this->add_action($row);
+        }
     }
 
     /**

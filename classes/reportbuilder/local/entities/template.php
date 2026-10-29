@@ -91,6 +91,13 @@ class template extends base {
             ->add_fields("{$coursealias}.fullname")
             ->set_is_sortable(true);
 
+        $columns[] = (new column('visible', new lang_string('visible'), $this->get_entity_name()))
+            ->add_joins($this->get_joins())
+            ->set_type(column::TYPE_BOOLEAN)
+            ->add_fields("{$alias}.visible")
+            ->set_is_sortable(true)
+            ->set_callback([\core_reportbuilder\local\helpers\format::class, 'boolean_as_text']);
+
         $columns[] = (new column(
             'timecreated', new lang_string('timecreated', 'core_reportbuilder'), $this->get_entity_name()
         ))

@@ -75,6 +75,11 @@ class template extends persistent {
                 'type' => PARAM_INT,
                 'default' => 1,
             ],
+            // Whether the template is offered when creating a course.
+            'visible' => [
+                'type' => PARAM_BOOL,
+                'default' => 1,
+            ],
         ];
     }
 }

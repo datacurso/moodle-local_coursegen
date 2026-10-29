@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026102637
+
+### Added
+- **A template can be hidden without deleting it**  
+  The list of templates has a Visible column and, on each row, an action to hide the template or show it again. A hidden template keeps everything it has but is not offered when creating a course from a template, so a template that is being prepared or tested can stay out of sight until it is ready.
+
 ## [2.0.10] - 2026102636
 
 ### Changed

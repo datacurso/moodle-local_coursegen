@@ -467,5 +467,15 @@ function xmldb_local_coursegen_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026101222, 'local', 'coursegen');
     }
 
+    if ($oldversion < 2026102637) {
+        // A template can be hidden from the creation of a course without being deleted.
+        $table = new xmldb_table('local_coursegen_template');
+        $field = new xmldb_field('visible', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '1', 'namingstart');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+        upgrade_plugin_savepoint(true, 2026102637, 'local', 'coursegen');
+    }
+
     return true;
 }
