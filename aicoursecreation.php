@@ -65,6 +65,7 @@ use local_coursegen\local\service\course_session_service;
 
 $resumesessionid = optional_param('sessionid', 0, PARAM_INT);
 $templatesession = null;
+$templaterunsummary = null;
 $showsessionsview = optional_param('view', '', PARAM_ALPHA) === 'courses';
 // A fresh visit opens on the choice of starting point: the parameter being
 // absent is what means "nothing chosen yet", so a card writes its own value
@@ -77,7 +78,7 @@ if ($resumesessionid > 0) {
     $opened = $DB->get_record(
         'local_coursegen_course_sessions',
         ['id' => $resumesessionid, 'userid' => $USER->id],
-        'id, templateid'
+        'id, templateid, coursedata'
     );
     if ($opened && !empty($opened->templateid)) {
         $resumesessionid = 0;
@@ -96,6 +97,10 @@ if ($resumesessionid > 0) {
                 'sections' => max(0, count($modinfo->get_section_info_all()) - 1),
                 'activities' => count($modinfo->get_cms()),
             ];
+            // What the course was generated with, as the first message of its thread.
+            $templaterunsummary = \local_coursegen\local\service\template_run_summary::from_coursedata(
+                (array) json_decode((string) $opened->coursedata, true)
+            );
         }
     }
 }
@@ -230,6 +235,7 @@ $templatecontext = [
     'guidelines' => json_encode($systeminstructions),
     'coursetemplates' => $coursetemplates,
     'templatepickerformhtml' => $templatepickerformhtml,
+    'templaterunsummary' => $templaterunsummary,
     'templateemptystatehtml' => $templateemptystatehtml,
     'hascoursetemplates' => !empty($coursetemplates),
     'languages' => json_encode($languageoptions),

@@ -107,9 +107,11 @@ class start_template_generation extends external_api {
         // The exact payload the run was given, kept alongside the session:
         // a preview reading it back later must see what the run saw, not the
         // template's course as it happens to look whenever the preview loads.
+        // The syllabus's name is kept too, so the course says later what it was made from.
         $coursedata = [
             'templateid' => $params['templateid'],
             'payload' => $payload,
+            'syllabus' => $file !== null ? $file->get_filename() : '',
         ];
         $session = new course_session(0, (object) [
             'userid' => (int) $USER->id,

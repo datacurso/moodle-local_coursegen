@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026102633
+
+### Added
+- **A course made from a template says what it was generated with**  
+  The conversation of the generation now opens with the course settings: the template, the language, the attached syllabus and the general instruction. Reopening a course that was already made shows the same settings beside its card, so it is always possible to know how it was generated. Courses generated before this change show what they kept: the template, the language and the instruction.
+
 ## [2.0.10] - 2026102632
 
 ### Fixed

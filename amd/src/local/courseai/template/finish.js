@@ -99,7 +99,7 @@ export const reviewAndCreate = async(host, state, tplState, sessionId) => {
 
 /**
  * Open a course that was already made from a template: the completion view, with what the course holds
- * and the way to open it, and nothing of the form that makes a new one.
+ * and the way to open it, and nothing of the form that makes a new one but what it was generated with.
  *
  * @param {Object} host Holds the page's actions, bound once the page is set up.
  * @param {Object} state Page state.
@@ -111,6 +111,9 @@ export const showFinishedCourse = (host, state, session) => {
     state.withImages = false;
     state.createAnotherUrl = CREATE_ANOTHER_URL;
     showFinishView();
-    document.getElementById('courseaiWorkspace')?.classList.add('is-finished');
+    const workspace = document.getElementById('courseaiWorkspace');
+    workspace?.classList.add('is-finished');
+    // The page renders what the course was generated with as the first message of the thread, and the thread stays.
+    workspace?.classList.toggle('has-run-summary', !!document.querySelector('#cgLog .cg-run-summary'));
     host.actions.showCompletionView({success: true, courseurl: session.courseurl});
 };
