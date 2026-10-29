@@ -140,7 +140,8 @@ foreach ($records as $record) {
 $coursetemplates = [];
 $tplrecords = [];
 if ($cantemplate) {
-    $tplrecords = \local_coursegen\local\models\template::get_records([], 'name', 'ASC');
+    // A hidden template is kept but not offered.
+    $tplrecords = \local_coursegen\local\models\template::get_records(['visible' => 1], 'name', 'ASC');
 }
 foreach ($tplrecords as $tpl) {
     $tplcourse = $DB->get_record('course', ['id' => $tpl->get('courseid')], 'id, fullname', IGNORE_MISSING);

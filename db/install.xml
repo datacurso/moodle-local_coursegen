@@ -96,6 +96,7 @@
                 <FIELD NAME="allowedtypes" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="JSON array of allowed activity type names" />
                 <FIELD NAME="namingpattern" TYPE="char" LENGTH="255" NOTNULL="false" SEQUENCE="false" />
                 <FIELD NAME="namingstart" TYPE="int" LENGTH="2" NOTNULL="true" DEFAULT="1" SEQUENCE="false" />
+                <FIELD NAME="visible" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="1" SEQUENCE="false" COMMENT="Whether the template is offered when creating a course; a hidden one is kept but not offered" />
                 <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
                 <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
                 <FIELD NAME="usermodified" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
