@@ -3458,30 +3458,18 @@ body.cg-execution-stopped .btn-compact-regenerate { display: none; }
   padding: 4px 2px 4px 0;
 }
 
-/* What a course from a template is generated with: the first message of its thread, a system note with the
-   template, language, syllabus and instruction as label/value rows. */
-.cg-run-summary {
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 14px 18px;
-}
+/* What a course from a template is generated with: the first message of its thread. It is what the professor set, so
+   it reads as one of their turns (the grey card of the feed), with label/value rows at the size of the feed's text. */
 .cg-run-summary-body {
   flex: 1;
   min-width: 0;
 }
-.cg-run-summary-title {
-  display: block;
-  margin-bottom: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--fg);
-}
 .cg-run-summary-list {
   display: grid;
   grid-template-columns: max-content minmax(0, 1fr);
-  gap: 6px 16px;
+  gap: 2px 12px;
   margin: 0;
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.5;
 }
 .cg-run-summary-list dt {
@@ -3495,7 +3483,6 @@ body.cg-execution-stopped .btn-compact-regenerate { display: none; }
 }
 .cg-run-summary-none {
   color: var(--muted-fg);
-  font-style: italic;
 }
 
 /* Legacy color bar: kept in the DOM for semantics but only shown on the

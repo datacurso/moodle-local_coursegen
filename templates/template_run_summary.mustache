@@ -35,11 +35,10 @@
         "instruction": "Curso de seguridad industrial para operarios."
     }
 }}
-<div class="cg-log-entry cg-log-entry--neutral cg-log-entry--turn-system cg-run-summary" role="status">
+<div class="cg-log-entry cg-log-entry--user cg-log-entry--turn-user cg-run-summary" role="status">
     <span class="cg-log-body">
-        <span class="cg-log-actor" aria-hidden="true">⚙️</span>
         <span class="cg-run-summary-body">
-            <span class="cg-run-summary-title">{{#str}} courseai_template_summary_title, local_coursegen {{/str}}</span>
+            <span class="sr-only">{{#str}} courseai_template_summary_title, local_coursegen {{/str}}</span>
             <dl class="cg-run-summary-list">
                 <dt>{{#str}} courseai_template_summary_template, local_coursegen {{/str}}</dt>
                 <dd>{{template}}</dd>
@@ -50,7 +49,7 @@
                 <dd>{{#syllabus}}{{.}}{{/syllabus}}{{^syllabus}}<span class="cg-run-summary-none">{{#str}} courseai_template_summary_nosyllabus, local_coursegen {{/str}}</span>{{/syllabus}}</dd>
                 {{/hassyllabusrow}}
                 <dt>{{#str}} courseai_template_summary_instruction, local_coursegen {{/str}}</dt>
-                <dd class="cg-run-summary-instruction">{{#instruction}}{{.}}{{/instruction}}{{^instruction}}<span class="cg-run-summary-none">{{#str}} courseai_template_summary_noinstruction, local_coursegen {{/str}}</span>{{/instruction}}</dd>
+                <dd>{{#instruction}}{{.}}{{/instruction}}{{^instruction}}<span class="cg-run-summary-none">{{#str}} courseai_template_summary_noinstruction, local_coursegen {{/str}}</span>{{/instruction}}</dd>
             </dl>
         </span>
     </span>

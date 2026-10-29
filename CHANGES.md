@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026102635
+
+### Changed
+- **The settings of a course made from a template read as one more message of the conversation**  
+  They no longer stand out as a card with a title and an icon: they are the grey card of the professor's turns, at the size of the rest of the conversation, so no step weighs more than another.
+
 ## [2.0.10] - 2026102634
 
 ### Fixed
