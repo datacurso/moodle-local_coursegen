@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026102636
+
+### Changed
+- **The syllabus row is always shown in the settings of a course made from a template**  
+  A course generated before the name of its syllabus was kept says "Not recorded" instead of leaving the row out, so the row is never missing without a reason.
+
 ## [2.0.10] - 2026102635
 
 ### Changed

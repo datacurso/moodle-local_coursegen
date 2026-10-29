@@ -872,6 +872,7 @@ $string['courseai_template_log_completed'] = 'El contenido del curso está listo
 $string['courseai_template_summary_instruction'] = 'Instrucción general';
 $string['courseai_template_summary_language'] = 'Idioma';
 $string['courseai_template_summary_noinstruction'] = 'Ninguna';
+$string['courseai_template_summary_notrecorded'] = 'No registrado';
 $string['courseai_template_summary_nosyllabus'] = 'Sin sílabo adjunto';
 $string['courseai_template_summary_syllabus'] = 'Sílabo';
 $string['courseai_template_summary_template'] = 'Plantilla';

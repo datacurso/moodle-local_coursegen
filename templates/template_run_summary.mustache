@@ -22,7 +22,7 @@
     Context variables required for this template:
     * template - Template name
     * language - Course language, as the language selector names it
-    * hassyllabusrow - Whether the syllabus is known (sessions started before it was kept do not know it)
+    * syllabusknown - Whether the syllabus is known (sessions started before it was kept do not know it)
     * syllabus - Attached syllabus file name, empty for none
     * instruction - General instruction typed by the professor, empty for none
 
@@ -30,7 +30,7 @@
     {
         "template": "Plantilla H5P",
         "language": "Español - Internacional (ES)",
-        "hassyllabusrow": true,
+        "syllabusknown": true,
         "syllabus": "silabo.pdf",
         "instruction": "Curso de seguridad industrial para operarios."
     }
@@ -44,10 +44,8 @@
                 <dd>{{template}}</dd>
                 <dt>{{#str}} courseai_template_summary_language, local_coursegen {{/str}}</dt>
                 <dd>{{language}}</dd>
-                {{#hassyllabusrow}}
                 <dt>{{#str}} courseai_template_summary_syllabus, local_coursegen {{/str}}</dt>
-                <dd>{{#syllabus}}{{.}}{{/syllabus}}{{^syllabus}}<span class="cg-run-summary-none">{{#str}} courseai_template_summary_nosyllabus, local_coursegen {{/str}}</span>{{/syllabus}}</dd>
-                {{/hassyllabusrow}}
+                <dd>{{#syllabusknown}}{{#syllabus}}{{.}}{{/syllabus}}{{^syllabus}}<span class="cg-run-summary-none">{{#str}} courseai_template_summary_nosyllabus, local_coursegen {{/str}}</span>{{/syllabus}}{{/syllabusknown}}{{^syllabusknown}}<span class="cg-run-summary-none">{{#str}} courseai_template_summary_notrecorded, local_coursegen {{/str}}</span>{{/syllabusknown}}</dd>
                 <dt>{{#str}} courseai_template_summary_instruction, local_coursegen {{/str}}</dt>
                 <dd>{{#instruction}}{{.}}{{/instruction}}{{^instruction}}<span class="cg-run-summary-none">{{#str}} courseai_template_summary_noinstruction, local_coursegen {{/str}}</span>{{/instruction}}</dd>
             </dl>

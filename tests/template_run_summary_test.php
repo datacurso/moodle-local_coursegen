@@ -45,24 +45,24 @@ final class template_run_summary_test extends \advanced_testcase {
 
         $this->assertSame('Plantilla H5P', $summary['template']);
         $this->assertSame('English (EN)', $summary['language']);
-        $this->assertTrue($summary['hassyllabusrow']);
+        $this->assertTrue($summary['syllabusknown']);
         $this->assertSame('syllabus.pdf', $summary['syllabus']);
         $this->assertSame('Safety course', $summary['instruction']);
     }
 
     /**
-     * A session started before the syllabus's name was kept says nothing about the syllabus, while one started
-     * without a syllabus says there was none.
+     * A session started before the syllabus's name was kept says it does not know it, while one started without
+     * a syllabus says there was none.
      */
-    public function test_an_unknown_syllabus_is_left_out_and_a_missing_one_is_said(): void {
+    public function test_an_unknown_syllabus_and_a_missing_one_are_told_apart(): void {
         $this->resetAfterTest(true);
         $templateid = $this->create_template('Template');
 
         $old = template_run_summary::from_coursedata(['templateid' => $templateid, 'payload' => []]);
         $none = template_run_summary::from_coursedata(['templateid' => $templateid, 'payload' => [], 'syllabus' => '']);
 
-        $this->assertFalse($old['hassyllabusrow']);
-        $this->assertTrue($none['hassyllabusrow']);
+        $this->assertFalse($old['syllabusknown']);
+        $this->assertTrue($none['syllabusknown']);
         $this->assertSame('', $none['syllabus']);
     }
 

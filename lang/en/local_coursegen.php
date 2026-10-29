@@ -920,6 +920,7 @@ $string['courseai_template_log_completed'] = 'The course content is ready.';
 $string['courseai_template_summary_instruction'] = 'General instruction';
 $string['courseai_template_summary_language'] = 'Language';
 $string['courseai_template_summary_noinstruction'] = 'None';
+$string['courseai_template_summary_notrecorded'] = 'Not recorded';
 $string['courseai_template_summary_nosyllabus'] = 'None attached';
 $string['courseai_template_summary_syllabus'] = 'Syllabus';
 $string['courseai_template_summary_template'] = 'Template';

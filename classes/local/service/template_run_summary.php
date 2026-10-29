@@ -39,7 +39,7 @@ class template_run_summary {
         $payload = $coursedata['payload'] ?? [];
         $templateid = (int) ($coursedata['templateid'] ?? 0);
         $record = $templateid ? template::get_record(['id' => $templateid]) : false;
-        // A session started before the syllabus name was kept does not know it, so it says nothing about it.
+        // A session started before the syllabus name was kept does not know it, and says so.
         $syllabus = array_key_exists('syllabus', $coursedata) ? (string) $coursedata['syllabus'] : null;
         return self::context(
             $record ? format_string($record->get('name')) : '',
@@ -62,7 +62,7 @@ class template_run_summary {
         return [
             'template' => $template,
             'language' => $language,
-            'hassyllabusrow' => $syllabus !== null,
+            'syllabusknown' => $syllabus !== null,
             'syllabus' => (string) $syllabus,
             'instruction' => trim($instruction),
         ];

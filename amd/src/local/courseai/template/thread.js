@@ -146,7 +146,7 @@ export const announceTemplate = async(summary) => {
     const {html, js} = await Templates.renderForPromise('local_coursegen/template_run_summary', {
         template: summary.template || '',
         language: summary.language || '',
-        hassyllabusrow: true,
+        syllabusknown: true,
         syllabus: summary.syllabus || '',
         instruction: String(summary.instruction || '').trim(),
     });
