@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026102632
+
+### Fixed
+- **The language picked when creating a course from a template is now the language of the generated course**  
+  The language selector of the creation from a template was kept in the browser and never sent, so the course was always written in the language of the template's course or of the professor's session (English on an English site), whatever was picked. The start of the generation now carries it.
+
 ## [2.0.10] - 2026102631
 
 ### Removed

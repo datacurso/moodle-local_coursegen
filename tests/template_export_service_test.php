@@ -57,6 +57,26 @@ final class template_export_service_test extends \advanced_testcase {
     }
 
     /**
+     * The language the professor picked wins over the template course's own and over the session's, and an empty one
+     * leaves the template course's language as it was.
+     */
+    public function test_the_picked_language_is_the_language_of_the_payload(): void {
+        $this->resetAfterTest(true);
+        $this->setAdminUser();
+
+        $course = $this->getDataGenerator()->create_course(['lang' => 'en']);
+        $templateid = $this->create_template($course->id)->get('id');
+
+        $picked = template_export_service::build_init_payload($templateid, '', 'es');
+        $this->assertSame('es', $picked['lang']);
+        $this->assertSame('es', $picked['course_configuration']['lang']);
+
+        $kept = template_export_service::build_init_payload($templateid);
+        $this->assertSame('en', $kept['lang']);
+        $this->assertSame('en', $kept['course_configuration']['lang']);
+    }
+
+    /**
      * The payload carries the template course's format, its language and the
      * course settings the new course takes as they are.
      */

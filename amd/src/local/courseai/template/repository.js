@@ -42,11 +42,12 @@ export const getTemplateStructure = (templateId) => fetchMany([{
  * @param {number} templateId
  * @param {string} prompt The professor's single general instruction.
  * @param {number} draftItemId Draft area holding the syllabus, 0 when none.
+ * @param {string} lang Language the professor picked for the course, empty for the template's own.
  * @returns {Promise<Object>} {threadid, sessionid, streamurl}
  */
-export const startTemplateGeneration = (templateId, prompt, draftItemId) => fetchMany([{
+export const startTemplateGeneration = (templateId, prompt, draftItemId, lang) => fetchMany([{
     methodname: 'local_coursegen_start_template_generation',
-    args: {templateid: templateId, prompt: prompt, draftitemid: draftItemId},
+    args: {templateid: templateId, prompt: prompt, draftitemid: draftItemId, lang: lang || ''},
 }])[0];
 
 /**

@@ -58,7 +58,8 @@ export const runGeneration = async(tplState, tplSelect, genBtn, state, host) => 
         const started = await startTemplateGeneration(
             templateId,
             tplState.prompt || '',
-            parseInt(tplState.syllabusdraftitemid || 0, 10) || 0
+            parseInt(tplState.syllabusdraftitemid || 0, 10) || 0,
+            tplState.lang || ''
         );
         usePreviewSession(started.sessionid);
         announceSession(started.sessionid);
