@@ -40,6 +40,7 @@ import {
     openSections,
     resetSections,
     setActivityRepeat,
+    showWrittenSections,
     startActivity,
 } from 'local_coursegen/local/courseai/template/section_progress';
 
@@ -250,5 +251,41 @@ export const showRepeatProgress = (uid, summary) => {
                 lastNode.textContent = summary.last || '';
             }
         }
+    });
+};
+
+/**
+ * Show the activities a finished run wrote, section by section, for a conversation replayed after a reload.
+ *
+ * @param {Array<Object>} written [{name, activities: [{title, type}]}]
+ */
+export const showWrittenChecklist = (written) => {
+    const total = (written || []).reduce((count, section) => count + (section.activities || []).length, 0);
+    if (total === 0) {
+        return;
+    }
+    enqueue(async() => {
+        for (const checklist of nodesOf(CARD_IDS)) {
+            checklist.classList.remove('hidden');
+        }
+        await showWrittenSections(document.getElementById(SECTION_LIST_ID), written);
+        // The panel of the top bar lists them one by one, already written.
+        for (const section of written) {
+            for (const activity of section.activities || []) {
+                const context = {
+                    uid: '',
+                    name: activity.title || '',
+                    typelabel: activity.type || '',
+                    sectionname: section.name || '',
+                };
+                // eslint-disable-next-line no-await-in-loop
+                const {html} = await Templates.renderForPromise(ITEM_TEMPLATE, context);
+                for (const list of nodesOf(LIST_IDS)) {
+                    list.insertAdjacentHTML('beforeend', html);
+                    list.lastElementChild?.classList.replace('is-loading', 'is-done');
+                }
+            }
+        }
+        await paintCount({done: total, total});
     });
 };

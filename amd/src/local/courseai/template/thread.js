@@ -99,12 +99,13 @@ const getLog = () => {
  * @param {string} kind Visual kind, as the log module names them.
  * @param {string} message
  * @param {boolean} [markdown] Whether to render the message as Markdown.
+ * @param {number} [createdAt] When it happened, in ms since epoch; now when absent.
  */
-export const turn = (actor, kind, message, markdown = false) => {
+export const turn = (actor, kind, message, markdown = false, createdAt = Date.now()) => {
     if (!String(message || '').trim()) {
         return;
     }
-    getLog().add({actor, kind, message, markdown});
+    getLog().add({actor, kind, message, markdown, createdAt});
 };
 
 /**
@@ -113,11 +114,12 @@ export const turn = (actor, kind, message, markdown = false) => {
  * @param {string} key One of STRING_KEYS.
  * @param {string} [actor]
  * @param {string} [kind]
+ * @param {number} [createdAt] When it happened, in ms since epoch; now when absent.
  * @returns {Promise<void>}
  */
-export const milestone = async(key, actor = 'ai', kind = 'ai') => {
+export const milestone = async(key, actor = 'ai', kind = 'ai', createdAt = Date.now()) => {
     const texts = await getLabels();
-    turn(actor, kind, texts[key]);
+    turn(actor, kind, texts[key], false, createdAt);
 };
 
 /**

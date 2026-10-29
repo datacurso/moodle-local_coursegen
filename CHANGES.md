@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026102634
+
+### Fixed
+- **Reloading a course made from a template keeps its conversation**  
+  The conversation of a generation from a template lived only in the browser, so reloading the page left the course card alone. Moodle now keeps every answer to the review, the moment the course was built and the activities the AI wrote, and a reload shows the conversation again: the steps with their times, the changes asked for, the approval and the generated activities by section. Courses built before this change show the steps that are certain (approved and built), without the list of activities. The finished course now counts its sections the way the generation does, the general section included.
+
 ## [2.0.10] - 2026102633
 
 ### Added

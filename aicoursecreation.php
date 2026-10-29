@@ -88,14 +88,17 @@ if ($resumesessionid > 0) {
         $createdcourseid = (int) ($openedrecord->get('courseid') ?? 0);
         if ((int) $openedrecord->get('status') === course_session::STATUS_CREATED && $createdcourseid > 0
                 && $DB->record_exists('course', ['id' => $createdcourseid])) {
-            // What the finished course holds, counted in the course itself.
+            // What the finished course holds, counted in the course itself: every section, the general one too, as
+            // the live run counts the sections of the template.
             $modinfo = get_fast_modinfo($createdcourseid, -1);
             $templatesession = [
                 'id' => (int) $opened->id,
                 'created' => true,
                 'courseurl' => (new moodle_url('/course/view.php', ['id' => $createdcourseid]))->out(false),
-                'sections' => max(0, count($modinfo->get_section_info_all()) - 1),
+                'sections' => count($modinfo->get_section_info_all()),
                 'activities' => count($modinfo->get_cms()),
+                // The conversation of the run, replayed in the thread under its first message.
+                'history' => \local_coursegen\local\service\template_run_history::for_page($openedrecord),
             ];
             // What the course was generated with, as the first message of its thread.
             $templaterunsummary = \local_coursegen\local\service\template_run_summary::from_coursedata(

@@ -32,6 +32,7 @@ use external_single_structure;
 use external_value;
 use local_coursegen\local\models\course_session;
 use local_coursegen\local\service\template_ai_api_service;
+use local_coursegen\local\service\template_run_history;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -101,6 +102,8 @@ class template_review_feedback extends external_api {
         }
 
         (new template_ai_api_service())->send_feedback($session->get('session_id'), $intent);
+        // Kept for the conversation a reload shows again.
+        template_run_history::record_review((int) $params['sessionid'], $params['action'], $params['instruction']);
 
         return ['status' => 'stored'];
     }

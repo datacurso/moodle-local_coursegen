@@ -41,6 +41,7 @@ use local_coursegen\local\service\template_ai_api_service;
 use local_coursegen\local\service\template_course_image_applier;
 use local_coursegen\local\service\template_course_order;
 use local_coursegen\local\service\template_keep_copier;
+use local_coursegen\local\service\template_run_history;
 use local_coursegen\local\service\template_settings_copier;
 
 defined('MOODLE_INTERNAL') || die();
@@ -138,6 +139,8 @@ class finish_template_generation extends external_api {
                 (array) ($result['slot_images'] ?? []),
                 (array) ($coursedata['payload']['image_slots'] ?? [])
             );
+            // Kept for the conversation a reload shows again.
+            template_run_history::record_completed((int) $params['sessionid'], $courseid, $generatedcms);
         }
 
         return self::created_response($courseid, $CFG->wwwroot);

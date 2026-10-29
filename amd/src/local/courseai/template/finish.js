@@ -29,6 +29,7 @@
 
 import {finishTemplateGeneration, getTemplateCourseSettings} from './repository';
 import {askToRetry} from './generation_retry';
+import {replayRun} from './thread_replay';
 
 /** Where "create another course" leads when the course came from a template. */
 const CREATE_ANOTHER_URL = 'aicoursecreation.php?mode=template';
@@ -103,7 +104,7 @@ export const reviewAndCreate = async(host, state, tplState, sessionId) => {
  *
  * @param {Object} host Holds the page's actions, bound once the page is set up.
  * @param {Object} state Page state.
- * @param {Object} session {id, courseurl, sections, activities}
+ * @param {Object} session {id, courseurl, sections, activities, history}
  */
 export const showFinishedCourse = (host, state, session) => {
     state.sessionid = session.id;
@@ -115,5 +116,6 @@ export const showFinishedCourse = (host, state, session) => {
     workspace?.classList.add('is-finished');
     // The page renders what the course was generated with as the first message of the thread, and the thread stays.
     workspace?.classList.toggle('has-run-summary', !!document.querySelector('#cgLog .cg-run-summary'));
+    replayRun(session.history || null);
     host.actions.showCompletionView({success: true, courseurl: session.courseurl});
 };

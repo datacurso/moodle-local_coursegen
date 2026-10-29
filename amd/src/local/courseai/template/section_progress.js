@@ -225,3 +225,39 @@ export const finishActivity = async(uid) => {
         clampDetail(section.detail);
     }
 };
+
+/**
+ * Build the items of sections that are already written, for a conversation replayed after a reload.
+ *
+ * @param {Element|null} list
+ * @param {Array<Object>} written [{name, activities: [{title, type}]}], as the course got them.
+ * @returns {Promise<void>}
+ */
+export const showWrittenSections = async(list, written) => {
+    resetSections(list);
+    if (!list) {
+        return;
+    }
+    sections = (written || []).map((section) => ({
+        name: section.name || '',
+        activities: (section.activities || []).map((activity) => ({
+            uid: '',
+            title: activity.title || '',
+            type: activity.type || '',
+            state: 'done',
+            repeat: null,
+        })),
+        item: null,
+        detail: null,
+    }));
+    for (const section of sections) {
+        section.item = buildItem(section);
+        section.item.classList.remove('is-loading');
+        section.item.classList.add('is-done');
+        section.item.setAttribute('data-remaining', '0');
+        section.detail = section.item.querySelector('.courseai-checklist-detail');
+        list.appendChild(section.item);
+        await paintSection(section);
+        clampDetail(section.detail);
+    }
+};
