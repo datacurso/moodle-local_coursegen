@@ -53,6 +53,12 @@ class start_template_generation extends external_api {
             'templateid' => new external_value(PARAM_INT, 'Template ID'),
             'prompt' => new external_value(PARAM_RAW, 'The professor\'s general instruction', VALUE_DEFAULT, ''),
             'draftitemid' => new external_value(PARAM_INT, 'Draft item id of the syllabus, 0 for none', VALUE_DEFAULT, 0),
+            'lang' => new external_value(
+                PARAM_LANG,
+                'Language of the generated course, empty for the template\'s',
+                VALUE_DEFAULT,
+                ''
+            ),
         ]);
     }
 
@@ -62,15 +68,17 @@ class start_template_generation extends external_api {
      * @param int $templateid
      * @param string $prompt
      * @param int $draftitemid
+     * @param string $lang
      * @return array
      */
-    public static function execute($templateid, $prompt = '', $draftitemid = 0) {
+    public static function execute($templateid, $prompt = '', $draftitemid = 0, $lang = '') {
         global $USER;
 
         $params = self::validate_parameters(self::execute_parameters(), [
             'templateid' => $templateid,
             'prompt' => $prompt,
             'draftitemid' => $draftitemid,
+            'lang' => $lang,
         ]);
 
         $context = context_system::instance();
@@ -79,7 +87,7 @@ class start_template_generation extends external_api {
         if ($params['draftitemid'] > 0) {
             require_capability('local/coursegen:uploadcoursesyllabus', $context);
         }
-        $payload = template_export_service::build_init_payload($params['templateid'], $params['prompt']);
+        $payload = template_export_service::build_init_payload($params['templateid'], $params['prompt'], $params['lang']);
 
         // Read first: a reference marker with no usable target is refused before a session exists.
         $referenceuploads = template_reference_uploads::plan($payload);

@@ -44,9 +44,10 @@ class template_export_service {
      *
      * @param int $templateid
      * @param string $generalinstruction The professor's single prompt/syllabus instruction.
+     * @param string $lang The language the professor picked for the generated course, empty to keep the template's.
      * @return array
      */
-    public static function build_init_payload(int $templateid, string $generalinstruction = ''): array {
+    public static function build_init_payload(int $templateid, string $generalinstruction = '', string $lang = ''): array {
         global $CFG;
 
         $template = template::get_record(['id' => $templateid]);
@@ -61,7 +62,9 @@ class template_export_service {
         $actions = self::saved_activity_actions($templateid);
         $behaviors = self::saved_section_behaviors($templateid);
 
-        $lang = $course->lang;
+        if ($lang === '') {
+            $lang = $course->lang;
+        }
         if (!$lang) {
             $lang = current_language();
         }
