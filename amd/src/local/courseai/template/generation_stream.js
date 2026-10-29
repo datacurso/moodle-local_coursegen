@@ -153,7 +153,7 @@ const paintStage = async(key) => {
  * Put the page in its generating state: header visible and spinning, every
  * activity the AI will generate dimmed and waiting, edit controls gone.
  *
- * @param {Object} context {prompt, templateName} for the opening turns.
+ * @param {Object} context What the run is generated with: {template, language, syllabus, instruction}.
  */
 const openView = async(context) => {
     document.body.classList.add('cg-generating');
@@ -168,8 +168,7 @@ const openView = async(context) => {
         composer.hidden = true;
     }
     resetThread();
-    await announceTemplate(context.templateName);
-    turn('user', 'user', String(context.prompt || '').trim());
+    await announceTemplate(context);
     milestone('courseai_template_log_starting');
     generatedRows().forEach((row) => {
         row.classList.remove(...ALL_STATUS_CLASSES);
@@ -206,7 +205,7 @@ const closeView = (message) => {
  * @param {string} streamUrl SSE endpoint returned by start_template_generation.
  * @param {Function} buildCourse Called once the run completes; resolves to {courseurl}.
  * @param {number} sessionId Session the review answers belong to.
- * @param {Object} context {prompt, templateName}, for the opening turns.
+ * @param {Object} context What the run is generated with, for the opening message.
  * @returns {Promise<Object>} The built course, as buildCourse resolved it.
  */
 export const runGenerationStream = async(streamUrl, buildCourse, sessionId, context) => {

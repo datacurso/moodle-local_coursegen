@@ -27,11 +27,11 @@
  */
 
 import {getStrings} from 'core/str';
+import Templates from 'core/templates';
 import {createLog} from 'local_coursegen/local/courseai/ui/log';
 import {resetChecklist} from 'local_coursegen/local/courseai/template/generation_checklist';
 
 const STRING_KEYS = [
-    'courseai_template_log_selected',
     'courseai_template_log_starting',
     'courseai_template_log_writing',
     'courseai_template_log_review_ready',
@@ -99,12 +99,13 @@ const getLog = () => {
  * @param {string} kind Visual kind, as the log module names them.
  * @param {string} message
  * @param {boolean} [markdown] Whether to render the message as Markdown.
+ * @param {number} [createdAt] When it happened, in ms since epoch; now when absent.
  */
-export const turn = (actor, kind, message, markdown = false) => {
+export const turn = (actor, kind, message, markdown = false, createdAt = Date.now()) => {
     if (!String(message || '').trim()) {
         return;
     }
-    getLog().add({actor, kind, message, markdown});
+    getLog().add({actor, kind, message, markdown, createdAt});
 };
 
 /**
@@ -113,30 +114,43 @@ export const turn = (actor, kind, message, markdown = false) => {
  * @param {string} key One of STRING_KEYS.
  * @param {string} [actor]
  * @param {string} [kind]
+ * @param {number} [createdAt] When it happened, in ms since epoch; now when absent.
  * @returns {Promise<void>}
  */
-export const milestone = async(key, actor = 'ai', kind = 'ai') => {
+export const milestone = async(key, actor = 'ai', kind = 'ai', createdAt = Date.now()) => {
     const texts = await getLabels();
-    turn(actor, kind, texts[key]);
+    turn(actor, kind, texts[key], false, createdAt);
 };
 
 /**
- * Say which template the run is built on, and put the picker away.
+ * Open the thread with what the course is generated with, and put the picker away.
  *
- * Once the run starts the picker is no longer a control: changing it would not
- * change anything. So it leaves, and what it said becomes the first thing in
+ * Once the run starts the picker and the composer are no longer controls:
+ * changing them would not change anything. So the picker leaves, and the
+ * template, language, syllabus and instruction become the first message of
  * the conversation, which is where the rest of the run is recorded anyway.
+ * A course reopened later shows the same message, rendered by the page.
  *
- * @param {string} name The chosen template's name.
+ * @param {Object} summary {template, language, syllabus, instruction}.
  * @returns {Promise<void>}
  */
-export const announceTemplate = async(name) => {
+export const announceTemplate = async(summary) => {
     const card = document.getElementById('templateModeCard');
     if (card) {
         card.hidden = true;
     }
-    const texts = await getLabels();
-    turn('user', 'user', texts.courseai_template_log_selected.replace('{$a}', name || ''));
+    const node = document.getElementById('cgLog');
+    if (!node) {
+        return;
+    }
+    const {html, js} = await Templates.renderForPromise('local_coursegen/template_run_summary', {
+        template: summary.template || '',
+        language: summary.language || '',
+        syllabusknown: true,
+        syllabus: summary.syllabus || '',
+        instruction: String(summary.instruction || '').trim(),
+    });
+    Templates.prependNodeContents(node, html, js);
 };
 
 /**

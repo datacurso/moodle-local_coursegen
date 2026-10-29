@@ -172,12 +172,15 @@ svg { display: block; flex-shrink: 0; }
   overflow: hidden;
 }
 
-/* A course that was already made: the card of the course alone, in the middle, without the form that makes a new one. */
-.courseai-workspace.is-template.is-finished {
+/* A course that was already made: the card of the course alone, in the middle, without the form that makes a new one.
+   When the page says what the course was generated with, the thread stays beside it with that first message only. */
+.courseai-workspace.is-template.is-finished:not(.has-run-summary) {
   grid-template-columns: minmax(0, 1fr);
 }
-.courseai-workspace.is-template.is-finished .tpl-left-panel,
-.courseai-workspace.is-template.is-finished .cg-splitter {
+.courseai-workspace.is-template.is-finished:not(.has-run-summary) .tpl-left-panel,
+.courseai-workspace.is-template.is-finished:not(.has-run-summary) .cg-splitter,
+.courseai-workspace.is-template.is-finished #templateModeCard,
+.courseai-workspace.is-template.is-finished #tplInputBar {
   display: none;
 }
 
@@ -3453,6 +3456,33 @@ body.cg-execution-stopped .btn-compact-regenerate { display: none; }
 
 .cg-log-entry--turn-ai {
   padding: 4px 2px 4px 0;
+}
+
+/* What a course from a template is generated with: the first message of its thread. It is what the professor set, so
+   it reads as one of their turns (the grey card of the feed), with label/value rows at the size of the feed's text. */
+.cg-run-summary-body {
+  flex: 1;
+  min-width: 0;
+}
+.cg-run-summary-list {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 2px 12px;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.cg-run-summary-list dt {
+  font-weight: 400;
+  color: var(--muted-fg);
+}
+.cg-run-summary-list dd {
+  margin: 0;
+  color: var(--fg);
+  overflow-wrap: anywhere;
+}
+.cg-run-summary-none {
+  color: var(--muted-fg);
 }
 
 /* Legacy color bar: kept in the DOM for semantics but only shown on the

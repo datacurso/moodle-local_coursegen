@@ -29,6 +29,14 @@ import {usePreviewSession} from './preview';
 import {reviewAndCreate} from './finish';
 
 /**
+ * The visible text of a select's chosen option.
+ *
+ * @param {HTMLSelectElement|null} select
+ * @returns {string}
+ */
+const selectedText = (select) => select?.options[select.selectedIndex]?.text || '';
+
+/**
  * Generate the course from the picked template, with the input bar's own
  * values (prompt and syllabus), and watch it happen.
  *
@@ -68,8 +76,10 @@ export const runGeneration = async(tplState, tplSelect, genBtn, state, host) => 
             () => reviewAndCreate(host, state, tplState, started.sessionid),
             started.sessionid,
             {
-                prompt: tplState.prompt || '',
-                templateName: tplSelect?.options[tplSelect.selectedIndex]?.text || '',
+                template: selectedText(tplSelect),
+                language: selectedText(document.getElementById('tplLangSelect')),
+                syllabus: tplState.syllabusfilename || '',
+                instruction: tplState.prompt || '',
             }
         );
     } catch (e) {

@@ -764,12 +764,12 @@
           </div>
         </div>
 
-        {{! Thread feed — the professor's own instruction is re-stated here as a
-            turn once generation starts, because the composer that held it is put
-            away for the duration. Same ids and classes as free mode's feed: the
+        {{! Thread feed — it opens with what the course is generated with (template, language, syllabus and the
+            professor's own instruction), because the composer that held them is put away for the duration. A course
+            reopened later shows that same first message, rendered here. Same ids and classes as free mode's feed: the
             log and working-indicator modules find them by id, and the two blocks
             are mutually exclusive, so the ids never collide. }}
-        <div class="cg-log cg-thread-feed" id="cgLog" aria-live="polite"></div>
+        <div class="cg-log cg-thread-feed" id="cgLog" aria-live="polite">{{#templaterunsummary}}{{> local_coursegen/template_run_summary }}{{/templaterunsummary}}</div>
 
         {{! The activities as the AI writes them: the same rows the pill of the top bar lists, kept in the thread so
             the progress of each activity stays in view. Its ids differ from the pill's, and generation_checklist

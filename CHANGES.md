@@ -2,6 +2,30 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026102636
+
+### Changed
+- **The syllabus row is always shown in the settings of a course made from a template**  
+  A course generated before the name of its syllabus was kept says "Not recorded" instead of leaving the row out, so the row is never missing without a reason.
+
+## [2.0.10] - 2026102635
+
+### Changed
+- **The settings of a course made from a template read as one more message of the conversation**  
+  They no longer stand out as a card with a title and an icon: they are the grey card of the professor's turns, at the size of the rest of the conversation, so no step weighs more than another.
+
+## [2.0.10] - 2026102634
+
+### Fixed
+- **Reloading a course made from a template keeps its conversation**  
+  The conversation of a generation from a template lived only in the browser, so reloading the page left the course card alone. Moodle now keeps every answer to the review, the moment the course was built and the activities the AI wrote, and a reload shows the conversation again: the steps with their times, the changes asked for, the approval and the generated activities by section. Courses built before this change show the steps that are certain (approved and built), without the list of activities. The finished course now counts its sections the way the generation does, the general section included.
+
+## [2.0.10] - 2026102633
+
+### Added
+- **A course made from a template says what it was generated with**  
+  The conversation of the generation now opens with the course settings: the template, the language, the attached syllabus and the general instruction. Reopening a course that was already made shows the same settings beside its card, so it is always possible to know how it was generated. Courses generated before this change show what they kept: the template, the language and the instruction.
+
 ## [2.0.10] - 2026102632
 
 ### Fixed
