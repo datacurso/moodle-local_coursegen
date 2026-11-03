@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026110301
+
+### Fixed
+- **A course made from a template generates its images when the professor asks for them**  
+  The images switch of the template form was ignored: the generation always ran without images, so no activity of the template could come out with pictures. The choice now travels with the generation, and it needs the same permission as creating a course with images.
+
 ## [2.0.10] - 2026102637
 
 ### Added

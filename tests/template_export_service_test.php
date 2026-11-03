@@ -77,6 +77,20 @@ final class template_export_service_test extends \advanced_testcase {
     }
 
     /**
+     * The images are generated only when the professor asked for them.
+     */
+    public function test_images_follow_the_professors_choice(): void {
+        $this->resetAfterTest(true);
+        $this->setAdminUser();
+
+        $course = $this->getDataGenerator()->create_course();
+        $templateid = $this->create_template($course->id)->get('id');
+
+        $this->assertFalse(template_export_service::build_init_payload($templateid)['with_images']);
+        $this->assertTrue(template_export_service::build_init_payload($templateid, '', '', true)['with_images']);
+    }
+
+    /**
      * The payload carries the template course's format, its language and the
      * course settings the new course takes as they are.
      */

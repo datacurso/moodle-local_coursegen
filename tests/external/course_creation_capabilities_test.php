@@ -174,6 +174,17 @@ final class course_creation_capabilities_test extends \advanced_testcase {
     }
 
     /**
+     * Starting a template generation with images needs the capability to generate course images.
+     */
+    public function test_a_template_generation_with_images_needs_the_images_capability(): void {
+        $this->resetAfterTest();
+        $this->login_without('local/coursegen:generatecourseimages');
+
+        $this->expectException(\required_capability_exception::class);
+        start_template_generation::execute(1, '', 0, '', true);
+    }
+
+    /**
      * Starting an activity generation with images needs the capability to generate activity images.
      * The function reports a refusal in its answer instead of throwing.
      */

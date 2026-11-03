@@ -67,7 +67,8 @@ export const runGeneration = async(tplState, tplSelect, genBtn, state, host) => 
             templateId,
             tplState.prompt || '',
             parseInt(tplState.syllabusdraftitemid || 0, 10) || 0,
-            tplState.lang || ''
+            tplState.lang || '',
+            Boolean(tplState.generateimages)
         );
         usePreviewSession(started.sessionid);
         announceSession(started.sessionid);
