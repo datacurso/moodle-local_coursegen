@@ -45,9 +45,15 @@ class template_export_service {
      * @param int $templateid
      * @param string $generalinstruction The professor's single prompt/syllabus instruction.
      * @param string $lang The language the professor picked for the generated course, empty to keep the template's.
+     * @param bool $withimages Whether the professor asked for the images to be generated.
      * @return array
      */
-    public static function build_init_payload(int $templateid, string $generalinstruction = '', string $lang = ''): array {
+    public static function build_init_payload(
+        int $templateid,
+        string $generalinstruction = '',
+        string $lang = '',
+        bool $withimages = false
+    ): array {
         global $CFG;
 
         $template = template::get_record(['id' => $templateid]);
@@ -103,7 +109,7 @@ class template_export_service {
             'image_slots' => template_course_image_slots::payload(template_course_image_slots::for_course($course)),
             'general_instruction' => $generalinstruction,
             'lang' => $lang,
-            'with_images' => false,
+            'with_images' => $withimages,
             'site_url' => $CFG->wwwroot,
             // Reference files are attached after /init (they need its
             // thread_id), so the run must not start until they have landed.

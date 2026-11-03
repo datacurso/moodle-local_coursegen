@@ -59,6 +59,7 @@ class start_template_generation extends external_api {
                 VALUE_DEFAULT,
                 ''
             ),
+            'withimages' => new external_value(PARAM_BOOL, 'Whether to generate images', VALUE_DEFAULT, false),
         ]);
     }
 
@@ -69,9 +70,10 @@ class start_template_generation extends external_api {
      * @param string $prompt
      * @param int $draftitemid
      * @param string $lang
+     * @param bool $withimages
      * @return array
      */
-    public static function execute($templateid, $prompt = '', $draftitemid = 0, $lang = '') {
+    public static function execute($templateid, $prompt = '', $draftitemid = 0, $lang = '', $withimages = false) {
         global $USER;
 
         $params = self::validate_parameters(self::execute_parameters(), [
@@ -79,6 +81,7 @@ class start_template_generation extends external_api {
             'prompt' => $prompt,
             'draftitemid' => $draftitemid,
             'lang' => $lang,
+            'withimages' => $withimages,
         ]);
 
         $context = context_system::instance();
@@ -87,7 +90,15 @@ class start_template_generation extends external_api {
         if ($params['draftitemid'] > 0) {
             require_capability('local/coursegen:uploadcoursesyllabus', $context);
         }
-        $payload = template_export_service::build_init_payload($params['templateid'], $params['prompt'], $params['lang']);
+        if ($params['withimages']) {
+            require_capability('local/coursegen:generatecourseimages', $context);
+        }
+        $payload = template_export_service::build_init_payload(
+            $params['templateid'],
+            $params['prompt'],
+            $params['lang'],
+            (bool) $params['withimages']
+        );
 
         // Read first: a reference marker with no usable target is refused before a session exists.
         $referenceuploads = template_reference_uploads::plan($payload);
