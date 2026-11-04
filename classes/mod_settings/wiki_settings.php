@@ -70,7 +70,7 @@ class wiki_settings extends base_settings {
         $firstpagecontent = '';
         foreach ($pages as $page) {
             $title = $page['title'];
-            // [[Title]] is the wiki-link syntax in all formats; only wrap in <p> for HTML.
+            // The [[Title]] wiki-link syntax works in all formats; only wrap in <p> for HTML.
             if ($this->wikiformat === 'html') {
                 $firstpagecontent .= "<p>[[{$title}]]</p>\n";
             } else {
@@ -107,8 +107,8 @@ class wiki_settings extends base_settings {
     /**
      * Copy the generated images of a page from its draft area to the attachments of the subwiki.
      *
-     * The parameter cleaner downloaded them into the draft area and pointed the content at
-     * @@PLUGINFILE@@, but mod_wiki_external::new_page() saves no files. The attachments area is
+     * The parameter cleaner downloaded them into the draft area and pointed the content at the
+     * plugin file URLs, but mod_wiki_external::new_page() saves no files. The attachments area is
      * shared by every page of the subwiki, so the files are added one by one: saving the draft
      * area over it would delete the images of the pages created before.
      *
@@ -124,8 +124,14 @@ class wiki_settings extends base_settings {
         $draftfiles = $fs->get_area_files($usercontext->id, 'user', 'draft', $draftitemid, 'id', false);
 
         foreach ($draftfiles as $draftfile) {
-            $exists = $fs->file_exists($modcontext->id, 'mod_wiki', 'attachments', $subwikiid,
-                $draftfile->get_filepath(), $draftfile->get_filename());
+            $exists = $fs->file_exists(
+                $modcontext->id,
+                'mod_wiki',
+                'attachments',
+                $subwikiid,
+                $draftfile->get_filepath(),
+                $draftfile->get_filename()
+            );
             if ($exists) {
                 continue;
             }

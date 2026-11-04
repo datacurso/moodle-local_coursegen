@@ -86,8 +86,15 @@ final class lesson_settings_test extends \advanced_testcase {
         $this->assertStringNotContainsString('/tmp/resource_files', $page->contents);
 
         $context = \context_module::instance($cm->coursemodule);
-        $this->assertTrue(get_file_storage()->file_exists(
-            $context->id, 'mod_lesson', 'page_contents', $page->id, '/', 'img_lesson01.png'));
+        $exists = get_file_storage()->file_exists(
+            $context->id,
+            'mod_lesson',
+            'page_contents',
+            $page->id,
+            '/',
+            'img_lesson01.png'
+        );
+        $this->assertTrue($exists);
     }
 
     /**
