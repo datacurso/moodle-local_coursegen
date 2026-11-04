@@ -290,14 +290,44 @@ final class mycourses_header_hook_test extends \advanced_testcase {
     }
 
     /**
-     * Pages other than My courses are never decorated.
+     * The Dashboard is not decorated while the site has its My courses page.
+     */
+    public function test_should_not_inject_on_dashboard_when_my_courses_is_enabled(): void {
+        global $PAGE;
+
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        set_config('enablemycourses', 1);
+        $this->set_page_url('/my/index.php');
+
+        $this->assertFalse(mycourses_header_hook::should_inject($PAGE));
+    }
+
+    /**
+     * With the My courses page disabled the Dashboard gets the button, so the
+     * assistant stays reachable.
+     */
+    public function test_should_inject_on_dashboard_when_my_courses_is_disabled(): void {
+        global $PAGE;
+
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        set_config('enablemycourses', 0);
+        $this->set_page_url('/my/index.php');
+
+        $this->assertTrue(mycourses_header_hook::should_inject($PAGE));
+    }
+
+    /**
+     * Pages other than My courses and the Dashboard are never decorated.
      */
     public function test_should_not_inject_on_other_pages(): void {
         global $PAGE;
 
         $this->resetAfterTest();
         $this->setAdminUser();
-        $this->set_page_url('/my/index.php');
+        set_config('enablemycourses', 0);
+        $this->set_page_url('/course/index.php');
 
         $this->assertFalse(mycourses_header_hook::should_inject($PAGE));
     }

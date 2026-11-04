@@ -132,17 +132,29 @@ class mycourses_header_hook {
     }
 
     /**
-     * Determine if the given page is the My courses page.
+     * Determine if the given page is where the user lists their courses.
+     *
+     * That is the My courses page, or the Dashboard when the site has the My courses
+     * page disabled: My courses then redirects to the Dashboard, whose Course overview
+     * block carries the course actions, and without this the teacher had no way in.
      *
      * @param \moodle_page $page The page being rendered.
      * @return bool
      */
     private static function is_my_courses_page(\moodle_page $page): bool {
+        global $CFG;
+
         if (!$page->has_set_url()) {
             return false;
         }
 
-        return str_ends_with($page->url->get_path(), '/my/courses.php');
+        $path = $page->url->get_path();
+        if (str_ends_with($path, '/my/courses.php')) {
+            return true;
+        }
+
+        $isdashboard = str_ends_with($path, '/my/') || str_ends_with($path, '/my/index.php');
+        return $isdashboard && empty($CFG->enablemycourses);
     }
 
     /**
