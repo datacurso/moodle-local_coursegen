@@ -94,6 +94,7 @@ class chat_hook {
                 self::is_moodle_45(),
                 $languageoptions,
                 self::get_default_language_code($languageoptions),
+                \local_coursegen\local\bootstrap_classes::get(),
             ]);
         }
     }

@@ -177,7 +177,7 @@ final class create_course_import_mode_test extends \advanced_testcase {
         } else {
             $result = testable_create_course::execute((int) $session->get('id'), '', '', 0, $targetmode);
         }
-        $result = \external_api::clean_returnvalue(create_course::execute_returns(), $result);
+        $result = \core_external\external_api::clean_returnvalue(create_course::execute_returns(), $result);
 
         $this->assertTrue($result['success'], $result['message']);
         $this->assertFalse($result['importqueued']);
@@ -412,7 +412,7 @@ final class create_course_import_mode_test extends \advanced_testcase {
             'import',
             (int) $target->id
         );
-        $result = \external_api::clean_returnvalue(create_course::execute_returns(), $result);
+        $result = \core_external\external_api::clean_returnvalue(create_course::execute_returns(), $result);
 
         $this->assertTrue($result['success'], $result['message']);
         $this->assertTrue($result['importqueued']);
@@ -457,7 +457,7 @@ final class create_course_import_mode_test extends \advanced_testcase {
         $this->mock_result(['fullname' => 'AI course', 'shortname' => 'aicourse']);
 
         $result = testable_create_course::execute((int) $session->get('id'), '', '', 0, 'import', (int) $target->id);
-        $result = \external_api::clean_returnvalue(create_course::execute_returns(), $result);
+        $result = \core_external\external_api::clean_returnvalue(create_course::execute_returns(), $result);
 
         $this->assertTrue($result['success'], $result['message']);
         $this->assertCount(0, \core\task\manager::get_adhoc_tasks(import_generated_course_task::class));
@@ -504,7 +504,7 @@ final class create_course_import_mode_test extends \advanced_testcase {
         $coursesbefore = $DB->count_records('course');
 
         $result = testable_create_course::execute((int) $session->get('id'), '', '', 0, 'import', (int) $target->id);
-        $result = \external_api::clean_returnvalue(create_course::execute_returns(), $result);
+        $result = \core_external\external_api::clean_returnvalue(create_course::execute_returns(), $result);
 
         $this->assertTrue($result['success'], $result['message']);
         $this->assertCount(0, \core\task\manager::get_adhoc_tasks(import_generated_course_task::class));
@@ -543,7 +543,7 @@ final class create_course_import_mode_test extends \advanced_testcase {
 
         $result = testable_create_course::execute((int) $session->get('id'), '', '', 0, 'import', (int) $target->id);
         $this->assertDebuggingCalled();
-        $result = \external_api::clean_returnvalue(create_course::execute_returns(), $result);
+        $result = \core_external\external_api::clean_returnvalue(create_course::execute_returns(), $result);
 
         $this->assertFalse($result['success']);
         $this->assertFalse($result['importqueued']);

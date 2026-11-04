@@ -48,6 +48,15 @@ class glossary_settings extends base_settings {
                 'value' => true,
             ],
         ];
+        // The parameter cleaner downloaded the generated images of the definition into this draft
+        // area; without it the entry points at files that never leave the draft.
+        $draftitemid = (int) ($entry['definition_editor']['itemid'] ?? 0);
+        if ($draftitemid > 0) {
+            $options[] = [
+                'name' => 'inlineattachmentsid',
+                'value' => $draftitemid,
+            ];
+        }
         mod_glossary_external::add_entry(
             $this->cm->instance,
             $entry['concept'],

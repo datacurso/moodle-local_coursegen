@@ -17,10 +17,10 @@
 namespace local_coursegen\external;
 
 use context_course;
-use external_api;
-use external_function_parameters;
-use external_single_structure;
-use external_value;
+use core_external\external_api;
+use core_external\external_function_parameters;
+use core_external\external_single_structure;
+use core_external\external_value;
 use local_coursegen\event\generation_denied;
 use local_coursegen\event\generation_failed;
 use local_coursegen\event\generation_job_started;

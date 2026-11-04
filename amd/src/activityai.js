@@ -26,6 +26,7 @@ import Templates from 'core/templates';
 import {reactiveInstance, ensureInitialState} from 'local_coursegen/local/activityai/reactive';
 import AddActivityAiButton from 'local_coursegen/local/activityai/components/add_activity_ai_button';
 import ModalController from 'local_coursegen/local/activityai/components/modal_controller';
+import {setClasses, getClasses} from 'local_coursegen/local/bootstrap_classes';
 
 let ismoodle45 = false;
 let modalControllerRegistered = false;
@@ -40,9 +41,11 @@ let modalControllerRegistered = false;
  * @param {boolean} isMoodle45 Whether the Moodle version is 4.5.
  * @param {Array} languages Available languages.
  * @param {string} defaultlang Default language code.
+ * @param {Object<string, string>} bootstrapclasses Bootstrap class names of the running Moodle.
  */
-export const init = async(courseid, isMoodle45 = false, languages = [], defaultlang = 'en') => {
+export const init = async(courseid, isMoodle45 = false, languages = [], defaultlang = 'en', bootstrapclasses = {}) => {
     ismoodle45 = Boolean(isMoodle45);
+    setClasses(bootstrapclasses);
 
     const languageList = Array.isArray(languages) ? languages : [];
     const normalisedDefaultLang = String(defaultlang || 'en').toLowerCase();
@@ -114,6 +117,7 @@ export const injectButton = async(container, courseid) => {
         beforemod,
         arialabel,
         showfulltext: showFullText,
+        bs: getClasses(),
     });
 
     container.insertAdjacentHTML('beforeend', html);

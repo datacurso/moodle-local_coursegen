@@ -93,7 +93,7 @@ final class get_course_session_state_import_test extends \advanced_testcase {
      */
     private function call(int $recordid): array {
         $result = testable_get_course_session_state::execute($recordid);
-        return \external_api::clean_returnvalue(get_course_session_state::execute_returns(), $result);
+        return \core_external\external_api::clean_returnvalue(get_course_session_state::execute_returns(), $result);
     }
 
     /**
