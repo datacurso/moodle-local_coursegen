@@ -32,6 +32,7 @@ import {get_string as getString} from 'core/str';
 
 import ChatForm from 'local_coursegen/local/activityai/components/chat_form';
 import StreamOutput from 'local_coursegen/local/activityai/components/stream_output';
+import {getClasses} from 'local_coursegen/local/bootstrap_classes';
 
 export default class extends BaseComponent {
     create() {
@@ -83,7 +84,7 @@ export default class extends BaseComponent {
             });
         }
 
-        const footercontext = {languages: languageItems};
+        const footercontext = {languages: languageItems, bs: getClasses()};
         const footerHTML = await Templates.render('local_coursegen/activity_chat_footer', footercontext);
 
         const title = await getString('addactivityai_modaltitle', 'local_coursegen');

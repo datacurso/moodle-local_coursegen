@@ -19,6 +19,9 @@
 
     AI Course Creation Wizard - Step 1: Context
 
+    Context variable bs: Bootstrap class names for the running Moodle,
+    from \local_coursegen\local\bootstrap_classes::get().
+
     Example context (json):
     {
         "logourl": "https://example.com/local/coursegen/pix/logo.png",
@@ -33,6 +36,22 @@
             "emptytext": "No results",
             "hasitems": false,
             "items": []
+        },
+        "bs": {
+            "visuallyhidden": "visually-hidden",
+            "iconspacing1": "me-1",
+            "iconspacing2": "me-2",
+            "iconspacing3": "me-3",
+            "startspacing2": "ms-2",
+            "endpadding1": "pe-1",
+            "textend": "text-end",
+            "fontbold": "fw-bold",
+            "switchwrapper": "form-check form-switch",
+            "checkboxwrapper": "form-check",
+            "radiowrapper": "form-check",
+            "checkinput": "form-check-input",
+            "checklabel": "form-check-label",
+            "selectsmall": "form-select form-select-sm"
         }
     }
 }}
@@ -668,7 +687,7 @@
            data-import-existing-enabled="{{#importexistingenabled}}1{{/importexistingenabled}}{{^importexistingenabled}}0{{/importexistingenabled}}">
         <div class="card-body">
           <div class="d-flex align-items-start mb-3">
-            <span class="d-flex align-items-center justify-content-center mr-3"
+            <span class="d-flex align-items-center justify-content-center {{bs.iconspacing3}}"
                   style="width:40px;height:40px;border-radius:8px;background:var(--primary-soft, #fef2f0);color:var(--primary, #c2412e);flex-shrink:0">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M12 20h9"/>
@@ -683,7 +702,7 @@
 
           {{#importexistingenabled}}
           {{! Destination of the generated content: a new course (default) or an existing one (ticket #9539). }}
-          <div class="form-group" id="targetModeGroup">
+          <div class="mb-3" id="targetModeGroup">
             <label for="targetMode">{{#str}}courseai_targetmode_label, local_coursegen{{/str}}</label>
             <select id="targetMode" class="form-control">
               <option value="new" selected>{{#str}}courseai_targetmode_new, local_coursegen{{/str}}</option>
@@ -692,20 +711,20 @@
           </div>
           {{/importexistingenabled}}
 
-          <div class="form-group" id="reviewFullnameGroup">
+          <div class="mb-3" id="reviewFullnameGroup">
             <label for="reviewFullname">{{#str}}courseai_review_fullname_label, local_coursegen{{/str}}</label>
             <input type="text" id="reviewFullname" class="form-control" maxlength="255"
                    placeholder="{{#str}}courseai_review_fullname_placeholder, local_coursegen{{/str}}">
           </div>
 
-          <div class="form-group" id="reviewShortnameGroup">
+          <div class="mb-3" id="reviewShortnameGroup">
             <label for="reviewShortname">{{#str}}courseai_review_shortname_label, local_coursegen{{/str}}</label>
             <input type="text" id="reviewShortname" class="form-control" maxlength="100"
                    placeholder="{{#str}}courseai_review_shortname_placeholder, local_coursegen{{/str}}">
             <small class="form-text text-muted">{{#str}}courseai_review_shortname_note, local_coursegen{{/str}}</small>
           </div>
 
-          <div class="form-group mb-0" id="reviewCategoryGroup">
+          <div class="mb-0" id="reviewCategoryGroup">
             <label for="reviewCategory">{{#str}}courseai_review_category_label, local_coursegen{{/str}}</label>
             <select id="reviewCategory" class="form-control"></select>
           </div>
@@ -717,11 +736,11 @@
             <p class="text-muted mb-3" style="font-size:.875rem">{{!
             }}{{#importcontentmodeadd}}{{#str}}courseai_import_help_add, local_coursegen{{/str}}{{/importcontentmodeadd}}{{!
             }}{{^importcontentmodeadd}}{{#str}}courseai_import_help_replace, local_coursegen{{/str}}{{/importcontentmodeadd}}</p>
-            <div class="form-group" id="importCategoryGroup">
+            <div class="mb-3" id="importCategoryGroup">
               <label for="importCategory">{{#str}}courseai_import_category_label, local_coursegen{{/str}}</label>
               <select id="importCategory" class="form-control"></select>
             </div>
-            <div class="form-group mb-0" id="importCourseGroup">
+            <div class="mb-0" id="importCourseGroup">
               <label for="importCourse">{{#str}}courseai_import_course_label, local_coursegen{{/str}}</label>
               <select id="importCourse" class="form-control"></select>
             </div>
@@ -731,7 +750,7 @@
           <hr class="my-3">
 
           <div class="d-flex justify-content-end">
-            <button type="button" class="btn btn-outline-secondary mr-2" id="reviewCancelBtn">
+            <button type="button" class="btn btn-outline-secondary {{bs.iconspacing2}}" id="reviewCancelBtn">
               {{#str}}courseai_review_cancel, local_coursegen{{/str}}
             </button>
             <button type="button" class="btn btn-primary" id="reviewConfirmBtn">

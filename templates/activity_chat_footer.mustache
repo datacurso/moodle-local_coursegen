@@ -22,6 +22,9 @@
     Template for the chat interface that appears in the modal footer.
     Contains form for activity AI generation with image options.
 
+    Context variable bs: Bootstrap class names for the running Moodle,
+    from \local_coursegen\local\bootstrap_classes::get().
+
     Example context (json):
     {
         "languages": [
@@ -35,7 +38,23 @@
                 "name": "English (EN)",
                 "selected": false
             }
-        ]
+        ],
+        "bs": {
+            "visuallyhidden": "visually-hidden",
+            "iconspacing1": "me-1",
+            "iconspacing2": "me-2",
+            "iconspacing3": "me-3",
+            "startspacing2": "ms-2",
+            "endpadding1": "pe-1",
+            "textend": "text-end",
+            "fontbold": "fw-bold",
+            "switchwrapper": "form-check form-switch",
+            "checkboxwrapper": "form-check",
+            "radiowrapper": "form-check",
+            "checkinput": "form-check-input",
+            "checklabel": "form-check-label",
+            "selectsmall": "form-select form-select-sm"
+        }
     }
 }}
 <div class="col-lg-10">
@@ -53,7 +72,7 @@
                 {{#str}} yesimages, local_coursegen {{/str}}
             </label>
             <label class="mb-0 d-flex align-items-center" style="gap: .4rem;">
-                <select class="custom-select custom-select-sm" data-region="local_coursegen/activity/lang" style="width: auto; min-width: 170px;">
+                <select class="{{bs.selectsmall}}" data-region="local_coursegen/activity/lang" style="width: auto; min-width: 170px;">
                     {{#languages}}
                         <option value="{{code}}" {{#selected}}selected{{/selected}}>{{name}}</option>
                     {{/languages}}
@@ -64,7 +83,7 @@
         <div class="mb-2" data-region="local_coursegen/activity/selectedfile" style="display: none;">
             <div class="d-flex align-items-center justify-content-between p-2 border rounded bg-light" style="gap: .5rem;">
                 <div class="text-truncate" style="min-width: 0;">
-                    <i class="fa fa-paperclip mr-1" aria-hidden="true"></i>
+                    <i class="fa fa-paperclip {{bs.iconspacing1}}" aria-hidden="true"></i>
                     <span data-region="local_coursegen/activity/selectedfile_name"></span>
                 </div>
                 <button type="button" class="btn btn-link p-0" data-region="local_coursegen/activity/selectedfile_remove">
@@ -74,7 +93,7 @@
         </div>
 
         <!-- Barra de entrada estilo chat (textarea arriba, botones abajo) -->
-        <label class="sr-only" for="local-coursegen-activity-prompt">{{#str}} addactivityai_label, local_coursegen {{/str}}</label>
+        <label class="{{bs.visuallyhidden}}" for="local-coursegen-activity-prompt">{{#str}} addactivityai_label, local_coursegen {{/str}}</label>
         <div class="ai-prompt-container shadow-sm d-flex flex-column"
              style="background-color: var(--bs-body-bg, var(--body-bg, #fff)); border: 1px solid var(--bs-border-color, var(--border-color, #d1d5db)); border-radius: 24px; padding: 10px; max-width: 100%;">
 

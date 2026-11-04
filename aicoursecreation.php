@@ -145,6 +145,7 @@ $templatecontext = [
         'hasitems' => false,
         'items' => [],
     ],
+    'bs' => \local_coursegen\local\bootstrap_classes::get(),
 ];
 
 echo $OUTPUT->header();

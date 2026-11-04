@@ -26,6 +26,7 @@ import {BaseComponent} from 'core/reactive';
 import {renderMarkdown} from 'local_coursegen/local/courseai/ui/markdown';
 import {regions, activityRegions} from 'local_coursegen/selectors';
 import {loadActivityaiStrings} from 'local_coursegen/local/activityai/i18n';
+import {bsClass} from 'local_coursegen/local/bootstrap_classes';
 
 export default class extends BaseComponent {
     create() {
@@ -149,20 +150,22 @@ export default class extends BaseComponent {
                 if (text === String(element.error)) {
                     return;
                 }
-                icon = '<i class="fa fa-times-circle text-danger mr-2"></i>';
+                icon = '<i class="fa fa-times-circle text-danger ' + bsClass('iconspacing2') + '"></i>';
             } else if (isLast && element.reviewneeded) {
                 // Estado final de espera de revisión: icono de info, como setStatus(..., isWorking=false).
-                icon = '<i class="fa fa-info-circle mr-2 text-info"></i>';
+                icon = '<i class="fa fa-info-circle ' + bsClass('iconspacing2') + ' text-info"></i>';
             } else if (isLast && isWorking) {
                 // Estado actual mientras se está generando: spinner.
-                icon = '<div class="spinner-border spinner-border-sm mr-2 text-primary" role="status"></div>';
+                icon = '<div class="spinner-border spinner-border-sm ' + bsClass('iconspacing2') +
+                    ' text-primary" role="status"></div>';
             } else {
                 // Estados anteriores: check verde.
-                icon = '<i class="fa fa-check text-success mr-2"></i>';
+                icon = '<i class="fa fa-check text-success ' + bsClass('iconspacing2') + '"></i>';
             }
 
             const line = '' +
-                '<div class="d-flex align-items-center text-muted my-2 small font-weight-bold text-uppercase tracking-wide">' +
+                '<div class="d-flex align-items-center text-muted my-2 small ' + bsClass('fontbold') +
+                    ' text-uppercase tracking-wide">' +
                     '<span>' + icon + '</span>' +
                     '<span>' + safeText(text) + '</span>' +
                 '</div>';
@@ -182,10 +185,10 @@ export default class extends BaseComponent {
         const promptHtml = element.prompt
             ? '' +
                 '<div class="d-flex justify-content-end my-3 border-top pt-3 mt-4">' +
-                    '<span class="badge badge-light border border-secondary text-muted p-2" ' +
+                    '<span class="badge ' + bsClass('badgelight') + ' border border-secondary text-muted p-2" ' +
                         'style="font-size: 1rem; line-height: 1.4; font-weight: normal; max-width: 100%; ' +
                         'white-space: normal; word-break: break-word; text-align: left; display: inline-block;">' +
-                        '<i class="fa fa-user mr-1"></i> '
+                        '<i class="fa fa-user ' + bsClass('iconspacing1') + '"></i> '
                          + safeText(this.texts.activityai_prompt_prefix) + ' ' + safeText(element.prompt) +
                     '</span>' +
                 '</div>'
@@ -206,7 +209,7 @@ export default class extends BaseComponent {
             const retryButtonHtml = retriable
                 ? '<button type="button" class="btn btn-primary btn-sm mt-2" ' +
                     'data-action="local_coursegen/activity/retry-run" data-run-id="' + safeText(runId) + '">' +
-                    '<i class="fa fa-refresh mr-1" aria-hidden="true"></i>' +
+                    '<i class="fa fa-refresh ' + bsClass('iconspacing1') + '" aria-hidden="true"></i>' +
                     safeText(this.texts.activityai_retry_action) +
                   '</button>'
                 : '';
@@ -214,9 +217,9 @@ export default class extends BaseComponent {
                 '<div class="alert ' + alertClass + ' my-3" role="alert" ' +
                     'data-region="local_coursegen/activity/retry-alert">' +
                     '<div class="d-flex align-items-start">' +
-                        '<i class="fa fa-exclamation-triangle mr-2 mt-1" aria-hidden="true"></i>' +
+                        '<i class="fa fa-exclamation-triangle ' + bsClass('iconspacing2') + ' mt-1" aria-hidden="true"></i>' +
                         '<div>' +
-                            '<div class="font-weight-bold">' + safeText(headline) + '</div>' +
+                            '<div class="' + bsClass('fontbold') + '">' + safeText(headline) + '</div>' +
                             (showDetail
                                 ? '<div class="small mt-1">' + safeText(detail) + '</div>'
                                 : '') +
@@ -257,7 +260,7 @@ export default class extends BaseComponent {
 
         const btnAccept = document.createElement('button');
         btnAccept.type = 'button';
-        btnAccept.className = 'btn btn-primary mr-2 shadow-sm';
+        btnAccept.className = 'btn btn-primary ' + bsClass('iconspacing2') + ' shadow-sm';
         btnAccept.textContent = this.texts.accept_planning_create_activity;
 
         const btnAdjust = document.createElement('button');
