@@ -18,10 +18,10 @@ namespace local_coursegen\external;
 
 use context_system;
 use context_user;
-use external_api;
-use external_function_parameters;
-use external_single_structure;
-use external_value;
+use core_external\external_api;
+use core_external\external_function_parameters;
+use core_external\external_single_structure;
+use core_external\external_value;
 use local_coursegen\event\external_transfer_initiated;
 use local_coursegen\local\models\course_session;
 use local_coursegen\local\service\ai_course_api_service;
