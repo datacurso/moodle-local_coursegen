@@ -141,11 +141,14 @@ class text_editor_parameter_cleaner {
     /**
      * Replace generated-image references with @@PLUGINFILE@@ URLs in draft area.
      *
+     * Public for the module settings that receive plain HTML instead of a text editor object
+     * (e.g. lesson pages), so their images are downloaded without cleaning the rest of the text.
+     *
      * @param string $text Editor text.
      * @param int $itemid Draft itemid where files will be stored.
      * @return string
      */
-    private static function replace_generated_images_in_text(string $text, int $itemid): string {
+    public static function replace_generated_images_in_text(string $text, int $itemid): string {
         if ($text === '') {
             return $text;
         }
@@ -316,7 +319,10 @@ class text_editor_parameter_cleaner {
         static $client = null;
         static $initialized = false;
 
-        if ($initialized) {
+        // Under PHPUnit each test injects its own client through api_client_factory, so the
+        // client is resolved on every call instead of reusing the one of an earlier test.
+        $intests = defined('PHPUNIT_TEST') && PHPUNIT_TEST;
+        if ($initialized && !$intests) {
             return $client;
         }
 

@@ -92,8 +92,50 @@ class wiki_settings extends base_settings {
      * @param array $page Page data.
      */
     protected function add_page($page) {
+        global $DB;
+
         $content = $page['newcontent_editor']['text'];
-        mod_wiki_external::new_page($page['title'], $content, $this->wikiformat, null, $this->cm->instance);
+        $result = mod_wiki_external::new_page($page['title'], $content, $this->wikiformat, null, $this->cm->instance);
+
+        $draftitemid = (int) ($page['newcontent_editor']['itemid'] ?? 0);
+        if ($draftitemid > 0) {
+            $subwikiid = (int) $DB->get_field('wiki_pages', 'subwikiid', ['id' => $result['pageid']], MUST_EXIST);
+            $this->copy_draft_images($draftitemid, $subwikiid);
+        }
+    }
+
+    /**
+     * Copy the generated images of a page from its draft area to the attachments of the subwiki.
+     *
+     * The parameter cleaner downloaded them into the draft area and pointed the content at
+     * @@PLUGINFILE@@, but mod_wiki_external::new_page() saves no files. The attachments area is
+     * shared by every page of the subwiki, so the files are added one by one: saving the draft
+     * area over it would delete the images of the pages created before.
+     *
+     * @param int $draftitemid Draft itemid holding the images of the page.
+     * @param int $subwikiid Subwiki the page belongs to.
+     */
+    protected function copy_draft_images(int $draftitemid, int $subwikiid): void {
+        global $USER;
+
+        $fs = get_file_storage();
+        $usercontext = \context_user::instance($USER->id);
+        $modcontext = \context_module::instance($this->cm->coursemodule);
+        $draftfiles = $fs->get_area_files($usercontext->id, 'user', 'draft', $draftitemid, 'id', false);
+
+        foreach ($draftfiles as $draftfile) {
+            $exists = $fs->file_exists($modcontext->id, 'mod_wiki', 'attachments', $subwikiid,
+                $draftfile->get_filepath(), $draftfile->get_filename());
+            if ($exists) {
+                continue;
+            }
+            $fs->create_file_from_storedfile([
+                'contextid' => $modcontext->id,
+                'component' => 'mod_wiki',
+                'filearea' => 'attachments',
+                'itemid' => $subwikiid,
+            ], $draftfile);
+        }
     }
 
     /**

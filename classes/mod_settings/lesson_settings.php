@@ -19,6 +19,7 @@ namespace local_coursegen\mod_settings;
 use context_module;
 use lesson;
 use lesson_page;
+use local_coursegen\utils\text_editor_parameter_cleaner;
 use stdClass;
 
 /**
@@ -61,10 +62,33 @@ class lesson_settings extends base_settings {
             if ($properties === null) {
                 continue;
             }
+            $properties->contents_editor = $this->prepare_contents($properties->contents_editor);
 
             $created = lesson_page::create($properties, $lesson, $context, $CFG->maxbytes);
             $previouspageid = $created->id;
         }
+    }
+
+    /**
+     * Download the generated images of a page and clean its HTML before lesson_page::create() saves it.
+     *
+     * The page content arrives as plain HTML (content_html), which the parameter cleaner does not
+     * process, so its generated images still point at the AI service. They are downloaded into a
+     * draft area and the content is pointed at @@PLUGINFILE@@; lesson_page::create() then moves the
+     * draft files to the page_contents area of the new page.
+     *
+     * The lesson shows its pages without cleaning them (noclean), so the HTML the AI wrote is
+     * cleaned here, the way Moodle cleans text from a person who is not trusted.
+     *
+     * @param array $editor Editor array with 'text', 'format' and 'itemid'.
+     * @return array The same editor with the images rewritten, the HTML cleaned and a draft itemid holding the images.
+     */
+    protected function prepare_contents(array $editor): array {
+        $itemid = file_get_unused_draft_itemid();
+        $text = text_editor_parameter_cleaner::replace_generated_images_in_text($editor['text'], $itemid);
+        $editor['text'] = clean_text($text, FORMAT_HTML);
+        $editor['itemid'] = $itemid;
+        return $editor;
     }
 
     /**
@@ -129,12 +153,13 @@ class lesson_settings extends base_settings {
             }
             $correct = !empty($option['correct']);
 
+            // The lesson shows answers and feedback without cleaning them (noclean).
             $properties->answer_editor[] = [
-                'text' => $text,
+                'text' => clean_text($text, FORMAT_HTML),
                 'format' => FORMAT_HTML,
             ];
             $properties->response_editor[] = [
-                'text' => trim((string) ($option['feedback'] ?? '')),
+                'text' => clean_text(trim((string) ($option['feedback'] ?? '')), FORMAT_HTML),
                 'format' => FORMAT_HTML,
             ];
             $properties->jumpto[] = $correct ? LESSON_NEXTPAGE : LESSON_THISPAGE;
