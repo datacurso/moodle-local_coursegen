@@ -22,6 +22,21 @@
  */
 
 /**
+ * Format a localised activity count ("1 activity", "3 activities").
+ *
+ * @param {Object} texts Prefetched lang strings.
+ * @param {number} count
+ * @returns {string}
+ */
+export const formatActivityCount = (texts, count) => {
+    const total = count || 0;
+    const label = total === 1
+        ? ((texts && texts.courseai_activity_count_one) || 'activity')
+        : ((texts && texts.courseai_activities_count) || 'activities');
+    return total + ' ' + label;
+};
+
+/**
  * Format a localised image count string.
  *
  * @param {Object} ctx

@@ -760,6 +760,13 @@
         </div>
       </div>
 
+      {{! Shown after the review is cancelled, so the generated course can still be created }}
+      <div class="text-center my-3" id="courseReviewReopen" style="display:none">
+        <button type="button" class="btn btn-primary" id="reviewReopenBtn">
+          {{#str}}courseai_review_reopen, local_coursegen{{/str}}
+        </button>
+      </div>
+
     </div>
 
     </div><!-- .courseai-workspace -->

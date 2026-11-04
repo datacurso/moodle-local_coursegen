@@ -48,6 +48,7 @@ import {rebuildTranscriptFromPlan} from 'local_coursegen/local/courseai/ui/plan-
  * @param {Function} params.replayThread - replay the service thread (preferred path)
  * @param {Function} params.emitLog
  * @param {Object} params.texts - localized strings (for reconstructed AI milestones)
+ * @param {Function} [params.openCourseReview] - reopen the course review panel of a generated course
  * @returns {Function} async resumeFromSnapshot function
  */
 export const makeResumeFromSnapshot = ({
@@ -71,6 +72,7 @@ export const makeResumeFromSnapshot = ({
     replayThread,
     emitLog,
     texts,
+    openCourseReview,
 }) => {
     /**
      * Read the distinct user turns out of a snapshot, in checkpoint order.
@@ -448,9 +450,10 @@ export const makeResumeFromSnapshot = ({
         }
 
         if (status === 'COMPLETED') {
-            // Course already created → no composer (it cannot be edited from here).
-            // The body class hides it via CSS regardless of the showReviewActions
-            // call below (which would otherwise re-enable the composer).
+            // Generation finished but the course was never created in Moodle (the created
+            // case returned above): reload, cancel or a closed tab must not strand it.
+            // No composer (the plan cannot be edited from here); the body class hides it via
+            // CSS regardless of any later review-actions call.
             state.planApproved = true;
             document.body.classList.add('cg-plan-approved');
             stepsUi.transitionToPlanning();
@@ -463,12 +466,17 @@ export const makeResumeFromSnapshot = ({
             if (typeof detailedUi.enableAllActionControls === 'function') {
                 detailedUi.enableAllActionControls();
             }
-            planningUi.showReviewActions('detailed');
             stepsUi.setStepState('planning', 'done');
             stepsUi.setStepState('generating', 'done');
             state.currentStage = 'completed';
-            stepsUi.setProgress(100);
             stepsUi.updateFlowNav();
+            // Reopen the course review panel, the step the session was left on.
+            if (typeof openCourseReview === 'function') {
+                await openCourseReview();
+            } else {
+                planningUi.showReviewActions('detailed');
+                stepsUi.setProgress(100);
+            }
             return true;
         }
 

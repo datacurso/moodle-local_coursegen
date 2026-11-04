@@ -145,6 +145,7 @@ $string['course_streaming_planning_title'] = 'Planning course creation';
 $string['courseai_activities_count'] = 'activities';
 $string['courseai_activity_assign'] = 'Assignment';
 $string['courseai_activity_book'] = 'Book';
+$string['courseai_activity_count_one'] = 'activity';
 $string['courseai_activity_data'] = 'Database';
 $string['courseai_activity_default'] = 'Activity';
 $string['courseai_activity_forum'] = 'Forum';
@@ -275,7 +276,7 @@ $string['courseai_log_added_activity'] = 'You added an activity';
 $string['courseai_log_added_activity_named'] = 'You added activity: {$a->title}';
 $string['courseai_log_added_section'] = 'You added a section';
 $string['courseai_log_added_section_named'] = 'You added section: {$a->name}';
-$string['courseai_log_ai_completed'] = 'Your course is ready. I created it in Moodle.';
+$string['courseai_log_ai_completed'] = 'Your course content is ready. Review its details to create it in Moodle.';
 $string['courseai_log_ai_course_configuration'] = 'Course: {$a}';
 $string['courseai_log_ai_planned_structure'] = 'Here is the structure I planned for your course';
 $string['courseai_log_ai_proposals_ready'] = 'I prepared a few suggestions for you. Review them and choose how you want to continue.';
@@ -344,6 +345,7 @@ $string['courseai_prv_sub_init'] = 'Starting…';
 $string['courseai_questions_label'] = 'questions';
 $string['courseai_resize_panels'] = 'Resize panels';
 
+$string['courseai_retry'] = 'Retry';
 // Decision log (§4).
 $string['courseai_review_cancel'] = 'Cancel';
 $string['courseai_review_category_label'] = 'Category';
@@ -360,6 +362,7 @@ $string['courseai_review_confirm'] = 'Create course';
 // Interpreted-feedback proposals (single-choice summaries).
 $string['courseai_review_fullname_label'] = 'Course name';
 $string['courseai_review_fullname_placeholder'] = 'Enter the course full name';
+$string['courseai_review_reopen'] = 'Review and create the course';
 $string['courseai_review_shortname_label'] = 'Short name';
 $string['courseai_review_shortname_note'] = 'If left empty, one will be generated automatically.';
 $string['courseai_review_shortname_placeholder'] = 'Enter a short name (optional)';
