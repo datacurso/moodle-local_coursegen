@@ -343,8 +343,38 @@ function xmldb_local_coursegen_upgrade($oldversion) {
 
     if ($oldversion < 2026110400) {
         // Repair sites where the course sessions table kept courseid as NOT NULL
-        // and/or lacks coursedata (earlier steps did not take effect). Idempotent.
-        \local_coursegen\local\schema_repair::repair_course_sessions_table($DB, $dbman);
+        // and/or lacks coursedata (steps 2026021801 and 2026021803 did not take effect).
+        // It inspects the real schema, so it is safe on sites that were already correct.
+        $table = new xmldb_table('local_coursegen_course_sessions');
+
+        if ($dbman->table_exists($table)) {
+            // Columns are read uncached so the real state of the table is seen.
+            $columns = $DB->get_columns('local_coursegen_course_sessions', false);
+
+            if (isset($columns['courseid']) && !empty($columns['courseid']->not_null)) {
+                $field = new xmldb_field('courseid', XMLDB_TYPE_INTEGER, '10', null, null, null, null, 'id');
+                $index = new xmldb_index('courseid', XMLDB_INDEX_NOTUNIQUE, ['courseid']);
+
+                if ($dbman->index_exists($table, $index)) {
+                    $dbman->drop_index($table, $index);
+                }
+
+                // Launch change of nullability for field courseid.
+                $dbman->change_field_notnull($table, $field);
+
+                if (!$dbman->index_exists($table, $index)) {
+                    $dbman->add_index($table, $index);
+                }
+            }
+
+            // Define field coursedata to be added to local_coursegen_course_sessions.
+            $field = new xmldb_field('coursedata', XMLDB_TYPE_TEXT, null, null, null, null, null, 'courseid');
+
+            // Conditionally launch add field coursedata.
+            if (!$dbman->field_exists($table, $field)) {
+                $dbman->add_field($table, $field);
+            }
+        }
 
         // Coursegen savepoint reached.
         upgrade_plugin_savepoint(true, 2026110400, 'local', 'coursegen');
