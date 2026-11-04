@@ -1,3 +1,23 @@
+## [2.0.12] - 2026-11-03
+
+**Compatibility note:** This version is compatible from **Moodle 4.5** to **Moodle 5.3**.
+
+## Changed
+
+- **Moodle 5.3 is a supported release**
+  `version.php` declared support up to Moodle 5.2, so the plugins page of a Moodle 5.3 site warned that the plugin was outside its tested range. It now declares `[405, 503]`
+
+## Fixed
+
+- **The web service classes use their current names**
+  The external functions, and the tests that call them, used the legacy global names of the web service API (`external_api`, `external_function_parameters`, `external_single_structure`, `external_multiple_structure`, `external_value`). Moodle 4.2 renamed them into `core_external`, and Moodle 5.3 reports every use of the old names as deprecated, which made the tests that load those classes fail. They now import the `core_external` classes, which Moodle 4.5 also has. The test of the client factory gave the provider its licence through the Moodle 4.5 plugin setting only; on Moodle 5.0+ it now creates the enabled provider instance that holds it, so the test runs on both
+- **The templates and the activity chat use the Bootstrap classes of the running Moodle**
+  The image generation settings page, the course creation page, the footer of the activity chat, the add-activity button and the progress and review markup of the activity chat used Bootstrap 4 classes (`custom-control`, `custom-switch`, `custom-checkbox`, `custom-radio`, `custom-select`, `sr-only`, `mr-*`, `ml-*`, `pr-*`, `text-right`, `font-weight-bold`, `badge-light`, `form-group`). Moodle 5.0 moved to Bootstrap 5 and keeps those names only through a deprecated compatibility layer, which outlines them in red as deprecated on Behat sites and in theme designer mode and which a later release removes. Moodle 4.5 ships Bootstrap 4, without the Bootstrap 5 names, so neither set works on both. The class names now come from `\local_coursegen\local\bootstrap_classes`, which gives the Bootstrap 4 names on Moodle 4.5 and the Bootstrap 5 names on Moodle 5.0 and later; PHP passes them to the templates it renders and, through `activityai.init()`, to the JavaScript (`local_coursegen/local/bootstrap_classes`). `form-group` is replaced by `mb-3`, or dropped where `mb-0` already overrode its margin, which renders the same on both
+- **The HTML the AI writes in a lesson is cleaned before it is stored**
+  Release 2.0.9 cleaned the HTML the AI writes in books, quiz questions and database entries, but not in the pages of a lesson, which kept scripts, event attributes and script links. The lesson shows its pages, its answers and their feedback without cleaning them (`noclean`), so they reached the student as written. The content of each page, the text of each option and its feedback are now cleaned the way Moodle cleans text from a person who is not trusted, as in the other activities. The labels of the buttons of a content page are left as they are, since the lesson strips their tags when it shows them
+- **The generated images of lessons, glossaries and wikis reach the activity**
+  The images of these three activities were generated but did not show in the course. The pages of a lesson arrive as plain HTML, which the parameter cleaner does not read, so their images kept the path of the file on the AI service and were never downloaded: they are now downloaded and stored in the page. The images of a glossary entry and of a wiki page were downloaded into a draft area of the user who generated the course and never moved to the activity, so the entry or the page pointed at a missing file until Moodle deleted the draft: a glossary entry now receives its draft area through the `inlineattachmentsid` option, and the images of a wiki page are added to the attachments of its subwiki one by one, since that area is shared by every page of the subwiki and saving the draft area over it would remove the images of the pages created before
+
 ## [2.0.11] - 2026-10-26
 
 **Compatibility note:** This version is compatible from **Moodle 4.5** to **Moodle 5.2**.
