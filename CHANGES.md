@@ -1,3 +1,37 @@
+## [2.0.13] - 2026-11-04
+
+**Compatibility note:** This version is compatible from **Moodle 4.5** to **Moodle 5.3**.
+
+## Added
+
+- **Dashboard access to the course assistant**
+  On sites with the My courses page disabled, the "Create with AI" button is added to the Dashboard, so teachers can still reach the assistant
+- **Non-admin access to image generation management**
+  Users with `local/coursegen:manageimagegeneration` who are not site administrators can open "Manage image generation"
+
+## Fixed
+
+- **The image toggle is respected in the full course flow**
+  With the site image policy disabled or never configured, turning images on in the assistant generated no images at all. The disabled policy is no longer sent, as in the activity flow
+- **A generated course can always be created**
+  Reloading the page after the generation finished showed "I created it in Moodle" and the plan review buttons instead of the course review panel, and accepting again left the session stuck. The session now reopens the course review panel
+- **Cancelling the course review no longer strands the session**
+  A "Review and create the course" button reopens the panel after Cancel
+- **The course summary, section summaries and language are applied**
+  The descriptions sent by the service become the course and section summaries, and the course takes the language chosen in the assistant when its pack is installed
+- **The general section is kept**
+  A plan numbered from section 0 starts at section 1, so the first unit no longer replaces the course's general section
+- **The completed generation message no longer claims the course exists**
+  It now says the content is ready and the course details must be reviewed to create it
+- **Accepting subsections from the decision card is kept after a reload**
+  The session records the choice, so the "+" menu toggle stays on
+- **Image suggestions show what will be generated**
+  Each suggestion shows its description and the part it illustrates
+- **The activity creation response names the course module**
+  `data.cmid` returned the module instance id (or none for books and wikis)
+- **Interface texts**
+  The "Retry" button is translated, a single activity reads "1 activity", and the Spanish strings no longer use voseo
+
 ## [2.0.12] - 2026-11-03
 
 **Compatibility note:** This version is compatible from **Moodle 4.5** to **Moodle 5.3**.
