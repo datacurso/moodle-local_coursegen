@@ -116,6 +116,15 @@ class course_planning_feedback extends external_api {
             throw new \moodle_exception('error_sending_feedback', 'local_coursegen');
         }
 
+        // Accepting subsections from the decision card switches the session to subsections:
+        // record it, so a reload shows the "+" menu toggle on, as it was left.
+        if (($pendingaction['action'] ?? '') === 'enable_subsections') {
+            $coursedata = json_decode((string)$session->get('coursedata'), true) ?: [];
+            $coursedata['local_coursegen_generate_subsections'] = 1;
+            $session->set('coursedata', json_encode($coursedata));
+            $session->update();
+        }
+
         // Adjusting the plan starts a new AI generation turn on the thread, so
         // it is audited like any other generation start. The free-text
         // instruction is deliberately left out of the payload.
