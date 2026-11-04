@@ -341,5 +341,14 @@ function xmldb_local_coursegen_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026100600, 'local', 'coursegen');
     }
 
+    if ($oldversion < 2026110400) {
+        // Repair sites where the course sessions table kept courseid as NOT NULL
+        // and/or lacks coursedata (earlier steps did not take effect). Idempotent.
+        \local_coursegen\local\schema_repair::repair_course_sessions_table($DB, $dbman);
+
+        // Coursegen savepoint reached.
+        upgrade_plugin_savepoint(true, 2026110400, 'local', 'coursegen');
+    }
+
     return true;
 }
