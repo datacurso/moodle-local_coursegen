@@ -1,3 +1,14 @@
+## 2.0.12-wp
+
+**Released on:** 2026-11-04
+
+**Compatibility note:** This version is compatible only with **Moodle Workplace 4.5**.
+
+## Fixed
+
+- **Starting a course plan no longer fails on sites with an outdated sessions table**
+  On some sites the table that stores course planning sessions kept the `courseid` column as required, or lacked the `coursedata` column, even though earlier upgrade steps should have fixed it. Starting a course plan then failed with the generic message "An error occurred while starting course planning". An upgrade step now checks the real table and only repairs what is wrong, so it is safe on sites that were already correct.
+
 ## 2.0.11-wp
 
 **Released on:** 2026-10-26
