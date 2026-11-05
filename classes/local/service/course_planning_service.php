@@ -91,8 +91,14 @@ class course_planning_service {
             'subsections_available' => $available,
         ];
 
+        // A disabled (or never configured) policy is left out: sent with the teacher's
+        // toggle on, it would make the service drop every image the teacher asked for.
+        // The activity flow does the same (create_mod_stream).
         if ($withimages) {
-            $payload['image_policy'] = image_policy_builder::build();
+            $imagepolicy = image_policy_builder::build();
+            if (($imagepolicy['mode'] ?? '') !== activities::MODE_DISABLED) {
+                $payload['image_policy'] = $imagepolicy;
+            }
         }
 
         // Site file-type group catalog, so activities generated in the course flow

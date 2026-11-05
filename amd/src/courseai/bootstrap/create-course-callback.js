@@ -86,12 +86,34 @@ export const makeCreateCourseCallback = ({elements, stepsUi, texts, getActions})
                     existingEdit.style.display = '';
                 }
             }
-            // Show the course review panel before creating.
-            const overrides = await actions.showCourseReviewPanel();
-            if (overrides === null) {
-                return;
-            }
-            await actions.createCourseFromSession(overrides);
+            await runCourseReview(actions);
         }
     };
+};
+
+/**
+ * Show the course review panel and create the course once the teacher confirms.
+ *
+ * Cancelling closes the panel but keeps a "Review and create the course" button, so
+ * a generated course can always be created: without it the session had no way out.
+ *
+ * @param {Object} actions Courseai actions (showCourseReviewPanel, createCourseFromSession).
+ * @returns {Promise<void>}
+ */
+const runCourseReview = async(actions) => {
+    const reopen = document.getElementById('courseReviewReopen');
+    const reopenBtn = document.getElementById('reviewReopenBtn');
+    if (reopen) {
+        reopen.style.display = 'none';
+    }
+    const overrides = await actions.showCourseReviewPanel();
+    if (overrides !== null) {
+        await actions.createCourseFromSession(overrides);
+        return;
+    }
+    if (!reopen || !reopenBtn) {
+        return;
+    }
+    reopen.style.display = '';
+    reopenBtn.addEventListener('click', () => runCourseReview(actions), {once: true});
 };

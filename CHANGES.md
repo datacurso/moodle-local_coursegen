@@ -2,6 +2,13 @@
 
 **Compatibility note:** This version is compatible from **Moodle 4.5** to **Moodle 5.3**.
 
+## Added
+
+- **Dashboard access to the course assistant**
+  On sites with the My courses page disabled (setting `enablemycourses`, Moodle 5.2 and later), the "Create with AI" button is added to the Dashboard, so teachers can still reach the assistant. On Moodle 4.5 to 5.1, which have no such setting and always keep My courses, the Dashboard is left unchanged
+- **Non-admin access to image generation management**
+  Users with `local/coursegen:manageimagegeneration` who are not site administrators can open "Manage image generation"
+
 ## Changed
 
 - **Moodle 5.3 is a supported release**
@@ -17,6 +24,26 @@
   Release 2.0.9 cleaned the HTML the AI writes in books, quiz questions and database entries, but not in the pages of a lesson, which kept scripts, event attributes and script links. The lesson shows its pages, its answers and their feedback without cleaning them (`noclean`), so they reached the student as written. The content of each page, the text of each option and its feedback are now cleaned the way Moodle cleans text from a person who is not trusted, as in the other activities. The labels of the buttons of a content page are left as they are, since the lesson strips their tags when it shows them
 - **The generated images of lessons, glossaries and wikis reach the activity**
   The images of these three activities were generated but did not show in the course. The pages of a lesson arrive as plain HTML, which the parameter cleaner does not read, so their images kept the path of the file on the AI service and were never downloaded: they are now downloaded and stored in the page. The images of a glossary entry and of a wiki page were downloaded into a draft area of the user who generated the course and never moved to the activity, so the entry or the page pointed at a missing file until Moodle deleted the draft: a glossary entry now receives its draft area through the `inlineattachmentsid` option, and the images of a wiki page are added to the attachments of its subwiki one by one, since that area is shared by every page of the subwiki and saving the draft area over it would remove the images of the pages created before
+- **The image toggle is respected in the full course flow**
+  With the site image policy disabled or never configured, turning images on in the assistant generated no images at all. The disabled policy is no longer sent, as in the activity flow
+- **A generated course can always be created**
+  Reloading the page after the generation finished showed "I created it in Moodle" and the plan review buttons instead of the course review panel, and accepting again left the session stuck. The session now reopens the course review panel
+- **Cancelling the course review no longer strands the session**
+  A "Review and create the course" button reopens the panel after Cancel
+- **The course summary, section summaries and language are applied**
+  The descriptions sent by the service become the course and section summaries, and the course takes the language chosen in the assistant when its pack is installed
+- **The general section is kept**
+  A plan numbered from section 0 starts at section 1, so the first unit no longer replaces the course's general section
+- **The completed generation message no longer claims the course exists**
+  It now says the content is ready and the course details must be reviewed to create it
+- **Accepting subsections from the decision card is kept after a reload**
+  The session records the choice, so the "+" menu toggle stays on
+- **Image suggestions show what will be generated**
+  Each suggestion shows its description and the part it illustrates
+- **The activity creation response names the course module**
+  `data.cmid` returned the module instance id (or none for books and wikis)
+- **Interface texts**
+  The "Retry" button is translated, a single activity reads "1 activity", and the Spanish strings no longer use voseo
 
 ## [2.0.12] - 2026-11-04
 

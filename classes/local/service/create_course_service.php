@@ -64,8 +64,15 @@ class create_course_service {
 
             require_once($CFG->dirroot . '/course/lib.php');
 
+            // Keep section 0 as the course's general section.
+            $resultdata = self::move_plan_out_of_general_section($resultdata);
+
             // Build course data entirely from the API response.
             $coursedata = self::build_course_data_from_api($resultdata);
+            $lang = self::resolve_course_language($session);
+            if ($lang !== '') {
+                $coursedata->lang = $lang;
+            }
 
             // Apply user overrides (from the review modal) on top of AI-generated data.
             // These take precedence over the API response values.
@@ -262,6 +269,12 @@ class create_course_service {
 
         $coursedata->category = (int)($config['category'] ?? $defaultcategoryid);
 
+        $description = trim((string)($config['description'] ?? ''));
+        if ($description !== '') {
+            $coursedata->summary = self::description_to_html($description);
+            $coursedata->summaryformat = FORMAT_HTML;
+        }
+
         return $coursedata;
     }
 
@@ -388,14 +401,21 @@ class create_course_service {
         foreach ($sectionsinfo as $sectioninfo) {
             $sectionnumber = (int)$sectioninfo['section'];
             $sectionname = $sectioninfo['name'] ?? '';
+            $description = trim((string)($sectioninfo['description'] ?? ''));
+            $summary = $description !== '' ? self::description_to_html($description) : '';
 
             if (isset($existingsections[$sectionnumber])) {
-                // Update existing section name.
+                // Update the existing section with the planned name and summary.
+                $update = ['id' => $existingsections[$sectionnumber]->id];
                 if (!empty($sectionname) && $existingsections[$sectionnumber]->name !== $sectionname) {
-                    $DB->update_record('course_sections', [
-                        'id' => $existingsections[$sectionnumber]->id,
-                        'name' => $sectionname,
-                    ]);
+                    $update['name'] = $sectionname;
+                }
+                if ($summary !== '') {
+                    $update['summary'] = $summary;
+                    $update['summaryformat'] = FORMAT_HTML;
+                }
+                if (count($update) > 1) {
+                    $DB->update_record('course_sections', $update);
                 }
             } else {
                 // Create new section.
@@ -403,7 +423,7 @@ class create_course_service {
                 $sectiondata->course = $courseid;
                 $sectiondata->section = $sectionnumber;
                 $sectiondata->name = $sectionname;
-                $sectiondata->summary = '';
+                $sectiondata->summary = $summary;
                 $sectiondata->summaryformat = FORMAT_HTML;
                 $sectiondata->sequence = '';
                 $sectiondata->visible = 1;
@@ -426,6 +446,72 @@ class create_course_service {
 
         // Rebuild course cache.
         rebuild_course_cache($courseid, true);
+    }
+
+    /**
+     * Shift a plan that starts at section 0 one position down.
+     *
+     * The service numbers the planned sections from 0, which would turn the first
+     * unit into the course's general section and leave the course without one.
+     * Sections, the top-level section of each activity and the parent of each
+     * subsection move together, so the structure is kept.
+     *
+     * @param array $resultdata Result data from the Datacurso API.
+     * @return array The same data, with section numbers starting at 1.
+     */
+    private static function move_plan_out_of_general_section(array $resultdata): array {
+        $sections = $resultdata['sections_info'] ?? null;
+        if (!is_array($sections) || $sections === []) {
+            return $resultdata;
+        }
+        $numbers = array_map(fn($section) => (int)($section['section'] ?? 0), array_filter($sections, 'is_array'));
+        if ($numbers === [] || min($numbers) !== 0) {
+            return $resultdata;
+        }
+
+        foreach ($resultdata['sections_info'] as $key => $section) {
+            if (is_array($section)) {
+                $resultdata['sections_info'][$key]['section'] = (int)($section['section'] ?? 0) + 1;
+            }
+        }
+        foreach ($resultdata['generated_activities'] ?? [] as $key => $activity) {
+            if (is_array($activity)) {
+                $current = (int)($activity['parameters']['section'] ?? 0);
+                $resultdata['generated_activities'][$key]['parameters']['section'] = $current + 1;
+            }
+        }
+        foreach ($resultdata['subsections_info'] ?? [] as $key => $subsection) {
+            if (is_array($subsection)) {
+                $resultdata['subsections_info'][$key]['parent_section'] = (int)($subsection['parent_section'] ?? 0) + 1;
+            }
+        }
+        return $resultdata;
+    }
+
+    /**
+     * Language chosen in the assistant, when its language pack is installed.
+     *
+     * @param course_session $session Planning session persistent.
+     * @return string Language code, or '' to keep the site default.
+     */
+    private static function resolve_course_language(course_session $session): string {
+        $coursedata = json_decode((string)$session->get('coursedata'), true);
+        $lang = clean_param((string)($coursedata['local_coursegen_lang'] ?? ''), PARAM_LANG);
+        if ($lang === '' || !get_string_manager()->translation_exists($lang, false)) {
+            return '';
+        }
+        return $lang;
+    }
+
+    /**
+     * Turn a plain-text description from the service into summary HTML.
+     *
+     * @param string $description Plain text, one paragraph per line.
+     * @return string
+     */
+    private static function description_to_html(string $description): string {
+        $paragraphs = preg_split('/\R+/u', $description, -1, PREG_SPLIT_NO_EMPTY);
+        return implode('', array_map(fn($paragraph) => \html_writer::tag('p', s(trim($paragraph))), $paragraphs));
     }
 
     /**

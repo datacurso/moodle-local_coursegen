@@ -130,7 +130,7 @@ class create_mod extends external_api {
                 'message' => get_string('resource_created', 'local_coursegen', $newcm->modulename),
                 'data' => [
                     'activityurl' => $url->out(false),
-                    'cmid' => $newcm->id,
+                    'cmid' => (int)$newcm->coursemodule,
                     'modname' => $newcm->modulename,
                 ],
             ];

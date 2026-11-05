@@ -147,4 +147,13 @@ if ($hassiteconfig) {
         'moodle/site:config',
         true
     ));
+} else if (has_capability('local/coursegen:manageimagegeneration', context_system::instance())) {
+    // Users who manage image generation without being site administrators still need
+    // the page in the admin tree: admin_externalpage_setup() only opens registered pages.
+    $ADMIN->add('localplugins', new admin_externalpage(
+        'local_coursegen_manage_image_generation',
+        get_string('manage_image_generation', 'local_coursegen'),
+        new moodle_url('/local/coursegen/manage_image_generation.php'),
+        'local/coursegen:manageimagegeneration'
+    ));
 }

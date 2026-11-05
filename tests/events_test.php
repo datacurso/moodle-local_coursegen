@@ -139,6 +139,8 @@ final class events_test extends \advanced_testcase {
         $this->assertTrue(
             $DB->record_exists('course_modules', ['id' => $event->other['cmid'], 'course' => $course->id])
         );
+        // The response names the same course module, not the module instance.
+        $this->assertSame((int) $event->other['cmid'], $result['data']['cmid']);
     }
 
     /**
