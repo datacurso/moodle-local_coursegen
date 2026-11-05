@@ -5,7 +5,7 @@
 ## Added
 
 - **Dashboard access to the course assistant**
-  On sites with the My courses page disabled, the "Create with AI" button is added to the Dashboard, so teachers can still reach the assistant
+  On sites with the My courses page disabled (setting `enablemycourses`, Moodle 5.2 and later), the "Create with AI" button is added to the Dashboard, so teachers can still reach the assistant. On Moodle 4.5 to 5.1, which have no such setting and always keep My courses, the Dashboard is left unchanged
 - **Non-admin access to image generation management**
   Users with `local/coursegen:manageimagegeneration` who are not site administrators can open "Manage image generation"
 
