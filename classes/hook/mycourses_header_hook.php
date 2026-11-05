@@ -138,6 +138,9 @@ class mycourses_header_hook {
      * page disabled: My courses then redirects to the Dashboard, whose Course overview
      * block carries the course actions, and without this the teacher had no way in.
      *
+     * The setting only exists from Moodle 5.2. Before that the My courses page cannot be
+     * disabled, so an unset setting means My courses is there and the Dashboard is left alone.
+     *
      * @param \moodle_page $page The page being rendered.
      * @return bool
      */
@@ -154,7 +157,7 @@ class mycourses_header_hook {
         }
 
         $isdashboard = str_ends_with($path, '/my/') || str_ends_with($path, '/my/index.php');
-        return $isdashboard && empty($CFG->enablemycourses);
+        return $isdashboard && isset($CFG->enablemycourses) && empty($CFG->enablemycourses);
     }
 
     /**

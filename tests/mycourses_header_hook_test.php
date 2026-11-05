@@ -319,6 +319,35 @@ final class mycourses_header_hook_test extends \advanced_testcase {
     }
 
     /**
+     * Before Moodle 5.2 the My courses page cannot be disabled and the setting does not
+     * exist: the Dashboard is left alone, as with the page enabled.
+     */
+    public function test_should_not_inject_on_dashboard_when_the_setting_does_not_exist(): void {
+        global $PAGE;
+
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        unset_config('enablemycourses');
+        $this->set_page_url('/my/index.php');
+
+        $this->assertFalse(mycourses_header_hook::should_inject($PAGE));
+    }
+
+    /**
+     * My courses keeps the button whether the setting exists or not.
+     */
+    public function test_should_inject_on_my_courses_when_the_setting_does_not_exist(): void {
+        global $PAGE;
+
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        unset_config('enablemycourses');
+        $this->set_page_url('/my/courses.php');
+
+        $this->assertTrue(mycourses_header_hook::should_inject($PAGE));
+    }
+
+    /**
      * Pages other than My courses and the Dashboard are never decorated.
      */
     public function test_should_not_inject_on_other_pages(): void {
