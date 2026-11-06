@@ -807,6 +807,7 @@ $string['systeminstructionname_help'] = 'Ingrese el nombre de la instrucción de
 $string['systeminstructionnameexists'] = 'Ya existe una instrucción del sistema con este nombre';
 $string['systeminstructionsaved'] = 'La instrucción del sistema se guardó correctamente';
 $string['task_import_generated_course'] = 'Importar un curso generado con IA en un curso existente';
+$string['task_skipped_plugindisabled'] = 'El plugin está deshabilitado en el proveedor de IA de Datacurso; se omite la ejecución.';
 $string['thread_not_found'] = 'Hilo no encontrado';
 $string['tooltip_enable_assign'] = 'Habilite imágenes para el contenido de la tarea.';
 $string['tooltip_enable_book'] = 'Habilite imágenes para el contenido del libro.';

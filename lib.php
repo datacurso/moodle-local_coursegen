@@ -22,6 +22,7 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+use aiprovider_datacurso\local\plugin_settings;
 use local_coursegen\local\models\course_context;
 use local_coursegen\local\service\course_session_service;
 
@@ -40,6 +41,8 @@ use local_coursegen\local\service\course_session_service;
  * @param array $args extra arguments (itemid, path)
  * @param bool $forcedownload whether or not force download
  * @param array $options additional options affecting the file serving
+ * @return bool false when the file is not served (plugin disabled, wrong context, area or access);
+ *              otherwise the file is sent and the script ends
  */
 function local_coursegen_pluginfile(
     $course,
@@ -54,6 +57,11 @@ function local_coursegen_pluginfile(
 
     // Make sure the user is logged.
     require_login(null, false);
+
+    // Nothing is served while the plugin is disabled in the Datacurso AI provider.
+    if (!plugin_settings::is_enabled('local_coursegen')) {
+        return false;
+    }
 
     // Syllabus files live in the system context only.
     if ($context->contextlevel != CONTEXT_SYSTEM) {

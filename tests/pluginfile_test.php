@@ -216,4 +216,32 @@ final class pluginfile_test extends \advanced_testcase {
             'filename' => 'syllabus.pdf',
         ], '%PDF-1.4 test syllabus');
     }
+
+    /**
+     * While the plugin is disabled in the Datacurso AI provider even the session owner gets nothing.
+     *
+     * The enabled path is covered by the other tests of this class.
+     *
+     * @return void
+     */
+    public function test_nothing_is_served_when_plugin_disabled(): void {
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course();
+        $owner = $generator->create_user();
+        $sessionid = $this->insert_session($course->id, $owner->id);
+        $this->create_syllabus_file($sessionid);
+        $this->setUser($owner);
+        set_config('plugin_enabled_local_coursegen', '0', 'aiprovider_datacurso');
+
+        $result = local_coursegen_pluginfile(
+            get_site(),
+            null,
+            context_system::instance(),
+            'syllabus',
+            [$sessionid, 'syllabus.pdf'],
+            false,
+            []
+        );
+        $this->assertFalse($result);
+    }
 }

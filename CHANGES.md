@@ -1,3 +1,17 @@
+## [2.0.14] - 2026-11-06
+
+**Compatibility note:** This version is compatible from **Moodle 4.5** to **Moodle 5.3**.
+
+## Added
+
+- **The plugin can be switched off from the Datacurso AI provider**
+  Site administrators can now switch the plugin off from the Datacurso AI provider (the Enabled switch of Course Creator AI in Site administration > AI > Datacurso plugins list); the plugin has no "Enabled" setting of its own. While it is off, the *Create with AI* button on My courses (or on the Dashboard when My courses is disabled), the *Create course with AI* entry under Site administration > Courses and the activity AI button on course pages are hidden; the course creation page and every web service of the course and activity creation flows refuse with the Datacurso AI provider's message (users are told to contact the administrator, and site administrators get a link to the provider's plugins list); syllabus files are no longer served; and queued imports into an existing course are skipped by cron, which logs *The plugin is disabled in the Datacurso AI provider; skipping.* and keeps the staging course and the queued session. The plugin's administration pages (system instructions and image generation, with its web service) stay available so it can be configured before it is switched on. With the plugin on, nothing changes. Requires `aiprovider_datacurso` 2026110400.
+
+## Changed
+
+- **Creating a course with AI requires a fixed set of four capabilities**
+  The creation permission set added in 2.0.8 also included every capability the `editingteacher` role archetype allows by default, computed at runtime from the installed plugins. It is now exactly `moodle/course:create`, `moodle/course:view`, `local/coursegen:createcoursewithai` and `local/coursegen:createactivitywithai`, so another plugin adding a capability to that archetype never hides the *Create with AI* button from roles created earlier. `local/coursegen:createcoursewithai` is still checked on the system context and the rest on the category the course is created in. The stock `manager` role holds all four, so managers can create courses with AI again; site administrators are unaffected.
+
 ## [2.0.13] - 2026-11-04
 
 **Compatibility note:** This version is compatible from **Moodle 4.5** to **Moodle 5.3**.
@@ -80,7 +94,7 @@
 - **The text the AI writes is cleaned before it is saved**  
   Pages, lessons, books, labels, forums, quiz questions and database entries could keep scripts, event attributes or script links if the AI wrote them, for example after reading a document that asked for them. The text is now cleaned the way Moodle cleans any text from a person who is not trusted: scripts, event attributes, script links, frames and forms are removed, while the layout and the inline styles stay. Links of a database URL field must be real addresses (#370)
 
-## [2.0.8] - Unreleased
+## [2.0.8] - 2026-10-21
 
 **Compatibility note:** This version is compatible from **Moodle 4.5** to **Moodle 5.2**.
 
@@ -111,7 +125,7 @@
 - **Import help text follows the import content mode**  
   The help shown under *Import into an existing course* always described a replace, even with *Import content mode* set to append. It is now chosen server-side from `local_coursegen/importcontentmode`: one text explains that the copy's content is replaced (participants, roles and groups are kept, their grades and submissions on the replaced activities are lost), the other that the generated sections are added after the existing ones and nothing is removed; both say the original course is renamed and hidden as a backup.
 
-## [2.0.7] - Unreleased
+## [2.0.7] - 2026-10-13
 
 **Compatibility note:** This version is compatible from **Moodle 4.5** to **Moodle 5.2**.
 
@@ -133,7 +147,7 @@
 - **Tests**  
   Added coverage for syllabus upload validation, privacy provider system context handling and a check that outbound payloads match the declared privacy metadata.
 
-## [2.0.6] - Unreleased
+## [2.0.6] - 2026-09-30
 
 **Compatibility note:** This version is compatible from **Moodle 4.5** to **Moodle 5.2**.
 

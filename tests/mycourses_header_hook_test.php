@@ -254,8 +254,8 @@ final class mycourses_header_hook_test extends \advanced_testcase {
     }
 
     /**
-     * A non-admin user holding the full creation set (editingteacher archetype plus the four extra
-     * capabilities) in a category gets the button.
+     * A non-admin user holding the full creation set (the four fixed capabilities) in a category
+     * gets the button.
      */
     public function test_should_inject_for_user_with_the_full_creation_set(): void {
         global $PAGE;
@@ -435,5 +435,23 @@ final class mycourses_header_hook_test extends \advanced_testcase {
         foreach ($footercallbacks as $callback) {
             $this->assertStringNotContainsString('mycourses_header_hook', $callback);
         }
+    }
+
+    /**
+     * While the plugin is disabled in the Datacurso AI provider not even an admin gets the button.
+     *
+     * The enabled path is test_should_inject_for_admin_on_my_courses().
+     *
+     * @return void
+     */
+    public function test_should_not_inject_when_plugin_disabled(): void {
+        global $PAGE;
+
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        $this->set_page_url('/my/courses.php');
+        set_config('plugin_enabled_local_coursegen', '0', 'aiprovider_datacurso');
+
+        $this->assertFalse(mycourses_header_hook::should_inject($PAGE));
     }
 }

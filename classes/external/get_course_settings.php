@@ -24,6 +24,7 @@
 
 namespace local_coursegen\external;
 
+use aiprovider_datacurso\local\plugin_settings;
 use core_external\external_api;
 use core_external\external_function_parameters;
 use core_external\external_multiple_structure;
@@ -63,9 +64,12 @@ class get_course_settings extends external_api {
      *
      * @param int $recordid Session record ID.
      * @return array Course settings (fullname, shortname, category, categories).
+     * @throws \moodle_exception plugindisabled or plugindisabled_admin when the plugin is disabled.
      */
     public static function execute($recordid) {
         global $USER;
+
+        plugin_settings::require_enabled('local_coursegen');
 
         $params = self::validate_parameters(self::execute_parameters(), [
             'recordid' => $recordid,

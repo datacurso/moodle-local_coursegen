@@ -805,6 +805,7 @@ $string['systeminstructionname_help'] = 'Введите название сис�
 $string['systeminstructionnameexists'] = 'Системная инструкция с таким именем уже существует';
 $string['systeminstructionsaved'] = 'Системная инструкция успешно сохранена.';
 $string['task_import_generated_course'] = 'Импорт сгенерированного AI курса в существующий курс';
+$string['task_skipped_plugindisabled'] = 'Плагин отключён в ИИ-провайдере Datacurso; выполнение пропущено.';
 $string['thread_not_found'] = 'Поток не найден';
 $string['tooltip_enable_assign'] = 'Включите изображения для содержимого задания.';
 $string['tooltip_enable_book'] = 'Включите изображения для содержимого книги.';

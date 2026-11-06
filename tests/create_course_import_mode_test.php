@@ -99,7 +99,7 @@ final class create_course_import_mode_test extends \advanced_testcase {
 
     /**
      * Give the user, at system level, the full creation set the web service gate requires
-     * (editingteacher archetype plus four capabilities, ticket #9539).
+     * (the four fixed capabilities, ticket #9539).
      *
      * @param int $userid User id.
      * @return int The creator role id, so a test can override one of its capabilities.

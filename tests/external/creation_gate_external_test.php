@@ -35,7 +35,7 @@ require_once(__DIR__ . '/../fixtures/aiprovider_datacurso_stub.php');
  * The web services of the AI course creation flow apply the creation permission gate (ticket #9539).
  *
  * A user who could open the page under the old two-capability check but does
- * not hold the full creation set (editingteacher archetype plus four) is
+ * not hold the full creation set (the four fixed capabilities) is
  * refused by every service before any work is done; a user holding the full
  * set reaches the existing behaviour, mocked where it would hit the network.
  *
@@ -353,7 +353,8 @@ final class creation_gate_external_test extends \advanced_testcase {
         global $DB;
         [$user, $roleid] = $this->create_full_user();
         $category = $this->getDataGenerator()->create_category();
-        assign_capability('mod/quiz:addinstance', CAP_PROHIBIT, $roleid, \context_coursecat::instance($category->id)->id, true);
+        $categorycontextid = \context_coursecat::instance($category->id)->id;
+        assign_capability('local/coursegen:createactivitywithai', CAP_PROHIBIT, $roleid, $categorycontextid, true);
         $this->setUser($user);
         $session = $this->create_session((int) $user->id);
         $settings = $this->getMockBuilder(ai_course_api_service::class)
@@ -370,7 +371,7 @@ final class creation_gate_external_test extends \advanced_testcase {
             testable_create_course::execute((int) $session->get('id'));
             $this->fail('create_course must refuse a category where one capability is prohibited.');
         } catch (\required_capability_exception $e) {
-            $this->assertSame(get_capability_string('mod/quiz:addinstance'), $e->a);
+            $this->assertSame(get_capability_string('local/coursegen:createactivitywithai'), $e->a);
         }
         $this->assertSame($coursesbefore, $DB->count_records('course'));
     }

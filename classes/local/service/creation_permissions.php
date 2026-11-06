@@ -23,10 +23,11 @@ use context_system;
 /**
  * Single source of truth for the capabilities creating a complete course with AI needs (ticket #9539).
  *
- * The set is every capability the editingteacher archetype allows by default,
- * computed at runtime so it follows the installed plugins, plus four more:
- * moodle/course:create, moodle/course:view and the two local_coursegen
- * creation capabilities. The same set hides the "Create with AI" button,
+ * The set is a fixed list of four capabilities: moodle/course:create,
+ * moodle/course:view and the two local_coursegen creation capabilities. It
+ * does not depend on the editingteacher archetype, so another plugin adding
+ * a capability to that archetype never grows it and never hides the button
+ * from roles created earlier. The same set hides the "Create with AI" button,
  * refuses the page and refuses every web service of the creation flow, so a
  * user is only ever offered a creation the server will accept.
  *
@@ -39,10 +40,10 @@ use context_system;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 final class creation_permissions {
-    /** @var string Role archetype whose default CAP_ALLOW capabilities form the base of the set. */
+    /** @var string Role archetype the plugin's roles are built from (role_installer); not part of the set. */
     public const ARCHETYPE = 'editingteacher';
 
-    /** @var string[] Capabilities required on top of the archetype defaults. */
+    /** @var string[] The capabilities the creation requires, sorted; the plugin's roles add them on top of the archetype. */
     public const EXTRA_CAPABILITIES = [
         'local/coursegen:createactivitywithai',
         'local/coursegen:createcoursewithai',
@@ -65,37 +66,18 @@ final class creation_permissions {
      */
     public const CANDIDATE_LIMIT = 200;
 
-    /** @var string[]|null Per-request memo of required_capabilities(). */
-    private static ?array $required = null;
-
     /**
-     * The sorted, unique list of capabilities the creation needs.
+     * The sorted list of capabilities the creation needs.
      *
-     * Archetype CAP_ALLOW defaults plus EXTRA_CAPABILITIES, minus any name
-     * that is not installed (a stale access.php entry must never block).
-     * Memoised for the request only: the installed plugins cannot change
-     * within a request, and nothing is cached across requests.
+     * Exactly EXTRA_CAPABILITIES: a fixed list, never derived from a role
+     * archetype or from the installed plugins.
      *
      * @return string[]
      */
     public static function required_capabilities(): array {
-        if (self::$required !== null) {
-            return self::$required;
-        }
-        $defaults = get_default_capabilities(self::ARCHETYPE);
         $capabilities = self::EXTRA_CAPABILITIES;
-        foreach ($defaults as $capability => $permission) {
-            if ((int) $permission === CAP_ALLOW) {
-                $capabilities[] = $capability;
-            }
-        }
-        $capabilities = array_filter(
-            array_unique($capabilities),
-            static fn(string $capability): bool => get_capability_info($capability) !== null
-        );
         sort($capabilities, SORT_STRING);
-        self::$required = array_values($capabilities);
-        return self::$required;
+        return $capabilities;
     }
 
     /**
@@ -138,9 +120,9 @@ final class creation_permissions {
      *
      * Candidates are the categories where the user holds moodle/course:create,
      * in category sort order, at most CANDIDATE_LIMIT of them; the first one
-     * holding the full set answers. Cost: about one in-memory capability
-     * lookup per required capability per candidate once the access cache is
-     * loaded. Nothing is cached across requests.
+     * holding the full set answers. Cost: three in-memory capability lookups
+     * per candidate once the access cache is loaded. Nothing is cached across
+     * requests.
      *
      * @param int|null $userid Acting user, the current user when null.
      * @return bool

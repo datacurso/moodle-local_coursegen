@@ -23,6 +23,8 @@
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+use aiprovider_datacurso\local\plugin_settings;
+
 defined('MOODLE_INTERNAL') || die();
 
 if ($hassiteconfig) {
@@ -30,7 +32,11 @@ if ($hassiteconfig) {
     // both too: admin_externalpage ORs the capabilities it is given and cannot
     // express that, which showed the entry to users the page then rejected.
     $coursegencapabilities = ['moodle/course:create', 'local/coursegen:createcoursewithai'];
-    if (has_all_capabilities($coursegencapabilities, context_system::instance())) {
+    // The entry is hidden while the plugin is disabled in the Datacurso AI provider.
+    if (
+        plugin_settings::is_enabled('local_coursegen')
+        && has_all_capabilities($coursegencapabilities, context_system::instance())
+    ) {
         $ADMIN->add('courses', new admin_externalpage(
             'local_coursegen_addnewcourseai',
             get_string('courseai_admin_addnewcourse', 'local_coursegen'),

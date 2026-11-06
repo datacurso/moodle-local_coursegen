@@ -805,6 +805,7 @@ $string['systeminstructionname_help'] = 'Geben Sie den Namen der Systemanweisung
 $string['systeminstructionnameexists'] = 'Eine Systemanweisung mit diesem Namen existiert bereits';
 $string['systeminstructionsaved'] = 'Systemanweisung erfolgreich gespeichert';
 $string['task_import_generated_course'] = 'Einen KI-generierten Kurs in einen vorhandenen Kurs importieren';
+$string['task_skipped_plugindisabled'] = 'Das Plugin ist im Datacurso-KI-Anbieter deaktiviert; die Ausführung wird übersprungen.';
 $string['thread_not_found'] = 'Thread nicht gefunden';
 $string['tooltip_enable_assign'] = 'Aktivieren Sie Bilder für Aufgabeninhalte.';
 $string['tooltip_enable_book'] = 'Aktivieren Sie Bilder für Buchinhalte.';

@@ -16,6 +16,7 @@
 
 namespace local_coursegen\external;
 
+use aiprovider_datacurso\local\plugin_settings;
 use context_course;
 use core_external\external_api;
 use core_external\external_function_parameters;
@@ -74,6 +75,7 @@ class create_mod_stream extends external_api {
      * @param int|null $beforemod Before module id where the module will be created.
      * @param string|null $lang Requested language code.
      * @return array
+     * @throws \moodle_exception plugindisabled or plugindisabled_admin when the plugin is disabled.
      */
     public static function execute(
         int $courseid,
@@ -84,6 +86,8 @@ class create_mod_stream extends external_api {
         ?string $lang = null
     ) {
         global $CFG, $DB, $USER;
+
+        plugin_settings::require_enabled('local_coursegen');
 
         try {
             $params = self::validate_parameters(self::execute_parameters(), [

@@ -16,6 +16,7 @@
 
 namespace local_coursegen\task;
 
+use aiprovider_datacurso\local\plugin_settings;
 use core\task\adhoc_task;
 use core\task\manager;
 use local_coursegen\local\service\course_import_service;
@@ -65,9 +66,16 @@ class import_generated_course_task extends adhoc_task {
     /**
      * Run the import. All bookkeeping (session status, events, rollback) lives in the service.
      *
+     * Skipped while the plugin is disabled in the Datacurso AI provider: nothing is touched, the
+     * staging course is kept and the session stays queued.
+     *
      * @return void
      */
     public function execute(): void {
+        if (!plugin_settings::is_enabled('local_coursegen')) {
+            mtrace(get_string('task_skipped_plugindisabled', 'local_coursegen'));
+            return;
+        }
         $data = $this->get_custom_data();
         course_import_service::import_into_existing(
             (int)$data->sessionid,

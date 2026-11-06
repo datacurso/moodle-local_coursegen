@@ -57,10 +57,10 @@ class local_coursegen_generator extends component_generator_base {
     /**
      * Create a role holding the full "create a course with AI" capability set.
      *
-     * The role takes the editingteacher archetype defaults (reset_role_capabilities)
-     * plus the four extra capabilities creation_permissions requires, all as
-     * role definitions at system level, so assigning it in any context grants
-     * the full set there. Each call creates a new role with a unique shortname.
+     * The role takes the editingteacher archetype defaults (reset_role_capabilities),
+     * as the plugin's own roles do, plus the four capabilities creation_permissions
+     * requires, all as role definitions at system level, so assigning it in any
+     * context grants the full set there. Each call creates a new role with a unique shortname.
      *
      * @param array $record Optional overrides: name, shortname.
      * @return int The role id.

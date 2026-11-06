@@ -94,7 +94,7 @@ final class course_confirmation_permissions_test extends \advanced_testcase {
     }
 
     /**
-     * Give the user the full creation set (editingteacher archetype plus four, ticket #9539) in one
+     * Give the user the full creation set (the four fixed capabilities, ticket #9539) in one
      * category only.
      *
      * @param int $userid User id.
