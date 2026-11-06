@@ -77,6 +77,8 @@ final class privacy_outbound_payload_test extends \advanced_testcase {
      */
     protected function setUp(): void {
         parent::setUp();
+        // Reset even when a test skips before its own resetAfterTest(): setUp() writes to the DB.
+        $this->resetAfterTest();
         set_config('datacurso_service_url', 'https://invalid.invalid', 'local_coursegen');
     }
 

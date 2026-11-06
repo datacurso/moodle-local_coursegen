@@ -46,14 +46,15 @@ final class create_course_import_mode_test extends \advanced_testcase {
      */
     protected function setUp(): void {
         parent::setUp();
+        // Load fixtures and enable the DB reset before the skip: tearDown() touches the fixtures.
+        $this->resetAfterTest();
+        require_once(__DIR__ . '/fixtures/testable_create_course.php');
+        require_once(__DIR__ . '/fixtures/testable_course_import_service.php');
         // The CI pipeline does not install declared dependencies: without the Datacurso AI provider
         // these tests cannot run.
         if (!class_exists(\aiprovider_datacurso\local\plugin_settings::class)) {
             $this->markTestSkipped('aiprovider_datacurso is not installed.');
         }
-        $this->resetAfterTest();
-        require_once(__DIR__ . '/fixtures/testable_create_course.php');
-        require_once(__DIR__ . '/fixtures/testable_course_import_service.php');
 
         // Any accidental real API call must fail fast instead of reaching the network.
         set_config('datacurso_service_url', 'https://invalid.invalid', 'local_coursegen');

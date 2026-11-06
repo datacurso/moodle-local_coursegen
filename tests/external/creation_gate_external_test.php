@@ -60,16 +60,17 @@ final class creation_gate_external_test extends \advanced_testcase {
         global $CFG;
 
         parent::setUp();
-        // The CI pipeline does not install declared dependencies: without the Datacurso AI provider
-        // these tests cannot run.
-        if (!class_exists(\aiprovider_datacurso\local\plugin_settings::class)) {
-            $this->markTestSkipped('aiprovider_datacurso is not installed.');
-        }
+        // Load fixtures and enable the DB reset before the skip: tearDown() touches the fixtures.
         $this->resetAfterTest();
         require_once($CFG->dirroot . '/local/coursegen/tests/fixtures/testable_get_course_settings.php');
         require_once($CFG->dirroot . '/local/coursegen/tests/fixtures/testable_get_course_session_state.php');
         require_once($CFG->dirroot . '/local/coursegen/tests/fixtures/testable_courseai_syllabus_upload.php');
         require_once($CFG->dirroot . '/local/coursegen/tests/fixtures/testable_create_course.php');
+        // The CI pipeline does not install declared dependencies: without the Datacurso AI provider
+        // these tests cannot run.
+        if (!class_exists(\aiprovider_datacurso\local\plugin_settings::class)) {
+            $this->markTestSkipped('aiprovider_datacurso is not installed.');
+        }
 
         // Any accidental real API call must fail fast instead of reaching the network.
         set_config('datacurso_service_url', 'https://invalid.invalid', 'local_coursegen');

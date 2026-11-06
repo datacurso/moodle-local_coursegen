@@ -65,6 +65,8 @@ final class events_test extends \advanced_testcase {
      */
     protected function setUp(): void {
         parent::setUp();
+        // Reset even when a test skips before its own resetAfterTest(): setUp() writes to the DB.
+        $this->resetAfterTest();
         require_once(__DIR__ . '/fixtures/testable_create_mod.php');
         require_once(__DIR__ . '/fixtures/testable_create_mod_stream.php');
         require_once(__DIR__ . '/fixtures/testable_courseai_syllabus_upload.php');

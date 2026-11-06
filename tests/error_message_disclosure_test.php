@@ -71,6 +71,8 @@ final class error_message_disclosure_test extends \advanced_testcase {
      */
     protected function setUp(): void {
         parent::setUp();
+        // Reset even when a test skips before its own resetAfterTest(): setUp() writes to the DB.
+        $this->resetAfterTest();
         require_once(__DIR__ . '/fixtures/testable_create_mod.php');
 
         // Any accidental real API call must fail fast instead of reaching the network.
