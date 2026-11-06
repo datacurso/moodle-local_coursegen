@@ -36,6 +36,17 @@ use local_coursegen\hook\mycourses_header_hook;
  * @covers     \local_coursegen\hook\mycourses_header_hook
  */
 final class mycourses_header_hook_test extends \advanced_testcase {
+    /**
+     * Skip the test when the Datacurso AI provider, whose enable gate the tested code calls, is not installed.
+     *
+     * The CI pipeline does not install declared dependencies.
+     */
+    private function require_datacurso_provider(): void {
+        if (!class_exists(\aiprovider_datacurso\local\plugin_settings::class)) {
+            $this->markTestSkipped('aiprovider_datacurso is not installed.');
+        }
+    }
+
     /** @var string Button fragment used by the splice tests; carries the template's form id. */
     private const FRAGMENT = '<form action="/local/coursegen/aicoursecreation.php" method="get" '
         . 'id="local_coursegen_aicourseform"><button type="submit">Create with AI</button></form>';
@@ -244,6 +255,7 @@ final class mycourses_header_hook_test extends \advanced_testcase {
      * An admin on My courses gets the button.
      */
     public function test_should_inject_for_admin_on_my_courses(): void {
+        $this->require_datacurso_provider();
         global $PAGE;
 
         $this->resetAfterTest();
@@ -258,6 +270,7 @@ final class mycourses_header_hook_test extends \advanced_testcase {
      * gets the button.
      */
     public function test_should_inject_for_user_with_the_full_creation_set(): void {
+        $this->require_datacurso_provider();
         global $PAGE;
 
         $this->resetAfterTest();
@@ -276,6 +289,7 @@ final class mycourses_header_hook_test extends \advanced_testcase {
      * the button: the user could open the page but not complete the creation (ticket #9539).
      */
     public function test_should_not_inject_for_user_with_only_the_two_page_capabilities(): void {
+        $this->require_datacurso_provider();
         global $PAGE;
 
         $this->resetAfterTest();
@@ -293,6 +307,7 @@ final class mycourses_header_hook_test extends \advanced_testcase {
      * The Dashboard is not decorated while the site has its My courses page.
      */
     public function test_should_not_inject_on_dashboard_when_my_courses_is_enabled(): void {
+        $this->require_datacurso_provider();
         global $PAGE;
 
         $this->resetAfterTest();
@@ -308,6 +323,7 @@ final class mycourses_header_hook_test extends \advanced_testcase {
      * assistant stays reachable.
      */
     public function test_should_inject_on_dashboard_when_my_courses_is_disabled(): void {
+        $this->require_datacurso_provider();
         global $PAGE;
 
         $this->resetAfterTest();
@@ -323,6 +339,7 @@ final class mycourses_header_hook_test extends \advanced_testcase {
      * exist: the Dashboard is left alone, as with the page enabled.
      */
     public function test_should_not_inject_on_dashboard_when_the_setting_does_not_exist(): void {
+        $this->require_datacurso_provider();
         global $PAGE;
 
         $this->resetAfterTest();
@@ -337,6 +354,7 @@ final class mycourses_header_hook_test extends \advanced_testcase {
      * My courses keeps the button whether the setting exists or not.
      */
     public function test_should_inject_on_my_courses_when_the_setting_does_not_exist(): void {
+        $this->require_datacurso_provider();
         global $PAGE;
 
         $this->resetAfterTest();
@@ -351,6 +369,7 @@ final class mycourses_header_hook_test extends \advanced_testcase {
      * Pages other than My courses and the Dashboard are never decorated.
      */
     public function test_should_not_inject_on_other_pages(): void {
+        $this->require_datacurso_provider();
         global $PAGE;
 
         $this->resetAfterTest();
@@ -365,6 +384,7 @@ final class mycourses_header_hook_test extends \advanced_testcase {
      * A user without local/coursegen:createcoursewithai does not get the button.
      */
     public function test_should_not_inject_without_createcoursewithai(): void {
+        $this->require_datacurso_provider();
         global $PAGE;
 
         $this->resetAfterTest();
@@ -379,6 +399,7 @@ final class mycourses_header_hook_test extends \advanced_testcase {
      * A user without moodle/course:create does not get the button.
      */
     public function test_should_not_inject_without_course_create(): void {
+        $this->require_datacurso_provider();
         global $PAGE;
 
         $this->resetAfterTest();
@@ -393,6 +414,7 @@ final class mycourses_header_hook_test extends \advanced_testcase {
      * A user with neither capability does not get the button.
      */
     public function test_should_not_inject_without_any_capability(): void {
+        $this->require_datacurso_provider();
         global $PAGE;
 
         $this->resetAfterTest();
@@ -406,6 +428,7 @@ final class mycourses_header_hook_test extends \advanced_testcase {
      * A page whose URL has not been set is not decorated (and no debugging notice is raised).
      */
     public function test_should_not_inject_when_page_url_is_not_set(): void {
+        $this->require_datacurso_provider();
         $this->resetAfterTest();
         $this->setAdminUser();
 
@@ -445,6 +468,7 @@ final class mycourses_header_hook_test extends \advanced_testcase {
      * @return void
      */
     public function test_should_not_inject_when_plugin_disabled(): void {
+        $this->require_datacurso_provider();
         global $PAGE;
 
         $this->resetAfterTest();

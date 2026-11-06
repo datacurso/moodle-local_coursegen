@@ -29,6 +29,17 @@ use local_coursegen\local\models\course_session;
  */
 final class import_generated_course_task_test extends \advanced_testcase {
     /**
+     * Skip the test when the Datacurso AI provider, whose enable gate the tested code calls, is not installed.
+     *
+     * The CI pipeline does not install declared dependencies.
+     */
+    private function require_datacurso_provider(): void {
+        if (!class_exists(\aiprovider_datacurso\local\plugin_settings::class)) {
+            $this->markTestSkipped('aiprovider_datacurso is not installed.');
+        }
+    }
+
+    /**
      * Create a target course, a staging course with one module and a session pointing at the staging course.
      *
      * @param int $userid Session owner.
@@ -92,6 +103,7 @@ final class import_generated_course_task_test extends \advanced_testcase {
      * Executing the task runs the import: the copy exists with the original names and the session points at it.
      */
     public function test_execute_runs_the_import(): void {
+        $this->require_datacurso_provider();
         global $DB;
         $this->resetAfterTest();
         $this->setAdminUser();
@@ -135,6 +147,7 @@ final class import_generated_course_task_test extends \advanced_testcase {
      * @return void
      */
     public function test_execute_skips_when_plugin_disabled(): void {
+        $this->require_datacurso_provider();
         global $DB;
         $this->resetAfterTest();
         $this->setAdminUser();

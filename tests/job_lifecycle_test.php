@@ -44,6 +44,17 @@ require_once(__DIR__ . '/fixtures/aiprovider_datacurso_stub.php');
  */
 final class job_lifecycle_test extends \advanced_testcase {
     /**
+     * Skip the test when the Datacurso AI provider, whose enable gate the tested code calls, is not installed.
+     *
+     * The CI pipeline does not install declared dependencies.
+     */
+    private function require_datacurso_provider(): void {
+        if (!class_exists(\aiprovider_datacurso\local\plugin_settings::class)) {
+            $this->markTestSkipped('aiprovider_datacurso is not installed.');
+        }
+    }
+
+    /**
      * Load the testable subclass in the isolated process.
      */
     protected function setUp(): void {
@@ -71,6 +82,7 @@ final class job_lifecycle_test extends \advanced_testcase {
      * with the localized error before touching the AI service again.
      */
     public function test_consumed_job_cannot_be_replayed(): void {
+        $this->require_datacurso_provider();
         global $DB, $USER;
 
         $this->resetAfterTest();

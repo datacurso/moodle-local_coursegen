@@ -47,6 +47,11 @@ final class create_mod_permissions_test extends \advanced_testcase {
      */
     protected function setUp(): void {
         parent::setUp();
+        // The CI pipeline does not install declared dependencies: without the Datacurso AI provider
+        // these tests cannot run.
+        if (!class_exists(\aiprovider_datacurso\local\plugin_settings::class)) {
+            $this->markTestSkipped('aiprovider_datacurso is not installed.');
+        }
         require_once(__DIR__ . '/fixtures/testable_create_mod.php');
         require_once(__DIR__ . '/fixtures/h5p_package_fixture.php');
 

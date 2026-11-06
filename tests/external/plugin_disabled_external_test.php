@@ -47,6 +47,17 @@ namespace local_coursegen\external;
  * @runTestsInSeparateProcesses
  */
 final class plugin_disabled_external_test extends \advanced_testcase {
+    /**
+     * Skip the test when the Datacurso AI provider, whose enable gate the tested code calls, is not installed.
+     *
+     * The CI pipeline does not install declared dependencies.
+     */
+    private function require_datacurso_provider(): void {
+        if (!class_exists(\aiprovider_datacurso\local\plugin_settings::class)) {
+            $this->markTestSkipped('aiprovider_datacurso is not installed.');
+        }
+    }
+
     /** @var string[] Web services behind the plugin's own administration pages, available while disabled. */
     private const ADMIN_FUNCTIONS = ['local_coursegen_manage_image_generation'];
 
@@ -130,6 +141,7 @@ final class plugin_disabled_external_test extends \advanced_testcase {
      * @return void
      */
     public function test_feature_web_services_refuse_when_disabled(): void {
+        $this->require_datacurso_provider();
         set_config('plugin_enabled_local_coursegen', '0', 'aiprovider_datacurso');
 
         $classes = $this->declared_classes(false);
@@ -145,6 +157,7 @@ final class plugin_disabled_external_test extends \advanced_testcase {
      * @return void
      */
     public function test_web_services_are_not_refused_when_enabled(): void {
+        $this->require_datacurso_provider();
         foreach ($this->declared_classes(true) as $name => $classname) {
             $this->assertNotSame('plugindisabled', $this->failure_of($classname), $name);
         }

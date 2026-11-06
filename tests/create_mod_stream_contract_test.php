@@ -51,6 +51,17 @@ require_once(__DIR__ . '/fixtures/aiprovider_datacurso_stub.php');
  */
 final class create_mod_stream_contract_test extends \advanced_testcase {
     /**
+     * Skip the test when the Datacurso AI provider, whose enable gate the tested code calls, is not installed.
+     *
+     * The CI pipeline does not install declared dependencies.
+     */
+    private function require_datacurso_provider(): void {
+        if (!class_exists(\aiprovider_datacurso\local\plugin_settings::class)) {
+            $this->markTestSkipped('aiprovider_datacurso is not installed.');
+        }
+    }
+
+    /**
      * Load the testable subclass in the isolated process.
      */
     protected function setUp(): void {
@@ -115,6 +126,7 @@ final class create_mod_stream_contract_test extends \advanced_testcase {
      * column as system_instruction_name, not name).
      */
     public function test_course_context_reaches_the_stored_job(): void {
+        $this->require_datacurso_provider();
         global $DB, $USER;
 
         $this->resetAfterTest();
@@ -163,6 +175,7 @@ final class create_mod_stream_contract_test extends \advanced_testcase {
      * The H5P framework version travels as an optional field.
      */
     public function test_start_request_contains_required_contract_fields(): void {
+        $this->require_datacurso_provider();
         $this->resetAfterTest();
         $this->setAdminUser();
 
@@ -215,6 +228,7 @@ final class create_mod_stream_contract_test extends \advanced_testcase {
      * (regression observed on sites without generationmode configured).
      */
     public function test_disabled_image_mode_is_not_sent_with_images_enabled(): void {
+        $this->require_datacurso_provider();
         $this->resetAfterTest();
         $this->setAdminUser();
 
@@ -261,6 +275,7 @@ final class create_mod_stream_contract_test extends \advanced_testcase {
      * reach the developer log nor the client.
      */
     public function test_invalid_init_response_logs_keys_only(): void {
+        $this->require_datacurso_provider();
         $this->resetAfterTest();
         $this->setAdminUser();
 
@@ -291,6 +306,7 @@ final class create_mod_stream_contract_test extends \advanced_testcase {
      * accompanies the individual activity creation request.
      */
     public function test_h5p_core_api_version_composed_from_site_framework(): void {
+        $this->require_datacurso_provider();
         $this->resetAfterTest();
         $this->setAdminUser();
 
@@ -324,6 +340,7 @@ final class create_mod_stream_contract_test extends \advanced_testcase {
      * is sent without that field and the generation continues.
      */
     public function test_generation_continues_when_h5p_core_api_unresolvable(): void {
+        $this->require_datacurso_provider();
         $this->resetAfterTest();
         $this->setAdminUser();
 
@@ -367,6 +384,7 @@ final class create_mod_stream_contract_test extends \advanced_testcase {
      * the AI service is never called and no job record is persisted.
      */
     public function test_enrolled_student_cannot_start_generation(): void {
+        $this->require_datacurso_provider();
         $this->resetAfterTest();
 
         $generator = $this->getDataGenerator();

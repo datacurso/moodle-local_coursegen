@@ -40,6 +40,18 @@ require_once($CFG->libdir . '/adminlib.php');
  */
 final class plugin_disabled_test extends \advanced_testcase {
     /**
+     * Skip the whole class when the Datacurso AI provider is not installed.
+     */
+    protected function setUp(): void {
+        parent::setUp();
+        // The CI pipeline does not install declared dependencies: without the Datacurso AI provider
+        // these tests cannot run.
+        if (!class_exists(\aiprovider_datacurso\local\plugin_settings::class)) {
+            $this->markTestSkipped('aiprovider_datacurso is not installed.');
+        }
+    }
+
+    /**
      * Switch the plugin off in the provider.
      *
      * @return void

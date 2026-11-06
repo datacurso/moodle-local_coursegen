@@ -50,6 +50,17 @@ require_once(__DIR__ . '/fixtures/aiprovider_datacurso_stub.php');
  */
 final class events_test extends \advanced_testcase {
     /**
+     * Skip the test when the Datacurso AI provider, whose enable gate the tested code calls, is not installed.
+     *
+     * The CI pipeline does not install declared dependencies.
+     */
+    private function require_datacurso_provider(): void {
+        if (!class_exists(\aiprovider_datacurso\local\plugin_settings::class)) {
+            $this->markTestSkipped('aiprovider_datacurso is not installed.');
+        }
+    }
+
+    /**
      * Load the testable subclasses in the isolated process.
      */
     protected function setUp(): void {
@@ -80,6 +91,7 @@ final class events_test extends \advanced_testcase {
      * Starting an activity generation job fires generation_job_started with job data and no prompt.
      */
     public function test_generation_job_started_event_on_activity_stream(): void {
+        $this->require_datacurso_provider();
         $this->resetAfterTest();
         $this->setAdminUser();
 
@@ -114,6 +126,7 @@ final class events_test extends \advanced_testcase {
      * Applying a generation result fires generation_result_applied with job id and cmid.
      */
     public function test_generation_result_applied_event_on_create_mod(): void {
+        $this->require_datacurso_provider();
         $this->resetAfterTest();
         $this->setAdminUser();
 
@@ -147,6 +160,7 @@ final class events_test extends \advanced_testcase {
      * A failing generation fires generation_failed carrying only the sanitized reason class.
      */
     public function test_generation_failed_event_on_create_mod(): void {
+        $this->require_datacurso_provider();
         $this->resetAfterTest();
         $this->setAdminUser();
 
@@ -179,6 +193,7 @@ final class events_test extends \advanced_testcase {
      * A capability rejection fires generation_denied with the missing capability.
      */
     public function test_generation_denied_event_on_create_mod(): void {
+        $this->require_datacurso_provider();
         $this->resetAfterTest();
 
         $generator = $this->getDataGenerator();
@@ -208,6 +223,7 @@ final class events_test extends \advanced_testcase {
      * file content.
      */
     public function test_external_transfer_initiated_event_on_syllabus_upload(): void {
+        $this->require_datacurso_provider();
         global $USER;
 
         $this->resetAfterTest();
@@ -284,6 +300,7 @@ final class events_test extends \advanced_testcase {
      * is audited with the same non-identifying metadata as the syllabus.
      */
     public function test_external_transfer_initiated_event_on_activity_file_upload(): void {
+        $this->require_datacurso_provider();
         global $USER;
 
         $this->resetAfterTest();
@@ -334,6 +351,7 @@ final class events_test extends \advanced_testcase {
      * planning feedback endpoint is audited like any other generation start.
      */
     public function test_generation_job_started_event_on_course_planning_feedback(): void {
+        $this->require_datacurso_provider();
         global $USER;
 
         $this->resetAfterTest();

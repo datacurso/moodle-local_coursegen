@@ -48,6 +48,17 @@ use local_coursegen\local\service\create_course_service;
  */
 final class course_confirmation_permissions_test extends \advanced_testcase {
     /**
+     * Skip the test when the Datacurso AI provider, whose enable gate the tested code calls, is not installed.
+     *
+     * The CI pipeline does not install declared dependencies.
+     */
+    private function require_datacurso_provider(): void {
+        if (!class_exists(\aiprovider_datacurso\local\plugin_settings::class)) {
+            $this->markTestSkipped('aiprovider_datacurso is not installed.');
+        }
+    }
+
+    /**
      * Load the testable subclass in the isolated process.
      */
     protected function setUp(): void {
@@ -145,6 +156,7 @@ final class course_confirmation_permissions_test extends \advanced_testcase {
      * A user without the capabilities is rejected by create_course.
      */
     public function test_create_course_rejects_user_without_capabilities(): void {
+        $this->require_datacurso_provider();
         $this->resetAfterTest();
 
         $user = $this->getDataGenerator()->create_user();
@@ -160,6 +172,7 @@ final class course_confirmation_permissions_test extends \advanced_testcase {
      * A user without the capabilities is rejected by get_course_settings.
      */
     public function test_get_course_settings_rejects_user_without_capabilities(): void {
+        $this->require_datacurso_provider();
         $this->resetAfterTest();
 
         $user = $this->getDataGenerator()->create_user();
@@ -176,6 +189,7 @@ final class course_confirmation_permissions_test extends \advanced_testcase {
      * by get_course_settings.
      */
     public function test_get_course_settings_rejects_user_without_any_course_create(): void {
+        $this->require_datacurso_provider();
         $this->resetAfterTest();
 
         $user = $this->getDataGenerator()->create_user();
@@ -193,6 +207,7 @@ final class course_confirmation_permissions_test extends \advanced_testcase {
      * even for a session they own.
      */
     public function test_course_planning_feedback_rejects_user_without_capabilities(): void {
+        $this->require_datacurso_provider();
         $this->resetAfterTest();
 
         $user = $this->getDataGenerator()->create_user();
@@ -212,6 +227,7 @@ final class course_confirmation_permissions_test extends \advanced_testcase {
      * even for a session they own.
      */
     public function test_get_course_session_state_rejects_user_without_capabilities(): void {
+        $this->require_datacurso_provider();
         $this->resetAfterTest();
 
         $user = $this->getDataGenerator()->create_user();
@@ -244,6 +260,7 @@ final class course_confirmation_permissions_test extends \advanced_testcase {
      * category by get_course_settings.
      */
     public function test_category_creator_is_offered_only_their_category(): void {
+        $this->require_datacurso_provider();
         $this->resetAfterTest();
 
         $generator = $this->getDataGenerator();
@@ -285,6 +302,7 @@ final class course_confirmation_permissions_test extends \advanced_testcase {
      * offered: creating there would be refused by the gate (ticket #9539).
      */
     public function test_category_with_plain_course_create_only_is_not_offered(): void {
+        $this->require_datacurso_provider();
         $this->resetAfterTest();
 
         $generator = $this->getDataGenerator();
@@ -372,6 +390,7 @@ final class course_confirmation_permissions_test extends \advanced_testcase {
      * even for a fully privileged user.
      */
     public function test_foreign_session_access_keeps_existing_session_error(): void {
+        $this->require_datacurso_provider();
         $this->resetAfterTest();
 
         $owner = $this->getDataGenerator()->create_user();
