@@ -38,4 +38,9 @@ final class lesson_link_texts implements module_link_texts {
     public function text_columns(): array {
         return ['contents'];
     }
+
+    #[\Override]
+    public function file_area(string $column, \stdClass $record): array {
+        return ['mod_lesson', 'page_contents', (int) $record->id];
+    }
 }

@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026110601
+
+### Added
+- **A course made from a template offers the syllabus the professor uploaded**  
+  A template can link the syllabus from any page, lesson page or label with a link marked as such (for example, the weekly plan offering the didactic guide as a PDF). The uploaded file is kept with the generation and, once the course exists, each of those links opens a copy of it kept with its page, so the students read the same document the course was made from instead of a version written again. Without an uploaded file those links are taken out.
+
 ## [2.0.10] - 2026110301
 
 ### Fixed
