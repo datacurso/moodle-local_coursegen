@@ -24,6 +24,7 @@
 
 namespace local_coursegen\external;
 
+use aiprovider_datacurso\local\plugin_settings;
 use context_coursecat;
 use context_system;
 use core_course_category;
@@ -77,8 +78,11 @@ class search_target_courses extends external_api {
      * @param string $query Search text, empty for all.
      * @param int $limit Maximum number of courses returned, clamped to 1..50.
      * @return array List of courses (id, fullname, shortname, categoryid, displayname).
+     * @throws \moodle_exception plugindisabled or plugindisabled_admin when the plugin is disabled.
      */
     public static function execute(int $categoryid, string $query = '', int $limit = self::LIMIT_DEFAULT): array {
+        plugin_settings::require_enabled('local_coursegen');
+
         $params = self::validate_parameters(self::execute_parameters(), [
             'categoryid' => $categoryid,
             'query' => $query,

@@ -22,14 +22,17 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+use aiprovider_datacurso\local\plugin_settings;
+
 require('../../config.php');
 require_once($CFG->libdir . '/filelib.php');
 
 require_login();
+plugin_settings::require_enabled('local_coursegen');
 
-// Check permissions: the full creation set (editingteacher archetype plus four
-// capabilities) in at least one category, the same gate as the button and the
-// web services of the flow (ticket #9539).
+// Check permissions: the full creation set (a fixed list of four capabilities)
+// in at least one category, the same gate as the button and the web services
+// of the flow (ticket #9539).
 $systemcontext = context_system::instance();
 \local_coursegen\local\service\creation_permissions::require_anywhere();
 

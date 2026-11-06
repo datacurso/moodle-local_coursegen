@@ -805,6 +805,7 @@ $string['systeminstructionname_help'] = 'Masukkan nama instruksi sistem yang aka
 $string['systeminstructionnameexists'] = 'Instruksi sistem dengan nama ini sudah ada';
 $string['systeminstructionsaved'] = 'Instruksi sistem berhasil disimpan';
 $string['task_import_generated_course'] = 'Impor kursus hasil AI ke kursus yang sudah ada';
+$string['task_skipped_plugindisabled'] = 'Plugin dinonaktifkan di penyedia AI Datacurso; eksekusi dilewati.';
 $string['thread_not_found'] = 'Utas tidak ditemukan';
 $string['tooltip_enable_assign'] = 'Aktifkan gambar untuk konten tugas.';
 $string['tooltip_enable_book'] = 'Aktifkan gambar untuk konten buku.';

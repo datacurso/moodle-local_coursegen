@@ -18,8 +18,8 @@ Feature: Create with AI button on the My courses page
       | username | firstname | lastname | email                |
       | creator1 | Cara      | Creator  | creator1@example.com |
       | student1 | Sam       | Student  | student1@example.com |
-    # The full creation set (ticket #9539) is the editingteacher archetype plus four
-    # capabilities; the stock editingteacher role extended with them holds it.
+    # The full creation set (ticket #9539) is a fixed list of four capabilities;
+    # the stock editingteacher role extended with them holds it.
     And the following "role capabilities" exist:
       | role           | moodle/course:create | moodle/course:view | local/coursegen:createcoursewithai | local/coursegen:createactivitywithai |
       | editingteacher | allow                | allow              | allow                              | allow                                |

@@ -805,6 +805,7 @@ $string['systeminstructionname_help'] = 'Entrez le nom de l\'instruction systèm
 $string['systeminstructionnameexists'] = 'Une instruction système portant ce nom existe déjà';
 $string['systeminstructionsaved'] = 'Instruction système enregistrée avec succès';
 $string['task_import_generated_course'] = 'Importer un cours généré par IA dans un cours existant';
+$string['task_skipped_plugindisabled'] = 'Le plugin est désactivé dans le fournisseur d’IA Datacurso ; exécution ignorée.';
 $string['thread_not_found'] = 'Fil introuvable';
 $string['tooltip_enable_assign'] = 'Activez les images pour le contenu du devoir.';
 $string['tooltip_enable_book'] = 'Activez les images pour le contenu du livre.';

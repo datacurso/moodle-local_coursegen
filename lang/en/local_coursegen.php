@@ -848,6 +848,7 @@ $string['systeminstructionname_help'] = 'Enter the name of the system instructio
 $string['systeminstructionnameexists'] = 'A system instruction with this name already exists';
 $string['systeminstructionsaved'] = 'System instruction saved successfully';
 $string['task_import_generated_course'] = 'Import an AI-generated course into an existing course';
+$string['task_skipped_plugindisabled'] = 'The plugin is disabled in the Datacurso AI provider; skipping.';
 $string['thread_not_found'] = 'Thread not found';
 $string['tooltip_enable_assign'] = 'Enable images for assignment content.';
 $string['tooltip_enable_book'] = 'Enable images for book content.';

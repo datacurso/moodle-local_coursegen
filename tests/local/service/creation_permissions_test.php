@@ -19,9 +19,10 @@ namespace local_coursegen\local\service;
 /**
  * Tests for the single source of truth of the "create a course with AI" capability set (ticket #9539).
  *
- * The set is every capability the editingteacher archetype allows by default
- * plus four more. A user missing any one of them in a category cannot start
- * the creation there, and a user who can start it nowhere is not offered it.
+ * The set is a fixed list of four capabilities, independent of the editingteacher
+ * archetype, so another plugin adding a capability to that archetype never grows
+ * it. A user missing any one of them in a category cannot start the creation
+ * there, and a user who can start it nowhere is not offered it.
  *
  * @package    local_coursegen
  * @category   test
@@ -30,8 +31,8 @@ namespace local_coursegen\local\service;
  * @covers     \local_coursegen\local\service\creation_permissions
  */
 final class creation_permissions_test extends \advanced_testcase {
-    /** @var string[] The four capabilities added on top of the archetype. */
-    private const EXTRA = [
+    /** @var string[] The four capabilities the creation requires, sorted. */
+    private const REQUIRED = [
         'local/coursegen:createactivitywithai',
         'local/coursegen:createcoursewithai',
         'moodle/course:create',
@@ -39,21 +40,7 @@ final class creation_permissions_test extends \advanced_testcase {
     ];
 
     /**
-     * The expected set, computed independently from the archetype definitions.
-     *
-     * @return string[]
-     */
-    private static function expected_capabilities(): array {
-        $defaults = get_default_capabilities('editingteacher');
-        $allowed = array_keys(array_filter($defaults, static fn($permission): bool => (int) $permission === CAP_ALLOW));
-        $all = array_unique(array_merge($allowed, self::EXTRA));
-        $installed = array_values(array_filter($all, static fn(string $cap): bool => get_capability_info($cap) !== null));
-        sort($installed, SORT_STRING);
-        return $installed;
-    }
-
-    /**
-     * Create a role holding the full set: archetype defaults plus the four extras.
+     * Create a role holding the full set and the editingteacher archetype defaults.
      *
      * @return int Role id.
      */
@@ -97,25 +84,44 @@ final class creation_permissions_test extends \advanced_testcase {
     }
 
     /**
-     * The set is the archetype's CAP_ALLOW defaults plus the four extras, installed only, sorted and unique.
+     * The set is exactly the four fixed capabilities, sorted, whatever the editingteacher archetype grants.
      */
-    public function test_required_capabilities_are_the_archetype_defaults_plus_the_extras(): void {
+    public function test_required_capabilities_are_the_fixed_list(): void {
         $required = creation_permissions::required_capabilities();
 
-        $this->assertSame(self::expected_capabilities(), $required);
-        $this->assertSame($required, array_values(array_unique($required)));
-        $sorted = $required;
-        sort($sorted, SORT_STRING);
-        $this->assertSame($sorted, $required);
-        foreach (self::EXTRA as $capability) {
-            $this->assertContains($capability, $required);
-        }
+        $this->assertSame(self::REQUIRED, $required);
         foreach ($required as $capability) {
             $this->assertNotNull(get_capability_info($capability), $capability . ' must be installed');
         }
-        $this->assertGreaterThan(100, count($required), 'The archetype grants far more than the four extras');
         $this->assertSame(['local/coursegen:createcoursewithai'], creation_permissions::SYSTEM_CAPABILITIES);
-        $this->assertSame('editingteacher', creation_permissions::ARCHETYPE);
+    }
+
+    /**
+     * A role holding only the four capabilities, without any editingteacher archetype default, passes the gate.
+     *
+     * Regression: the gate used to require every archetype default too, so a role
+     * created before another plugin added a capability to the archetype failed it.
+     */
+    public function test_a_role_with_only_the_four_capabilities_passes_the_gate(): void {
+        $this->resetAfterTest();
+        $generator = $this->getDataGenerator();
+        $category = $generator->create_category();
+        $user = $generator->create_user();
+        $systemcontextid = \context_system::instance()->id;
+        $roleid = $generator->create_role(['shortname' => 'fouronly']);
+        foreach (self::REQUIRED as $capability) {
+            assign_capability($capability, CAP_ALLOW, $roleid, $systemcontextid, true);
+        }
+        role_assign($roleid, $user->id, $systemcontextid);
+        $this->assertFalse(
+            has_capability('moodle/course:manageactivities', \context_coursecat::instance($category->id), $user->id),
+            'The role must not hold the editingteacher archetype defaults'
+        );
+
+        $this->assertTrue(creation_permissions::can_create_in((int) $category->id, (int) $user->id));
+        $this->assertTrue(creation_permissions::can_create_anywhere((int) $user->id));
+        creation_permissions::require_for_category((int) $category->id, (int) $user->id);
+        creation_permissions::require_anywhere((int) $user->id);
     }
 
     /**
@@ -141,16 +147,26 @@ final class creation_permissions_test extends \advanced_testcase {
     }
 
     /**
-     * A representative sample of the set across components, one per case.
+     * Each of the four required capabilities, one per case.
      *
      * @return array[]
      */
-    public static function sample_capability_provider(): array {
+    public static function required_capability_provider(): array {
+        $cases = [];
+        foreach (self::REQUIRED as $capability) {
+            $cases[$capability] = [$capability];
+        }
+        return $cases;
+    }
+
+    /**
+     * A sample of editingteacher archetype defaults outside the required set, one per case.
+     *
+     * @return array[]
+     */
+    public static function non_required_capability_provider(): array {
         $sample = [
-            'moodle/course:create',
-            'moodle/course:view',
-            'local/coursegen:createcoursewithai',
-            'local/coursegen:createactivitywithai',
+            'enrol/manual:enrol',
             'moodle/course:manageactivities',
             'mod/quiz:addinstance',
             'mod/forum:startdiscussion',
@@ -164,9 +180,9 @@ final class creation_permissions_test extends \advanced_testcase {
     }
 
     /**
-     * Removing any single capability from the full role denies the creation.
+     * Removing any one of the four required capabilities from the full role denies the creation.
      *
-     * @dataProvider sample_capability_provider
+     * @dataProvider required_capability_provider
      * @param string $missing The one capability removed from the role.
      */
     public function test_can_create_in_is_false_when_one_capability_is_missing(string $missing): void {
@@ -181,11 +197,29 @@ final class creation_permissions_test extends \advanced_testcase {
     }
 
     /**
+     * Prohibiting an editingteacher archetype default outside the required set still allows the creation.
+     *
+     * @dataProvider non_required_capability_provider
+     * @param string $missing The one archetype capability prohibited on the role.
+     */
+    public function test_can_create_in_is_true_when_a_non_required_capability_is_missing(string $missing): void {
+        $this->resetAfterTest();
+        [$user, $roleid] = $this->create_user_with_full_role(\context_system::instance());
+        $category = $this->getDataGenerator()->create_category();
+        $this->assertNotContains($missing, creation_permissions::required_capabilities());
+
+        assign_capability($missing, CAP_PROHIBIT, $roleid, \context_system::instance()->id, true);
+
+        $this->assertFalse(has_capability($missing, \context_coursecat::instance($category->id), $user->id));
+        $this->assertTrue(creation_permissions::can_create_in((int) $category->id, (int) $user->id), 'Missing ' . $missing);
+        $this->assertTrue(creation_permissions::can_create_anywhere((int) $user->id), 'Missing ' . $missing);
+        creation_permissions::require_for_category((int) $category->id, (int) $user->id);
+    }
+
+    /**
      * Every capability of the set is load-bearing: prohibiting each one in turn denies the creation.
      *
-     * Prohibit rather than unassign: a few of the capabilities (block/online_users:viewlist, ...)
-     * are also granted by the stock Authenticated user role, so unassigning them from the
-     * creator role alone would not take them away from the user.
+     * Prohibit rather than unassign, so a grant from any other role of the user cannot mask the removal.
      */
     public function test_can_create_in_is_false_whichever_capability_is_missing(): void {
         $this->resetAfterTest();
@@ -267,13 +301,13 @@ final class creation_permissions_test extends \advanced_testcase {
         $this->resetAfterTest();
         [$user, $roleid] = $this->create_user_with_full_role(\context_system::instance());
         $category = $this->getDataGenerator()->create_category();
-        unassign_capability('mod/forum:startdiscussion', $roleid, \context_system::instance()->id);
+        unassign_capability('moodle/course:view', $roleid, \context_system::instance()->id);
 
         try {
             creation_permissions::require_for_category((int) $category->id, (int) $user->id);
             $this->fail('A missing capability must be reported.');
         } catch (\required_capability_exception $e) {
-            $this->assertSame(get_capability_string('mod/forum:startdiscussion'), $e->a);
+            $this->assertSame(get_capability_string('moodle/course:view'), $e->a);
         }
     }
 
@@ -286,8 +320,8 @@ final class creation_permissions_test extends \advanced_testcase {
         $category = $this->getDataGenerator()->create_category();
         $systemcontextid = \context_system::instance()->id;
         unassign_capability('local/coursegen:createcoursewithai', $roleid, $systemcontextid);
-        // A category capability that sorts before the system one and exists in every supported Moodle version.
-        unassign_capability('enrol/manual:enrol', $roleid, $systemcontextid);
+        // A category capability that sorts before the system one.
+        unassign_capability('local/coursegen:createactivitywithai', $roleid, $systemcontextid);
 
         try {
             creation_permissions::require_for_category((int) $category->id, (int) $user->id);
@@ -391,20 +425,20 @@ final class creation_permissions_test extends \advanced_testcase {
 
         // First category (in sort order): two capabilities missing.
         $tworole = $this->create_full_role();
-        unassign_capability('mod/forum:startdiscussion', $tworole, $systemcontextid);
-        unassign_capability('mod/quiz:addinstance', $tworole, $systemcontextid);
+        unassign_capability('local/coursegen:createactivitywithai', $tworole, $systemcontextid);
+        unassign_capability('moodle/course:view', $tworole, $systemcontextid);
         role_assign($tworole, $user->id, \context_coursecat::instance($first->id)->id);
 
         // Second category: one capability missing.
         $onerole = $this->create_full_role();
-        unassign_capability('moodle/question:add', $onerole, $systemcontextid);
+        unassign_capability('moodle/course:view', $onerole, $systemcontextid);
         role_assign($onerole, $user->id, \context_coursecat::instance($second->id)->id);
 
         try {
             creation_permissions::require_anywhere((int) $user->id);
             $this->fail('A user missing capabilities everywhere must be refused.');
         } catch (\required_capability_exception $e) {
-            $this->assertSame(get_capability_string('moodle/question:add'), $e->a);
+            $this->assertSame(get_capability_string('moodle/course:view'), $e->a);
         }
     }
 

@@ -72,6 +72,11 @@ final class search_target_courses_test extends \advanced_testcase {
      */
     protected function setUp(): void {
         parent::setUp();
+        // The CI pipeline does not install declared dependencies: without the Datacurso AI provider
+        // these tests cannot run.
+        if (!class_exists(\aiprovider_datacurso\local\plugin_settings::class)) {
+            $this->markTestSkipped('aiprovider_datacurso is not installed.');
+        }
         $this->resetAfterTest();
 
         set_config('enableimportexisting', 1, 'local_coursegen');

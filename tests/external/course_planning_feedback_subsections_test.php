@@ -41,6 +41,18 @@ require_once($CFG->dirroot . '/local/coursegen/tests/fixtures/aiprovider_datacur
  */
 final class course_planning_feedback_subsections_test extends \advanced_testcase {
     /**
+     * Skip the whole class when the Datacurso AI provider is not installed.
+     */
+    protected function setUp(): void {
+        parent::setUp();
+        // The CI pipeline does not install declared dependencies: without the Datacurso AI provider
+        // these tests cannot run.
+        if (!class_exists(\aiprovider_datacurso\local\plugin_settings::class)) {
+            $this->markTestSkipped('aiprovider_datacurso is not installed.');
+        }
+    }
+
+    /**
      * Drop the injected client between tests.
      */
     protected function tearDown(): void {

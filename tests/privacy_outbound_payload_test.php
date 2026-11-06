@@ -58,6 +58,17 @@ require_once(__DIR__ . '/fixtures/aiprovider_datacurso_stub.php');
  * @runTestsInSeparateProcesses
  */
 final class privacy_outbound_payload_test extends \advanced_testcase {
+    /**
+     * Skip the test when the Datacurso AI provider, whose enable gate the tested code calls, is not installed.
+     *
+     * The CI pipeline does not install declared dependencies.
+     */
+    private function require_datacurso_provider(): void {
+        if (!class_exists(\aiprovider_datacurso\local\plugin_settings::class)) {
+            $this->markTestSkipped('aiprovider_datacurso is not installed.');
+        }
+    }
+
     /** @var array<int, array{path: string, payload: array}> Calls recorded by the client double. */
     private array $captured = [];
 
@@ -66,6 +77,8 @@ final class privacy_outbound_payload_test extends \advanced_testcase {
      */
     protected function setUp(): void {
         parent::setUp();
+        // Reset even when a test skips before its own resetAfterTest(): setUp() writes to the DB.
+        $this->resetAfterTest();
         set_config('datacurso_service_url', 'https://invalid.invalid', 'local_coursegen');
     }
 
@@ -82,6 +95,7 @@ final class privacy_outbound_payload_test extends \advanced_testcase {
      * The planning init payload only carries declared fields.
      */
     public function test_course_init_payload_fields_are_declared(): void {
+        $this->require_datacurso_provider();
         $this->resetAfterTest();
         $this->setAdminUser();
         $this->inject_recording_client();
@@ -108,6 +122,7 @@ final class privacy_outbound_payload_test extends \advanced_testcase {
      * The activity init payload only carries declared fields.
      */
     public function test_activity_init_payload_fields_are_declared(): void {
+        $this->require_datacurso_provider();
         global $DB;
 
         $this->resetAfterTest();
@@ -145,6 +160,7 @@ final class privacy_outbound_payload_test extends \advanced_testcase {
      * attributes included.
      */
     public function test_syllabus_upload_payload_fields_are_declared(): void {
+        $this->require_datacurso_provider();
         $this->resetAfterTest();
         $this->setAdminUser();
         $this->inject_recording_client();
@@ -169,6 +185,7 @@ final class privacy_outbound_payload_test extends \advanced_testcase {
      * attributes included.
      */
     public function test_activity_file_upload_payload_fields_are_declared(): void {
+        $this->require_datacurso_provider();
         global $USER;
 
         $this->resetAfterTest();
@@ -195,6 +212,7 @@ final class privacy_outbound_payload_test extends \advanced_testcase {
      * The planning feedback payload only carries declared fields.
      */
     public function test_course_feedback_payload_fields_are_declared(): void {
+        $this->require_datacurso_provider();
         $this->resetAfterTest();
         $this->setAdminUser();
         $this->inject_recording_client();
@@ -221,6 +239,7 @@ final class privacy_outbound_payload_test extends \advanced_testcase {
      * The activity feedback payload only carries declared fields.
      */
     public function test_activity_feedback_payload_fields_are_declared(): void {
+        $this->require_datacurso_provider();
         global $USER;
 
         $this->resetAfterTest();

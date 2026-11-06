@@ -37,6 +37,17 @@ use stdClass;
  */
 final class pluginfile_test extends \advanced_testcase {
     /**
+     * Skip the test when the Datacurso AI provider, whose enable gate the tested code calls, is not installed.
+     *
+     * The CI pipeline does not install declared dependencies.
+     */
+    private function require_datacurso_provider(): void {
+        if (!class_exists(\aiprovider_datacurso\local\plugin_settings::class)) {
+            $this->markTestSkipped('aiprovider_datacurso is not installed.');
+        }
+    }
+
+    /**
      * Load lib.php in each test process.
      */
     protected function setUp(): void {
@@ -50,6 +61,7 @@ final class pluginfile_test extends \advanced_testcase {
      * Requests against a course context are rejected: files live in the system context.
      */
     public function test_course_context_is_rejected(): void {
+        $this->require_datacurso_provider();
         $generator = $this->getDataGenerator();
         $course = $generator->create_course();
         $owner = $generator->create_user();
@@ -73,6 +85,7 @@ final class pluginfile_test extends \advanced_testcase {
      * An unexpected file area is rejected.
      */
     public function test_unknown_filearea_is_rejected(): void {
+        $this->require_datacurso_provider();
         $generator = $this->getDataGenerator();
         $course = $generator->create_course();
         $owner = $generator->create_user();
@@ -95,6 +108,7 @@ final class pluginfile_test extends \advanced_testcase {
      * An item id that does not match any planning session is rejected.
      */
     public function test_unknown_session_is_rejected(): void {
+        $this->require_datacurso_provider();
         $user = $this->getDataGenerator()->create_user();
         $this->setUser($user);
 
@@ -114,6 +128,7 @@ final class pluginfile_test extends \advanced_testcase {
      * A user who neither owns the session nor holds view_syllabus is rejected.
      */
     public function test_non_owner_without_capability_is_rejected(): void {
+        $this->require_datacurso_provider();
         $generator = $this->getDataGenerator();
         $course = $generator->create_course();
         $owner = $generator->create_user();
@@ -215,5 +230,34 @@ final class pluginfile_test extends \advanced_testcase {
             'filepath' => '/',
             'filename' => 'syllabus.pdf',
         ], '%PDF-1.4 test syllabus');
+    }
+
+    /**
+     * While the plugin is disabled in the Datacurso AI provider even the session owner gets nothing.
+     *
+     * The enabled path is covered by the other tests of this class.
+     *
+     * @return void
+     */
+    public function test_nothing_is_served_when_plugin_disabled(): void {
+        $this->require_datacurso_provider();
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course();
+        $owner = $generator->create_user();
+        $sessionid = $this->insert_session($course->id, $owner->id);
+        $this->create_syllabus_file($sessionid);
+        $this->setUser($owner);
+        set_config('plugin_enabled_local_coursegen', '0', 'aiprovider_datacurso');
+
+        $result = local_coursegen_pluginfile(
+            get_site(),
+            null,
+            context_system::instance(),
+            'syllabus',
+            [$sessionid, 'syllabus.pdf'],
+            false,
+            []
+        );
+        $this->assertFalse($result);
     }
 }

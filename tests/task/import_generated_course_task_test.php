@@ -29,6 +29,17 @@ use local_coursegen\local\models\course_session;
  */
 final class import_generated_course_task_test extends \advanced_testcase {
     /**
+     * Skip the test when the Datacurso AI provider, whose enable gate the tested code calls, is not installed.
+     *
+     * The CI pipeline does not install declared dependencies.
+     */
+    private function require_datacurso_provider(): void {
+        if (!class_exists(\aiprovider_datacurso\local\plugin_settings::class)) {
+            $this->markTestSkipped('aiprovider_datacurso is not installed.');
+        }
+    }
+
+    /**
      * Create a target course, a staging course with one module and a session pointing at the staging course.
      *
      * @param int $userid Session owner.
@@ -92,6 +103,7 @@ final class import_generated_course_task_test extends \advanced_testcase {
      * Executing the task runs the import: the copy exists with the original names and the session points at it.
      */
     public function test_execute_runs_the_import(): void {
+        $this->require_datacurso_provider();
         global $DB;
         $this->resetAfterTest();
         $this->setAdminUser();
@@ -125,5 +137,43 @@ final class import_generated_course_task_test extends \advanced_testcase {
         $task = new import_generated_course_task();
         $this->assertFalse($task->retry_until_success());
         $this->assertSame(get_string('task_import_generated_course', 'local_coursegen'), $task->get_name());
+    }
+
+    /**
+     * While the plugin is disabled in the Datacurso AI provider the task skips: no copy, staging kept, session queued.
+     *
+     * The enabled path is test_execute_runs_the_import().
+     *
+     * @return void
+     */
+    public function test_execute_skips_when_plugin_disabled(): void {
+        $this->require_datacurso_provider();
+        global $DB;
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        $adminid = get_admin()->id;
+        [$target, $staging, $session] = $this->create_fixture($adminid);
+        import_generated_course_task::queue($session->get('id'), $staging->id, $target->id, $adminid);
+        $coursecount = $DB->count_records('course');
+        set_config('plugin_enabled_local_coursegen', '0', 'aiprovider_datacurso');
+
+        $task = new import_generated_course_task();
+        $task->set_custom_data([
+            'sessionid' => $session->get('id'),
+            'stagingcourseid' => $staging->id,
+            'targetcourseid' => $target->id,
+        ]);
+        $task->set_userid($adminid);
+        ob_start();
+        $task->execute();
+        $output = ob_get_clean();
+
+        $this->assertStringContainsString(get_string('task_skipped_plugindisabled', 'local_coursegen'), $output);
+        $this->assertSame($coursecount, $DB->count_records('course'));
+        $this->assertTrue($DB->record_exists('course', ['id' => $staging->id]));
+        $this->assertSame('TASK-ORIG', $DB->get_field('course', 'shortname', ['id' => $target->id]));
+        $session = new course_session($session->get('id'));
+        $coursedata = json_decode((string)$session->get('coursedata'), true);
+        $this->assertSame('queued', $coursedata['import']['state']);
     }
 }
