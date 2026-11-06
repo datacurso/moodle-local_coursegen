@@ -32,9 +32,11 @@ if ($hassiteconfig) {
     // both too: admin_externalpage ORs the capabilities it is given and cannot
     // express that, which showed the entry to users the page then rejected.
     $coursegencapabilities = ['moodle/course:create', 'local/coursegen:createcoursewithai'];
-    // The entry is hidden while the plugin is disabled in the Datacurso AI provider.
+    // The entry is hidden while the plugin is disabled in the Datacurso AI provider, or the provider is missing
+    // (the admin tree is also built while installing a site, before the dependency can be checked).
     if (
-        plugin_settings::is_enabled('local_coursegen')
+        class_exists(plugin_settings::class)
+        && plugin_settings::is_enabled('local_coursegen')
         && has_all_capabilities($coursegencapabilities, context_system::instance())
     ) {
         $ADMIN->add('courses', new admin_externalpage(
