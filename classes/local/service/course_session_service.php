@@ -167,4 +167,40 @@ class course_session_service {
         }
         return $sessions;
     }
+
+    /**
+     * Keep the file a session was made from, where the syllabus of a planning session is kept.
+     *
+     * A course made from a template offers this same file to its students later (template_syllabus_linker), so it is
+     * kept beyond the draft area the professor uploaded it to, which Moodle empties after a few days.
+     *
+     * @param int $sessionid Session record ID (syllabus file item id).
+     * @param \stored_file $file The uploaded file.
+     */
+    public static function keep_syllabus(int $sessionid, \stored_file $file): void {
+        $fs = get_file_storage();
+        $contextid = \context_system::instance()->id;
+        $fs->delete_area_files($contextid, 'local_coursegen', 'syllabus', $sessionid);
+        $fs->create_file_from_storedfile([
+            'contextid' => $contextid,
+            'component' => 'local_coursegen',
+            'filearea' => 'syllabus',
+            'itemid' => $sessionid,
+            'filepath' => '/',
+        ], $file);
+    }
+
+    /**
+     * The file a session was made from, or null when none was uploaded.
+     *
+     * @param int $sessionid Session record ID (syllabus file item id).
+     * @return \stored_file|null
+     */
+    public static function syllabus_file(int $sessionid): ?\stored_file {
+        $fs = get_file_storage();
+        $contextid = \context_system::instance()->id;
+        $files = $fs->get_area_files($contextid, 'local_coursegen', 'syllabus', $sessionid, 'id', false);
+        $file = reset($files);
+        return $file ?: null;
+    }
 }

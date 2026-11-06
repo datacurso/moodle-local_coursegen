@@ -43,6 +43,7 @@ use local_coursegen\local\service\template_course_order;
 use local_coursegen\local\service\template_keep_copier;
 use local_coursegen\local\service\template_run_history;
 use local_coursegen\local\service\template_settings_copier;
+use local_coursegen\local\service\template_syllabus_linker;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -133,6 +134,11 @@ class finish_template_generation extends external_api {
         self::arrange_course($templateid, $courseid, $generatedactivities, $generatedcms, $keptcms);
         self::resolve_activity_links($session, $courseid, $generatedactivities, $generatedcms, $keptcms);
         if ($courseid > 0) {
+            template_syllabus_linker::apply(
+                $courseid,
+                array_values($generatedcms),
+                course_session_service::syllabus_file((int) $params['sessionid'])
+            );
             $coursedata = json_decode((string) $session->get('coursedata'), true);
             template_course_image_applier::apply(
                 $courseid,

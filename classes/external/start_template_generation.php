@@ -30,6 +30,7 @@ use external_function_parameters;
 use external_single_structure;
 use external_value;
 use local_coursegen\local\models\course_session;
+use local_coursegen\local\service\course_session_service;
 use local_coursegen\local\service\template_ai_api_service;
 use local_coursegen\local\service\template_course_image_slots;
 use local_coursegen\local\service\template_export_service;
@@ -132,6 +133,9 @@ class start_template_generation extends external_api {
             'coursedata' => json_encode($coursedata),
         ]);
         $session->create();
+        if ($file !== null) {
+            course_session_service::keep_syllabus((int) $session->get('id'), $file);
+        }
 
         // Nothing has run yet: consuming the stream is what drives the
         // generation, so the caller opens this URL and watches it happen,
