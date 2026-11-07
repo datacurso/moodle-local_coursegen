@@ -116,6 +116,25 @@ final class creation_permissions {
     }
 
     /**
+     * The first category, in category sort order, where the user holds the full creation set.
+     *
+     * Looks at the same candidates as can_create_anywhere(): at most CANDIDATE_LIMIT
+     * categories where the user holds moodle/course:create.
+     *
+     * @param int|null $userid Acting user, the current user when null.
+     * @return int Category id, or 0 when there is none.
+     */
+    public static function first_allowed_category(?int $userid = null): int {
+        $userid = self::resolve_userid($userid);
+        foreach (self::candidate_categories($userid) as $categoryid) {
+            if (self::can_create_in($categoryid, $userid)) {
+                return $categoryid;
+            }
+        }
+        return 0;
+    }
+
+    /**
      * Whether there is at least one category the user could create a course with AI in.
      *
      * Candidates are the categories where the user holds moodle/course:create,

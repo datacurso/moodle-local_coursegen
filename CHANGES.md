@@ -1,3 +1,12 @@
+## [2.0.15] - 2026-11-07
+
+**Compatibility note:** This version is compatible from **Moodle 4.5** to **Moodle 5.3**.
+
+## Fixed
+
+- **Confirming a course no longer fails when the AI proposes a category the site does not have**
+  The AI service proposes the category of the new course without knowing the categories of the site. When that category did not exist (for example on a site where category 1 was deleted), the review panel showed an empty category field but kept the confirm button enabled, and confirming failed with *Can't find data record in database table course_categories*: the course was not created, although the generation had already used the credits. The proposed category is now used only when it exists and the user may create courses with AI in it; otherwise the site default category, and then the first category where the user may create, take its place. The review panel starts on that category, the confirm button stays disabled while the category field is empty, and a category picked by the user that no longer exists is refused with a clear message (`error_category_unavailable`). A category picked by the user where they lack a required capability is still refused naming that capability. Tests: `tests/local/service/create_course_category_test.php`, `tests/external/creation_gate_external_test.php`
+
 ## [2.0.14] - 2026-11-06
 
 **Compatibility note:** This version is compatible from **Moodle 4.5** to **Moodle 5.3**.
