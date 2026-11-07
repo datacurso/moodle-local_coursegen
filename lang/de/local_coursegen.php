@@ -450,6 +450,7 @@ $string['enter_message'] = 'Geben Sie Ihre Nachricht ein';
 $string['error'] = 'Fehler: {$a}';
 $string['error_activity_creation_failed'] = 'Diese Aktivität konnte nicht erstellt werden.';
 $string['error_api_response'] = 'Ungültige Antwort vom AI-Dienst';
+$string['error_category_unavailable'] = 'Die Kategorie des neuen Kurses existiert nicht oder Sie dürfen darin keine Kurse anlegen. Wählen Sie eine andere Kategorie.';
 $string['error_context_type_required'] = 'Bitte wählen Sie einen Kontexttyp aus, um fortzufahren (Lehrplan oder benutzerdefinierte Eingabeaufforderung).';
 $string['error_course_creation_failed'] = 'Der Kurs konnte nicht erstellt werden. Bitte versuchen Sie es später noch einmal.';
 $string['error_creating_course'] = '❌ Fehler beim Erstellen des Kurses: {$a}';

@@ -374,7 +374,9 @@ final class creation_gate_external_test extends \advanced_testcase {
         $coursesbefore = $DB->count_records('course');
 
         try {
-            testable_create_course::execute((int) $session->get('id'));
+            // The category is the user's pick in the review panel: a proposal of the AI service
+            // that the user cannot use is replaced instead (create_course_category_test).
+            testable_create_course::execute((int) $session->get('id'), '', '', (int) $category->id);
             $this->fail('create_course must refuse a category where one capability is prohibited.');
         } catch (\required_capability_exception $e) {
             $this->assertSame(get_capability_string('local/coursegen:createactivitywithai'), $e->a);

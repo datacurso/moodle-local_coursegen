@@ -450,6 +450,7 @@ $string['enter_message'] = 'Digite sua mensagem';
 $string['error'] = 'Erro: {$a}';
 $string['error_activity_creation_failed'] = 'Não foi possível criar esta atividade.';
 $string['error_api_response'] = 'Resposta inválida do serviço AI';
+$string['error_category_unavailable'] = 'A categoria do novo curso não existe ou você não pode criar cursos nela. Escolha outra categoria.';
 $string['error_context_type_required'] = 'Selecione um tipo de contexto para continuar (programa de estudos ou prompt personalizado).';
 $string['error_course_creation_failed'] = 'Não foi possível criar o curso. Por favor, tente novamente mais tarde.';
 $string['error_creating_course'] = '❌ Erro ao criar curso: {$a}';

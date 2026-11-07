@@ -450,6 +450,7 @@ $string['enter_message'] = 'Введите ваше сообщение';
 $string['error'] = 'Ошибка: {$a}';
 $string['error_activity_creation_failed'] = 'Не удалось создать эту активность.';
 $string['error_api_response'] = 'Неверный ответ от службы AI.';
+$string['error_category_unavailable'] = 'Категория нового курса не существует или вы не можете создавать в ней курсы. Выберите другую категорию.';
 $string['error_context_type_required'] = 'Чтобы продолжить, выберите тип контекста (программа или пользовательская подсказка).';
 $string['error_course_creation_failed'] = 'Не удалось создать курс. Пожалуйста, повторите попытку позже.';
 $string['error_creating_course'] = '❌ Ошибка при создании курса: {$a}.';

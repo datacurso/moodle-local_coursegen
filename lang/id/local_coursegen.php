@@ -450,6 +450,7 @@ $string['enter_message'] = 'Masukkan pesan Anda';
 $string['error'] = 'Kesalahan: {$a}';
 $string['error_activity_creation_failed'] = 'Aktivitas ini tidak dapat dibuat.';
 $string['error_api_response'] = 'Respons tidak valid dari layanan AI';
+$string['error_category_unavailable'] = 'Kategori kursus baru tidak ada atau Anda tidak dapat membuat kursus di dalamnya. Pilih kategori lain.';
 $string['error_context_type_required'] = 'Silakan pilih jenis konteks untuk melanjutkan (Silabus atau Perintah Kustom).';
 $string['error_course_creation_failed'] = 'Kursus tidak dapat dibuat. Silakan coba lagi nanti.';
 $string['error_creating_course'] = '❌ Kesalahan saat membuat kursus: {$a}';
