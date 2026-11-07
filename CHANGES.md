@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026110701
+
+### Changed
+- **A generated quiz is created in Moodle much faster**  
+  Every question used to load the quiz again, check it, clear its previews and add up the marks of all the questions before it, so a final exam of a hundred questions took seconds on its own. That work is now done once for the whole quiz: the questions, their marks, their pages and the total grade are the same.
+
 ## [2.0.10] - 2026110601
 
 ### Added

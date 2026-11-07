@@ -32,8 +32,16 @@ class quiz_settings extends base_settings {
      * rebuilt before the questions exist would end up pointing somewhere else.
      */
     public function add_settings() {
+        $quiz = $this->quiz_setup();
+        $added = 0;
         foreach ($this->modsettings['questions'] as $question) {
-            $this->add_question($question);
+            $added += $this->add_question($question, $quiz) ? 1 : 0;
+        }
+        if ($added > 0) {
+            // Once for the whole quiz: done after every question, they made a quiz of a hundred questions take
+            // seconds, because each one went over all the questions added before it.
+            quiz_delete_previews($quiz->quiz);
+            $quiz->quizobj->get_grade_calculator()->recompute_quiz_sumgrades();
         }
 
         if (!empty($this->modsettings['sections'])) {
@@ -51,19 +59,38 @@ class quiz_settings extends base_settings {
     const CALCULATED_QTYPES = ['calculated', 'calculatedmulti'];
 
     /**
+     * What every question of the quiz shares: its context, its question category, the quiz and its settings.
+     *
+     * Read once for the whole quiz; the capabilities and the check that the quiz can be edited are made here.
+     *
+     * @return \stdClass With context, categoryinfo, quiz and quizobj.
+     */
+    protected function quiz_setup(): \stdClass {
+        $context = \context_module::instance($this->cm->coursemodule);
+        require_capability('moodle/question:add', $context);
+        require_capability('mod/quiz:manage', $context);
+        [$quiz, $cm] = get_module_from_cmid($this->cm->coursemodule);
+        $quizobj = new \mod_quiz\quiz_settings($quiz, $cm, get_course($cm->course));
+        $quizobj->get_structure()->check_can_be_edited();
+        return (object) [
+            'context' => $context,
+            'categoryinfo' => question_make_default_categories([$context]),
+            'quiz' => $quiz,
+            'quizobj' => $quizobj,
+        ];
+    }
+
+    /**
      * Add question to quiz.
      *
      * @param array $aiquestiondata Question data.
+     * @param \stdClass $setup What the questions of the quiz share (see quiz_setup()).
+     * @return bool Whether the question was added.
      */
-    protected function add_question($aiquestiondata) {
-        global $DB, $USER;
-        $cm = $this->cm;
-        $context = \context_module::instance($cm->coursemodule);
-        require_capability('moodle/question:add', $context);
-
-        $DB->get_record('quiz', ['id' => $cm->instance], '*', MUST_EXIST);
-
-        $categoryinfo = question_make_default_categories([$context]);
+    protected function add_question($aiquestiondata, \stdClass $setup): bool {
+        global $USER;
+        $context = $setup->context;
+        $categoryinfo = $setup->categoryinfo;
 
         if (in_array($aiquestiondata['qtype'], self::CALCULATED_QTYPES, true)) {
             try {
@@ -76,7 +103,7 @@ class quiz_settings extends base_settings {
                         . ($aiquestiondata['name'] ?? '') . '": ' . $exception->getMessage(),
                     DEBUG_DEVELOPER
                 );
-                return;
+                return false;
             }
         } else {
             $category = "{$categoryinfo->id},{$categoryinfo->contextid}";
@@ -104,37 +131,25 @@ class quiz_settings extends base_settings {
                         . ($aiquestiondata['name'] ?? '') . '": ' . $exception->getMessage(),
                     DEBUG_DEVELOPER
                 );
-                return;
+                return false;
             }
         }
 
         // Purge this question from the cache.
         \question_bank::notify_question_edited($question->id);
 
-        require_capability('mod/quiz:manage', $context);
-
         $this->add_question_tags($aiquestiondata, (int) $question->id, $context);
 
-        [$quiz, $cm] = get_module_from_cmid($cm->coursemodule);
-
-        // Get the course object and related bits.
-        $course = get_course($cm->course);
-        $quizobj = new \mod_quiz\quiz_settings($quiz, $cm, $course);
-        $structure = $quizobj->get_structure();
-        $gradecalculator = $quizobj->get_grade_calculator();
-
         // Add a single question to the current quiz.
-        $structure->check_can_be_edited();
         quiz_require_question_use($question->id);
         quiz_add_quiz_question(
             $question->id,
-            $quiz,
+            $setup->quiz,
             $this->slot_page($aiquestiondata),
             $this->slot_maxmark($aiquestiondata)
         );
-        $this->apply_slot_options((int) $quiz->id, (int) $question->id, $aiquestiondata);
-        quiz_delete_previews($quiz);
-        $gradecalculator->recompute_quiz_sumgrades();
+        $this->apply_slot_options((int) $setup->quiz->id, (int) $question->id, $aiquestiondata);
+        return true;
     }
 
     /**
