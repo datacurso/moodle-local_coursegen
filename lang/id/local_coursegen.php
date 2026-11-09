@@ -205,6 +205,7 @@ $string['courseai_lang_arialabel'] = 'Bahasa';
 $string['courseai_lang_menu_label'] = 'Bahasa';
 $string['courseai_lang_search_placeholder'] = 'Cari bahasa…';
 $string['courseai_lang_title'] = 'Bahasa kursus';
+$string['courseai_lang_auto'] = 'Deteksi otomatis';
 $string['courseai_live_note_detailed'] = 'Menampilkan kemajuan perencanaan terperinci secara real-time.';
 $string['courseai_menu_activity_or_resource'] = 'Aktivitas atau sumber';
 $string['courseai_modal_close'] = 'Tutup';

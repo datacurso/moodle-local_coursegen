@@ -106,8 +106,8 @@ export const wireTemplateMode = (state, host) => {
     // The activities pill of the top bar opens and closes its list of activities.
     initTopBar();
 
-    // Input-bar defaults: no images, page default language, no syllabus yet.
-    const tplState = createTemplateState({lang: state.defaultLang || ''});
+    // Input-bar defaults: no images, language left to the AI (detect automatically), no syllabus yet.
+    const tplState = createTemplateState({lang: ''});
 
     wireInputBar(tplState, state);
 

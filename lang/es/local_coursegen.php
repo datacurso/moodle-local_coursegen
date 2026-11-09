@@ -276,6 +276,7 @@ $string['courseai_lang_arialabel'] = 'Idioma';
 $string['courseai_lang_menu_label'] = 'Idioma';
 $string['courseai_lang_search_placeholder'] = 'Buscar idioma…';
 $string['courseai_lang_title'] = 'Idioma del curso';
+$string['courseai_lang_auto'] = 'Detectar automáticamente';
 $string['courseai_live_note_detailed'] = 'Mostrando el progreso de la planificación detallada en tiempo real.';
 $string['courseai_log_add_activity_target'] = '«{$a->section}», posición {$a->position}';
 $string['courseai_log_add_section_target'] = 'posición {$a->position}';

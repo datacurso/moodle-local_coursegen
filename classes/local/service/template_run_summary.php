@@ -43,7 +43,9 @@ class template_run_summary {
         $syllabus = array_key_exists('syllabus', $coursedata) ? (string) $coursedata['syllabus'] : null;
         return self::context(
             $record ? format_string($record->get('name')) : '',
-            self::language_name((string) ($payload['lang'] ?? '')),
+            !empty($payload['lang_auto'])
+                ? get_string('courseai_lang_auto', 'local_coursegen')
+                : self::language_name((string) ($payload['lang'] ?? '')),
             $syllabus,
             (string) ($payload['general_instruction'] ?? '')
         );

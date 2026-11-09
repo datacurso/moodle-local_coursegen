@@ -44,7 +44,8 @@ class template_export_service {
      *
      * @param int $templateid
      * @param string $generalinstruction The professor's single prompt/syllabus instruction.
-     * @param string $lang The language the professor picked for the generated course, empty to keep the template's.
+     * @param string $lang The language the professor picked for the generated course. Empty leaves it to the AI
+     *                     service to detect it (the template course's language travels only as the fallback).
      * @param bool $withimages Whether the professor asked for the images to be generated.
      * @return array
      */
@@ -68,7 +69,8 @@ class template_export_service {
         $actions = self::saved_activity_actions($templateid);
         $behaviors = self::saved_section_behaviors($templateid);
 
-        if ($lang === '') {
+        $langauto = ($lang === '');
+        if ($langauto) {
             $lang = $course->lang;
         }
         if (!$lang) {
@@ -109,6 +111,7 @@ class template_export_service {
             'image_slots' => template_course_image_slots::payload(template_course_image_slots::for_course($course)),
             'general_instruction' => $generalinstruction,
             'lang' => $lang,
+            'lang_auto' => $langauto,
             'with_images' => $withimages,
             'site_url' => $CFG->wwwroot,
             // Reference files are attached after /init (they need its
