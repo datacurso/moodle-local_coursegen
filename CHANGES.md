@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026110903
+
+### Fixed
+- **Creating an activity or a course with the AI no longer ends in "Disconnected from the server"**  
+  The stream that shows the progress asked the provider plugin for its License-Key header, and a provider that does not build it in one place has no such method, so the stream stopped before it began. The header is now built here the same way when the provider cannot.
+
 ## [2.0.10] - 2026110902
 
 ### Changed

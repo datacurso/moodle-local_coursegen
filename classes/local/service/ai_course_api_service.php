@@ -118,7 +118,16 @@ class ai_course_api_service {
      * @throws \moodle_exception When no license key is configured.
      */
     public function get_license_header(): string {
-        return $this->client->get_license_header();
+        // Newer provider clients build the header in one place. An older provider has no such method, and then
+        // every stream of the relay died before it began: the header is built here the same way.
+        if (method_exists($this->client, 'get_license_header')) {
+            return $this->client->get_license_header();
+        }
+        $key = (string) get_config('aiprovider_datacurso', 'licensekey');
+        if ($key === '') {
+            throw new \moodle_exception('invalidlicensekey', 'aiprovider_datacurso');
+        }
+        return 'License-Key: ' . $key;
     }
 
     /**
