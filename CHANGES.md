@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026110901
+
+### Fixed
+- **An H5P activity shown inside a lesson page grows with its content**  
+  The frame that shows the activity asked for the script that fits it to its content from a path that does not exist, so it always kept its starting height and anything taller than that was left out of sight: the exercises and the questions at the bottom of a long activity could not be reached. The script is now asked from the H5P library of Moodle, and the frame takes the height of the activity.
+
 ## [2.0.10] - 2026110701
 
 ### Changed
