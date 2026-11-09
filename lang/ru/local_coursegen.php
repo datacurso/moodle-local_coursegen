@@ -205,6 +205,7 @@ $string['courseai_lang_arialabel'] = 'Язык';
 $string['courseai_lang_menu_label'] = 'Язык';
 $string['courseai_lang_search_placeholder'] = 'Поиск языка…';
 $string['courseai_lang_title'] = 'Язык курса';
+$string['courseai_lang_auto'] = 'Определить автоматически';
 $string['courseai_live_note_detailed'] = 'Отображение хода детального планирования в режиме реального времени.';
 $string['courseai_menu_activity_or_resource'] = 'Элемент курса или ресурс';
 $string['courseai_modal_close'] = 'Закрыть';

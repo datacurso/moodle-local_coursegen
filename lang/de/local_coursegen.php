@@ -205,6 +205,7 @@ $string['courseai_lang_arialabel'] = 'Sprache';
 $string['courseai_lang_menu_label'] = 'Sprache';
 $string['courseai_lang_search_placeholder'] = 'Sprache suchen…';
 $string['courseai_lang_title'] = 'Kurssprache';
+$string['courseai_lang_auto'] = 'Automatisch erkennen';
 $string['courseai_live_note_detailed'] = 'Zeigt den detaillierten Planungsfortschritt in Echtzeit an.';
 $string['courseai_menu_activity_or_resource'] = 'Aktivität oder Material';
 $string['courseai_modal_close'] = 'Schließen';

@@ -70,10 +70,13 @@ final class template_export_service_test extends \advanced_testcase {
         $picked = template_export_service::build_init_payload($templateid, '', 'es');
         $this->assertSame('es', $picked['lang']);
         $this->assertSame('es', $picked['course_configuration']['lang']);
+        $this->assertFalse($picked['lang_auto']);
 
         $kept = template_export_service::build_init_payload($templateid);
         $this->assertSame('en', $kept['lang']);
         $this->assertSame('en', $kept['course_configuration']['lang']);
+        // No language picked: the service detects it, and the template course's one is only the fallback.
+        $this->assertTrue($kept['lang_auto']);
     }
 
     /**
