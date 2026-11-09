@@ -25,6 +25,7 @@ import Notification from 'core/notification';
 import YUI from 'core/yui';
 import {initFilepicker} from '../../../repository/courseai';
 import {bindToggleWrap, showFilePicker} from '../context/filepicker';
+import {wireLanguagePicker} from './language_picker';
 
 /**
  * Show/refresh or hide the input bar's syllabus chip to match tplState.
@@ -84,6 +85,7 @@ export const wireInputBar = (tplState, state) => {
         langSelect.addEventListener('change', () => {
             tplState.lang = langSelect.value;
         });
+        wireLanguagePicker(langSelect);
     }
 
     // Generate-images toggle — same toggle-track pattern as free mode.

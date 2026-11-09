@@ -493,16 +493,50 @@ svg { display: block; flex-shrink: 0; }
 .tpl-input-bar .tbar-toggle-label {
   font-size: 13px;
 }
-.tpl-input-bar .tbar-select {
+.tpl-input-bar .tbar-lang {
+  flex: 0 1 190px;
+  min-width: 64px;
+}
+.tpl-input-bar .tbar-lang-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
   height: 30px;
   padding: 0 10px;
+  font: inherit;
   font-size: 13px;
+  font-weight: 500;
+  color: var(--muted-fg);
+  background: transparent;
   border: 1px solid var(--border);
   border-radius: 999px;
-  background: transparent;
-  flex: 0 1 130px;
-  min-width: 64px;
-  max-width: 130px;
+  cursor: pointer;
+  outline: none;
+  transition: border-color .12s, color .12s;
+}
+.tpl-input-bar .tbar-lang-btn:hover,
+.tpl-input-bar .tbar-lang-btn[aria-expanded="true"] {
+  border-color: hsl(215, 20%, 70%);
+  color: var(--fg);
+}
+.tpl-input-bar .tbar-lang-btn:focus-visible {
+  border-color: var(--primary);
+  color: var(--fg);
+}
+.tpl-input-bar .tbar-lang-value {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+.tpl-input-bar .tbar-lang-chevron {
+  flex: none;
+}
+.tpl-input-bar .tbar-lang .popover-panel {
+  width: 280px;
 }
 .tpl-input-bar .tbar-right {
   gap: 6px;

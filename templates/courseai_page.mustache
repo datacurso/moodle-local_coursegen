@@ -879,13 +879,45 @@
             </div>
             {{/cangeneratecourseimages}}
 
-            {{! Language select — options populated by JS from the same
-                languages array as free mode (page context / courseai-data) }}
-            <select class="tbar-select" id="tplLangSelect"
-                    title="{{#str}}courseai_lang_title, local_coursegen{{/str}}"
-                    aria-label="{{#str}}courseai_lang_arialabel, local_coursegen{{/str}}">
-              <option value="" selected>{{#str}}courseai_lang_auto, local_coursegen{{/str}}</option>
-            </select>
+            {{! Language picker: a styled chip that opens the same searchable list as free mode. The hidden select
+                stays the single source of truth (options populated by JS from the languages array of the page). }}
+            <div class="popover-wrap tbar-lang" id="tplLangWrap"
+                 data-force-desc="{{#str}}courseai_lang_force_desc, local_coursegen, __LANG__{{/str}}"
+                 data-auto-desc="{{#str}}courseai_lang_auto_desc, local_coursegen{{/str}}">
+              <select class="hidden" id="tplLangSelect" tabindex="-1" aria-hidden="true">
+                <option value="" selected>{{#str}}courseai_lang_auto, local_coursegen{{/str}}</option>
+              </select>
+              <button class="tbar-lang-btn" id="tplLangBtn" type="button" aria-haspopup="dialog"
+                      aria-controls="tplLangPopover" aria-expanded="false"
+                      title="{{#str}}courseai_lang_title, local_coursegen{{/str}}"
+                      aria-label="{{#str}}courseai_lang_arialabel, local_coursegen{{/str}}">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>
+                  <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                </svg>
+                <span class="tbar-lang-value" id="tplLangValue"></span>
+                <svg class="tbar-lang-chevron" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <polyline points="6 9 12 15 18 9"/>
+                </svg>
+              </button>
+              <div class="popover-panel" id="tplLangPopover" role="dialog" aria-label="{{#str}}courseai_lang_arialabel, local_coursegen{{/str}}">
+                <button class="pop-close-btn" id="tplLangClose" type="button" aria-label="{{#str}}closebuttontitle, core{{/str}}">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true">
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                  </svg>
+                </button>
+                <div class="pop-search-row">
+                  <div class="pop-search-inner">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <circle cx="11" cy="11" r="8"/>
+                      <path d="m21 21-4.35-4.35"/>
+                    </svg>
+                    <input type="text" id="tplLangSearch" placeholder="{{#str}}courseai_lang_search_placeholder, local_coursegen{{/str}}" autocomplete="off" />
+                  </div>
+                </div>
+                <ul class="pop-list" id="tplLangList" role="listbox" aria-label="{{#str}}courseai_lang_arialabel, local_coursegen{{/str}}"></ul>
+              </div>
+            </div>
           </div>
 
           <div class="tbar-right">

@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file. Each change
 
 ### Changed
 - **The language of a course made from a template is detected by the AI unless the professor picks one**  
-  The language select of the template form now starts on "Detect automatically": the AI reads the instruction, the attached syllabus and the template and writes the whole course in the language they are in. Before, it started on the language of the professor's own Moodle, so a course written in Spanish from a Spanish template came out in English when the interface was English, with the fixed texts of the template in Spanish. Picking a language still forces the whole course into it.
+  The language select of the template form now starts on "Detect automatically": the AI reads the instruction, the attached syllabus and the template and writes the whole course in the language they are in. Before, it started on the language of the professor's own Moodle, so a course written in Spanish from a Spanish template came out in English when the interface was English, with the fixed texts of the template in Spanish. Picking a language still forces the whole course into it. The select is now the same styled chip and searchable list the free mode uses, and every option explains itself in a tooltip.
 
 ## [2.0.10] - 2026110901
 
