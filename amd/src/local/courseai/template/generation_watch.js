@@ -25,12 +25,14 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+import RelaySource from 'local_coursegen/local/courseai/stream/relay-source';
+
 /**
  * Close the pass's source once, then run the given action. Guards against
  * running twice: a pass can be finished by more than one listener racing
  * (a terminal message and a transient 'error', say).
  *
- * @param {Object} state {source: EventSource, settled: boolean}
+ * @param {Object} state {source: RelaySource, settled: boolean}
  * @param {Function} action
  * @returns {void}
  */
@@ -46,7 +48,7 @@ const finishPass = (state, action) => {
 /**
  * Fail the pass: close its source, report the message, and reject.
  *
- * @param {Object} state {source: EventSource, settled: boolean}
+ * @param {Object} state {source: RelaySource, settled: boolean}
  * @param {Function} onFail Called with the message once the pass fails.
  * @param {Function} reject The pass promise's reject.
  * @param {string} message
@@ -64,7 +66,7 @@ const failPass = (state, onFail, reject, message, code = 'connection') => finish
  * Handle one decoded 'message' event: apply it, and finish or fail the pass
  * once it reaches a terminal outcome.
  *
- * @param {Object} state {source: EventSource, settled: boolean}
+ * @param {Object} state {source: RelaySource, settled: boolean}
  * @param {Object} progress Mutable {total, done} counters.
  * @param {Function} applyEvent (data, progress) => outcome string.
  * @param {Function} onFail Called with a message once the pass fails.
@@ -84,7 +86,7 @@ const handleStreamMessage = (state, progress, applyEvent, onFail, resolve, rejec
     const outcome = applyEvent(data, progress);
     if (outcome === 'review' || outcome === 'completed') {
         // The stream is closed on both. A pause left open would be
-        // reconnected by EventSource, which resumes the graph from the
+        // reconnected by the browser, which resumes the graph from the
         // same point and re-emits the same pause, forever.
         finishPass(state, () => resolve({outcome, data}));
     } else if (outcome === 'failed') {
@@ -106,7 +108,7 @@ const handleStreamMessage = (state, progress, applyEvent, onFail, resolve, rejec
  * @returns {Promise<Object>} {outcome: 'review'|'completed', data}
  */
 export const watchOnce = (streamUrl, progress, applyEvent, onFail) => new Promise((resolve, reject) => {
-    const state = {source: new EventSource(streamUrl), settled: false};
+    const state = {source: new RelaySource(streamUrl), settled: false};
 
     state.source.addEventListener('message', (event) => {
         handleStreamMessage(state, progress, applyEvent, onFail, resolve, reject, event);
@@ -120,11 +122,8 @@ export const watchOnce = (streamUrl, progress, applyEvent, onFail) => new Promis
     });
 
     state.source.onerror = () => {
-        // EventSource reconnects by itself on a transient drop, reporting
-        // CONNECTING while it does; only a closed connection is a failure.
-        if (state.source.readyState === EventSource.CONNECTING) {
-            return;
-        }
+        // The relay does not reconnect by itself: a drop is a failure of this pass, and the caller offers to try
+        // again, which opens the stream once more from where the run stopped.
         failPass(state, onFail, reject, 'The connection to the generation was lost.');
     };
 });

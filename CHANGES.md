@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026110904
+
+### Changed
+- **The progress of a course generated from a template reaches the browser through Moodle**  
+  The browser opened the stream of the AI service itself, so the address of the service was in the page and nobody checked who read the run. It now reads it from this plugin, like the activity and the course stream: only the user who started the run, and who may still generate from a template, can read it, and the service address stays on the server.
+
 ## [2.0.10] - 2026110903
 
 ### Fixed
