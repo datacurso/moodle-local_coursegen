@@ -45,17 +45,26 @@ export const askToRetry = async(code) => {
     );
     document.getElementById(CARD_ID)?.remove();
 
+    // The same markup as any other turn of the thread (see ui/log.js), so the failure reads as one more message of
+    // the left column and not as a banner over the page.
     const card = document.createElement('div');
     card.id = CARD_ID;
-    card.className = 'alert alert-danger m-2';
+    card.className = 'cg-log-entry cg-log-entry--danger cg-log-entry--turn-ai';
     card.setAttribute('role', 'alert');
-    const heading = document.createElement('p');
-    heading.className = 'fw-bold mb-1';
+    const bar = document.createElement('span');
+    bar.className = 'cg-log-bar';
+    bar.setAttribute('aria-hidden', 'true');
+    const content = document.createElement('span');
+    content.className = 'cg-log-body';
+    const message = document.createElement('span');
+    message.className = 'cg-log-msg';
+    const heading = document.createElement('strong');
+    heading.className = 'd-block mb-1';
     heading.textContent = title;
-    const body = document.createElement('p');
-    body.className = 'mb-2';
+    const body = document.createElement('span');
+    body.className = 'd-block mb-2';
     body.textContent = code === 'high_demand' ? busy : text;
-    const buttons = document.createElement('div');
+    const buttons = document.createElement('span');
     buttons.className = 'd-flex gap-2';
     const retryButton = document.createElement('button');
     retryButton.type = 'button';
@@ -66,9 +75,11 @@ export const askToRetry = async(code) => {
     closeButton.className = 'btn btn-secondary btn-sm';
     closeButton.textContent = close;
     buttons.append(retryButton, closeButton);
-    card.append(heading, body, buttons);
+    message.append(heading, body, buttons);
+    content.append(message);
+    card.append(bar, content);
 
-    const host = document.getElementById('courseaiChatScroll') || document.body;
+    const host = document.getElementById('cgLog') || document.getElementById('courseaiChatScroll') || document.body;
     host.append(card);
     card.scrollIntoView({block: 'nearest'});
 

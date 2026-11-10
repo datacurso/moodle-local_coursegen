@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026110906
+
+### Fixed
+- **The error of a template generation shows in the conversation, not over the page**  
+  When a generation stopped, the message with "Try again" and "Close" was added at the end of the page and spread over its whole width, below both columns. It now appears as one more message of the left column, with the same look as the rest of the thread.
+
 ## [2.0.10] - 2026110905
 
 ### Fixed
