@@ -17,6 +17,7 @@
 namespace local_coursegen\local\service;
 
 use aiprovider_datacurso\httpclient\ai_course_api;
+use local_coursegen\local\streaming\stream_type;
 use stored_file;
 
 /**
@@ -149,17 +150,16 @@ class template_ai_api_service {
     }
 
     /**
-     * The SSE URL whose consumption drives one session's generation.
+     * The URL whose consumption drives one session's generation.
      *
-     * Handed to the browser, which opens it directly: the progress events the
-     * graph emits are for the professor to watch live, so proxying them
-     * through Moodle would only add a hop and buffer them.
+     * It is the relay of this plugin, never the service: the relay checks who owns the run, keeps the service URL and
+     * the license out of the browser, and passes the events on as they come.
      *
      * @param string $threadid
      * @return string
      */
     public function stream_url(string $threadid): string {
-        return streaming_url_builder::course_template_stream($this->client->get_base_url(), $threadid);
+        return streaming_url_builder::relay(stream_type::TEMPLATE, $threadid);
     }
 
     /**

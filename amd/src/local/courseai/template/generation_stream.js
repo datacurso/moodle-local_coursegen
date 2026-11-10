@@ -199,6 +199,26 @@ const closeView = (message) => {
 };
 
 /**
+ * Open the generating page at once, before the service has answered: sending the material to the AI can take a
+ * while, and the professor must not wait in front of an empty screen.
+ *
+ * @param {Object} context What the run is generated with: {template, language, syllabus, instruction}.
+ */
+export const beginGenerationView = async(context) => {
+    await openView(context);
+    await paintStage('connecting');
+};
+
+/**
+ * Take the page out of its generating state when the run could not even start.
+ *
+ * @param {string} message What went wrong, reported as a turn in the feed (none when empty).
+ */
+export const abortGenerationView = (message) => {
+    closeView(message);
+};
+
+/**
  * Run one generation, pausing for the professor's review, and resolve when
  * the course has been built.
  *
@@ -206,11 +226,13 @@ const closeView = (message) => {
  * @param {Function} buildCourse Called once the run completes; resolves to {courseurl}.
  * @param {number} sessionId Session the review answers belong to.
  * @param {Object} context What the run is generated with, for the opening message.
+ * @param {boolean} viewOpened Whether beginGenerationView already put the page in its generating state.
  * @returns {Promise<Object>} The built course, as buildCourse resolved it.
  */
-export const runGenerationStream = async(streamUrl, buildCourse, sessionId, context) => {
-    await openView(context);
-    await paintStage('connecting');
+export const runGenerationStream = async(streamUrl, buildCourse, sessionId, context, viewOpened = false) => {
+    if (!viewOpened) {
+        await beginGenerationView(context);
+    }
 
     const progress = {total: 0, done: 0};
     // Reading the material is over once the first activity starts: the thread moves on to the

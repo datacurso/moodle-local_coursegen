@@ -97,6 +97,17 @@ final class streaming_url_builder_test extends \basic_testcase {
     }
 
     /**
+     * The relay URL of a template generation carries the template stream type.
+     */
+    public function test_relay_url_for_a_template_generation(): void {
+        global $CFG;
+
+        $url = streaming_url_builder::relay(stream_type::TEMPLATE, 'thread-3');
+
+        $this->assertSame($CFG->wwwroot . '/local/coursegen/stream.php?streamtype=template&threadid=thread-3', $url);
+    }
+
+    /**
      * The relay URL never exposes a service URL.
      */
     public function test_relay_url_does_not_expose_the_service(): void {

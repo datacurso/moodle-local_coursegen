@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026110906
+
+### Fixed
+- **The error of a template generation shows in the conversation, not over the page**  
+  When a generation stopped, the message with "Try again" and "Close" was added at the end of the page and spread over its whole width, below both columns. It now appears as one more message of the left column, with the same look as the rest of the thread.
+
+## [2.0.10] - 2026110905
+
+### Fixed
+- **The generation of a course from a template shows from the click**  
+  The page stayed empty until the service answered, which takes close to a minute while the syllabus is sent to the AI. The generating page, with its "Starting the generation…" step, now opens as soon as the button is pressed, and it closes again with the error if the run cannot start.
+
+## [2.0.10] - 2026110904
+
+### Changed
+- **The progress of a course generated from a template reaches the browser through Moodle**  
+  The browser opened the stream of the AI service itself, so the address of the service was in the page and nobody checked who read the run. It now reads it from this plugin, like the activity and the course stream: only the user who started the run, and who may still generate from a template, can read it, and the service address stays on the server.
+
 ## [2.0.10] - 2026110903
 
 ### Fixed
