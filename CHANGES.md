@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026110911
+
+### Changed
+- **The questions of the AI show only what is needed**  
+  A question that is a yes or no is its question and two buttons, Yes and No, and it is answered by pressing one: no title, no explanation, no "Continue". A question that asks for a file has two buttons, one to attach it (the file is the answer as soon as it is picked) and one to go on without it. The options of a question with one choice are radio buttons, and those of a question with several are checkboxes, with the same markup as the rest of the interface. Only a card with several questions keeps its title and its Continue button.
+
 ## [2.0.10] - 2026110910
 
 ### Added

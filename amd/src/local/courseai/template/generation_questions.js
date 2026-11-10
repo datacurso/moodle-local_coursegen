@@ -135,11 +135,14 @@ const toggleControl = (question, sheet, text) => {
 const choiceControl = (question, sheet, several) => {
     const group = element('div', 'cg-question-options');
     group.setAttribute('role', several ? 'group' : 'radiogroup');
-    question.options.forEach((option) => {
-        const label = element('label', 'cg-question-option');
+    question.options.forEach((option, index) => {
+        // The markup the rest of the plugin (and Moodle) uses for a radio button or a checkbox, so these look like them.
+        const wrapper = element('div', 'form-check mb-2');
         const input = document.createElement('input');
+        input.className = 'form-check-input';
         input.type = several ? 'checkbox' : 'radio';
         input.name = `cgq_${question.id}`;
+        input.id = `cgq_${question.id}_${index}`;
         input.value = option.value;
         input.checked = several
             ? (sheet.values[question.id] || []).includes(option.value)
@@ -157,13 +160,13 @@ const choiceControl = (question, sheet, several) => {
             }
             sheet.set(question.id, question.options.map((item) => item.value).filter((value) => current.has(value)));
         });
-        const words = element('span', 'cg-question-option-text');
-        words.append(element('span', 'cg-question-option-label', option.label));
+        const label = element('label', 'form-check-label', option.label);
+        label.setAttribute('for', input.id);
         if (option.description) {
-            words.append(element('span', 'cg-question-option-description', option.description));
+            label.append(element('small', 'd-block text-muted', option.description));
         }
-        label.append(input, words);
-        group.append(label);
+        wrapper.append(input, label);
+        group.append(wrapper);
     });
     return group;
 };
@@ -192,9 +195,10 @@ const textControl = (question, sheet) => {
  * @param {Object} sheet
  * @param {Object} text
  * @param {Function} pickFile Asks the person for a file: resolves {filename, draftitemid}, or null when they gave up.
+ * @param {boolean} [removable] Whether the file picked can be taken off; a card that answers by picking has no use for it.
  * @returns {HTMLElement}
  */
-const fileControl = (question, sheet, text, pickFile) => {
+const fileControl = (question, sheet, text, pickFile, removable = true) => {
     const group = element('div', 'cg-question-file');
     const attach = element('button', 'btn btn-sm btn-outline-secondary', text.attach);
     attach.type = 'button';
@@ -216,7 +220,10 @@ const fileControl = (question, sheet, text, pickFile) => {
     remove.addEventListener('click', () => sheet.set(question.id, null));
     sheet.onChange(paint);
     paint();
-    group.append(attach, chosen, remove);
+    group.append(attach);
+    if (removable) {
+        group.append(chosen, remove);
+    }
     return group;
 };
 
@@ -227,9 +234,10 @@ const fileControl = (question, sheet, text, pickFile) => {
  * @param {Object} sheet
  * @param {Object} text
  * @param {Function} pickFile
+ * @param {boolean} [compact] Whether the card has this one question and answers as soon as it is chosen.
  * @returns {HTMLElement}
  */
-const controlFor = (question, sheet, text, pickFile) => {
+const controlFor = (question, sheet, text, pickFile, compact = false) => {
     switch (question.kind) {
         case 'toggle':
             return toggleControl(question, sheet, text);
@@ -238,7 +246,7 @@ const controlFor = (question, sheet, text, pickFile) => {
         case 'multi_choice':
             return choiceControl(question, sheet, true);
         case 'file':
-            return fileControl(question, sheet, text, pickFile);
+            return fileControl(question, sheet, text, pickFile, !compact);
         default:
             return textControl(question, sheet);
     }
@@ -301,6 +309,12 @@ export const askQuestions = async(data, {pickFile, host} = {}) => {
     const sheet = createAnswerSheet(questions);
     document.getElementById(CARD_ID)?.remove();
 
+    // One question with a short answer (a yes or a no, a file) is answered at once and shows nothing else: no title,
+    // no explanation, no "continue". Anything longer keeps the form with its buttons.
+    const single = questions.length === 1 ? questions[0] : null;
+    const compact = single !== null && (single.kind === 'toggle' || single.kind === 'file');
+    const canSkip = data.can_skip !== false;
+
     // The same markup as any other turn of the thread, so the questions read as one more message of the left
     // column and not as a form over the page.
     const card = element('div', 'cg-log-entry cg-log-entry--ai cg-log-entry--turn-ai cg-question-card');
@@ -311,7 +325,9 @@ export const askQuestions = async(data, {pickFile, host} = {}) => {
     bar.setAttribute('aria-hidden', 'true');
     const body = element('span', 'cg-log-body');
     const message = element('span', 'cg-log-msg');
-    message.append(element('strong', 'd-block mb-2', text.title));
+    if (!compact) {
+        message.append(element('strong', 'd-block mb-2', text.title));
+    }
 
     questions.forEach((question) => {
         const block = element('fieldset', 'cg-question');
@@ -320,30 +336,39 @@ export const askQuestions = async(data, {pickFile, host} = {}) => {
         if (question.hint) {
             block.append(element('span', 'cg-question-hint', question.hint));
         }
-        block.append(controlFor(question, sheet, text, pickFile || (async() => null)));
+        block.append(controlFor(question, sheet, text, pickFile || (async() => null), compact));
         message.append(block);
     });
 
     const buttons = element('span', 'd-flex gap-2 mt-2');
-    const next = element('button', 'btn btn-primary btn-sm', text.next);
-    next.type = 'button';
-    buttons.append(next);
+    let next = null;
+    if (!compact) {
+        next = element('button', 'btn btn-primary btn-sm', text.next);
+        next.type = 'button';
+        buttons.append(next);
+    }
     let skip = null;
-    if (data.can_skip !== false) {
+    // A yes or no is its own way out; a file question needs the way to go on without one.
+    if (canSkip && !(compact && single.kind === 'toggle')) {
         skip = element('button', 'btn btn-secondary btn-sm', text.skip);
         skip.type = 'button';
         buttons.append(skip);
     }
     const note = element('span', 'cg-question-required', '');
     note.hidden = true;
-    message.append(note, buttons);
+    message.append(note);
+    if (buttons.children.length) {
+        message.append(buttons);
+    }
     body.append(message);
     card.append(bar, body);
 
     const refresh = () => {
         const ready = sheet.complete();
-        next.disabled = !ready;
-        note.hidden = ready;
+        if (next) {
+            next.disabled = !ready;
+        }
+        note.hidden = ready || compact;
         note.textContent = ready ? '' : text.required;
     };
     sheet.onChange(refresh);
@@ -358,11 +383,21 @@ export const askQuestions = async(data, {pickFile, host} = {}) => {
             card.remove();
             resolve(reply);
         };
-        next.addEventListener('click', () => {
-            if (sheet.complete()) {
-                finish({skipped: false, answers: sheet.list()});
-            }
-        });
+        if (next) {
+            next.addEventListener('click', () => {
+                if (sheet.complete()) {
+                    finish({skipped: false, answers: sheet.list()});
+                }
+            });
+        }
+        if (compact) {
+            // The answer is given by choosing it: nothing else to press.
+            sheet.onChange(() => {
+                if (single.id in sheet.values) {
+                    finish({skipped: false, answers: sheet.list()});
+                }
+            });
+        }
         if (skip) {
             skip.addEventListener('click', () => finish({skipped: true, answers: []}));
         }

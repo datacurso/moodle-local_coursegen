@@ -53,8 +53,8 @@ test('the card is one more message of the conversation, with a title and the pro
     assert.ok(byText(card, 'Language?').length);
 });
 
-test('a switch answers yes or no', async() => {
-    const {card, result} = await open([toggleQuestion()]);
+test('a yes or no among other questions is answered with the two buttons and Continue', async() => {
+    const {card, result} = await open([toggleQuestion(), singleQuestion()]);
     const yes = byText(card, T('yes'))[0];
     const no = byText(card, T('no'))[0];
 
@@ -66,6 +66,79 @@ test('a switch answers yes or no', async() => {
 
     continueButton(card).click();
     assert.deepEqual(await result, {skipped: false, answers: [{question_id: 'images', value: false}]});
+});
+
+test('a single yes or no shows the question and two buttons, and nothing else', async() => {
+    const {card} = await open([toggleQuestion({hint: ''})]);
+    assert.ok(byText(card, 'Make pictures?').length);
+    assert.deepEqual(buttons(card).map((b) => b.textContent), [T('yes'), T('no')]);
+    assert.equal(byText(card, T('title')).length, 0, 'no title');
+    assert.equal(continueButton(card), undefined);
+    assert.equal(skipButton(card), undefined);
+    assert.equal(card.attrs['aria-label'], T('title'), 'the card is still named for assistive technology');
+});
+
+test('a single yes answers at once', async() => {
+    const {card, result} = await open([toggleQuestion()]);
+    byText(card, T('yes'))[0].click();
+    assert.deepEqual(await result, {skipped: false, answers: [{question_id: 'images', value: true}]});
+    assert.equal(host.children.includes(card), false, 'and the card is gone');
+});
+
+test('a single no answers at once, and it is an answer, not a skip', async() => {
+    const {card, result} = await open([toggleQuestion()]);
+    byText(card, T('no'))[0].click();
+    assert.deepEqual(await result, {skipped: false, answers: [{question_id: 'images', value: false}]});
+});
+
+test('a single yes or no that is required has the same two buttons', async() => {
+    const {card, result} = await open([toggleQuestion({required: true})], {can_skip: false});
+    assert.deepEqual(buttons(card).map((b) => b.textContent), [T('yes'), T('no')]);
+    byText(card, T('yes'))[0].click();
+    assert.deepEqual((await result).answers, [{question_id: 'images', value: true}]);
+});
+
+test('a single file question has two buttons: attach, and go on without it', async() => {
+    const {card} = await open([fileQuestion()]);
+    assert.deepEqual(buttons(card).map((b) => b.textContent).filter(Boolean), [T('attach'), T('skip')]);
+    assert.equal(continueButton(card), undefined);
+    assert.equal(byText(card, T('title')).length, 0);
+});
+
+test('a single file question is answered by picking the file', async() => {
+    const {card, result} = await open([fileQuestion()], {}, {pickFile: async() => ({filename: 'guide.pdf', draftitemid: 77})});
+    byText(card, T('attach'))[0].click();
+    assert.deepEqual(await result, {
+        skipped: false,
+        answers: [{question_id: 'syllabus', value: {draftitemid: 77, filename: 'guide.pdf'}}],
+    });
+});
+
+test('a single file question can go on without a file', async() => {
+    const {card, result} = await open([fileQuestion()]);
+    skipButton(card).click();
+    assert.deepEqual(await result, {skipped: true, answers: []});
+});
+
+test('a single file question whose picker gives nothing stays on the page', async() => {
+    const {card, result} = await open([fileQuestion()], {}, {pickFile: async() => null});
+    byText(card, T('attach'))[0].click();
+    await settle();
+    assert.equal(host.children.includes(card), true);
+    skipButton(card).click();
+    assert.equal((await result).skipped, true);
+});
+
+test('a single required file question has only the way to attach', async() => {
+    const {card} = await open([fileQuestion({required: true})], {can_skip: false});
+    assert.deepEqual(buttons(card).map((b) => b.textContent).filter(Boolean), [T('attach')]);
+});
+
+test('a single choice keeps its radio buttons and Continue', async() => {
+    const {card} = await open([singleQuestion()]);
+    assert.equal(inputs(card, 'radio').length, 2);
+    assert.ok(continueButton(card));
+    assert.ok(byText(card, T('title')).length);
 });
 
 test('one choice is answered with the option picked', async() => {
@@ -121,8 +194,8 @@ test('some text is answered trimmed, and empty text is no answer', async() => {
     assert.deepEqual(await result, {skipped: false, answers: [{question_id: 'note', value: 'final'}]});
 });
 
-test('a file is picked with the picker, shown by name and can be taken off', async() => {
-    const {card, result} = await open([fileQuestion()], {}, {
+test('a file among other questions is shown by name and can be taken off', async() => {
+    const {card, result} = await open([fileQuestion(), toggleQuestion()], {}, {
         pickFile: async() => ({filename: 'guide.pdf', draftitemid: 77}),
     });
     const attach = byText(card, T('attach'))[0];
@@ -149,7 +222,7 @@ test('a file is picked with the picker, shown by name and can be taken off', asy
 
 test('a picker that gives nothing, or no draft item, leaves the question unanswered', async() => {
     for (const picked of [null, {filename: 'x.pdf', draftitemid: 0}, {filename: 'x.pdf'}]) {
-        const {card, result} = await open([fileQuestion()], {}, {pickFile: async() => picked});
+        const {card, result} = await open([fileQuestion(), toggleQuestion()], {}, {pickFile: async() => picked});
         byText(card, T('attach'))[0].click();
         await settle();
         continueButton(card).click();
@@ -158,14 +231,14 @@ test('a picker that gives nothing, or no draft item, leaves the question unanswe
 });
 
 test('a question with a default starts answered', async() => {
-    const {card, result} = await open([toggleQuestion({default: true})]);
+    const {card, result} = await open([toggleQuestion({default: true}), singleQuestion()]);
     assert.equal(byText(card, T('yes'))[0].attrs['aria-checked'], 'true');
     continueButton(card).click();
     assert.deepEqual((await result).answers, [{question_id: 'images', value: true}]);
 });
 
 test('a required question keeps Continue off, says why, and offers no way to skip', async() => {
-    const {card, result} = await open([toggleQuestion({required: true})], {can_skip: false});
+    const {card, result} = await open([toggleQuestion({required: true}), singleQuestion()], {can_skip: false});
     const next = continueButton(card);
     assert.equal(next.disabled, true);
     assert.equal(skipButton(card), undefined, 'there is no skip button');
@@ -182,7 +255,7 @@ test('a required question keeps Continue off, says why, and offers no way to ski
 });
 
 test('Continue on a card with nothing required works with no answers', async() => {
-    const {card, result} = await open([toggleQuestion()]);
+    const {card, result} = await open([toggleQuestion(), singleQuestion()]);
     assert.equal(continueButton(card).disabled, false);
     continueButton(card).click();
     assert.deepEqual(await result, {skipped: false, answers: []});
@@ -196,7 +269,7 @@ test('skipping goes on without answering, even with answers given', async() => {
 });
 
 test('the card leaves the conversation once it is answered', async() => {
-    const {card, result} = await open([toggleQuestion()]);
+    const {card, result} = await open([toggleQuestion(), singleQuestion()]);
     assert.equal(host.children.includes(card), true);
     skipButton(card).click();
     await result;
@@ -288,4 +361,58 @@ test('asking again replaces the card that was left on the page', async() => {
     const second = await open([singleQuestion()]);
     assert.notEqual(first.card, second.card);
     assert.ok(second.card);
+});
+
+test('the options of a single choice are radio buttons in the markup of the rest of the interface', async() => {
+    const {card} = await open([singleQuestion()]);
+    const radios = inputs(card, 'radio');
+    assert.equal(radios.length, 2);
+    for (const radio of radios) {
+        assert.match(radio.className, /form-check-input/);
+        assert.equal(radio.parent.className.includes('form-check'), true, 'inside a form-check');
+    }
+    const labels = findAll(card, (node) => node.tag === 'label');
+    assert.equal(labels.length, 2);
+    assert.ok(labels.every((label) => /form-check-label/.test(label.className)));
+});
+
+test('each label belongs to its radio button, so a click on the words chooses it', async() => {
+    const {card} = await open([singleQuestion()]);
+    const radios = inputs(card, 'radio');
+    const labels = findAll(card, (node) => node.tag === 'label');
+    radios.forEach((radio, index) => assert.equal(labels[index].attrs.for, radio.id));
+    assert.equal(new Set(radios.map((radio) => radio.id)).size, radios.length, 'every id is its own');
+});
+
+test('the radio buttons of one question share a name, and two questions never share one', async() => {
+    const {card} = await open([singleQuestion(), {...singleQuestion(), id: 'other'}]);
+    const radios = inputs(card, 'radio');
+    assert.equal(radios[0].name, radios[1].name);
+    assert.notEqual(radios[0].name, radios[2].name);
+});
+
+test('the options of a multiple choice are checkboxes in the same markup', async() => {
+    const {card} = await open([multiQuestion()]);
+    const boxes = inputs(card, 'checkbox');
+    assert.equal(boxes.length, 3);
+    assert.ok(boxes.every((box) => /form-check-input/.test(box.className) && box.parent.className.includes('form-check')));
+});
+
+test('choosing a radio button unchooses the answer given before', async() => {
+    const {card, result} = await open([singleQuestion()]);
+    const [spanish, english] = inputs(card, 'radio');
+    spanish.checked = true;
+    spanish.dispatch('change');
+    english.checked = true;
+    english.dispatch('change');
+    continueButton(card).click();
+    assert.deepEqual((await result).answers, [{question_id: 'lang', value: 'en'}]);
+});
+
+test('a default option of a single choice starts chosen', async() => {
+    const question = {...singleQuestion(), default: 'en'};
+    const {card} = await open([question]);
+    const [spanish, english] = inputs(card, 'radio');
+    assert.equal(spanish.checked, false);
+    assert.equal(english.checked, true);
 });

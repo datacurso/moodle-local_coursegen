@@ -5057,29 +5057,8 @@ body.cg-generating :is(#prvSections, #tplModeStructure) .dp-add-subsection-wrap 
 .cg-question-card .cg-question-options {
   display: flex;
   flex-direction: column;
-  gap: 6px;
 }
 
-.cg-question-card .cg-question-option {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  margin: 0;
-  font-size: 13px;
-  font-weight: 400;
-  cursor: pointer;
-}
-
-.cg-question-card .cg-question-option input {
-  margin-top: 3px;
-}
-
-.cg-question-card .cg-question-option-text {
-  display: flex;
-  flex-direction: column;
-}
-
-.cg-question-card .cg-question-option-description,
 .cg-question-card .cg-question-file-name,
 .cg-question-card .cg-question-required {
   font-size: 12px;
