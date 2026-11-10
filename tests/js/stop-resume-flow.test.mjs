@@ -39,6 +39,7 @@ test('stopping closes the stream, tells the service, and resuming opens it again
     await settle();
     assert.equal(RelaySource.instances.length, 1);
     assert.equal(doc.elements.tplGenStop.hidden, false, 'Stop is offered while the run goes');
+    assert.equal(doc.elements.tplRunBar.hidden, false, 'in the bar at the bottom of the column');
 
     click('tplGenStop');
     await settle();
@@ -61,6 +62,7 @@ test('stopping closes the stream, tells the service, and resuming opens it again
     assert.deepEqual(await run, {courseurl: '/course'});
     assert.equal(built.length, 1);
     assert.equal(doc.elements.tplGenStop.hidden, true, 'no button is left when the run ends');
+    assert.equal(doc.elements.tplRunBar.hidden, true, 'and no bar');
 });
 
 test('the thread says that it was stopped and that it resumed', async() => {

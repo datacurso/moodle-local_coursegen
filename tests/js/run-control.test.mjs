@@ -27,7 +27,7 @@ const fakeDocument = () => {
             (this.handlers.click || []).forEach((handler) => handler());
         },
     });
-    const elements = {tplGenStop: make(), tplGenResume: make()};
+    const elements = {tplRunBar: make(), tplGenStop: make(), tplGenResume: make()};
     return {elements, getElementById: (id) => elements[id] || null};
 };
 
@@ -135,20 +135,23 @@ test('the state changes are reported once each, in order', () => {
 
 test('the buttons follow the state', () => {
     const doc = fakeDocument();
-    const {tplGenStop: stop, tplGenResume: resume} = doc.elements;
+    const {tplRunBar: bar, tplGenStop: stop, tplGenResume: resume} = doc.elements;
 
     renderControl(STATE.IDLE, doc);
-    assert.deepEqual([stop.hidden, resume.hidden], [true, true]);
+    assert.deepEqual([bar.hidden, stop.hidden, resume.hidden], [true, true, true]);
 
     renderControl(STATE.RUNNING, doc);
-    assert.deepEqual([stop.hidden, stop.disabled, resume.hidden], [false, false, true]);
+    assert.deepEqual([bar.hidden, stop.hidden, stop.disabled, resume.hidden], [false, false, false, true]);
 
     renderControl(STATE.STOPPING, doc);
-    assert.deepEqual([stop.hidden, stop.disabled, resume.hidden], [false, true, true]);
+    assert.deepEqual([bar.hidden, stop.hidden, stop.disabled, resume.hidden], [false, false, true, true]);
     assert.equal(stop.attrs['aria-busy'], 'true');
 
     renderControl(STATE.STOPPED, doc);
-    assert.deepEqual([stop.hidden, resume.hidden], [true, false]);
+    assert.deepEqual([bar.hidden, stop.hidden, resume.hidden], [false, true, false]);
+
+    renderControl(STATE.IDLE, doc);
+    assert.equal(bar.hidden, true, 'the bar goes away with the run');
 });
 
 test('a page without the buttons does not break', () => {

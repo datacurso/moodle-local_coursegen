@@ -21,7 +21,8 @@
  * already made is kept, and resuming opens the stream again to make only what is missing.
  *
  * This module holds the state of that (running, stopping, stopped) and the two buttons of the header. It knows
- * nothing about streams: whoever runs a pass hands in the function that closes it.
+ * nothing about streams: whoever runs a pass hands in the function that closes it. The buttons are the ones of free
+ * mode (same classes), in a bar at the bottom of the left column where the composer would be.
  *
  * @module     local_coursegen/local/courseai/template/generation_control
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -161,8 +162,13 @@ export const createRunControl = (onChange = () => undefined) => {
  * @param {Document} doc Where the header is.
  */
 export const renderControl = (state, doc = document) => {
+    const bar = doc.getElementById('tplRunBar');
     const stop = doc.getElementById('tplGenStop');
     const resume = doc.getElementById('tplGenResume');
+    if (bar) {
+        // The bar takes the place of the composer, which is away during the run: it shows only while there is a button.
+        bar.hidden = state === STATE.IDLE;
+    }
     if (stop) {
         stop.hidden = state !== STATE.RUNNING && state !== STATE.STOPPING;
         stop.disabled = state === STATE.STOPPING;

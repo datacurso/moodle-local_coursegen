@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026110909
+
+### Changed
+- **Stop and Resume sit where free mode has them**  
+  They were drawn in the header of the right column with a style of their own. They are now the same buttons as free mode, at the bottom of the left column where the composer would be, and the bar goes away when the run ends.
+
 ## [2.0.10] - 2026110908
 
 ### Added
