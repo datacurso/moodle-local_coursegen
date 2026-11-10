@@ -24,6 +24,7 @@
     * language - Course language, as the language selector names it
     * syllabusknown - Whether the syllabus is known (sessions started before it was kept do not know it)
     * syllabus - Attached syllabus file name, empty for none
+    * images - Whether the pictures are made
     * instruction - General instruction typed by the professor, empty for none
 
     Example context (json):
@@ -32,6 +33,7 @@
         "language": "Español - Internacional (ES)",
         "syllabusknown": true,
         "syllabus": "silabo.pdf",
+        "images": true,
         "instruction": "Curso de seguridad industrial para operarios."
     }
 }}
@@ -46,6 +48,8 @@
                 <dd>{{language}}</dd>
                 <dt>{{#str}} courseai_template_summary_syllabus, local_coursegen {{/str}}</dt>
                 <dd>{{#syllabusknown}}{{#syllabus}}{{.}}{{/syllabus}}{{^syllabus}}<span class="cg-run-summary-none">{{#str}} courseai_template_summary_nosyllabus, local_coursegen {{/str}}</span>{{/syllabus}}{{/syllabusknown}}{{^syllabusknown}}<span class="cg-run-summary-none">{{#str}} courseai_template_summary_notrecorded, local_coursegen {{/str}}</span>{{/syllabusknown}}</dd>
+                <dt>{{#str}} courseai_template_summary_images, local_coursegen {{/str}}</dt>
+                <dd data-region="run-summary-images">{{#images}}{{#str}} courseai_template_summary_images_on, local_coursegen {{/str}}{{/images}}{{^images}}<span class="cg-run-summary-none">{{#str}} courseai_template_summary_images_off, local_coursegen {{/str}}</span>{{/images}}</dd>
                 <dt>{{#str}} courseai_template_summary_instruction, local_coursegen {{/str}}</dt>
                 <dd>{{#instruction}}{{.}}{{/instruction}}{{^instruction}}<span class="cg-run-summary-none">{{#str}} courseai_template_summary_noinstruction, local_coursegen {{/str}}</span>{{/instruction}}</dd>
             </dl>

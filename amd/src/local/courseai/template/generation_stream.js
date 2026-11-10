@@ -49,6 +49,7 @@ import {
     milestone,
     resetThread,
     restorePicker,
+    showImagesInSummary,
     turn,
 } from 'local_coursegen/local/courseai/template/thread';
 import {refreshPreviewLinks} from 'local_coursegen/local/courseai/template/preview';
@@ -334,7 +335,11 @@ const settleQuestions = async(data, sessionId) => {
         const reply = await askQuestions(data, {pickFile});
         try {
             // eslint-disable-next-line no-await-in-loop
-            await answerTemplateQuestions(sessionId, reply.skipped, reply.answers);
+            const taken = await answerTemplateQuestions(sessionId, reply.skipped, reply.answers);
+            if (taken && typeof taken.images === 'boolean') {
+                // eslint-disable-next-line no-await-in-loop
+                await showImagesInSummary(taken.images);
+            }
         } catch (error) {
             turn('ai', 'danger', error.message || text.required);
             continue;

@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026110910
+
+### Added
+- **The summary at the top of the conversation says whether pictures are made**  
+  It listed the template, the language, the syllabus and the instruction, but not the pictures. It now has an Images row, and it changes when an answer to the AI turns them on, also when the page is opened again.
+
 ## [2.0.10] - 2026110909
 
 ### Changed

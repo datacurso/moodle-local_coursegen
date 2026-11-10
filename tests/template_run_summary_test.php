@@ -48,6 +48,7 @@ final class template_run_summary_test extends \advanced_testcase {
         $this->assertTrue($summary['syllabusknown']);
         $this->assertSame('syllabus.pdf', $summary['syllabus']);
         $this->assertSame('Safety course', $summary['instruction']);
+        $this->assertFalse($summary['images']);
     }
 
     /**
@@ -89,5 +90,19 @@ final class template_run_summary_test extends \advanced_testcase {
         $template = new template(0, (object) ['name' => $name, 'courseid' => $course->id]);
         $template->create();
         return (int) $template->get('id');
+    }
+
+    /**
+     * The summary says whether the pictures are made.
+     */
+    public function test_the_summary_says_whether_the_pictures_are_made(): void {
+        $this->resetAfterTest();
+        $on = template_run_summary::from_coursedata(['templateid' => 0, 'payload' => ['with_images' => true]]);
+        $off = template_run_summary::from_coursedata(['templateid' => 0, 'payload' => ['with_images' => false]]);
+        $unknown = template_run_summary::from_coursedata(['templateid' => 0, 'payload' => []]);
+
+        $this->assertTrue($on['images']);
+        $this->assertFalse($off['images']);
+        $this->assertFalse($unknown['images']);
     }
 }

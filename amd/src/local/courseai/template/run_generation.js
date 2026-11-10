@@ -66,6 +66,7 @@ export const runGeneration = async(tplState, tplSelect, genBtn, state, host) => 
         template: selectedText(tplSelect),
         language: selectedText(document.getElementById('tplLangSelect')),
         syllabus: tplState.syllabusfilename || '',
+        images: Boolean(tplState.generateimages),
         instruction: tplState.prompt || '',
     };
     let opened = false;

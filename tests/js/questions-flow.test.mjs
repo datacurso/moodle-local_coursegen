@@ -7,7 +7,7 @@ import * as ajax from './stubs/core-ajax.mjs';
 import {turns} from './stubs/log.mjs';
 import {state as indicator} from './stubs/feedback-progress.mjs';
 import {picker} from './stubs/syllabus-picker.mjs';
-import {byText, findAll, makeDocument, settle} from './fake-dom.mjs';
+import {byText, findAll, makeDocument, makeElement, settle} from './fake-dom.mjs';
 
 let doc = null;
 let stream = null;
@@ -22,7 +22,7 @@ beforeEach(async() => {
     doc = makeDocument();
     globalThis.document = doc;
     globalThis.window = {requestAnimationFrame: (fn) => fn(), setTimeout, clearTimeout};
-    ajax.handlers.local_coursegen_answer_template_questions = () => ({settled: false, answered: 1});
+    ajax.handlers.local_coursegen_answer_template_questions = () => ({settled: false, answered: 1, images: true});
     ajax.handlers.local_coursegen_stop_template_generation = () => ({wasrunning: true, stopped: true});
     stream = await import('../../amd/src/local/courseai/template/generation_stream.js');
     stream.abortGenerationView('');
@@ -211,4 +211,46 @@ test('a service that asks nothing never shows a card', async() => {
     completed(RelaySource.instances[0]);
     await run;
     assert.equal(findAll(doc.elements.cgLog, (node) => /cg-question-card/.test(node.className || '')).length, 0);
+});
+
+test('what the answers changed is said in the summary at the top of the conversation', async() => {
+    const summary = makeElement('summary');
+    const original = doc.querySelector;
+    doc.querySelector = (selector) => (selector === '[data-region="run-summary-images"]' ? summary : original());
+    const {run} = await start();
+    RelaySource.instances[0].emit('message', QUESTIONS);
+    await settle();
+    press(card(), 'local_coursegen:courseai_template_questions_yes');
+    press(card(), T('continue'));
+    await settle();
+
+    assert.equal(summary.textContent, 'local_coursegen:courseai_template_summary_images_on');
+    completed(RelaySource.instances[1]);
+    await run;
+});
+
+test('turning the pictures down leaves the summary saying they are off', async() => {
+    ajax.handlers.local_coursegen_answer_template_questions = () => ({settled: false, answered: 1, images: false});
+    const summary = makeElement('summary');
+    doc.querySelector = (selector) => (selector === '[data-region="run-summary-images"]' ? summary : null);
+    const {run} = await start();
+    RelaySource.instances[0].emit('message', QUESTIONS);
+    await settle();
+    press(card(), T('continue'));
+    await settle();
+
+    assert.equal(summary.textContent, 'local_coursegen:courseai_template_summary_images_off');
+    completed(RelaySource.instances[1]);
+    await run;
+});
+
+test('a summary that is not on the page does not break the answer', async() => {
+    const {run} = await start();
+    RelaySource.instances[0].emit('message', QUESTIONS);
+    await settle();
+    press(card(), T('continue'));
+    await settle();
+    assert.equal(RelaySource.instances.length, 2);
+    completed(RelaySource.instances[1]);
+    await run;
 });

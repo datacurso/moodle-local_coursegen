@@ -111,11 +111,39 @@ class answer_template_questions extends external_api {
         }
 
         $reply = $api->answer_questions($threadid, (bool) $params['skipped'], $sent);
+        $settings = (array) ($reply['settings'] ?? []);
+        self::keep_settings($session, $settings);
 
         return [
             'settled' => !empty($reply['settled']),
             'answered' => (int) ($reply['answered'] ?? 0),
+            'images' => !empty($settings['with_images']),
         ];
+    }
+
+    /**
+     * Keep with the session what the run will be generated with once it takes the answers.
+     *
+     * The summary at the top of the conversation is read from the session when the page is opened again, and must
+     * say the pictures are on when an answer turned them on.
+     *
+     * @param course_session $session
+     * @param array $settings The options the service says the run has: with_images, lang and lang_auto.
+     */
+    private static function keep_settings(course_session $session, array $settings): void {
+        $data = json_decode((string) $session->get('coursedata'), true);
+        if (!is_array($data) || !array_key_exists('with_images', $settings)) {
+            return;
+        }
+        $payload = is_array($data['payload'] ?? null) ? $data['payload'] : [];
+        $payload['with_images'] = !empty($settings['with_images']);
+        if (isset($settings['lang']) && $settings['lang'] !== '') {
+            $payload['lang'] = (string) $settings['lang'];
+            $payload['lang_auto'] = !empty($settings['lang_auto']);
+        }
+        $data['payload'] = $payload;
+        $session->set('coursedata', json_encode($data));
+        $session->update();
     }
 
     /**
@@ -154,6 +182,7 @@ class answer_template_questions extends external_api {
         return new external_single_structure([
             'settled' => new external_value(PARAM_BOOL, 'Whether the run had already taken its answers'),
             'answered' => new external_value(PARAM_INT, 'How many questions were answered'),
+            'images' => new external_value(PARAM_BOOL, 'Whether the pictures are made once the answers are taken'),
         ]);
     }
 }

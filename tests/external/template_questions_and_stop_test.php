@@ -198,6 +198,7 @@ final class template_questions_and_stop_test extends \advanced_testcase {
 
         $this->assertArrayHasKey('settled', $answer->keys);
         $this->assertArrayHasKey('answered', $answer->keys);
+        $this->assertArrayHasKey('images', $answer->keys);
         $this->assertArrayHasKey('wasrunning', $stop->keys);
         $this->assertArrayHasKey('stopped', $stop->keys);
     }

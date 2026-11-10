@@ -150,9 +150,28 @@ export const announceTemplate = async(summary) => {
         language: summary.language || '',
         syllabusknown: true,
         syllabus: summary.syllabus || '',
+        images: Boolean(summary.images),
         instruction: String(summary.instruction || '').trim(),
     });
     Templates.prependNodeContents(node, html, js);
+};
+
+/**
+ * Say in the summary of the run whether the pictures are made, when an answer changed it after the run started.
+ *
+ * @param {boolean} on
+ * @returns {Promise<void>}
+ */
+export const showImagesInSummary = async(on) => {
+    const cell = document.querySelector('[data-region="run-summary-images"]');
+    if (!cell) {
+        return;
+    }
+    const [yes, no] = await getStrings([
+        {key: 'courseai_template_summary_images_on', component: 'local_coursegen'},
+        {key: 'courseai_template_summary_images_off', component: 'local_coursegen'},
+    ]);
+    cell.textContent = on ? yes : no;
 };
 
 /**
