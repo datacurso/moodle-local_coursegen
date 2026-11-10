@@ -175,6 +175,7 @@ final class plugin_disabled_external_test extends \advanced_testcase {
      * @return void
      */
     public function test_admin_web_service_is_not_refused_when_disabled(): void {
+        $this->require_datacurso_provider();
         \aiprovider_datacurso\local\plugin_settings::set_enabled('local_coursegen', false);
 
         $this->assertNotSame('plugindisabled', $this->failure_of(manage_image_generation::class));
