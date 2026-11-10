@@ -16,6 +16,7 @@
 
 namespace local_coursegen\external;
 
+use aiprovider_datacurso\local\plugin_settings;
 use context_system;
 use context_user;
 use external_api;
@@ -57,9 +58,12 @@ class courseai_syllabus_upload extends external_api {
      * @param int $sessionid Course session ID
      * @param int $draftitemid Draft file area ID
      * @return array Result with success status and filename
+     * @throws \moodle_exception plugindisabled or plugindisabled_admin when the plugin is disabled.
      */
     public static function execute(int $sessionid, int $draftitemid): array {
         global $DB, $USER;
+
+        plugin_settings::require_enabled('local_coursegen');
 
         // Validate parameters.
         $params = self::validate_parameters(self::execute_parameters(), [

@@ -22,10 +22,13 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+use aiprovider_datacurso\local\plugin_settings;
+
 require('../../config.php');
 require_once($CFG->libdir . '/filelib.php');
 
 require_login();
+plugin_settings::require_enabled('local_coursegen');
 
 // Check permissions: system-level or category-level (Workplace tenant administrators).
 \local_coursegen\local\permission::require_create_course_with_ai();

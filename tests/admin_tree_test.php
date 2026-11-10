@@ -33,6 +33,18 @@ require_once($CFG->libdir . '/adminlib.php');
 final class admin_tree_test extends \advanced_testcase {
     use \local_coursegen\tests\requires_workplace;
 
+    /**
+     * Skip the test when the Datacurso AI provider is not installed: without it the
+     * "Create course with AI" entry is not registered (its enable gate lives in the provider).
+     *
+     * The CI pipeline does not install declared dependencies.
+     */
+    private function require_datacurso_provider(): void {
+        if (!class_exists(\aiprovider_datacurso\local\plugin_settings::class)) {
+            $this->markTestSkipped('aiprovider_datacurso is not installed.');
+        }
+    }
+
     #[\Override]
     protected function tearDown(): void {
         \local_coursegen\admin\external_page::reset_for_testing();
@@ -63,6 +75,7 @@ final class admin_tree_test extends \advanced_testcase {
      */
     public function test_tenant_admin_can_access_tenant_pages(): void {
         $this->require_tool_wp();
+        $this->require_datacurso_provider();
         $this->resetAfterTest();
         $this->login_as_new_tenant_admin();
 
@@ -163,6 +176,7 @@ final class admin_tree_test extends \advanced_testcase {
      * Without tool_wp the external pages are core admin pages gated by the plugin capabilities.
      */
     public function test_external_pages_fall_back_to_core_pages_without_workplace(): void {
+        $this->require_datacurso_provider();
         $this->resetAfterTest();
         \local_coursegen\admin\external_page::simulate_workplace_unavailable_for_testing();
         $sections = [

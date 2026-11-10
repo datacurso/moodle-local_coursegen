@@ -25,6 +25,7 @@
 
 namespace local_coursegen\external;
 
+use aiprovider_datacurso\local\plugin_settings;
 use context_system;
 use external_api;
 use external_function_parameters;
@@ -54,9 +55,12 @@ class courseai_filepicker_init extends external_api {
      * Initialise and return filepicker options.
      *
      * @return array
+     * @throws \moodle_exception plugindisabled or plugindisabled_admin when the plugin is disabled.
      */
     public static function execute(): array {
         global $PAGE;
+
+        plugin_settings::require_enabled('local_coursegen');
 
         $params = self::validate_parameters(self::execute_parameters(), []);
 

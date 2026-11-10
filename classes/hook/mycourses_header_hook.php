@@ -16,6 +16,7 @@
 
 namespace local_coursegen\hook;
 
+use aiprovider_datacurso\local\plugin_settings;
 use core\hook\output\before_http_headers;
 use local_coursegen\local\permission;
 
@@ -83,11 +84,15 @@ class mycourses_header_hook {
     /**
      * Whether the button should be injected into the given page for the current user.
      *
+     * Never while the plugin is disabled in the Datacurso AI provider.
+     *
      * @param \moodle_page $page The page being rendered.
      * @return bool
      */
     public static function should_inject(\moodle_page $page): bool {
-        return self::is_my_courses_page($page) && self::user_can_see_button();
+        return plugin_settings::is_enabled('local_coursegen')
+            && self::is_my_courses_page($page)
+            && self::user_can_see_button();
     }
 
     /**

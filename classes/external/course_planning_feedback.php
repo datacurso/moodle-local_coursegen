@@ -25,6 +25,7 @@
 
 namespace local_coursegen\external;
 
+use aiprovider_datacurso\local\plugin_settings;
 use context_system;
 use external_api;
 use external_function_parameters;
@@ -74,12 +75,15 @@ class course_planning_feedback extends external_api {
      * @param int $recordid Session record id in local_coursegen_course_sessions
      * @param array $pendingaction The ActionIntent to run
      * @return array
+     * @throws \moodle_exception plugindisabled or plugindisabled_admin when the plugin is disabled.
      */
     public static function execute(
         int $recordid,
         array $pendingaction
     ): array {
         global $USER;
+
+        plugin_settings::require_enabled('local_coursegen');
 
         $params = self::validate_parameters(self::execute_parameters(), [
             'recordid' => $recordid,

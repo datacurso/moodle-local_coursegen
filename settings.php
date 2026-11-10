@@ -23,6 +23,8 @@
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+use aiprovider_datacurso\local\plugin_settings;
+
 defined('MOODLE_INTERNAL') || die();
 
 $pluginname = 'local_coursegen';
@@ -34,13 +36,17 @@ $pluginname = 'local_coursegen';
 // The "Restore course" sibling only exists for users holding moodle/site:config.
 // The external pages are built by \local_coursegen\admin\external_page, which
 // falls back to core admin pages gated by the capability on plain Moodle LMS.
-$ADMIN->add('courses', \local_coursegen\admin\external_page::create(
-    'local_coursegen_addnewcourseai',
-    get_string('courseai_admin_addnewcourse', 'local_coursegen'),
-    (new moodle_url('/local/coursegen/aicoursecreation.php'))->out(false),
-    \local_coursegen\local\permission::CAP_CREATE_WITH_AI,
-    static fn(): bool => \local_coursegen\local\permission::can_create_course_with_ai()
-), $ADMIN->locate('restorecourse') ? 'restorecourse' : null);
+// The entry is hidden while the plugin is disabled in the Datacurso AI provider, or the provider is missing
+// (the admin tree is also built while installing a site, before the dependency can be checked).
+if (class_exists(plugin_settings::class) && plugin_settings::is_enabled('local_coursegen')) {
+    $ADMIN->add('courses', \local_coursegen\admin\external_page::create(
+        'local_coursegen_addnewcourseai',
+        get_string('courseai_admin_addnewcourse', 'local_coursegen'),
+        (new moodle_url('/local/coursegen/aicoursecreation.php'))->out(false),
+        \local_coursegen\local\permission::CAP_CREATE_WITH_AI,
+        static fn(): bool => \local_coursegen\local\permission::can_create_course_with_ai()
+    ), $ADMIN->locate('restorecourse') ? 'restorecourse' : null);
+}
 
 // The plugin category also hosts pages meant for tenant administrators, so it is
 // created for every admin tree user (an admin category hides itself when none of
