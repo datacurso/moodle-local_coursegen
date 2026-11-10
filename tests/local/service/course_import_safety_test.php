@@ -208,8 +208,29 @@ final class course_import_safety_test extends \advanced_testcase {
         try {
             $lock->release();
         } catch (\Throwable $e) {
-            // Expected: the connection is gone. The lock is marked released before the call.
+            // Expected: the connection is gone, and the database freed the lock with it. The factory
+            // still lists the lock and would try to release it again at shutdown, through the closed
+            // connection, so it forgets it as the dead process would have.
             unset($e);
+            $factory = (fn() => $this->factory)->call($lock);
+            if ($factory instanceof \core\lock\timing_wrapper_lock_factory) {
+                $factory = $factory->get_real_factory();
+            }
+            if (property_exists($factory, 'openlocks')) {
+                (fn() => $this->openlocks = [])->call($factory);
+            }
+        }
+    }
+
+    /**
+     * Skip the test when the Datacurso AI provider that keeps the plugin state is not installed.
+     *
+     * The queued task does nothing while the plugin is not enabled in the provider, and the CI
+     * pipeline does not install declared dependencies.
+     */
+    private function require_datacurso_provider(): void {
+        if (!class_exists(\aiprovider_datacurso\local\plugin_settings::class)) {
+            $this->markTestSkipped('aiprovider_datacurso is not installed.');
         }
     }
 
@@ -471,6 +492,7 @@ final class course_import_safety_test extends \advanced_testcase {
      * The queued task does nothing once the feature has been switched off.
      */
     public function test_task_refuses_once_the_feature_is_disabled(): void {
+        $this->require_datacurso_provider();
         $this->resetAfterTest();
         $this->setAdminUser();
         [$target, $staging] = $this->create_course_pair();
@@ -489,6 +511,7 @@ final class course_import_safety_test extends \advanced_testcase {
      * The queued task does nothing once the user may no longer create courses with AI.
      */
     public function test_task_refuses_once_createcoursewithai_is_gone(): void {
+        $this->require_datacurso_provider();
         $this->resetAfterTest();
         [$target, $staging, $category] = $this->create_course_pair();
         set_config('enableimportexisting', 1, 'local_coursegen');
@@ -517,6 +540,7 @@ final class course_import_safety_test extends \advanced_testcase {
      * The queued task marks the import failed, instead of failing itself, when the target permissions are gone.
      */
     public function test_task_refuses_once_the_target_permissions_are_gone(): void {
+        $this->require_datacurso_provider();
         $this->resetAfterTest();
         [$target, $staging] = $this->create_course_pair();
         set_config('enableimportexisting', 1, 'local_coursegen');
