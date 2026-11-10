@@ -77,6 +77,19 @@ const enhanceSelect = (FormAutocomplete, select, ajaxModule, placeholder, noResu
 };
 
 /**
+ * Whether a category is picked in the new-course category field of the review panel.
+ *
+ * Read from the DOM each time: the field is enhanced by core/form-autocomplete, which
+ * keeps the original select in sync and dispatches its change event.
+ *
+ * @returns {boolean}
+ */
+const isNewCategoryPicked = () => {
+    const select = document.getElementById('reviewCategory');
+    return parseInt(select?.value || '', 10) > 0;
+};
+
+/**
  * Wire the import-into-existing-course controls of the review panel (ticket #9539).
  *
  * Returns null when the site setting is off (the markup is not rendered) so the
@@ -86,7 +99,7 @@ const enhanceSelect = (FormAutocomplete, select, ajaxModule, placeholder, noResu
  * @param {HTMLButtonElement} confirmBtn
  * @param {Object} texts
  * @param {Object} FormAutocomplete core/form-autocomplete module
- * @returns {Object|null} {reset, getMode, getTargetCourseId} or null when disabled
+ * @returns {Object|null} {reset, getMode, getTargetCourseId, syncConfirm} or null when disabled
  */
 const setupImportControls = (panel, confirmBtn, texts, FormAutocomplete) => {
     if (panel.dataset.importExistingEnabled !== '1') {
@@ -116,7 +129,7 @@ const setupImportControls = (panel, confirmBtn, texts, FormAutocomplete) => {
         return id > 0 ? id : 0;
     };
     const syncConfirm = () => {
-        confirmBtn.disabled = getMode() === 'import' && getTargetCourseId() === 0;
+        confirmBtn.disabled = getMode() === 'import' ? getTargetCourseId() === 0 : !isNewCategoryPicked();
     };
     const buildCourseField = () => {
         courseGroup.innerHTML = courseFieldHtml;
@@ -176,6 +189,7 @@ const setupImportControls = (panel, confirmBtn, texts, FormAutocomplete) => {
         },
         getMode,
         getTargetCourseId,
+        syncConfirm,
     };
 };
 
@@ -237,9 +251,18 @@ export const showCourseReviewPanel = async(state, elements, texts, getCourseSett
         // Same category list as the new-course field: already filtered by moodle/course:create,
         // which is exactly the permission the target's category needs.
         importControls.reset(categories);
-    } else {
-        confirmBtn.disabled = false;
     }
+
+    // A new course is never submitted without a category: the one proposed by the AI
+    // service is pre-selected only when it can be used, so the field may start empty.
+    const syncConfirm = () => {
+        if (importControls) {
+            importControls.syncConfirm();
+            return;
+        }
+        confirmBtn.disabled = !isNewCategoryPicked();
+    };
+    syncConfirm();
 
     return new Promise((resolve) => {
         let resolved = false;
@@ -247,6 +270,7 @@ export const showCourseReviewPanel = async(state, elements, texts, getCourseSett
         const cleanup = () => {
             confirmBtn.removeEventListener('click', onConfirm);
             cancelBtn.removeEventListener('click', onCancel);
+            categorySelect.removeEventListener('change', syncConfirm);
         };
         const hidePanel = () => { panel.style.display = 'none'; };
 
@@ -256,6 +280,11 @@ export const showCourseReviewPanel = async(state, elements, texts, getCourseSett
             const targetCourseId = importControls ? importControls.getTargetCourseId() : 0;
             if (targetMode === 'import' && !targetCourseId) {
                 // Never submit an import without a target; the button is disabled anyway.
+                confirmBtn.disabled = true;
+                return;
+            }
+            if (targetMode !== 'import' && !isNewCategoryPicked()) {
+                // Never submit a new course without a category; the button is disabled anyway.
                 confirmBtn.disabled = true;
                 return;
             }
@@ -290,6 +319,7 @@ export const showCourseReviewPanel = async(state, elements, texts, getCourseSett
 
         confirmBtn.addEventListener('click', onConfirm);
         cancelBtn.addEventListener('click', onCancel);
+        categorySelect.addEventListener('change', syncConfirm);
         panel.style.display = '';
         setTimeout(() => fullnameInput.focus(), 100);
     });

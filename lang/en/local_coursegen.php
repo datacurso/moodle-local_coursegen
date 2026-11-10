@@ -477,6 +477,7 @@ $string['enter_message'] = 'Enter your message';
 $string['error'] = 'Error';
 $string['error_activity_creation_failed'] = 'This activity could not be created.';
 $string['error_api_response'] = 'Invalid response from AI service';
+$string['error_category_unavailable'] = 'The category of the new course does not exist or you cannot create courses in it. Choose another category.';
 $string['error_context_type_required'] = 'Please select a context type to continue (Syllabus or Custom prompt).';
 $string['error_course_creation_failed'] = 'The course could not be created. Please try again later.';
 $string['error_creating_course'] = '❌ Error creating course';
