@@ -36,6 +36,17 @@ use local_coursegen\hook\mycourses_header_hook;
  * @covers     \local_coursegen\hook\mycourses_header_hook
  */
 final class mycourses_header_hook_test extends \advanced_testcase {
+    /**
+     * Skip the test when the Datacurso AI provider, whose enable gate the tested code calls, is not installed.
+     *
+     * The CI pipeline does not install declared dependencies.
+     */
+    private function require_datacurso_provider(): void {
+        if (!class_exists(\aiprovider_datacurso\local\plugin_settings::class)) {
+            $this->markTestSkipped('aiprovider_datacurso is not installed.');
+        }
+    }
+
     /** @var string Button fragment used by the splice tests; carries the template's form id. */
     private const FRAGMENT = '<form action="/local/coursegen/aicoursecreation.php" method="get" '
         . 'id="local_coursegen_aicourseform"><button type="submit">Create with AI</button></form>';
@@ -244,6 +255,7 @@ final class mycourses_header_hook_test extends \advanced_testcase {
      * An admin on My courses gets the button.
      */
     public function test_should_inject_for_admin_on_my_courses(): void {
+        $this->require_datacurso_provider();
         global $PAGE;
 
         $this->resetAfterTest();
@@ -257,6 +269,7 @@ final class mycourses_header_hook_test extends \advanced_testcase {
      * A non-admin user holding both capabilities gets the button.
      */
     public function test_should_inject_for_user_with_both_capabilities(): void {
+        $this->require_datacurso_provider();
         global $PAGE;
 
         $this->resetAfterTest();
@@ -274,6 +287,7 @@ final class mycourses_header_hook_test extends \advanced_testcase {
      * A user holding both capabilities in a single category (not at system level) gets the button.
      */
     public function test_should_inject_for_user_with_category_level_capabilities(): void {
+        $this->require_datacurso_provider();
         global $PAGE;
 
         $this->resetAfterTest();
@@ -295,6 +309,7 @@ final class mycourses_header_hook_test extends \advanced_testcase {
      * Pages other than My courses are never decorated.
      */
     public function test_should_not_inject_on_other_pages(): void {
+        $this->require_datacurso_provider();
         global $PAGE;
 
         $this->resetAfterTest();
@@ -308,6 +323,7 @@ final class mycourses_header_hook_test extends \advanced_testcase {
      * A user without local/coursegen:createcoursewithai does not get the button.
      */
     public function test_should_not_inject_without_createcoursewithai(): void {
+        $this->require_datacurso_provider();
         global $PAGE;
 
         $this->resetAfterTest();
@@ -322,6 +338,7 @@ final class mycourses_header_hook_test extends \advanced_testcase {
      * A user without moodle/course:create does not get the button.
      */
     public function test_should_not_inject_without_course_create(): void {
+        $this->require_datacurso_provider();
         global $PAGE;
 
         $this->resetAfterTest();
@@ -336,6 +353,7 @@ final class mycourses_header_hook_test extends \advanced_testcase {
      * A user with neither capability does not get the button.
      */
     public function test_should_not_inject_without_any_capability(): void {
+        $this->require_datacurso_provider();
         global $PAGE;
 
         $this->resetAfterTest();
@@ -349,6 +367,7 @@ final class mycourses_header_hook_test extends \advanced_testcase {
      * A page whose URL has not been set is not decorated (and no debugging notice is raised).
      */
     public function test_should_not_inject_when_page_url_is_not_set(): void {
+        $this->require_datacurso_provider();
         $this->resetAfterTest();
         $this->setAdminUser();
 
@@ -378,5 +397,24 @@ final class mycourses_header_hook_test extends \advanced_testcase {
         foreach ($footercallbacks as $callback) {
             $this->assertStringNotContainsString('mycourses_header_hook', $callback);
         }
+    }
+
+    /**
+     * While the plugin is disabled in the Datacurso AI provider not even an admin gets the button.
+     *
+     * The enabled path is test_should_inject_for_admin_on_my_courses().
+     *
+     * @return void
+     */
+    public function test_should_not_inject_when_plugin_disabled(): void {
+        $this->require_datacurso_provider();
+        global $PAGE;
+
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        $this->set_page_url('/my/courses.php');
+        \aiprovider_datacurso\local\plugin_settings::set_enabled('local_coursegen', false);
+
+        $this->assertFalse(mycourses_header_hook::should_inject($PAGE));
     }
 }

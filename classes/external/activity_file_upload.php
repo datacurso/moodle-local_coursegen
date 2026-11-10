@@ -25,6 +25,7 @@
 
 namespace local_coursegen\external;
 
+use aiprovider_datacurso\local\plugin_settings;
 use context_course;
 use context_user;
 use external_api;
@@ -62,9 +63,12 @@ class activity_file_upload extends external_api {
      * @param string $jobid Activity generation job id
      * @param int $draftitemid Draft item id containing the uploaded file
      * @return array
+     * @throws \moodle_exception plugindisabled or plugindisabled_admin when the plugin is disabled.
      */
     public static function execute(int $courseid, string $jobid, int $draftitemid): array {
         global $USER;
+
+        plugin_settings::require_enabled('local_coursegen');
 
         $params = self::validate_parameters(self::execute_parameters(), [
             'courseid' => $courseid,

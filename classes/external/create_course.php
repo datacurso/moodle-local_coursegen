@@ -24,6 +24,7 @@
 
 namespace local_coursegen\external;
 
+use aiprovider_datacurso\local\plugin_settings;
 use external_api;
 use external_function_parameters;
 use external_value;
@@ -69,9 +70,12 @@ class create_course extends external_api {
      * @param int $category Optional override for the course category ID
      * @return array Result of the course content application
      * @throws moodle_exception
+     * @throws \moodle_exception plugindisabled or plugindisabled_admin when the plugin is disabled.
      */
     public static function execute($recordid, $fullname = '', $shortname = '', $category = 0) {
         global $USER;
+
+        plugin_settings::require_enabled('local_coursegen');
 
         $params = self::validate_parameters(self::execute_parameters(), [
             'recordid' => $recordid,

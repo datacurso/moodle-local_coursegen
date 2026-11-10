@@ -1,3 +1,14 @@
+## 2.0.13-wp
+
+**Released on:** 2026-11-09
+
+**Compatibility note:** This version is compatible only with **Moodle Workplace 4.5**.
+
+## Added
+
+- **The plugin can be switched off from the Datacurso AI provider**
+  The plugin can now be switched off from the Datacurso AI provider (the Enabled switch of Course Creator AI in the provider's plugins list); the plugin has no "Enabled" setting of its own. The switch lives in the provider per tenant: turning it off for one tenant affects only the users of that tenant, and tenants without their own value follow the provider's site default. The plugin never had a switch of its own, so there are no old values to migrate on upgrade. While it is off, the *Create with AI* button on My courses (or on the Dashboard when My courses is disabled), the *Create with AI* entry of the Workplace launcher, the *Create course with AI* entry under Site administration > Courses and the activity AI button on course pages are hidden; the course creation page and every web service of the course and activity creation flows refuse with the Datacurso AI provider's message (users are told to contact the administrator, and site administrators get a link to the provider's plugins list); and syllabus files are no longer served. The plugin's per-tenant administration pages (general and development settings, system instructions and image generation, with its web service) stay available so it can be configured before it is switched on. With the plugin on, nothing changes. Requires `aiprovider_datacurso` 2026110901.
+
 ## 2.0.12-wp
 
 **Released on:** 2026-11-04

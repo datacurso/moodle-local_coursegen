@@ -45,6 +45,17 @@ require_once(__DIR__ . '/fixtures/aiprovider_datacurso_stub.php');
  * @runTestsInSeparateProcesses
  */
 final class error_message_disclosure_test extends \advanced_testcase {
+    /**
+     * Skip the test when the Datacurso AI provider, whose enable gate the tested code calls, is not installed.
+     *
+     * The CI pipeline does not install declared dependencies.
+     */
+    private function require_datacurso_provider(): void {
+        if (!class_exists(\aiprovider_datacurso\local\plugin_settings::class)) {
+            $this->markTestSkipped('aiprovider_datacurso is not installed.');
+        }
+    }
+
     /** @var string Technical marker that must never surface in a client response. */
     private const TECHNICALDETAIL = 'TECH-SECRET curl error 500 at https://internal-api.invalid/course/init';
 
@@ -53,6 +64,8 @@ final class error_message_disclosure_test extends \advanced_testcase {
      */
     protected function setUp(): void {
         parent::setUp();
+        // Reset even when a test skips before its own resetAfterTest(): setUp() writes to the DB.
+        $this->resetAfterTest();
         require_once(__DIR__ . '/fixtures/testable_create_mod.php');
 
         // Any accidental real API call must fail fast instead of reaching the network.
@@ -94,6 +107,7 @@ final class error_message_disclosure_test extends \advanced_testcase {
      * technical detail stays out of the response.
      */
     public function test_create_mod_service_error_returns_localized_message(): void {
+        $this->require_datacurso_provider();
         $this->resetAfterTest();
 
         $generator = $this->getDataGenerator();
@@ -124,6 +138,7 @@ final class error_message_disclosure_test extends \advanced_testcase {
      * so the teacher still learns why the request was rejected.
      */
     public function test_create_mod_permission_error_keeps_permission_message(): void {
+        $this->require_datacurso_provider();
         $this->resetAfterTest();
 
         $generator = $this->getDataGenerator();
@@ -149,6 +164,7 @@ final class error_message_disclosure_test extends \advanced_testcase {
      * and the technical detail stays out of the response.
      */
     public function test_start_course_planning_error_returns_localized_message(): void {
+        $this->require_datacurso_provider();
         $this->resetAfterTest();
         $this->setAdminUser();
 

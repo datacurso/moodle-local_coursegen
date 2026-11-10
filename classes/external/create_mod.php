@@ -16,6 +16,7 @@
 
 namespace local_coursegen\external;
 
+use aiprovider_datacurso\local\plugin_settings;
 use context_course;
 use external_api;
 use external_function_parameters;
@@ -64,9 +65,13 @@ class create_mod extends external_api {
      * @param int|null $beforemod Before module id where the module will be created
      *
      * @return array
+     * @throws \moodle_exception plugindisabled or plugindisabled_admin when the plugin is disabled.
      */
     public static function execute(int $courseid, int $sectionnum, string $jobid, ?int $beforemod = null) {
         global $DB, $USER;
+
+        plugin_settings::require_enabled('local_coursegen');
+
         $params = self::validate_parameters(self::execute_parameters(), [
             'courseid' => $courseid,
             'sectionnum' => $sectionnum,
