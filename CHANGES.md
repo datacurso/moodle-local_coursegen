@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026110905
+
+### Fixed
+- **The generation of a course from a template shows from the click**  
+  The page stayed empty until the service answered, which takes close to a minute while the syllabus is sent to the AI. The generating page, with its "Starting the generation…" step, now opens as soon as the button is pressed, and it closes again with the error if the run cannot start.
+
 ## [2.0.10] - 2026110904
 
 ### Changed

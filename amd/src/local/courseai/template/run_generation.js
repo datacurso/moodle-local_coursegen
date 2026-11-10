@@ -24,7 +24,7 @@
 import {announceSession} from 'local_coursegen/local/courseai/template/session_name';
 import Notification from 'core/notification';
 import {startTemplateGeneration} from './repository';
-import {GenerationStopped, runGenerationStream} from './generation_stream';
+import {GenerationStopped, abortGenerationView, beginGenerationView, runGenerationStream} from './generation_stream';
 import {usePreviewSession} from './preview';
 import {reviewAndCreate} from './finish';
 
@@ -62,7 +62,17 @@ export const runGeneration = async(tplState, tplSelect, genBtn, state, host) => 
         return;
     }
     genBtn.disabled = true;
+    const context = {
+        template: selectedText(tplSelect),
+        language: selectedText(document.getElementById('tplLangSelect')),
+        syllabus: tplState.syllabusfilename || '',
+        instruction: tplState.prompt || '',
+    };
+    let opened = false;
     try {
+        // The page shows the generation from the click: sending the material to the AI can take a while.
+        await beginGenerationView(context);
+        opened = true;
         const started = await startTemplateGeneration(
             templateId,
             tplState.prompt || '',
@@ -76,17 +86,16 @@ export const runGeneration = async(tplState, tplSelect, genBtn, state, host) => 
             started.streamurl,
             () => reviewAndCreate(host, state, tplState, started.sessionid),
             started.sessionid,
-            {
-                template: selectedText(tplSelect),
-                language: selectedText(document.getElementById('tplLangSelect')),
-                syllabus: tplState.syllabusfilename || '',
-                instruction: tplState.prompt || '',
-            }
+            context,
+            true
         );
     } catch (e) {
         genBtn.disabled = false;
         // After an error the person was already offered to try again, and closed it: nothing more to say.
         if (!(e instanceof GenerationStopped)) {
+            if (opened) {
+                abortGenerationView('');
+            }
             Notification.exception(e);
         }
     }
