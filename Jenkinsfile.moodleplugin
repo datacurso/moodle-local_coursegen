@@ -2,4 +2,5 @@
 moodlePluginCI(moodleVersions: [
   [version: 'MOODLE_405_STABLE', dbs: ['mariadb', 'pgsql']],
   [version: 'MOODLE_502_STABLE', dbs: ['mariadb']],
+  [version: 'MOODLE_503_STABLE', dbs: ['mariadb']],
 ])
