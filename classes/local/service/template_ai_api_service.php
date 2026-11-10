@@ -150,6 +150,36 @@ class template_ai_api_service {
     }
 
     /**
+     * Answer the questions a run asked before it started, or go on without answering.
+     *
+     * Writing the answers is all this does; opening the stream again is what goes on with the run.
+     *
+     * @param string $threadid
+     * @param bool $skipped Go on without answering.
+     * @param array $answers List of ['question_id' => string, 'value' => mixed].
+     * @return array Decoded response: answered, skipped and settled.
+     */
+    public function answer_questions(string $threadid, bool $skipped, array $answers): array {
+        return (array) $this->client->request('POST', '/course-template/answers', [
+            'thread_id' => $threadid,
+            'skipped' => $skipped,
+            'answers' => $answers,
+        ]);
+    }
+
+    /**
+     * Stop the run of a session, and wait for the service to say that nothing of it goes on.
+     *
+     * What the run already made is kept; opening the stream again goes on with what is missing.
+     *
+     * @param string $threadid
+     * @return array Decoded response: was_running and stopped.
+     */
+    public function stop(string $threadid): array {
+        return (array) $this->client->request('POST', '/course-template/stop/' . $threadid, []);
+    }
+
+    /**
      * The URL whose consumption drives one session's generation.
      *
      * It is the relay of this plugin, never the service: the relay checks who owns the run, keeps the service URL and

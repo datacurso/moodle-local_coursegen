@@ -154,18 +154,7 @@ class start_template_generation extends external_api {
      * @return \stored_file|null
      */
     private static function draft_file(int $draftitemid): ?\stored_file {
-        if ($draftitemid <= 0) {
-            return null;
-        }
-        global $USER;
-        $usercontext = \context_user::instance($USER->id);
-        $fs = get_file_storage();
-        $files = $fs->get_area_files($usercontext->id, 'user', 'draft', $draftitemid, 'itemid', false);
-        $file = reset($files);
-        if (!$file) {
-            return null;
-        }
-        return $file;
+        return \local_coursegen\local\service\draft_file::first($draftitemid);
     }
 
     /**

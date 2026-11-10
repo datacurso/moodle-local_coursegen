@@ -14,6 +14,10 @@ const STUBS = {
     'core/str': new URL('./stubs/core-str.mjs', import.meta.url),
     'local_coursegen/local/courseai/ui/log': new URL('./stubs/log.mjs', import.meta.url),
     'core/templates': new URL('./stubs/core-templates.mjs', import.meta.url),
+    'local_coursegen/local/courseai/ui/feedback-progress': new URL('./stubs/feedback-progress.mjs', import.meta.url),
+    'local_coursegen/local/courseai/template/syllabus_picker': new URL('./stubs/syllabus-picker.mjs', import.meta.url),
+    'core/ajax': new URL('./stubs/core-ajax.mjs', import.meta.url),
+    'core/notification': new URL('./stubs/core-notification.mjs', import.meta.url),
     'local_coursegen/local/courseai/stream/relay-source': new URL('./stubs/relay-source.mjs', import.meta.url),
 };
 

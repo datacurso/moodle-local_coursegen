@@ -124,6 +124,34 @@ export const retryTemplateGeneration = (sessionId) => fetchMany([{
  * @param {string} shortname
  * @returns {Promise<Object>} {saved}
  */
+/**
+ * Tell the service to stop the run of a session; it answers once nothing of it is running any more.
+ *
+ * @param {number} sessionId
+ * @returns {Promise<Object>} {wasrunning, stopped}
+ */
+export const stopTemplateGeneration = (sessionId) => fetchMany([{
+    methodname: 'local_coursegen_stop_template_generation',
+    args: {sessionid: sessionId},
+}])[0];
+
+/**
+ * Answer the questions a run asked before it started, or go on without answering.
+ *
+ * @param {number} sessionId
+ * @param {boolean} skipped
+ * @param {Array<Object>} answers [{question_id, value}]; a file answer carries {draftitemid, filename}.
+ * @returns {Promise<Object>} {settled, answered}
+ */
+export const answerTemplateQuestions = (sessionId, skipped, answers) => fetchMany([{
+    methodname: 'local_coursegen_answer_template_questions',
+    args: {
+        sessionid: sessionId,
+        skipped: Boolean(skipped),
+        answers: answers.map((answer) => ({questionid: answer.question_id, value: JSON.stringify(answer.value)})),
+    },
+}])[0];
+
 export const nameTemplateSession = (sessionId, fullname, shortname) => fetchMany([{
     methodname: 'local_coursegen_name_template_session',
     args: {sessionid: sessionId, fullname: fullname, shortname: shortname},

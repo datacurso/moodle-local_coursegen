@@ -980,6 +980,15 @@
             <h2 class="prv-header-title" id="tplGenTitle"></h2>
             <p class="prv-header-sub" id="tplGenStage" aria-live="polite"></p>
           </div>
+          {{! Stop the run for certain (the service cancels everything under it), and go on with only what is missing. }}
+          <div class="prv-header-actions">
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="tplGenStop" hidden>
+              {{#str}}courseai_template_stop, local_coursegen{{/str}}
+            </button>
+            <button type="button" class="btn btn-primary btn-sm" id="tplGenResume" hidden>
+              {{#str}}courseai_template_resume, local_coursegen{{/str}}
+            </button>
+          </div>
         </div>
 
         {{! Dynamic structure — populated by JS when template is selected }}

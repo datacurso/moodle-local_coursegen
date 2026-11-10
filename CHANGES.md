@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026110908
+
+### Added
+- **The AI asks before it starts, when what was asked for does not fit**  
+  When the instruction or the template asks for something the request was not given (pictures asked for and turned off, a document the instructions lean on and nobody attached, a language that contradicts what was written), the generation now stops and asks, as one more message of the conversation. A question can be a switch, one choice, several choices, a file or some text, and the person answers or goes on without answering. The questions come from the AI service, so a new kind of question needs no change here. A file is attached with the same filepicker as the syllabus.
+
+## [2.0.10] - 2026110907
+
+### Added
+- **A generation from a template can be stopped, and resumed**  
+  The header of the generation now has a Stop button from the moment Generate is pressed, and a Resume button once it is stopped. Stopping closes the stream at once and tells the AI service, which cancels every request it had under the run and answers only when nothing is going any more, so nothing keeps spending the license. What was already made is kept; Resume makes only what is missing. If the service cannot confirm the stop, the thread says so.
+
+### Fixed
+- **The relay notices that the browser left even while the service is silent**  
+  PHP only learns that the browser left when it writes to it, so a long wait for the AI left the relay connected and the service generating for nobody. The relay now writes a comment to the browser every second, which the browser ignores, and ends the transfer as soon as the browser is gone.
+
 ## [2.0.10] - 2026110906
 
 ### Fixed

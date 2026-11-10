@@ -52,7 +52,20 @@ import {
     turn,
 } from 'local_coursegen/local/courseai/template/thread';
 import {refreshPreviewLinks} from 'local_coursegen/local/courseai/template/preview';
-import {retryTemplateGeneration, sendTemplateReviewFeedback} from 'local_coursegen/local/courseai/template/repository';
+import {
+    answerTemplateQuestions,
+    retryTemplateGeneration,
+    sendTemplateReviewFeedback,
+    stopTemplateGeneration,
+} from 'local_coursegen/local/courseai/template/repository';
+import {askQuestions, getQuestionStrings, summarize} from 'local_coursegen/local/courseai/template/generation_questions';
+import {pickFile} from 'local_coursegen/local/courseai/template/syllabus_picker';
+import {
+    STATE,
+    bindControlButtons,
+    createRunControl,
+    renderControl,
+} from 'local_coursegen/local/courseai/template/generation_control';
 import {askToRetry} from 'local_coursegen/local/courseai/template/generation_retry';
 import {resetStatus} from 'local_coursegen/local/courseai/template/generation_status';
 import {applySessionName} from 'local_coursegen/local/courseai/template/session_name';
@@ -77,10 +90,52 @@ const STAGE_STRINGS = {
     section_images: 'courseai_template_stage_section_images',
     saving: 'courseai_template_stage_saving',
     connecting: 'courseai_template_stage_connecting',
+    stopping: 'courseai_template_stage_stopping',
+    paused: 'courseai_template_stage_paused',
+    asking: 'courseai_template_stage_asking',
 };
+const UNCONFIRMED_STRING = 'courseai_template_stop_unconfirmed';
 const TITLE_STRING = 'courseai_template_generating_title';
 
 let labels = null;
+
+// The stop and resume of the run on screen: it exists from the click on Generate, so the person can stop even while
+// the material is still being sent, and it is released when the view is closed or the run ends.
+let activeControl = null;
+let unbindButtons = null;
+
+/**
+ * The stop and resume control of the run on screen, made on the first call.
+ *
+ * @returns {Object} From createRunControl.
+ */
+const ensureControl = () => {
+    if (!activeControl) {
+        activeControl = createRunControl((state) => {
+            renderControl(state);
+            if (state === STATE.STOPPING) {
+                // The page stops looking busy at the click, before the service has even answered.
+                document.body.classList.add(PAUSED_CLASS);
+                paintStage('stopping');
+            }
+        });
+        unbindButtons = bindControlButtons(activeControl);
+        activeControl.begin();
+    }
+    return activeControl;
+};
+
+/** Let go of the control of the run: no button is offered and nothing is left bound. */
+const releaseControl = () => {
+    if (activeControl) {
+        activeControl.end();
+    }
+    if (unbindButtons) {
+        unbindButtons();
+    }
+    activeControl = null;
+    unbindButtons = null;
+};
 
 /**
  * The batched string request for every phase key.
@@ -112,8 +167,12 @@ const getLabels = async() => {
     if (!labels) {
         const keys = Object.keys(STAGE_STRINGS);
         const requests = stageStringRequests(keys);
-        const values = await getStrings([...requests, {key: TITLE_STRING, component: 'local_coursegen'}]);
-        labels = {title: values[keys.length]};
+        const values = await getStrings([
+            ...requests,
+            {key: TITLE_STRING, component: 'local_coursegen'},
+            {key: UNCONFIRMED_STRING, component: 'local_coursegen'},
+        ]);
+        labels = {title: values[keys.length], unconfirmed: values[keys.length + 1]};
         assignStageLabels(labels, keys, values);
     }
     return labels;
@@ -136,9 +195,9 @@ const paintStage = async(key) => {
     if (stage) {
         stage.textContent = text;
     }
-    // Waiting for the professor is not work in progress: free mode shows no
+    // Waiting for the professor, or for the run to stop, is not work in progress: free mode shows no
     // indicator then, only the decision card.
-    if (key === 'reviewing') {
+    if (key === 'reviewing' || key === 'stopping' || key === 'paused' || key === 'asking') {
         hideWorkingIndicator();
         return;
     }
@@ -158,6 +217,7 @@ const paintStage = async(key) => {
 const openView = async(context) => {
     document.body.classList.add('cg-generating');
     document.body.classList.remove(PAUSED_CLASS, SETTLED_CLASS);
+    ensureControl();
 
     // The composer goes away for the duration, the way free mode's does: there
     // is nothing left to type, and leaving an active-looking input under a run
@@ -184,6 +244,7 @@ const openView = async(context) => {
  * @param {string} message What went wrong, reported as a turn in the feed.
  */
 const closeView = (message) => {
+    releaseControl();
     document.body.classList.remove('cg-generating', PAUSED_CLASS, SETTLED_CLASS);
     generatedRows().forEach((row) => row.classList.remove(...ALL_STATUS_CLASSES));
     hideWorkingIndicator();
@@ -219,6 +280,74 @@ export const abortGenerationView = (message) => {
 };
 
 /**
+ * The run was stopped: tell the service to stop for certain, say so in the thread, and wait for Resume.
+ *
+ * The stream is already closed. Closing it is not enough on its own, so the service is also told, and it answers
+ * once nothing of the run is going any more. If that cannot be confirmed the person is told, and Resume stays
+ * available: opening the stream again makes the service end any run it still had.
+ *
+ * @param {number} sessionId
+ * @param {Object} control The stop and resume of the run, from createRunControl.
+ * @returns {Promise<void>} Resolves when the person resumed and the page is ready to open the stream again.
+ */
+const settleStop = async(sessionId, control) => {
+    hideWorkingIndicator();
+    document.body.classList.add(PAUSED_CLASS);
+    await paintStage('paused');
+    milestone('courseai_template_log_stopped');
+    let confirmed = false;
+    try {
+        const answer = await stopTemplateGeneration(sessionId);
+        confirmed = answer?.stopped !== false;
+    } catch (error) {
+        confirmed = false;
+    }
+    if (!confirmed) {
+        turn('ai', 'danger', (await getLabels()).unconfirmed);
+    }
+    control.markStopped();
+    await control.waitForResume();
+    document.body.classList.remove(PAUSED_CLASS);
+    showGeneratingHeader((await getLabels()).title);
+    milestone('courseai_template_log_resuming');
+    await paintStage('connecting');
+    resetStatus();
+};
+
+/**
+ * The run asked questions before it started: show them in the conversation, send the answers, and go on.
+ *
+ * The questions are asked again when the answers cannot be sent (they did not fit, or there was no connection):
+ * the run never goes on with answers the service did not take.
+ *
+ * @param {Object} data The event of the service: {questions, can_skip}.
+ * @param {number} sessionId
+ * @returns {Promise<void>} Resolves once the service took the answers.
+ */
+const settleQuestions = async(data, sessionId) => {
+    hideWorkingIndicator();
+    document.body.classList.add(PAUSED_CLASS);
+    await paintStage('asking');
+    const text = await getQuestionStrings();
+    for (;;) {
+        // eslint-disable-next-line no-await-in-loop
+        const reply = await askQuestions(data, {pickFile});
+        try {
+            // eslint-disable-next-line no-await-in-loop
+            await answerTemplateQuestions(sessionId, reply.skipped, reply.answers);
+        } catch (error) {
+            turn('ai', 'danger', error.message || text.required);
+            continue;
+        }
+        turn('user', 'user', summarize(data.questions || [], reply, text));
+        break;
+    }
+    document.body.classList.remove(PAUSED_CLASS);
+    showGeneratingHeader((await getLabels()).title);
+    await paintStage('connecting');
+};
+
+/**
  * Run one generation, pausing for the professor's review, and resolve when
  * the course has been built.
  *
@@ -234,6 +363,24 @@ export const runGenerationStream = async(streamUrl, buildCourse, sessionId, cont
         await beginGenerationView(context);
     }
 
+    const control = ensureControl();
+    try {
+        return await runPasses(streamUrl, buildCourse, sessionId, control);
+    } finally {
+        releaseControl();
+    }
+};
+
+/**
+ * The passes of one run: open the stream, apply what it says, and decide what the end of each pass means.
+ *
+ * @param {string} streamUrl
+ * @param {Function} buildCourse
+ * @param {number} sessionId
+ * @param {Object} control The stop and resume of the run, from createRunControl.
+ * @returns {Promise<Object>} The built course.
+ */
+const runPasses = async(streamUrl, buildCourse, sessionId, control) => {
     const progress = {total: 0, done: 0};
     // Reading the material is over once the first activity starts: the thread moves on to the
     // writing, so the step that was spinning becomes a past one.
@@ -248,19 +395,28 @@ export const runGenerationStream = async(streamUrl, buildCourse, sessionId, cont
     for (;;) {
         let pass = null;
         try {
-            pass = await watchOnce(
-                streamUrl,
-                progress,
-                (eventData, eventProgress) => {
-                    if (eventData.type === 'course_configuration') {
-                        applySessionName(sessionId, eventData);
-                    }
-                    return applyEvent(eventData, eventProgress, paintStageOfRun);
-                },
-                () => undefined
-            );
+            if (control.takePendingStop()) {
+                // Stopped before the stream even opened: it never does.
+                pass = {outcome: 'stopped', data: null};
+            } else {
+                pass = await watchOnce(
+                    streamUrl,
+                    progress,
+                    (eventData, eventProgress) => {
+                        if (eventData.type === 'course_configuration') {
+                            applySessionName(sessionId, eventData);
+                        }
+                        return applyEvent(eventData, eventProgress, paintStageOfRun);
+                    },
+                    () => undefined,
+                    (close) => control.attach(close)
+                );
+            }
+            control.detach();
         } catch (error) {
+            control.detach();
             // Whatever went wrong, the person can try again: what the run already made is kept.
+            control.end();
             hideWorkingIndicator();
             if (!await askToRetry(error.code)) {
                 closeView(error.message);
@@ -278,9 +434,24 @@ export const runGenerationStream = async(streamUrl, buildCourse, sessionId, cont
                     throw new GenerationStopped(retryError.message);
                 }
             }
+            control.begin();
             continue;
         }
         const {outcome, data} = pass;
+
+        if (outcome === 'stopped') {
+            // eslint-disable-next-line no-await-in-loop
+            await settleStop(sessionId, control);
+            continue;
+        }
+        control.end();
+
+        if (outcome === 'questions') {
+            // eslint-disable-next-line no-await-in-loop
+            await settleQuestions(data, sessionId);
+            control.begin();
+            continue;
+        }
 
         if (outcome === 'completed') {
             // The result payload stays server-side: the browser only reports
@@ -305,6 +476,7 @@ export const runGenerationStream = async(streamUrl, buildCourse, sessionId, cont
         const decision = await askForDecision(data.generated_activities || []);
         document.body.classList.remove(PAUSED_CLASS);
         showGeneratingHeader((await getLabels()).title);
+        control.begin();
 
         if (decision.action === 'accept') {
             milestone('courseai_template_log_approved', 'user', 'success');

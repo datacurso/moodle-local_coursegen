@@ -33,6 +33,9 @@ class scripted_stream_client extends upstream_stream_client {
     /** @var array Steps to replay. */
     public array $script = [];
 
+    /** @var callable|null Called with the position of each step just before it is played. */
+    public $onstep = null;
+
     /** @var \Throwable|null Exception to throw after the script. */
     public ?\Throwable $failure = null;
 
@@ -55,7 +58,10 @@ class scripted_stream_client extends upstream_stream_client {
     public function stream(string $url, string $licenseheader): void {
         $this->calls[] = ['url' => $url, 'licenseheader' => $licenseheader];
 
-        foreach ($this->script as $step) {
+        foreach ($this->script as $position => $step) {
+            if ($this->onstep !== null) {
+                ($this->onstep)($position);
+            }
             if ($this->play($step)) {
                 return;
             }

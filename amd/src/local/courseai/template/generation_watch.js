@@ -83,8 +83,14 @@ const handleStreamMessage = (state, progress, applyEvent, onFail, resolve, rejec
         return;
     }
 
+    if (data.type === 'stopped') {
+        // The service ended the run because it was told to: this pass is over and nothing more will come.
+        finishPass(state, () => resolve({outcome: 'stopped', data}));
+        return;
+    }
+
     const outcome = applyEvent(data, progress);
-    if (outcome === 'review' || outcome === 'completed') {
+    if (outcome === 'review' || outcome === 'questions' || outcome === 'completed') {
         // The stream is closed on both. A pause left open would be
         // reconnected by the browser, which resumes the graph from the
         // same point and re-emits the same pause, forever.
@@ -97,18 +103,20 @@ const handleStreamMessage = (state, progress, applyEvent, onFail, resolve, rejec
 /**
  * Watch one pass of the stream.
  *
- * A pass ends in one of three ways: the graph pauses for the review, the run
- * completes, or it fails. The first two are not the end of the work, only of
- * this connection, which is why the caller loops.
+ * A pass ends in one of four ways: the graph pauses for the review, the run
+ * completes, it fails, or the person stops it. The first, second and last are
+ * not a failure, only the end of this connection, which is why the caller loops.
  *
  * @param {string} streamUrl
  * @param {Object} progress Mutable {total, done} counters.
  * @param {Function} applyEvent (data, progress) => outcome string.
  * @param {Function} onFail Called with a message once the pass fails.
- * @returns {Promise<Object>} {outcome: 'review'|'completed', data}
+ * @param {Function} onOpen Called with the function that closes this pass and settles it as stopped.
+ * @returns {Promise<Object>} {outcome: 'review'|'questions'|'completed'|'stopped', data}
  */
-export const watchOnce = (streamUrl, progress, applyEvent, onFail) => new Promise((resolve, reject) => {
+export const watchOnce = (streamUrl, progress, applyEvent, onFail, onOpen = () => undefined) => new Promise((resolve, reject) => {
     const state = {source: new RelaySource(streamUrl), settled: false};
+    onOpen(() => finishPass(state, () => resolve({outcome: 'stopped', data: null})));
 
     state.source.addEventListener('message', (event) => {
         handleStreamMessage(state, progress, applyEvent, onFail, resolve, reject, event);

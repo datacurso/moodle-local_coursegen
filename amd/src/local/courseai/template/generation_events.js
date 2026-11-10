@@ -149,6 +149,9 @@ const EVENT_HANDLERS = {
     },
     activity_progress_done: finishActivity,
     activity_progress_failed: finishActivity,
+    // The AI has questions before it starts: the pass ends so they can be answered, as it does for the review.
+    questions: () => 'questions',
+    questions_answered: () => '',
     completed: () => 'completed',
     failed: () => 'failed',
 };
@@ -159,7 +162,7 @@ const EVENT_HANDLERS = {
  * @param {Object} data
  * @param {Object} progress Mutable {total, done} counters.
  * @param {Function} paintStage Shows one phase label, by key.
- * @returns {string} '' to keep listening, otherwise 'review'/'completed'/'failed'.
+ * @returns {string} '' to keep listening, otherwise 'review'/'questions'/'completed'/'failed'.
  */
 export const applyEvent = (data, progress, paintStage) => {
     const handler = EVENT_HANDLERS[data.type];
