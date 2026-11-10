@@ -16,9 +16,9 @@
 
 namespace local_coursegen\task;
 
-use aiprovider_datacurso\local\plugin_settings;
 use core\task\adhoc_task;
 use core\task\manager;
+use local_coursegen\local\provider_state;
 use local_coursegen\local\service\course_import_service;
 
 /**
@@ -72,17 +72,36 @@ class import_generated_course_task extends adhoc_task {
      * @return void
      */
     public function execute(): void {
-        if (!plugin_settings::is_enabled('local_coursegen')) {
+        if (!provider_state::is_enabled()) {
             mtrace(get_string('task_skipped_plugindisabled', 'local_coursegen'));
             return;
         }
         $data = $this->get_custom_data();
-        course_import_service::import_into_existing(
-            (int)$data->sessionid,
-            (int)$data->stagingcourseid,
-            (int)$data->targetcourseid,
-            (int)$this->get_userid()
-        );
+        $sessionid = (int)$data->sessionid;
+        $stagingid = (int)$data->stagingcourseid;
+        $userid = (int)$this->get_userid();
+
+        // What the web service checked when the import was queued may have changed since: the
+        // feature may have been switched off and the user may have lost the right to create
+        // courses with AI or to import into the target. Either way nothing is touched, the
+        // staging course is kept and the session is marked failed.
+        if (empty(get_config('local_coursegen', 'enableimportexisting'))) {
+            mtrace('Import skipped: importing into an existing course is disabled.');
+            course_import_service::fail_without_changes($sessionid, $stagingid, 'error_import_existing_disabled', $userid);
+            return;
+        }
+        if (!has_capability('local/coursegen:createcoursewithai', \context_system::instance(), $userid)) {
+            mtrace('Import skipped: the user may no longer create courses with AI.');
+            course_import_service::fail_without_changes($sessionid, $stagingid, \required_capability_exception::class, $userid);
+            return;
+        }
+
+        try {
+            course_import_service::import_into_existing($sessionid, $stagingid, (int)$data->targetcourseid, $userid);
+        } catch (\required_capability_exception $e) {
+            mtrace('Import skipped: the user may no longer import into the target course.');
+            course_import_service::fail_without_changes($sessionid, $stagingid, get_class($e), $userid);
+        }
     }
 
     /**

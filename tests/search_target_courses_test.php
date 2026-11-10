@@ -168,7 +168,8 @@ final class search_target_courses_test extends \advanced_testcase {
     /**
      * Assign a per-course custom role granting the requested course-side import capabilities.
      *
-     * moodle/course:visibility is always granted; the three flags leave one capability out each.
+     * moodle/course:visibility, moodle/course:update and the name changes are always granted; the
+     * three flags leave one capability out each.
      *
      * @param int $userid User id.
      * @param int $courseid Course id.
@@ -180,7 +181,9 @@ final class search_target_courses_test extends \advanced_testcase {
     private function grant_in_course(int $userid, int $courseid, bool $backup, bool $restore, bool $userinfo = true): void {
         $coursecontext = \context_course::instance($courseid);
         $roleid = $this->getDataGenerator()->create_role(['shortname' => 'copier' . $courseid]);
-        assign_capability('moodle/course:visibility', CAP_ALLOW, $roleid, $coursecontext->id, true);
+        foreach (['visibility', 'update', 'changeshortname', 'changefullname'] as $capability) {
+            assign_capability('moodle/course:' . $capability, CAP_ALLOW, $roleid, $coursecontext->id, true);
+        }
         if ($backup) {
             assign_capability('moodle/backup:backupcourse', CAP_ALLOW, $roleid, $coursecontext->id, true);
         }
@@ -392,5 +395,50 @@ final class search_target_courses_test extends \advanced_testcase {
         $this->assertSame('PHY-ALPHA', $course['shortname']);
         $this->assertSame((int) $this->categorya->id, $course['categoryid']);
         $this->assertSame('Alpha Physics (PHY-ALPHA)', $course['displayname']);
+    }
+
+    /**
+     * A search checks the permissions of SCAN_LIMIT courses at most, whatever the size of the category.
+     *
+     * A category holds SCAN_LIMIT courses the user cannot import into, then one they can: the search
+     * stops before it. Moved before the others, the same course is found (Mindfree, observation 2).
+     */
+    public function test_search_stops_after_scanning_the_limit_of_courses(): void {
+        global $DB;
+        // Inside category A, where the user may create courses.
+        $category = $this->getDataGenerator()->create_category([
+            'name' => 'Large category',
+            'parent' => $this->categorya->id,
+        ]);
+        $importable = $this->getDataGenerator()->create_course([
+            'category' => $category->id,
+            'fullname' => 'Importable course',
+            'shortname' => 'IMPORTABLE',
+        ]);
+        $this->grant_in_course($this->user->id, (int) $importable->id, true, true);
+
+        // Bare course rows are enough here: the search reads the course, its context and permissions.
+        $base = (int) $DB->get_field_sql('SELECT MAX(sortorder) FROM {course}') + 1;
+        $rows = [];
+        for ($i = 0; $i < search_target_courses::SCAN_LIMIT; $i++) {
+            $rows[] = (object) [
+                'category' => $category->id,
+                'sortorder' => $base + $i,
+                'fullname' => 'Not importable ' . $i,
+                'shortname' => 'NOIMPORT-' . $i,
+                'visible' => 1,
+                'timecreated' => time(),
+                'timemodified' => time(),
+            ];
+        }
+        $DB->insert_records('course', $rows);
+        \context_helper::create_instances(CONTEXT_COURSE);
+        $DB->set_field('course', 'sortorder', $base + search_target_courses::SCAN_LIMIT, ['id' => $importable->id]);
+        $this->setUser($this->user);
+
+        $this->assertSame([], $this->returned_ids((int) $category->id), 'The course after the limit is not reached.');
+
+        $DB->set_field('course', 'sortorder', $base - 1, ['id' => $importable->id]);
+        $this->assertSame([(int) $importable->id], $this->returned_ids((int) $category->id));
     }
 }

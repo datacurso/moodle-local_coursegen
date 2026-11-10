@@ -36,6 +36,9 @@ final class import_permissions_test extends \advanced_testcase {
         'moodle/restore:restorecourse',
         'moodle/course:visibility',
         'moodle/backup:userinfo',
+        'moodle/course:update',
+        'moodle/course:changeshortname',
+        'moodle/course:changefullname',
     ];
 
     /** @var string[] The capabilities checked on the target's category context. */
@@ -62,7 +65,7 @@ final class import_permissions_test extends \advanced_testcase {
     }
 
     /**
-     * The six capabilities the import needs.
+     * The nine capabilities the import needs.
      *
      * @return string[]
      */

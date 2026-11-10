@@ -26,6 +26,7 @@ namespace local_coursegen\external;
 
 use aiprovider_datacurso\local\plugin_settings;
 use context_coursecat;
+use context_helper;
 use context_system;
 use core_course_category;
 use core_external\external_api;
@@ -57,6 +58,14 @@ class search_target_courses extends external_api {
 
     /** @var int Result size when the caller gives none. */
     const LIMIT_DEFAULT = 20;
+
+    /**
+     * @var int Largest number of courses whose permissions one search checks.
+     *
+     * The text filter runs in the database; the permission checks, one per course, are what grows
+     * with a large category, so they stop here even when fewer courses than the limit matched.
+     */
+    const SCAN_LIMIT = 500;
 
     /**
      * Returns description of method parameters.
@@ -104,11 +113,14 @@ class search_target_courses extends external_api {
         $limit = max(self::LIMIT_MIN, min(self::LIMIT_MAX, (int) $params['limit']));
 
         $courses = [];
-        foreach ($category->get_courses(['recursive' => true]) as $course) {
-            if ($needle !== '' && !self::matches($course, $needle)) {
-                continue;
+        $scanned = 0;
+        $candidates = self::candidates($category, $needle);
+        foreach ($candidates as $course) {
+            if (++$scanned > self::SCAN_LIMIT) {
+                break;
             }
-            if (!import_permissions::can_import_into($course)) {
+            context_helper::preload_from_record($course);
+            if (!self::is_visible_to_user($course) || !import_permissions::can_import_into($course)) {
                 continue;
             }
             $coursecontext = \context_course::instance($course->id);
@@ -124,20 +136,58 @@ class search_target_courses extends external_api {
                 break;
             }
         }
+        $candidates->close();
 
         return $courses;
     }
 
     /**
-     * Whether the course fullname or shortname contains the lower-cased needle.
+     * The courses of a category tree whose fullname or shortname contains the text, in course order.
      *
-     * @param \core_course_list_element $course Course being filtered.
-     * @param string $needle Lower-cased, trimmed search text.
+     * The filter runs in the database, so a large category is never loaded whole.
+     *
+     * @param core_course_category $category Root of the tree.
+     * @param string $needle Lower-cased, trimmed search text, empty for all.
+     * @return \moodle_recordset Course records (id, fullname, shortname, category, visible) with their context.
+     */
+    private static function candidates(core_course_category $category, string $needle): \moodle_recordset {
+        global $DB;
+
+        $ctxfields = context_helper::get_preload_record_columns_sql('ctx');
+        $where = '(cc.id = :categoryid OR ' . $DB->sql_like('cc.path', ':path') . ') AND c.id <> :siteid';
+        $params = [
+            'categoryid' => $category->id,
+            'path' => $DB->sql_like_escape($category->path) . '/%',
+            'siteid' => SITEID,
+            'contextlevel' => CONTEXT_COURSE,
+        ];
+        if ($needle !== '') {
+            $where .= ' AND (' . $DB->sql_like('c.fullname', ':fullname', false) . ' OR '
+                . $DB->sql_like('c.shortname', ':shortname', false) . ')';
+            $params['fullname'] = '%' . $DB->sql_like_escape($needle) . '%';
+            $params['shortname'] = '%' . $DB->sql_like_escape($needle) . '%';
+        }
+
+        return $DB->get_recordset_sql(
+            "SELECT c.id, c.fullname, c.shortname, c.category, c.visible, {$ctxfields}
+               FROM {course} c
+               JOIN {course_categories} cc ON cc.id = c.category
+               JOIN {context} ctx ON ctx.instanceid = c.id AND ctx.contextlevel = :contextlevel
+              WHERE {$where}
+           ORDER BY c.sortorder",
+            $params
+        );
+    }
+
+    /**
+     * Whether the user can see the course: always when visible, with viewhiddencourses when hidden.
+     *
+     * @param \stdClass $course Course record (id, visible).
      * @return bool
      */
-    private static function matches(\core_course_list_element $course, string $needle): bool {
-        return \core_text::strpos(\core_text::strtolower($course->fullname), $needle) !== false
-            || \core_text::strpos(\core_text::strtolower($course->shortname), $needle) !== false;
+    private static function is_visible_to_user(\stdClass $course): bool {
+        return !empty($course->visible)
+            || has_capability('moodle/course:viewhiddencourses', \context_course::instance($course->id));
     }
 
     /**

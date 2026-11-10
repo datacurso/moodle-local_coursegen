@@ -54,8 +54,11 @@ final class role_installer_test extends \advanced_testcase {
     /** @var string[] Stock roles the importer role may assign. */
     private const IMPORTER_ASSIGNABLE = ['editingteacher', 'teacher', 'student'];
 
-    /** @var int[] Context levels both roles are assignable at. */
+    /** @var int[] Context levels the creator role is assignable at. */
     private const CONTEXT_LEVELS = [CONTEXT_SYSTEM, CONTEXT_COURSE, CONTEXT_MODULE];
+
+    /** @var int[] Context levels the importer role is assignable at: never the whole site. */
+    private const IMPORTER_CONTEXT_LEVELS = [CONTEXT_COURSECAT, CONTEXT_COURSE];
 
     /**
      * The CAP_ALLOW capability names of the editingteacher archetype plus the given extras, sorted.
@@ -132,7 +135,9 @@ final class role_installer_test extends \advanced_testcase {
 
         $levels = array_values(array_map('intval', get_role_contextlevels((int) $role->id)));
         sort($levels);
-        $expectedlevels = self::CONTEXT_LEVELS;
+        $expectedlevels = $shortname === role_installer::IMPORTER_SHORTNAME
+            ? self::IMPORTER_CONTEXT_LEVELS
+            : self::CONTEXT_LEVELS;
         sort($expectedlevels);
         $this->assertSame($expectedlevels, $levels);
 
@@ -186,6 +191,8 @@ final class role_installer_test extends \advanced_testcase {
     public function test_install_missing_roles_creates_both_roles_on_a_fresh_site(): void {
         global $DB;
         $this->resetAfterTest();
+        // The importer role is only created while importing into an existing course is enabled.
+        set_config('enableimportexisting', 1, 'local_coursegen');
         self::remove_installed_roles();
 
         $this->assertFalse($DB->record_exists('role', ['shortname' => role_installer::CREATOR_SHORTNAME]));
@@ -230,6 +237,8 @@ final class role_installer_test extends \advanced_testcase {
      */
     public function test_install_missing_roles_is_idempotent(): void {
         $this->resetAfterTest();
+        // The importer role is only created while importing into an existing course is enabled.
+        set_config('enableimportexisting', 1, 'local_coursegen');
         self::remove_installed_roles();
 
         role_installer::install_missing_roles();
@@ -245,6 +254,8 @@ final class role_installer_test extends \advanced_testcase {
     public function test_install_missing_roles_keeps_an_existing_role_untouched(): void {
         global $DB;
         $this->resetAfterTest();
+        // The importer role is only created while importing into an existing course is enabled.
+        set_config('enableimportexisting', 1, 'local_coursegen');
         self::remove_installed_roles();
 
         $legacyid = create_role('Legacy creator', role_installer::CREATOR_SHORTNAME, 'Built by hand', 'coursecreator');
@@ -283,6 +294,8 @@ final class role_installer_test extends \advanced_testcase {
     public function test_install_missing_roles_names_the_roles_in_the_site_language(): void {
         global $CFG, $DB;
         $this->resetAfterTest();
+        // The importer role is only created while importing into an existing course is enabled.
+        set_config('enableimportexisting', 1, 'local_coursegen');
         self::remove_installed_roles();
 
         $langdir = $CFG->langotherroot . '/es';
@@ -314,6 +327,8 @@ final class role_installer_test extends \advanced_testcase {
     public function test_install_missing_roles_works_before_the_plugin_capabilities_are_registered(): void {
         global $DB;
         $this->resetAfterTest();
+        // The importer role is only created while importing into an existing course is enabled.
+        set_config('enableimportexisting', 1, 'local_coursegen');
         self::remove_installed_roles();
 
         $DB->delete_records('capabilities', ['component' => 'local_coursegen']);
@@ -342,6 +357,8 @@ final class role_installer_test extends \advanced_testcase {
     public function test_only_the_importer_role_can_assign_editing_teachers_in_a_course(): void {
         global $DB;
         $this->resetAfterTest();
+        // The importer role is only created while importing into an existing course is enabled.
+        set_config('enableimportexisting', 1, 'local_coursegen');
         self::remove_installed_roles();
 
         role_installer::install_missing_roles();

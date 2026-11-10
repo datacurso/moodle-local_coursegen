@@ -63,12 +63,15 @@ if ($hassiteconfig) {
 
     // Off by default: importing into an existing course copies and replaces
     // the target, so the site must opt in explicitly (ticket #9539).
-    $settings->add(new admin_setting_configcheckbox(
+    $enableimportexisting = new admin_setting_configcheckbox(
         'local_coursegen/enableimportexisting',
         get_string('setting_enableimportexisting', 'local_coursegen'),
         get_string('setting_enableimportexisting_desc', 'local_coursegen'),
         0
-    ));
+    );
+    // The importer role is only created once the feature is enabled.
+    $enableimportexisting->set_updatedcallback('local_coursegen\\local\\role_installer::install_missing_roles');
+    $settings->add($enableimportexisting);
 
     // Only meaningful while the import is enabled: "replace" deletes the copy
     // content before importing the generated course, "add" keeps the existing

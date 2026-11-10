@@ -31,6 +31,13 @@ use local_coursegen\local\service\creation_permissions;
  * (restore_dbops::get_best_assignable_role()); a stock role missing from the
  * site is skipped. A role is created only when no role with its shortname
  * exists; an existing one is never modified or removed, whatever it contains.
+ *
+ * The importer role is created only while importing into an existing course is
+ * enabled (local_coursegen/enableimportexisting), so a site that never uses the
+ * feature never holds a role with the user-data backup and restore capabilities.
+ * It is assignable on categories and courses, never on the whole site: the
+ * import needs it on the category of the target courses, and the AI course
+ * creator role, assignable site-wide, carries local/coursegen:createcoursewithai.
  * Names and descriptions come from the plugin strings in the site language at
  * creation time.
  *
@@ -51,13 +58,19 @@ final class role_installer {
         'moodle/restore:userinfo',
     ];
 
-    /** @var int[] Context levels both roles are assignable at. */
-    private const CONTEXT_LEVELS = [CONTEXT_SYSTEM, CONTEXT_COURSE, CONTEXT_MODULE];
+    /** @var int[] Context levels the creator role is assignable at. */
+    private const CREATOR_CONTEXT_LEVELS = [CONTEXT_SYSTEM, CONTEXT_COURSE, CONTEXT_MODULE];
+
+    /** @var int[] Context levels the importer role is assignable at: never the whole site. */
+    public const IMPORTER_CONTEXT_LEVELS = [CONTEXT_COURSECAT, CONTEXT_COURSE];
 
     /**
-     * Create the roles that do not exist yet.
+     * Create the roles that do not exist yet; the importer role only while the import is enabled.
      *
-     * @return string[] Shortnames of the roles created, in creation order; empty when both existed.
+     * Also the callback of the enableimportexisting setting, so the importer role appears when
+     * an administrator enables the feature.
+     *
+     * @return string[] Shortnames of the roles created, in creation order; empty when none was.
      */
     public static function install_missing_roles(): array {
         global $DB;
@@ -68,14 +81,19 @@ final class role_installer {
                 'description' => 'role_creator_desc',
                 'capabilities' => creation_permissions::EXTRA_CAPABILITIES,
                 'assignable' => ['teacher', 'student'],
+                'contextlevels' => self::CREATOR_CONTEXT_LEVELS,
             ],
             self::IMPORTER_SHORTNAME => [
                 'name' => 'role_importer_name',
                 'description' => 'role_importer_desc',
                 'capabilities' => array_merge(creation_permissions::EXTRA_CAPABILITIES, self::IMPORT_CAPABILITIES),
                 'assignable' => ['editingteacher', 'teacher', 'student'],
+                'contextlevels' => self::IMPORTER_CONTEXT_LEVELS,
             ],
         ];
+        if (empty(get_config('local_coursegen', 'enableimportexisting'))) {
+            unset($specs[self::IMPORTER_SHORTNAME]);
+        }
 
         $created = [];
         foreach ($specs as $shortname => $spec) {
@@ -88,11 +106,32 @@ final class role_installer {
                 $spec['name'],
                 $spec['description'],
                 $spec['capabilities'],
-                $spec['assignable']
+                $spec['assignable'],
+                $spec['contextlevels']
             );
             $created[] = $shortname;
         }
         return $created;
+    }
+
+    /**
+     * Stop the existing importer role from being assignable on the whole site.
+     *
+     * Used by the upgrade of the sites that created the role while it was assignable at the
+     * system level. Only the levels change: the assignments already made stay, and the
+     * administrator decides about them.
+     *
+     * @return bool Whether the role exists and was updated.
+     */
+    public static function restrict_importer_context_levels(): bool {
+        global $DB;
+
+        $roleid = $DB->get_field('role', 'id', ['shortname' => self::IMPORTER_SHORTNAME]);
+        if (!$roleid) {
+            return false;
+        }
+        set_role_contextlevels((int)$roleid, self::IMPORTER_CONTEXT_LEVELS);
+        return true;
     }
 
     /**
@@ -120,6 +159,7 @@ final class role_installer {
      * @param string $descriptionkey Lang key of the role description.
      * @param string[] $capabilities Capabilities allowed on the system context on top of the archetype defaults.
      * @param string[] $assignable Shortnames of the stock roles holders may assign; missing ones are skipped.
+     * @param int[] $contextlevels Context levels the role is assignable at.
      * @return int The new role id.
      */
     private static function create_role_from_spec(
@@ -127,7 +167,8 @@ final class role_installer {
         string $namekey,
         string $descriptionkey,
         array $capabilities,
-        array $assignable
+        array $assignable,
+        array $contextlevels
     ): int {
         global $DB;
 
@@ -146,7 +187,7 @@ final class role_installer {
             assign_capability($capability, CAP_ALLOW, $roleid, $systemcontextid, true);
         }
 
-        set_role_contextlevels($roleid, self::CONTEXT_LEVELS);
+        set_role_contextlevels($roleid, $contextlevels);
 
         foreach ($assignable as $assignableshortname) {
             $assignableid = $DB->get_field('role', 'id', ['shortname' => $assignableshortname]);
