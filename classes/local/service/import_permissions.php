@@ -44,6 +44,10 @@ final class import_permissions {
         'moodle/course:visibility',
         // The copy carries the user data of the original: backup side on the target.
         'moodle/backup:userinfo',
+        // The import changes the target: it renames it and moves its idnumber to the copy.
+        'moodle/course:update',
+        'moodle/course:changeshortname',
+        'moodle/course:changefullname',
     ];
 
     /** @var string[] Capabilities checked on the target's category context (the copy inherits from it). */
@@ -64,6 +68,9 @@ final class import_permissions {
         'moodle/course:visibility',
         'moodle/backup:userinfo',
         'moodle/restore:userinfo',
+        'moodle/course:update',
+        'moodle/course:changeshortname',
+        'moodle/course:changefullname',
     ];
 
     /**

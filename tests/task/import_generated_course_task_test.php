@@ -107,6 +107,8 @@ final class import_generated_course_task_test extends \advanced_testcase {
         global $DB;
         $this->resetAfterTest();
         $this->setAdminUser();
+        // The task checks again that the feature is enabled when it runs.
+        set_config('enableimportexisting', 1, 'local_coursegen');
         $adminid = get_admin()->id;
         [$target, $staging, $session] = $this->create_fixture($adminid);
 

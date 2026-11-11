@@ -16,8 +16,8 @@
 
 namespace local_coursegen\hook;
 
-use aiprovider_datacurso\local\plugin_settings;
 use core\hook\output\before_http_headers;
+use local_coursegen\local\provider_state;
 use local_coursegen\local\service\creation_permissions;
 
 /**
@@ -90,7 +90,7 @@ class mycourses_header_hook {
      * @return bool
      */
     public static function should_inject(\moodle_page $page): bool {
-        return plugin_settings::is_enabled('local_coursegen')
+        return provider_state::is_enabled()
             && self::is_my_courses_page($page)
             && self::user_can_see_button();
     }
