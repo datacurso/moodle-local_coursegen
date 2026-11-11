@@ -1,9 +1,11 @@
 ## [2.0.15] - 2026-11-10
 
-**Compatibility note:** This version is compatible from **Moodle 4.5** to **Moodle 5.3**.
+**Compatibility note:** This version is compatible with **Moodle 4.5** only.
 
 ## Removed
 
+- **The declared compatibility is narrowed to Moodle 4.5**
+  `$plugin->supported` is now `[405, 405]`: the Jenkins pipeline tests Moodle 4.5 only, with MariaDB and PostgreSQL. No test applies.
 - **The GitHub workflows are removed**
   The release workflow (`.github/workflows/moodle-release.yml`) interpolated the release tag inside its shell script, the pattern reported as AIP-SEC-004 and CDR-SEC-003 (High) in other plugins of the suite. The continuous integration and the release of the plugin run on Jenkins, so the whole `.github` folder is removed instead of fixed. Test: none, the change removes files
 

@@ -29,7 +29,7 @@ $plugin->release = '2.0.15';
 $plugin->version = 2026111001;
 $plugin->requires = 2024100700; // Moodle 4.5.
 $plugin->maturity = MATURITY_STABLE;
-$plugin->supported = [405, 503];
+$plugin->supported = [405, 405];
 $plugin->dependencies = [
     'aiprovider_datacurso' => 2026110400,
 ];
