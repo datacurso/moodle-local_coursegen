@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10-wp] - 2026111107
+
+### Fixed
+- **A creation of the course that stopped is no longer waited for**  
+  A request that found the course "being created" waited for up to ten minutes even when the process that was creating it had died. The creation now marks that it is alive at each step, and a request that finds it silent for ninety seconds builds the course itself.
+- **The page says why the creation stream could not be opened**  
+  It always said that the connection was lost; it now says what the server answered.
+
 ## [2.0.10-wp] - 2026111106
 
 ### Fixed
