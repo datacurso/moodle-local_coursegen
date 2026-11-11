@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026110913
+
+### Fixed
+- **A generation that stopped on an error no longer looks like it is still working**  
+  The ring of the header and the marker of the last step kept turning while the offer to try again was open. Now, as when the person stops the run, nothing turns, the header says it is stopped, and the failed step keeps its own color. Stop did not stop the ring of the header either; it does now.
+- **The buttons of a card in the thread have the look of Stop and Resume**  
+  "Try again" and "Close" were flat and touching each other. They now have the size and shape of the rest of the buttons, with a space between them. The same goes for Continue when there are several questions.
+
+## [2.0.10] - 2026110912
+
+### Changed
+- **Importing a template: the courses follow the category as soon as it changes**  
+  The import page had a "Filter courses" button next to the category, and the list of courses only changed after pressing it. The button is gone: choosing a category fills the list of courses with the ones of that category right away, the list can be searched by typing, and the course chosen for the previous category is emptied.
+
 ## [2.0.10] - 2026110911
 
 ### Changed

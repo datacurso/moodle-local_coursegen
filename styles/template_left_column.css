@@ -140,6 +140,24 @@ body.cg-generating.cg-generation-paused
   color: var(--cg-amber-ink);
 }
 
+/* A step that went wrong stays one while the run is stopped: it keeps its own color and its marker does not turn. */
+body.cg-generating.cg-generation-paused
+  .tpl-left-panel .cg-thread-feed > .cg-log-entry--danger:nth-last-child(1 of .cg-log-entry) {
+  background: transparent;
+}
+
+body.cg-generating.cg-generation-paused
+  .tpl-left-panel .cg-thread-feed > .cg-log-entry--danger:nth-last-child(1 of .cg-log-entry) .cg-log-bar {
+  border: 0;
+  background: radial-gradient(circle, var(--danger) 0 3.5px, var(--card) 4px);
+  animation: none;
+}
+
+body.cg-generating.cg-generation-paused
+  .tpl-left-panel .cg-thread-feed > .cg-log-entry--danger:nth-last-child(1 of .cg-log-entry) .cg-log-msg {
+  color: var(--danger);
+}
+
 /* Over: the last step is a check. */
 body.cg-generation-settled
   .tpl-left-panel .cg-thread-feed > .cg-log-entry--turn-ai:nth-last-child(1 of .cg-log-entry) .cg-log-bar {

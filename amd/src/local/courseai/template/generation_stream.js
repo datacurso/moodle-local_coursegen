@@ -423,21 +423,30 @@ const runPasses = async(streamUrl, buildCourse, sessionId, control) => {
             // Whatever went wrong, the person can try again: what the run already made is kept.
             control.end();
             hideWorkingIndicator();
+            // Nothing is running any more, so nothing turns: the page reads as stopped while the offer is open.
+            document.body.classList.add(PAUSED_CLASS);
+            await paintStage('paused');
             if (!await askToRetry(error.code)) {
                 closeView(error.message);
                 throw new GenerationStopped(error.message);
             }
+            document.body.classList.remove(PAUSED_CLASS);
+            showGeneratingHeader((await getLabels()).title);
             await paintStage('connecting');
             resetStatus();
             try {
-                    await retryTemplateGeneration(sessionId);
+                await retryTemplateGeneration(sessionId);
             } catch (retryError) {
-                // The retry itself failed: the same offer is made again.
-                    const again = await askToRetry('connection');
+                // The retry itself failed: the same offer is made again, with the page stopped as before.
+                document.body.classList.add(PAUSED_CLASS);
+                await paintStage('paused');
+                const again = await askToRetry('connection');
                 if (!again) {
                     closeView(retryError.message);
                     throw new GenerationStopped(retryError.message);
                 }
+                document.body.classList.remove(PAUSED_CLASS);
+                showGeneratingHeader((await getLabels()).title);
             }
             control.begin();
             continue;

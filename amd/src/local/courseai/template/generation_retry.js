@@ -65,14 +65,14 @@ export const askToRetry = async(code) => {
     body.className = 'd-block mb-2';
     body.textContent = code === 'high_demand' ? busy : text;
     const buttons = document.createElement('span');
-    buttons.className = 'd-flex gap-2';
+    buttons.className = 'cg-card-actions';
     const retryButton = document.createElement('button');
     retryButton.type = 'button';
-    retryButton.className = 'btn btn-primary btn-sm';
+    retryButton.className = 'cg-card-button cg-card-button--primary';
     retryButton.textContent = retry;
     const closeButton = document.createElement('button');
     closeButton.type = 'button';
-    closeButton.className = 'btn btn-secondary btn-sm';
+    closeButton.className = 'cg-card-button';
     closeButton.textContent = close;
     buttons.append(retryButton, closeButton);
     message.append(heading, body, buttons);

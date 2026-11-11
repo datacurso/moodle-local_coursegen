@@ -340,17 +340,17 @@ export const askQuestions = async(data, {pickFile, host} = {}) => {
         message.append(block);
     });
 
-    const buttons = element('span', 'd-flex gap-2 mt-2');
+    const buttons = element('span', 'cg-card-actions mt-2');
     let next = null;
     if (!compact) {
-        next = element('button', 'btn btn-primary btn-sm', text.next);
+        next = element('button', 'cg-card-button cg-card-button--primary', text.next);
         next.type = 'button';
         buttons.append(next);
     }
     let skip = null;
     // A yes or no is its own way out; a file question needs the way to go on without one.
     if (canSkip && !(compact && single.kind === 'toggle')) {
-        skip = element('button', 'btn btn-secondary btn-sm', text.skip);
+        skip = element('button', 'cg-card-button', text.skip);
         skip.type = 'button';
         buttons.append(skip);
     }
