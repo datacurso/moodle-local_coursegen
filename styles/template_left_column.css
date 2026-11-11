@@ -283,3 +283,8 @@ body.cg-generation-paused .tpl-left-panel .cg-working-slot {
     animation: none;
   }
 }
+
+/* The time left for the next retry changes every second: the digits keep their width so the line does not move. */
+.tpl-left-panel .cg-retry-status {
+  font-variant-numeric: tabular-nums;
+}
