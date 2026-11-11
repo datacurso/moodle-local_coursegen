@@ -26,6 +26,7 @@
  */
 
 import {getString} from 'core/str';
+import {clearServiceRetry, showServiceRetry} from 'local_coursegen/local/courseai/template/auto_retry';
 
 const NOTICE_ID = 'cgGenNotice';
 const PICTURES_ID = 'cgGenPictures';
@@ -39,7 +40,6 @@ const NOTICE_STRINGS = {
     rate_limit_wait: 'courseai_template_notice_rate_limit_wait',
     rate_limit_over: 'courseai_template_notice_rate_limit_over',
     slow_calls: 'courseai_template_notice_slow_calls',
-    retrying: 'courseai_template_notice_retrying',
 };
 
 let noticeTimer = null;
@@ -102,6 +102,14 @@ export const resetStatus = () => {
  * @returns {Promise<string>} The sentence shown, empty when there was nothing to show.
  */
 export const showNotice = async(data) => {
+    if (data.code === 'retry_over') {
+        clearServiceRetry();
+        return '';
+    }
+    if (data.code === 'retrying') {
+        // The service is trying again after the AI provider failed: the same card as when the connection fails.
+        return showServiceRetry(data);
+    }
     const elements = ensureElements();
     const key = NOTICE_STRINGS[data.code];
     if (!elements || !key) {
