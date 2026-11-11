@@ -102,7 +102,16 @@ export const makeDocument = () => {
         elements,
         body,
         createElement: (tag) => Object.assign(makeElement(''), {tag}),
-        getElementById: (id) => (elements[id] = elements[id] || makeElement(id)),
+        getElementById: (id) => {
+            if (!elements[id]) {
+                elements[id] = makeElement(id);
+                if (id === 'courseaiLeftChecklist') {
+                    // The list of the activities is hidden until a run says how many it will write.
+                    elements[id].classList.add('hidden');
+                }
+            }
+            return elements[id];
+        },
         querySelector: () => null,
         querySelectorAll: () => [],
         addEventListener() {},

@@ -184,10 +184,29 @@ export const createCourseFromSession = async(
             if (overrides.shortname) { payload.shortname = overrides.shortname; }
             if (overrides.category) { payload.category = overrides.category; }
         }
+        // The creation may take minutes; what is not allowed is silence, so the clock starts again at each news.
+        let idleTimer = null;
+        let rejectIdle = null;
+        const armIdleTimer = () => {
+            clearTimeout(idleTimer);
+            idleTimer = setTimeout(() => rejectIdle(new Error(texts.courseai_error_connection)), CREATE_COURSE_TIMEOUT_MS);
+        };
         const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error(texts.courseai_error_connection)), CREATE_COURSE_TIMEOUT_MS);
+            rejectIdle = reject;
+            armIdleTimer();
         });
-        const result = await Promise.race([createCourse(payload), timeoutPromise]);
+        const onProgress = (news) => {
+            armIdleTimer();
+            if (pcSubtitle && news && news.message) {
+                pcSubtitle.textContent = news.message;
+            }
+        };
+        let result;
+        try {
+            result = await Promise.race([createCourse(payload, onProgress), timeoutPromise]);
+        } finally {
+            clearTimeout(idleTimer);
+        }
 
         if (progressInterval) { clearInterval(progressInterval); }
         stepsUi.setProgress(100);

@@ -58,6 +58,9 @@ require_once($CFG->libdir . '/externallib.php');
  * finished, not to carry a whole course through itself.
  */
 class finish_template_generation extends external_api {
+    /** @var int Seconds a request waits for the one that is building the course. */
+    private const WAIT_SECONDS = 600;
+
     /**
      * Parameters.
      *
@@ -95,14 +98,22 @@ class finish_template_generation extends external_api {
     /**
      * Create the course of a finished generation.
      *
+     * The web service and the stream of the page both end here. The stream passes a callback, which hears of each
+     * step as it is done: a request that stays silent for two minutes is cut by the proxies in front of the site, and
+     * the creation of a course with a hundred activities takes longer than that.
+     *
      * @param int $sessionid
      * @param string $fullname
      * @param string $shortname
      * @param int $category
+     * @param callable|null $progress Called with (string $step, int $done, int $total) as the creation goes on.
      * @return array
      */
-    private static function build_course($sessionid, $fullname, $shortname, $category) {
+    public static function build_course($sessionid, $fullname, $shortname, $category, ?callable $progress = null) {
         global $USER, $CFG;
+
+        $report = $progress ?? static function (string $step, int $done = 0, int $total = 0): void {
+        };
 
         $params = self::validate_parameters(self::execute_parameters(), [
             'sessionid' => $sessionid,
@@ -124,7 +135,12 @@ class finish_template_generation extends external_api {
         if ((int) $session->get('status') === course_session::STATUS_CREATED) {
             return self::created_response((int) $session->get('courseid'), $CFG->wwwroot);
         }
+        // A request that is already building it goes on; this one waits for it instead of building a second course.
+        if ((int) $session->get('status') === course_session::STATUS_CREATING) {
+            return self::wait_for_creation((int) $params['sessionid'], $report, $CFG->wwwroot);
+        }
 
+        $report('result');
         $api = new template_ai_api_service();
         $result = $api->get_result($session->get('session_id'));
         $templateid = self::template_id_of($session);
@@ -142,15 +158,23 @@ class finish_template_generation extends external_api {
             (string) $params['shortname'],
             (int) $params['category']
         );
-        $created = create_course_service::create_course($session, $result, $overrides);
+        $report('course');
+        create_course_service::on_progress($progress);
+        try {
+            $created = create_course_service::create_course($session, $result, $overrides);
+        } finally {
+            create_course_service::on_progress(null);
+        }
         course_creation_guard::ensure_created($created);
         $courseid = $created['courseid'] ?? 0;
         $courseid = (int) $courseid;
         $keptcms = [];
         if ($courseid > 0 && $templateid !== null && $templateid > 0) {
+            $report('kept');
             template_keep_copier::copy_into($templateid, $courseid, $keptcms);
         }
         $generatedcms = $created['generatedcms'] ?? [];
+        $report('arrange');
         self::arrange_course($templateid, $courseid, $generatedactivities, $generatedcms, $keptcms);
         self::resolve_activity_links($session, $courseid, $generatedactivities, $generatedcms, $keptcms);
         if ($courseid > 0) {
@@ -170,6 +194,35 @@ class finish_template_generation extends external_api {
         }
 
         return self::created_response($courseid, $CFG->wwwroot);
+    }
+
+    /**
+     * Wait for the request that is building the course, and answer as it does.
+     *
+     * Each turn tells the one who listens that it is still waiting, so a stream that waits is never silent.
+     *
+     * @param int $sessionid Local session id.
+     * @param callable $report Called with (string $step, int $done, int $total).
+     * @param string $wwwroot
+     * @return array
+     * @throws \moodle_exception When the creation failed or did not end in time.
+     */
+    private static function wait_for_creation(int $sessionid, callable $report, string $wwwroot): array {
+        $deadline = time() + self::WAIT_SECONDS;
+        while (time() < $deadline) {
+            $report('waiting');
+            sleep(2);
+            $session = new course_session($sessionid);
+            $status = (int) $session->get('status');
+            if ($status === course_session::STATUS_CREATED) {
+                return self::created_response((int) $session->get('courseid'), $wwwroot);
+            }
+            if ($status !== course_session::STATUS_CREATING) {
+                break;
+            }
+        }
+        course_session_service::update_status($sessionid, course_session::STATUS_FAILED);
+        throw new \moodle_exception('error_course_creation_failed', 'local_coursegen');
     }
 
     /**

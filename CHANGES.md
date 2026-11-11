@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026110919
+
+### Fixed
+- **Creating the course after the generation no longer depends on one long request**  
+  The course was created in a single request that stayed silent until it ended, and with a hundred activities that takes longer than the two minutes the proxies in front of a site wait: the request was cut (error 524 on a site behind Cloudflare) and the course could not be created. The creation is now followed as a stream: the server writes after each activity and the page shows "Creating the activities: 35 of 102", so the connection is never silent. If the connection is cut anyway, the page opens it again and waits for the creation that is running instead of starting another. The creation goes on even if the browser leaves.
+- **The page waits as long as the creation lasts**  
+  It gave up after three minutes whatever happened; it now gives up only after three minutes without news.
+- **The tests of the questions of the AI run again**  
+  The page they simulate shows the list of the activities as hidden, as the real one does.
+
 ## [2.0.10] - 2026110918
 
 ### Fixed
