@@ -186,6 +186,11 @@ class template_export_service {
         $cmid = (int) $cm->id;
         $uid = template_export_uids::random_uid();
         $parameters = template_activity_export::parameters_for($cm);
+        if ($cm->modname === 'h5pactivity' && $action === template_activity::ACTION_TEMPLATE) {
+            // The pictures the mold's own package holds, so the content the AI writes can point at
+            // them. The files stay in the package, which the plugin rebuilds the activity from.
+            $parameters['package_images'] = h5p_package_images::of_activity($cm);
+        }
         return [
             'resource_type' => $cm->modname,
             'uid' => $uid,

@@ -91,6 +91,37 @@ final class template_export_service_test extends \advanced_testcase {
     }
 
     /**
+     * The mold of an H5P activity lists the images its package holds, and nothing else does.
+     */
+    public function test_an_h5p_mold_lists_the_images_of_its_package(): void {
+        global $CFG;
+        $this->resetAfterTest(true);
+        $this->setAdminUser();
+
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course();
+        $mold = $generator->create_module('h5pactivity', [
+            'course' => $course->id,
+            'packagefilepath' => $CFG->dirroot . '/h5p/tests/fixtures/guess-the-answer.h5p',
+        ]);
+        $kept = $generator->create_module('h5pactivity', [
+            'course' => $course->id,
+            'packagefilepath' => $CFG->dirroot . '/h5p/tests/fixtures/guess-the-answer.h5p',
+        ]);
+        $page = $generator->create_module('page', ['course' => $course->id]);
+        $templateid = $this->create_template($course->id)->get('id');
+        $this->mark_with_action($templateid, (int) $mold->cmid, 'template');
+
+        $payload = template_export_service::build_init_payload($templateid);
+
+        $images = $this->find_activity($payload, (int) $mold->cmid)['parameters']['package_images'];
+        $this->assertCount(1, $images);
+        $this->assertSame(['path', 'mime', 'width', 'height'], array_keys($images[0]));
+        $this->assertArrayNotHasKey('package_images', $this->find_activity($payload, (int) $kept->cmid)['parameters']);
+        $this->assertArrayNotHasKey('package_images', $this->find_activity($payload, (int) $page->cmid)['parameters']);
+    }
+
+    /**
      * The payload carries the template course's format, its language and the
      * course settings the new course takes as they are.
      */
