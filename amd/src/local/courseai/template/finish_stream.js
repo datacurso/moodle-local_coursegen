@@ -27,9 +27,8 @@
  */
 
 import RelaySource from 'local_coursegen/local/courseai/stream/relay-source';
-
-/** How many times the stream is opened again after the connection is lost. */
-const REOPENS = 5;
+import {getString} from 'core/str';
+import {ATTEMPTS, countdown, delayFor} from 'local_coursegen/local/courseai/template/retry_schedule';
 
 /**
  * Where the stream is, with what the teacher chose at the review.
@@ -95,28 +94,52 @@ const openOnce = (url, onProgress) => new Promise((resolve, reject) => {
 });
 
 /**
+ * The line that tells which retry it is and the time left, in the language of the person.
+ *
+ * @param {number} attempt
+ * @param {number} seconds
+ * @returns {Promise<string>}
+ */
+const describeWait = async(attempt, seconds) => {
+    const text = await getString('courseai_template_retry_status', 'local_coursegen');
+    return text.replace('{$a->attempt}', attempt).replace('{$a->total}', ATTEMPTS).replace('{$a->seconds}', seconds);
+};
+
+/**
  * Create the course and follow it.
+ *
+ * When the connection is lost the stream is opened again, waiting longer each time (ten seconds, twenty, forty, and
+ * so on), and the page is told which retry it is and how long is left for the next.
  *
  * @param {string} root Root of the site.
  * @param {number} sessionId
  * @param {Object} overrides {fullname, shortname, category}, each optional.
  * @param {Function} [onProgress] Called with {step, done, total, message}.
- * @param {number} [reopens] How many times to open the stream again after the connection is lost.
+ * @param {Object} [options] Replaced in tests.
+ * @param {Function} [options.open] One opening of the stream.
+ * @param {Function} [options.pause] One second of the countdown.
  * @returns {Promise<Object>} {success, courseid, fullname, shortname, message, courseurl}
  */
 export const finishTemplateGenerationStream = async(
-    root, sessionId, overrides, onProgress = () => undefined, reopens = REOPENS
+    root, sessionId, overrides, onProgress = () => undefined, {open = openOnce, pause = undefined} = {}
 ) => {
     const url = streamUrl(root, sessionId, overrides);
     for (let attempt = 0; ; attempt++) {
         try {
             // Each opening waits for the one before it, so the attempts are made one after the other.
             // eslint-disable-next-line no-await-in-loop
-            return await openOnce(url, onProgress);
+            return await open(url, onProgress);
         } catch (error) {
-            if (error.errorcode !== 'connection' || attempt >= reopens) {
+            if (error.errorcode !== 'connection' || attempt >= ATTEMPTS) {
                 throw error;
             }
         }
+        const next = attempt + 1;
+        const lines = new Map();
+        // eslint-disable-next-line no-await-in-loop
+        await countdown(delayFor(next), (left) => {
+            lines.set(left, describeWait(next, left));
+            lines.get(left).then((message) => onProgress({step: 'retrying', done: next, total: ATTEMPTS, message}));
+        }, pause ? {pause} : {});
     }
 };

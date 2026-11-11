@@ -68,6 +68,8 @@ import {
     renderControl,
 } from 'local_coursegen/local/courseai/template/generation_control';
 import {askToRetry} from 'local_coursegen/local/courseai/template/generation_retry';
+import {clearRetryCard, waitBeforeRetry} from 'local_coursegen/local/courseai/template/auto_retry';
+import {ATTEMPTS, delayFor, isRetryable} from 'local_coursegen/local/courseai/template/retry_schedule';
 import {resetStatus} from 'local_coursegen/local/courseai/template/generation_status';
 import {applySessionName} from 'local_coursegen/local/courseai/template/session_name';
 import {hideWorkingIndicator, showWorkingIndicator} from 'local_coursegen/local/courseai/ui/feedback-progress';
@@ -377,6 +379,46 @@ export const runGenerationStream = async(streamUrl, buildCourse, sessionId, cont
 };
 
 /**
+ * Try again by itself, waiting longer each time, and say so while it does.
+ *
+ * The wait before each retry doubles, and the person sees which retry it is, of how many, and how long is left. The
+ * count is the one of the failures in a row: it is handed in, so that a run that went on between two failures starts
+ * again from the first retry.
+ *
+ * @param {Error} error What stopped the run.
+ * @param {number} sessionId
+ * @param {Function} next Counts one more failure in a row and returns the count.
+ * @param {Function} count Returns the failures in a row.
+ * @returns {Promise<boolean>} True when the run was opened again; false when the person has to decide.
+ */
+const retryByItself = async(error, sessionId, next, count) => {
+    let reason = error;
+    while (isRetryable(reason) && count() < ATTEMPTS) {
+        const attempt = next();
+        // The retries of one failure are made one after the other: each one waits for the one before it.
+        // eslint-disable-next-line no-await-in-loop
+        const action = await waitBeforeRetry({
+            attempt,
+            total: ATTEMPTS,
+            seconds: delayFor(attempt),
+            reason: reason.message,
+        });
+        if (action === 'stop') {
+            return false;
+        }
+        try {
+            // eslint-disable-next-line no-await-in-loop
+            await retryTemplateGeneration(sessionId);
+            return true;
+        } catch (retryError) {
+            // The service did not take the retry: the next one comes later still.
+            reason = Object.assign(retryError, {code: retryError.code || 'connection'});
+        }
+    }
+    return false;
+};
+
+/**
  * The passes of one run: open the stream, apply what it says, and decide what the end of each pass means.
  *
  * @param {string} streamUrl
@@ -397,6 +439,8 @@ const runPasses = async(streamUrl, buildCourse, sessionId, control) => {
         }
         await paintStage(key);
     };
+    // Retries made by itself since the last time the run moved: a run that goes on resets the count.
+    const run = {failures: 0, moved: false};
     for (;;) {
         let pass = null;
         try {
@@ -408,6 +452,8 @@ const runPasses = async(streamUrl, buildCourse, sessionId, control) => {
                     streamUrl,
                     progress,
                     (eventData, eventProgress) => {
+                        run.moved = true;
+                        clearRetryCard();
                         if (eventData.type === 'course_configuration') {
                             applySessionName(sessionId, eventData);
                         }
@@ -420,12 +466,26 @@ const runPasses = async(streamUrl, buildCourse, sessionId, control) => {
             control.detach();
         } catch (error) {
             control.detach();
-            // Whatever went wrong, the person can try again: what the run already made is kept.
+            // Whatever went wrong, what the run already made is kept, and it is tried again.
             control.end();
             hideWorkingIndicator();
-            // Nothing is running any more, so nothing turns: the page reads as stopped while the offer is open.
+            // Nothing is running any more, so nothing turns: the page reads as stopped while it waits.
             document.body.classList.add(PAUSED_CLASS);
             await paintStage('paused');
+            if (run.moved) {
+                run.failures = 0;
+                run.moved = false;
+            }
+            if (await retryByItself(error, sessionId, () => ++run.failures, () => run.failures)) {
+                document.body.classList.remove(PAUSED_CLASS);
+                showGeneratingHeader((await getLabels()).title);
+                await paintStage('connecting');
+                resetStatus();
+                control.begin();
+                continue;
+            }
+            clearRetryCard();
+            // The retries ran out, or the failure is not one that waiting mends: the person decides.
             if (!await askToRetry(error.code)) {
                 closeView(error.message);
                 throw new GenerationStopped(error.message);

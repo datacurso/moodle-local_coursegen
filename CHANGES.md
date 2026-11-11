@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10-wp] - 2026111108
+
+### Added
+- **A failure of the connection is retried by itself, waiting longer each time**  
+  When the connection with the AI service is lost during a generation, or while the course is being created, the page no longer waits for the person to press "Try again". It retries by itself, ten times: the first retry ten seconds after the failure, the second twenty seconds after that, then forty, eighty and so on, with a ceiling of two minutes between retries. A run that goes on between two failures starts counting again.
+- **The page says which retry it is and how long is left for the next one**  
+  A card in the thread shows the reason, "Retry 3 of 10 · next one in 14 s" counting down every second, and two buttons: "Retry now" and "Stop retrying". While the course is being created the same line is shown under the title. If the ten retries are not enough, or the failure is not one that waiting mends (a missing license, for example), the person is asked as before.
+
 ## [2.0.10-wp] - 2026111107
 
 ### Fixed
