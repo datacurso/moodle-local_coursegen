@@ -30,6 +30,7 @@ import {getStrings} from 'core/str';
 import Templates from 'core/templates';
 import {createLog} from 'local_coursegen/local/courseai/ui/log';
 import {resetChecklist} from 'local_coursegen/local/courseai/template/generation_checklist';
+import {listIsShown} from 'local_coursegen/local/courseai/template/thread_feed';
 
 const STRING_KEYS = [
     'courseai_template_log_starting',
@@ -89,7 +90,11 @@ const getLabels = async() => {
  */
 const getLog = () => {
     if (!log) {
-        log = createLog({container: document.getElementById('cgLog')});
+        log = createLog({
+            container: document.getElementById('cgLog'),
+            actionContainer: document.getElementById('cgLogAfter'),
+            isActionPhase: listIsShown,
+        });
     }
     return log;
 };

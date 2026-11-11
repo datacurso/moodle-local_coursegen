@@ -82,6 +82,26 @@ class finish_template_generation extends external_api {
      * @return array
      */
     public static function execute($sessionid, $fullname = '', $shortname = '', $category = 0) {
+        try {
+            return self::build_course($sessionid, $fullname, $shortname, $category);
+        } catch (\Throwable $e) {
+            // The person sees a short message; the cause is kept in the log of the server.
+            error_log('local_coursegen: creating the course of session ' . (int) $sessionid . ' failed: ' . get_class($e) . ': '
+                . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
+            throw $e;
+        }
+    }
+
+    /**
+     * Create the course of a finished generation.
+     *
+     * @param int $sessionid
+     * @param string $fullname
+     * @param string $shortname
+     * @param int $category
+     * @return array
+     */
+    private static function build_course($sessionid, $fullname, $shortname, $category) {
         global $USER, $CFG;
 
         $params = self::validate_parameters(self::execute_parameters(), [

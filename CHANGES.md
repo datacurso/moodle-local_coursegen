@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026110918
+
+### Fixed
+- **The thread of the generation only grows downwards**  
+  Anything that happened after the list of the activities was on the page, such as the offer to try again or a question of the AI, was drawn above the list, in the middle of what was already there. It now goes under the list.
+- **The reason a course could not be created is kept in the log of the server**  
+  The person still sees a short message; the cause is written to the log so it can be found.
+
 ## [2.0.10] - 2026110917
 
 ### Fixed
