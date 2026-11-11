@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026110917
+
+### Fixed
+- **The review of the course data can be scrolled to its buttons**  
+  Once the course was generated, the review form (name, short name, category) could be taller than the screen and its Cancel and Create course buttons stayed out of sight, with no way to scroll. The column now scrolls on its own, with the same thin scrollbar as the rest of the interface.
+
 ## [2.0.10] - 2026110916
 
 ### Fixed
