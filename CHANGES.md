@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026111100
+
+### Added
+- **An H5P template lists the pictures its package holds**  
+  When the template course has an H5P activity set as a template, the export now tells the AI service which pictures that activity's own package keeps (their path, type and size), so an interactive book can use them. The pictures themselves are not sent: the activity of the new course is built from the template's own package, which already holds them. A package that cannot be read exports as before.
+
 ## [2.0.10] - 2026110301
 
 ### Fixed
