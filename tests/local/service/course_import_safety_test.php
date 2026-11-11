@@ -204,20 +204,27 @@ final class course_import_safety_test extends \advanced_testcase {
      * @param \core\lock\lock $lock Its lock, which can no longer be released through it.
      */
     private function kill_other_process(\moodle_database $other, \core\lock\lock $lock): void {
+        // Read the factory first: a successful release() drops the lock's reference to it.
+        $factory = (fn() => $this->factory)->call($lock);
+        if ($factory instanceof \core\lock\timing_wrapper_lock_factory) {
+            $factory = $factory->get_real_factory();
+        }
+
         $other->dispose();
         try {
             $lock->release();
         } catch (\Throwable $e) {
-            // Expected: the connection is gone, and the database freed the lock with it. The factory
-            // still lists the lock and would try to release it again at shutdown, through the closed
-            // connection, so it forgets it as the dead process would have.
+            // Expected on some drivers: the connection is gone, and the database freed the lock with it.
             unset($e);
-            $factory = (fn() => $this->factory)->call($lock);
-            if ($factory instanceof \core\lock\timing_wrapper_lock_factory) {
-                $factory = $factory->get_real_factory();
-            }
-            if (property_exists($factory, 'openlocks')) {
-                (fn() => $this->openlocks = [])->call($factory);
+        }
+
+        // Whether release() threw or not, the factory may still list the lock, and its shutdown
+        // handler would try to release it again through the closed connection, which fails the run
+        // after all tests passed. It forgets it, as the dead process would have. The MySQL factory
+        // lists its locks in openlocks and the PostgreSQL factory in resourcetokens.
+        foreach (['openlocks', 'resourcetokens'] as $property) {
+            if (property_exists($factory, $property)) {
+                (fn() => $this->$property = [])->call($factory);
             }
         }
     }
