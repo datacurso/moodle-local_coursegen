@@ -605,8 +605,9 @@ function xmldb_local_coursegen_upgrade($oldversion) {
         // columns of the course templates, and the tenant tables and columns. Everything the install file defines
         // and the site lacks is created here, so no step above has to be repeated; what the site has is left alone.
         global $CFG;
-        $schema = new xmldb_structure('local_coursegen');
-        $schema->loadXMLStructure($CFG->dirroot . '/local/coursegen/db/install.xml');
+        $installfile = new xmldb_file($CFG->dirroot . '/local/coursegen/db/install.xml');
+        $installfile->loadXMLStructure();
+        $schema = $installfile->getStructure();
         foreach ($schema->getTables() as $table) {
             if (!$dbman->table_exists($table)) {
                 $dbman->create_table($table);
