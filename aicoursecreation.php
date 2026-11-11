@@ -44,6 +44,12 @@ $PAGE->set_title(get_string('createwithai', 'local_coursegen'));
 // reach the true top of the viewport (see aicoursecreation.css).
 $PAGE->add_body_class('local-coursegen-aicoursecreation');
 
+// This page is the whole screen of the course creator: the HTML the site adds to every page (support and chat
+// widgets, social buttons, banners) is left out of it for this request only.
+$CFG->additionalhtmlhead = '';
+$CFG->additionalhtmltopofbody = '';
+$CFG->additionalhtmlfooter = '';
+
 // Load courseai CSS + sidebar CSS. Direct plugin stylesheets get NO revision
 // from Moodle's cache pipeline, so browsers keep stale copies across plugin
 // upgrades — bust them with the plugin version.

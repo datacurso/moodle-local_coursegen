@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10-wp] - 2026111102
+
+### Fixed
+- **The page of the course creator shows only the creator**  
+  The buttons and widgets that the site adds to every page, such as a support button or a chat or social icon, were drawn over the creator. They are left out of this page.
+
 ## [2.0.10-wp] - 2026111101
 
 ### Added
