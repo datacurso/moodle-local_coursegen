@@ -23,6 +23,7 @@
  */
 
 import {getStrings} from 'core/str';
+import {currentFeed} from 'local_coursegen/local/courseai/template/thread_feed';
 
 const CARD_ID = 'cgRetryCard';
 const STRINGS = [
@@ -79,7 +80,7 @@ export const askToRetry = async(code) => {
     content.append(message);
     card.append(bar, content);
 
-    const host = document.getElementById('cgLog') || document.getElementById('courseaiChatScroll') || document.body;
+    const host = currentFeed() || document.getElementById('courseaiChatScroll') || document.body;
     host.append(card);
     card.scrollIntoView({block: 'nearest'});
 

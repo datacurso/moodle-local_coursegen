@@ -26,6 +26,7 @@
  */
 
 import {getStrings} from 'core/str';
+import {currentFeed} from 'local_coursegen/local/courseai/template/thread_feed';
 
 const STRINGS = [
     'courseai_template_questions_title',
@@ -374,7 +375,7 @@ export const askQuestions = async(data, {pickFile, host} = {}) => {
     sheet.onChange(refresh);
     refresh();
 
-    const target = host || document.getElementById('cgLog') || document.body;
+    const target = host || currentFeed() || document.body;
     target.append(card);
     card.scrollIntoView({block: 'nearest'});
 

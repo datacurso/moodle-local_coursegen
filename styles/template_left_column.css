@@ -140,6 +140,24 @@ body.cg-generating.cg-generation-paused
   color: var(--cg-amber-ink);
 }
 
+/* The thread has two feeds, one above the list of the activities and one under it. The step the run is on is the
+   last of the feed that has the newest entries, so the last step of the upper feed is a plain one as soon as the
+   lower feed has something. */
+body .tpl-left-panel #cgLog:has(~ #cgLogAfter > .cg-log-entry) > .cg-log-entry--turn-ai:nth-last-child(1 of .cg-log-entry) {
+  background: transparent;
+}
+
+body .tpl-left-panel #cgLog:has(~ #cgLogAfter > .cg-log-entry) > .cg-log-entry--turn-ai:nth-last-child(1 of .cg-log-entry) .cg-log-bar {
+  border: 0;
+  background: radial-gradient(circle, var(--cg-dot) 0 3.5px, var(--card) 4px);
+  animation: none;
+}
+
+body .tpl-left-panel #cgLog:has(~ #cgLogAfter > .cg-log-entry) > .cg-log-entry--turn-ai:nth-last-child(1 of .cg-log-entry) .cg-log-msg {
+  color: inherit;
+  font-weight: inherit;
+}
+
 /* A step that went wrong stays one while the run is stopped: it keeps its own color and its marker does not turn. */
 body.cg-generating.cg-generation-paused
   .tpl-left-panel .cg-thread-feed > .cg-log-entry--danger:nth-last-child(1 of .cg-log-entry) {

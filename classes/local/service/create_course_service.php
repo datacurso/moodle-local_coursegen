@@ -212,6 +212,8 @@ class create_course_service {
             // Keep the technical detail in developer debugging only: the client
             // receives a localized message without internal information.
             debugging('local_coursegen: course creation failed. ' . $e->getMessage());
+            error_log('local_coursegen: course creation failed: ' . get_class($e) . ': ' . $e->getMessage() . ' at '
+                . $e->getFile() . ':' . $e->getLine());
 
             generation_failed::create([
                 'context' => \context_system::instance(),
