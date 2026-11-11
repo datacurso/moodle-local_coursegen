@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10-wp] - 2026111109
+
+### Added
+- **The retries of the service when the AI provider fails are shown like the retries of the connection**  
+  When the AI provider answers with an error that waiting mends, the service tries again by itself and says so. The page shows the same card as for a lost connection: the reason ("The AI provider returned an error (503)"), "Retry 2 of 10 · next one in 18 s" counting down every second, and it goes away when the request is answered. The card has no buttons, because the one who retries is the service.
+
 ## [2.0.10-wp] - 2026111108
 
 ### Added

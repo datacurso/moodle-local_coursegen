@@ -27,6 +27,9 @@ import {currentFeed} from 'local_coursegen/local/courseai/template/thread_feed';
 import {countdown} from 'local_coursegen/local/courseai/template/retry_schedule';
 
 const CARD_ID = 'cgAutoRetryCard';
+const SERVICE_CARD_ID = 'cgServiceRetryCard';
+/** A retry card of the service that nothing has renewed leaves the screen after this long, in seconds. */
+const SERVICE_CARD_LINGER_SECONDS = 20;
 
 const STRINGS = [
     'courseai_template_retry_status',
@@ -34,6 +37,8 @@ const STRINGS = [
     'courseai_template_retry_now',
     'courseai_template_retry_stop',
     'courseai_template_retry_default_reason',
+    'courseai_template_service_retry_reason',
+    'courseai_template_service_retry_reason_status',
 ];
 
 /**
@@ -48,9 +53,10 @@ export const clearRetryCard = () => {
  *
  * @param {string} reason What went wrong, in the words of the person's language.
  * @param {Object} text The strings of the card.
+ * @param {boolean} [withButtons] Whether the card offers to retry now or to stop: not when the service is the one retrying.
  * @returns {{card: HTMLElement, status: HTMLElement, now: HTMLButtonElement, stop: HTMLButtonElement}}
  */
-const buildCard = (reason, text) => {
+const buildCard = (reason, text, withButtons = true) => {
     const card = document.createElement('div');
     card.id = CARD_ID;
     card.className = 'cg-log-entry cg-log-entry--turn-ai';
@@ -78,7 +84,10 @@ const buildCard = (reason, text) => {
     stop.className = 'cg-card-button';
     stop.textContent = text.stop;
     buttons.append(now, stop);
-    message.append(heading, status, buttons);
+    message.append(heading, status);
+    if (withButtons) {
+        message.append(buttons);
+    }
     content.append(message);
     card.append(bar, content);
     return {card, status, now, stop};
@@ -138,4 +147,79 @@ export const waitBeforeRetry = async({attempt, total, seconds, reason}) => {
     view.now.disabled = true;
     view.stop.disabled = true;
     return 'retry';
+};
+
+let serviceTurn = 0;
+let serviceLinger = null;
+let serviceCard = null;
+
+/**
+ * Take the card of the retry the service is making off the thread, if it is there.
+ */
+export const clearServiceRetry = () => {
+    serviceTurn++;
+    clearTimeout(serviceLinger);
+    serviceCard?.remove();
+    serviceCard = null;
+};
+
+/**
+ * Show a retry that the service makes by itself when the AI provider fails: which retry it is, of how many, and the
+ * time left for the next one, counting down. The service is the one that retries, so the card has no buttons.
+ *
+ * A newer retry replaces the card, the end of the retries takes it off, and one that nothing renews leaves by itself.
+ *
+ * @param {Object} data {attempt, of, seconds, status}
+ * @returns {Promise<string>} The line shown.
+ */
+export const showServiceRetry = async(data) => {
+    const strings = await getStrings(STRINGS.map((key) => ({key, component: 'local_coursegen'})));
+    const [status, running, , , , reasonText, reasonWithStatus] = strings;
+    clearServiceRetry();
+    const turn = serviceTurn;
+    const reason = data.status ? reasonWithStatus.replace('{$a->status}', data.status) : reasonText;
+    const view = buildCard(reason, {now: '', stop: '', reason: reasonText}, false);
+    view.card.id = SERVICE_CARD_ID;
+    serviceCard = view.card;
+    const feed = currentFeed() || document.getElementById('courseaiChatScroll') || document.body;
+    feed.append(view.card);
+    view.card.scrollIntoView({block: 'nearest'});
+
+    const attempt = data.attempt || 0;
+    const total = data.of || 0;
+    const stage = document.getElementById('tplGenStage');
+    const say = (line) => {
+        view.status.textContent = line;
+        if (stage) {
+            stage.textContent = line;
+        }
+    };
+    const fill = (text, left) => text
+        .replace('{$a->attempt}', attempt)
+        .replace('{$a->total}', total)
+        .replace('{$a->seconds}', left);
+    const early = new Promise((resolve) => {
+        const watch = setInterval(() => {
+            if (turn !== serviceTurn) {
+                clearInterval(watch);
+                resolve();
+            }
+        }, 250);
+    });
+    const line = fill(status, data.seconds || 0);
+    say(line);
+    if (data.seconds) {
+        countdown(data.seconds, (left) => say(fill(status, left)), {skip: early}).then(() => {
+            if (turn !== serviceTurn) {
+                return;
+            }
+            say(fill(running, 0));
+            serviceLinger = setTimeout(() => {
+                if (turn === serviceTurn) {
+                    clearServiceRetry();
+                }
+            }, SERVICE_CARD_LINGER_SECONDS * 1000);
+        });
+    }
+    return line;
 };
