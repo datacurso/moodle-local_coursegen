@@ -91,7 +91,7 @@ const openOnce = (url, onProgress) => new Promise((resolve, reject) => {
         failWith(data.message || '', data.errorcode || 'failed');
     });
     source.addEventListener('done', () => failWith('The creation ended without an answer.', 'connection'));
-    source.onerror = () => failWith('The connection was lost.', 'connection');
+    source.onerror = (error) => failWith((error && error.message) || 'The connection was lost.', 'connection');
 });
 
 /**

@@ -61,6 +61,9 @@ class finish_template_generation extends external_api {
     /** @var int Seconds a request waits for the one that is building the course. */
     private const WAIT_SECONDS = 600;
 
+    /** @var int Seconds without news after which a creation that says it is going on is taken as dead. */
+    private const STALE_SECONDS = 90;
+
     /**
      * Parameters.
      *
@@ -110,9 +113,15 @@ class finish_template_generation extends external_api {
      * @return array
      */
     public static function build_course($sessionid, $fullname, $shortname, $category, ?callable $progress = null) {
-        global $USER, $CFG;
+        global $USER, $CFG, $DB;
 
-        $report = $progress ?? static function (string $step, int $done = 0, int $total = 0): void {
+        // Each step also says, in the record of the session, that the creation is alive: a request that finds the
+        // session "creating" waits only while that is recent, and builds the course itself when it is not.
+        $report = static function (string $step, int $done = 0, int $total = 0) use ($progress, $DB, $params): void {
+            $DB->set_field('local_coursegen_course_sessions', 'timemodified', time(), ['id' => (int) $params['sessionid']]);
+            if ($progress !== null) {
+                $progress($step, $done, $total);
+            }
         };
 
         $params = self::validate_parameters(self::execute_parameters(), [
@@ -136,8 +145,19 @@ class finish_template_generation extends external_api {
             return self::created_response((int) $session->get('courseid'), $CFG->wwwroot);
         }
         // A request that is already building it goes on; this one waits for it instead of building a second course.
-        if ((int) $session->get('status') === course_session::STATUS_CREATING) {
-            return self::wait_for_creation((int) $params['sessionid'], $report, $CFG->wwwroot);
+        // When the one that was building stopped (its process died), nobody is going to finish it: this one builds.
+        if (self::is_being_built($session)) {
+            // Waiting is not news of the creation, so it does not go through the report that marks it alive.
+            $answer = self::wait_for_creation(
+                (int) $params['sessionid'],
+                $progress ?? static function (string $step, int $done = 0, int $total = 0): void {
+                },
+                $CFG->wwwroot
+            );
+            if ($answer !== null) {
+                return $answer;
+            }
+            $session = new course_session($params['sessionid']);
         }
 
         $report('result');
@@ -159,7 +179,7 @@ class finish_template_generation extends external_api {
             (int) $params['category']
         );
         $report('course');
-        create_course_service::on_progress($progress);
+        create_course_service::on_progress($report);
         try {
             $created = create_course_service::create_course($session, $result, $overrides);
         } finally {
@@ -197,6 +217,20 @@ class finish_template_generation extends external_api {
     }
 
     /**
+     * Whether another request is building the course of the session right now.
+     *
+     * The session says "creating" while a request builds it, and a request that dies leaves it saying so. What tells
+     * them apart is the time of the last news: a creation that has not moved for a while is not going on.
+     *
+     * @param course_session $session
+     * @return bool
+     */
+    private static function is_being_built(course_session $session): bool {
+        return (int) $session->get('status') === course_session::STATUS_CREATING
+            && time() - (int) $session->get('timemodified') < self::STALE_SECONDS;
+    }
+
+    /**
      * Wait for the request that is building the course, and answer as it does.
      *
      * Each turn tells the one who listens that it is still waiting, so a stream that waits is never silent.
@@ -204,22 +238,25 @@ class finish_template_generation extends external_api {
      * @param int $sessionid Local session id.
      * @param callable $report Called with (string $step, int $done, int $total).
      * @param string $wwwroot
-     * @return array
+     * @return array|null The created course, or null when the creation stopped without ending.
      * @throws \moodle_exception When the creation failed or did not end in time.
      */
-    private static function wait_for_creation(int $sessionid, callable $report, string $wwwroot): array {
+    private static function wait_for_creation(int $sessionid, callable $report, string $wwwroot): ?array {
         $deadline = time() + self::WAIT_SECONDS;
         while (time() < $deadline) {
-            $report('waiting');
             sleep(2);
             $session = new course_session($sessionid);
             $status = (int) $session->get('status');
             if ($status === course_session::STATUS_CREATED) {
                 return self::created_response((int) $session->get('courseid'), $wwwroot);
             }
-            if ($status !== course_session::STATUS_CREATING) {
-                break;
+            if ($status === course_session::STATUS_FAILED) {
+                throw new \moodle_exception('error_course_creation_failed', 'local_coursegen');
             }
+            if (!self::is_being_built($session)) {
+                return null;
+            }
+            $report('waiting');
         }
         course_session_service::update_status($sessionid, course_session::STATUS_FAILED);
         throw new \moodle_exception('error_course_creation_failed', 'local_coursegen');
