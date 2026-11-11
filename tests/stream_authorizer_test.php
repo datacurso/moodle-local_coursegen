@@ -221,7 +221,7 @@ final class stream_authorizer_test extends \advanced_testcase {
         $roleid = $this->getDataGenerator()->create_role();
         $context = \context_system::instance();
         assign_capability('moodle/course:create', CAP_ALLOW, $roleid, $context->id, true);
-        assign_capability('local/coursegen:createcoursewithai', CAP_ALLOW, $roleid, $context->id, true);
+        assign_capability('local/coursegen:createfreecoursewithai', CAP_ALLOW, $roleid, $context->id, true);
         role_assign($roleid, $user->id, $context->id);
     }
 

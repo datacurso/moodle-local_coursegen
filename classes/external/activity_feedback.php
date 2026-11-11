@@ -25,6 +25,7 @@
 
 namespace local_coursegen\external;
 
+use aiprovider_datacurso\local\plugin_settings;
 use context_system;
 use external_api;
 use external_function_parameters;
@@ -63,9 +64,12 @@ class activity_feedback extends external_api {
      * @param string $approvalstatus Approval status (accept|adjust)
      * @param string $instruction Optional feedback text
      * @return array
+     * @throws \moodle_exception plugindisabled or plugindisabled_admin when the plugin is disabled.
      */
     public static function execute(int $courseid, string $jobid, string $approvalstatus, string $instruction = ''): array {
         global $USER;
+
+        plugin_settings::require_enabled('local_coursegen');
 
         $params = self::validate_parameters(self::execute_parameters(), [
             'courseid' => $courseid,

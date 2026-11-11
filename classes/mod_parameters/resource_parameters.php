@@ -16,7 +16,7 @@
 
 namespace local_coursegen\mod_parameters;
 
-use aiprovider_datacurso\httpclient\ai_course_api;
+use local_coursegen\local\api_client_factory;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -37,10 +37,7 @@ class resource_parameters extends base_parameters {
      */
     public function get_parameters() {
         $downloadinfo = $this->get_package_download_info();
-        $baseurl = get_config('local_coursegen', 'datacurso_service_url') ?: null;
-        $baseurleu = get_config('local_coursegen', 'datacurso_service_url_eu') ?: null;
-
-        $client = new ai_course_api(null, $baseurl, $baseurleu);
+        $client = api_client_factory::ai_course_api_for_current_tenant();
         $file = $client->download_file($downloadinfo['endpoint'], $downloadinfo['filename']);
         $this->parameters->files = $file->get_itemid();
         return $this->parameters;

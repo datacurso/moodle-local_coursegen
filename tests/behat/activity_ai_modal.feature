@@ -27,9 +27,13 @@ Feature: Add activity or resource with AI modal
   Scenario: Teacher with the createactivitywithai capability sees the AI button in editing mode
     Given I am on the "Course 1" course page logged in as teacher1
     When I turn editing mode on
-    Then "Add an activity or resource" "button" should exist
-    And "Add activity or resource with AI" "button" should exist
+    # The plugin button is injected next to core's activity chooser trigger
+    # ([data-action="open-chooser"]), whose label differs between Moodle 4.5
+    # ("Add an activity or resource") and 5.0 ("Add content"), so only the
+    # plugin's own button is asserted by label.
+    Then "Add activity or resource with AI" "button" should exist
     And ".local_coursegen-add-activity-ai-button" "css_element" should exist
+    And "[data-action='local_coursegen/add_activity_ai']" "css_element" should exist
 
   @SYS-E2E-001
   Scenario: Student without the createactivitywithai capability does not get the AI button
@@ -43,8 +47,11 @@ Feature: Add activity or resource with AI modal
       | local/coursegen:createactivitywithai  | Prohibit   | editingteacher | Course       | C1        |
     And I am on the "Course 1" course page logged in as teacher1
     When I turn editing mode on
-    Then "Add an activity or resource" "button" should exist
+    # Editing mode is on (core's chooser trigger is rendered) but the plugin
+    # button is not injected next to it.
+    Then "[data-action='open-chooser']" "css_element" should exist
     And ".local_coursegen-add-activity-ai-button" "css_element" should not exist
+    And "Add activity or resource with AI" "button" should not exist
 
   @SYS-E2E-001 @SYS-E2E-002
   Scenario: The AI modal opens from the course page with the chat interface

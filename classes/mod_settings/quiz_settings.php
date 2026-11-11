@@ -16,6 +16,11 @@
 
 namespace local_coursegen\mod_settings;
 
+defined('MOODLE_INTERNAL') || die();
+
+global $CFG;
+require_once($CFG->libdir . '/questionlib.php');
+
 /**
  * Class quiz_settings
  *

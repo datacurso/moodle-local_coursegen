@@ -25,12 +25,14 @@
 
 namespace local_coursegen\external;
 
+use aiprovider_datacurso\local\plugin_settings;
 use context_system;
 use external_api;
 use external_function_parameters;
 use external_single_structure;
 use external_value;
 use external_multiple_structure;
+use local_coursegen\local\permission;
 use local_coursegen\local\service\ai_course_api_service;
 use local_coursegen\local\service\course_session_service;
 
@@ -73,12 +75,15 @@ class course_planning_feedback extends external_api {
      * @param int $recordid Session record id in local_coursegen_course_sessions
      * @param array $pendingaction The ActionIntent to run
      * @return array
+     * @throws \moodle_exception plugindisabled or plugindisabled_admin when the plugin is disabled.
      */
     public static function execute(
         int $recordid,
         array $pendingaction
     ): array {
         global $USER;
+
+        plugin_settings::require_enabled('local_coursegen');
 
         $params = self::validate_parameters(self::execute_parameters(), [
             'recordid' => $recordid,
@@ -93,6 +98,11 @@ class course_planning_feedback extends external_api {
         require_capability('local/coursegen:createfreecoursewithai', $context);
 
         $session = course_session_service::get_user_session($recordid, $USER->id);
+
+        // Owning the session is not enough: adjusting a plan consumes paid AI
+        // credits, so require the same capabilities as start_course_planning.
+        permission::require_create_course_with_ai();
+
         $sessionid = $session->get('session_id');
 
         if (!$sessionid) {

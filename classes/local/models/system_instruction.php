@@ -61,6 +61,10 @@ class system_instruction extends persistent {
                 'type' => PARAM_INT,
                 'null' => NULL_NOT_ALLOWED,
             ],
+            'tenantid' => [
+                'type' => PARAM_INT,
+                'default' => 0,
+            ],
         ];
     }
 }

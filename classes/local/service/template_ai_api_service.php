@@ -17,6 +17,7 @@
 namespace local_coursegen\local\service;
 
 use aiprovider_datacurso\httpclient\ai_course_api;
+use local_coursegen\local\api_client_factory;
 use local_coursegen\local\streaming\stream_type;
 use stored_file;
 
@@ -46,15 +47,8 @@ class template_ai_api_service {
             $this->client = $client;
             return;
         }
-        $baseurl = get_config('local_coursegen', 'datacurso_service_url');
-        if (!$baseurl) {
-            $baseurl = null;
-        }
-        $baseurleu = get_config('local_coursegen', 'datacurso_service_url_eu');
-        if (!$baseurleu) {
-            $baseurleu = null;
-        }
-        $this->client = new ai_course_api(null, $baseurl, $baseurleu);
+        // The service URLs are the ones of the tenant of the user; built through the factory so tests can inject a client.
+        $this->client = api_client_factory::ai_course_api_for_current_tenant();
     }
 
     /**

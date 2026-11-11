@@ -22,10 +22,17 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+use aiprovider_datacurso\local\plugin_settings;
 use local_coursegen\local\models\course_context;
+use local_coursegen\local\service\course_session_service;
 
 /**
- * Serve the files from the local_bboard file areas.
+ * Serve the files from the local_coursegen file areas.
+ *
+ * Syllabus files are stored in the SYSTEM context with the planning session
+ * id as item id (see courseai_syllabus_upload), so they are served from the
+ * system context and gated on session ownership or the view_syllabus
+ * capability.
  *
  * @param stdClass $course the course object
  * @param stdClass $cm the course module object
@@ -34,6 +41,8 @@ use local_coursegen\local\models\course_context;
  * @param array $args extra arguments (itemid, path)
  * @param bool $forcedownload whether or not force download
  * @param array $options additional options affecting the file serving
+ * @return bool false when the file is not served (plugin disabled, wrong context, area or access);
+ *              otherwise the file is sent and the script ends
  */
 function local_coursegen_pluginfile(
     $course,
@@ -44,21 +53,23 @@ function local_coursegen_pluginfile(
     bool $forcedownload,
     array $options = []
 ) {
+    global $USER;
+
     // Make sure the user is logged.
     require_login(null, false);
+
+    // Nothing is served while the plugin is disabled in the Datacurso AI provider.
+    if (!plugin_settings::is_enabled('local_coursegen')) {
+        return false;
+    }
 
     // The files the AI service made for a template run, shown in the review preview.
     if ($filearea === \local_coursegen\utils\generated_file_cache::FILEAREA) {
         return \local_coursegen\local\service\generated_file_server::serve($context, $args, $forcedownload, $options);
     }
 
-    // Check the contextlevel is as expected - if your plugin is a block, this becomes CONTEXT_BLOCK, etc.
-    if ($context->contextlevel != CONTEXT_COURSE) {
-        return false;
-    }
-
-    // Check the relevant capabilities - these may vary depending on the filearea being accessed.
-    if (!has_capability('local/coursegen:view_syllabus', $context)) {
+    // Syllabus files live in the system context only.
+    if ($context->contextlevel != CONTEXT_SYSTEM) {
         return false;
     }
 
@@ -68,8 +79,13 @@ function local_coursegen_pluginfile(
     }
 
     // Args is an array containing [itemid, path].
-    // Fetch the itemid from the path.
+    // Fetch the itemid from the path: it is the planning session id.
     $itemid = array_shift($args);
+
+    // Only the session owner or users allowed to view syllabus files may access it.
+    if (!course_session_service::can_view_syllabus((int)$itemid, (int)$USER->id)) {
+        return false;
+    }
 
     // Extract the filename / filepath from the $args array.
     $filename = array_pop($args); // The last item in the $args array.
@@ -109,4 +125,29 @@ function local_coursegen_user_preferences() {
             'permissioncallback' => [\core\user::class, 'is_current_user'],
         ],
     ];
+}
+
+/**
+ * Callback for theme_workplace: adds "Create with AI" to the Workplace launcher.
+ *
+ * Nothing is added while the plugin is disabled in the Datacurso AI provider.
+ *
+ * @return array[] Launcher items, each with url (moodle_url), name and imageurl keys.
+ */
+function local_coursegen_theme_workplace_menu_items(): array {
+    global $OUTPUT;
+
+    if (!plugin_settings::is_enabled('local_coursegen')) {
+        return [];
+    }
+
+    if (!\local_coursegen\local\permission::can_create_course_with_ai()) {
+        return [];
+    }
+
+    return [[
+        'url' => new moodle_url('/local/coursegen/aicoursecreation.php'),
+        'name' => get_string('createwithai', 'local_coursegen'),
+        'imageurl' => $OUTPUT->image_url('sparkles', 'local_coursegen')->out(false),
+    ]];
 }

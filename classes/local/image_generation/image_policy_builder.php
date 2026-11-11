@@ -16,15 +16,17 @@
 
 namespace local_coursegen\local\image_generation;
 
+use local_coursegen\local\tenancy;
+
 /**
  * Builds the image generation policy sent to the AI service.
  *
- * Reads the current image generation configuration stored in the
- * local_coursegen plugin settings and combines it with the activity
- * definitions from {@see activities} into a structured array with the
- * global mode, override flags, and per-activity policies. Shared by both
- * the course planning flow and the single-activity flow, since both send
- * the same `image_policy` payload key to the AI service.
+ * Reads the effective image generation settings of the current user's tenant
+ * (see {@see image_settings}) and
+ * combines them with the activity definitions from {@see activities} into a
+ * structured array with the global mode, override flags, and per-activity
+ * policies. Shared by both the course planning flow and the single-activity
+ * flow, since both send the same `image_policy` payload key to the AI service.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -32,24 +34,22 @@ namespace local_coursegen\local\image_generation;
  */
 class image_policy_builder {
     /**
-     * Build the image generation policy from plugin settings.
+     * Build the image generation policy from the settings of the current user's tenant.
      *
      * @return array
      */
     public static function build(): array {
-        $mode = get_config('local_coursegen', 'generationmode') ?: activities::MODE_DISABLED;
-        $overridecourse = (bool) ((int) get_config('local_coursegen', 'overridecourse') === 1);
-        $overrideactivity = (bool) ((int) get_config('local_coursegen', 'overrideactivity') === 1);
+        $settings = image_settings::get_settings(tenancy::get_tenant_id());
 
         $activitiesconfig = array_map(
-            fn(array $definition): array => self::build_activity_policy($definition),
+            fn(array $definition): array => self::build_activity_policy($definition, $settings),
             activities::get_definitions()
         );
 
         return [
-            'mode' => $mode,
-            'overridecourse' => $overridecourse,
-            'overrideactivity' => $overrideactivity,
+            'mode' => $settings[image_settings::KEY_MODE],
+            'overridecourse' => $settings[image_settings::KEY_OVERRIDE_COURSE] === 1,
+            'overrideactivity' => $settings[image_settings::KEY_OVERRIDE_ACTIVITY] === 1,
             'activities' => $activitiesconfig,
         ];
     }
@@ -58,13 +58,14 @@ class image_policy_builder {
      * Build the image policy for a single activity type from its definition.
      *
      * @param array $definition Activity definition from activities::get_definitions()
+     * @param array $settings Effective settings from image_settings::get_settings()
      * @return array
      */
-    private static function build_activity_policy(array $definition): array {
-        $enabled = (int) get_config('local_coursegen', $definition['configenable']) === 1;
+    private static function build_activity_policy(array $definition, array $settings): array {
+        $enabled = ($settings[$definition['configenable']] ?? 0) === 1;
 
         $partsconfig = array_map(
-            fn(array $part): array => self::build_part_policy($part),
+            fn(array $part): array => self::build_part_policy($part, $settings),
             $definition['parts'] ?? []
         );
 
@@ -79,18 +80,16 @@ class image_policy_builder {
      * Build the image policy for a single part from its definition.
      *
      * @param array $part Part definition from activities::get_definitions()
+     * @param array $settings Effective settings from image_settings::get_settings()
      * @return array
      */
-    private static function build_part_policy(array $part): array {
-        $enabled = (int) get_config('local_coursegen', $part['configenable']) === 1;
+    private static function build_part_policy(array $part, array $settings): array {
+        $enabled = ($settings[$part['configenable']] ?? 0) === 1;
 
         $maximages = 0;
         $configmaximages = $part['configmaximages'] ?? null;
         if ($configmaximages !== null) {
-            $savedmax = (int) get_config('local_coursegen', $configmaximages);
-            if ($savedmax > 0) {
-                $maximages = $savedmax;
-            }
+            $maximages = (int) ($settings[$configmaximages] ?? 0);
         }
 
         return [

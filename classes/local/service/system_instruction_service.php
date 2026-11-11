@@ -19,7 +19,11 @@ namespace local_coursegen\local\service;
 use local_coursegen\local\models\system_instruction;
 
 /**
- * Service class for handling system instructions using the persistent model.
+ * Tenant-aware service for system instructions.
+ *
+ * Every instruction belongs to exactly one tenant and is private to it: a
+ * tenant only sees, uses, edits and deletes its own instructions. Names are
+ * unique per tenant.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -27,25 +31,27 @@ use local_coursegen\local\models\system_instruction;
  */
 class system_instruction_service {
     /**
-     * Create a new system instruction.
+     * Create a new system instruction owned by a tenant.
      *
-     * @param string $name Instruction name
-     * @param string $content Instruction content
+     * @param array $data Instruction data: name (string) and content (string).
+     * @param int $tenantid Owning tenant.
      * @return system_instruction
+     * @throws \moodle_exception When the name is empty or already used in the tenant.
      */
-    public static function create(string $name, string $content): system_instruction {
+    public static function create(array $data, int $tenantid): system_instruction {
         global $USER;
 
-        if (!self::validate_unique_name($name)) {
+        $name = trim((string) ($data['name'] ?? ''));
+        if (!self::validate_unique_name($name, $tenantid)) {
             throw new \moodle_exception('systeminstructionnameexists', 'local_coursegen');
         }
 
         $now = time();
-
         $record = (object) [
-            'name' => trim($name),
-            'content' => $content,
+            'name' => $name,
+            'content' => (string) ($data['content'] ?? ''),
             'deleted' => 0,
+            'tenantid' => $tenantid,
             'timecreated' => $now,
             'timemodified' => $now,
             'usermodified' => $USER->id,
@@ -58,106 +64,144 @@ class system_instruction_service {
     }
 
     /**
-     * Update an existing system instruction.
+     * Update a system instruction owned by the tenant.
      *
-     * @param int $id Instruction ID
-     * @param string $name Instruction name
-     * @param string $content Instruction content
+     * @param int $id Instruction id.
+     * @param array $data Instruction data: name (string) and content (string).
+     * @param int $tenantid Tenant performing the update; it must own the instruction.
      * @return system_instruction
+     * @throws \moodle_exception When the instruction is not owned by the tenant or the name is taken.
      */
-    public static function update(int $id, string $name, string $content): system_instruction {
+    public static function update(int $id, array $data, int $tenantid): system_instruction {
         global $USER;
 
-        $instruction = self::get_by_id($id);
-        if (!$instruction) {
-            throw new \moodle_exception('invalidrecord', 'error');
-        }
+        $instruction = self::require_owned($id, $tenantid);
 
-        if (!self::validate_unique_name($name, $id)) {
+        $name = trim((string) ($data['name'] ?? ''));
+        if (!self::validate_unique_name($name, $tenantid, $id)) {
             throw new \moodle_exception('systeminstructionnameexists', 'local_coursegen');
         }
 
-        $now = time();
-
-        $instruction->set('name', trim($name));
-        $instruction->set('content', $content);
-        $instruction->set('timemodified', $now);
+        $instruction->set('name', $name);
+        $instruction->set('content', (string) ($data['content'] ?? ''));
+        $instruction->set('timemodified', time());
         $instruction->set('usermodified', $USER->id);
-
         $instruction->update();
 
         return $instruction;
     }
 
     /**
-     * Soft delete a system instruction.
+     * Soft delete a system instruction owned by the tenant.
      *
-     * @param int $id Instruction ID
+     * @param int $id Instruction id.
+     * @param int $tenantid Tenant performing the deletion; it must own the instruction.
      * @return bool
+     * @throws \moodle_exception When the instruction is not owned by the tenant.
      */
-    public static function delete(int $id): bool {
+    public static function delete(int $id, int $tenantid): bool {
         global $DB;
 
-        $instruction = self::get_by_id($id);
-        if (!$instruction) {
-            return false;
-        }
+        self::require_owned($id, $tenantid);
 
         $DB->set_field(system_instruction::TABLE, 'deleted', 1, ['id' => $id]);
         return true;
     }
 
     /**
-     * Get all active (non deleted) system instructions.
+     * Active (non deleted) instructions owned by a tenant, newest first.
      *
+     * @param int $tenantid Tenant id.
      * @return system_instruction[]
      */
-    public static function get_all(): array {
-        return system_instruction::get_records(['deleted' => 0], 'timecreated', 'DESC');
+    public static function get_all(int $tenantid): array {
+        return system_instruction::get_records(['deleted' => 0, 'tenantid' => $tenantid], 'timecreated', 'DESC');
     }
 
     /**
-     * Get a system instruction by ID.
+     * Active instructions a tenant may use (its own), ordered by name.
      *
-     * @param int $id Instruction ID
+     * @param int $tenantid Tenant id.
+     * @return \stdClass[] Records with every table column, keyed by instruction id.
+     */
+    public static function get_available(int $tenantid): array {
+        global $DB;
+
+        return $DB->get_records(
+            system_instruction::TABLE,
+            ['deleted' => 0, 'tenantid' => $tenantid],
+            'name ASC, id ASC'
+        );
+    }
+
+    /**
+     * An active instruction owned by the tenant, or null.
+     *
+     * @param int $id Instruction id.
+     * @param int $tenantid Tenant id.
      * @return system_instruction|null
      */
-    public static function get_by_id(int $id): ?system_instruction {
-        $instruction = system_instruction::get_record(['id' => $id, 'deleted' => 0]);
+    public static function get_by_id(int $id, int $tenantid): ?system_instruction {
+        $instruction = system_instruction::get_record(['id' => $id, 'deleted' => 0, 'tenantid' => $tenantid]);
         return $instruction ?: null;
     }
 
     /**
-     * Get the content of a system instruction by ID.
+     * An active instruction owned by the tenant.
      *
-     * Returns an empty string if the instruction does not exist or has empty content.
-     *
-     * @param int $id Instruction ID
-     * @return string
+     * @param int $id Instruction id.
+     * @param int $tenantid Tenant that must own the instruction.
+     * @return system_instruction
+     * @throws \moodle_exception When the instruction does not exist, is deleted or belongs to someone else.
      */
-    public static function get_instruction_content(int $id): string {
-        $instruction = self::get_by_id($id);
-
-        if (!$instruction) {
-            return '';
+    public static function require_owned(int $id, int $tenantid): system_instruction {
+        $instruction = system_instruction::get_record(['id' => $id, 'deleted' => 0]);
+        if (!$instruction || (int) $instruction->get('tenantid') !== $tenantid) {
+            throw new \moodle_exception('invalidsysteminstruction', 'local_coursegen');
         }
-
-        $content = $instruction->get('content');
-        if (!$content) {
-            return '';
-        }
-
-        return (string)$content;
+        return $instruction;
     }
 
     /**
-     * Validate that a system instruction name is unique (among non deleted records).
+     * Ensure a tenant may use an instruction: it must be an active instruction of its own.
      *
-     * @param string $name Instruction name
-     * @param int|null $excludeid ID to exclude from the check (for updates)
-     * @return bool
+     * @param int $id Instruction id.
+     * @param int $tenantid Tenant id.
+     * @return void
+     * @throws \invalid_parameter_exception When the instruction is deleted, missing or belongs to another tenant.
      */
-    private static function validate_unique_name(string $name, ?int $excludeid = null): bool {
+    public static function assert_accessible(int $id, int $tenantid): void {
+        if (self::get_by_id($id, $tenantid) === null) {
+            throw new \invalid_parameter_exception('The system instruction is not available for this tenant.');
+        }
+    }
+
+    /**
+     * Content of an instruction by id, empty when it does not exist or has no content.
+     *
+     * Callers resolve access first ({@see assert_accessible()}): the instruction
+     * referenced by a course keeps being read by id whatever tenant reads it.
+     *
+     * @param int $id Instruction id.
+     * @return string
+     */
+    public static function get_instruction_content(int $id): string {
+        $instruction = system_instruction::get_record(['id' => $id, 'deleted' => 0]);
+        if (!$instruction) {
+            return '';
+        }
+        return (string) ($instruction->get('content') ?? '');
+    }
+
+    /**
+     * Whether a name is free among the active instructions of a tenant.
+     *
+     * @param string $name Instruction name (trimmed before comparing).
+     * @param int $tenantid Tenant id.
+     * @param int|null $excludeid Instruction to ignore (the one being updated).
+     * @return bool False for an empty name or a name already used in the tenant.
+     */
+    public static function validate_unique_name(string $name, int $tenantid, ?int $excludeid = null): bool {
         global $DB;
 
         $name = trim($name);
@@ -165,12 +209,11 @@ class system_instruction_service {
             return false;
         }
 
+        $sql = 'name = :name AND deleted = 0 AND tenantid = :tenantid';
+        $params = ['name' => $name, 'tenantid' => $tenantid];
         if ($excludeid) {
-            $sql = "name = :name AND deleted = 0 AND id <> :id";
-            $params = ['name' => $name, 'id' => $excludeid];
-        } else {
-            $sql = "name = :name AND deleted = 0";
-            $params = ['name' => $name];
+            $sql .= ' AND id <> :id';
+            $params['id'] = $excludeid;
         }
 
         return !$DB->record_exists_select(system_instruction::TABLE, $sql, $params);

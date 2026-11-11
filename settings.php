@@ -23,113 +23,146 @@
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+use aiprovider_datacurso\local\plugin_settings;
+
 defined('MOODLE_INTERNAL') || die();
 
-if ($hassiteconfig) {
-    // The target page requires the core capability to create courses AND one of
-    // the two modes, so the menu entry must check the same: admin_externalpage
-    // ORs the capabilities it is given and cannot express that, which showed the
-    // entry to users the page then rejected.
-    $creationmodes = ['local/coursegen:createfreecoursewithai', 'local/coursegen:createtemplatecoursewithai'];
-    $systemcontext = context_system::instance();
-    if (has_capability('moodle/course:create', $systemcontext) && has_any_capability($creationmodes, $systemcontext)) {
-        $ADMIN->add('courses', new admin_externalpage(
-            'local_coursegen_addnewcourseai',
-            get_string('courseai_admin_addnewcourse', 'local_coursegen'),
-            new moodle_url('/local/coursegen/aicoursecreation.php'),
-            $creationmodes
-        ), 'restorecourse');
-    }
+$pluginname = 'local_coursegen';
 
-    $pluginname = 'local_coursegen';
-    $admincategory = new admin_category($pluginname, get_string('pluginname', $pluginname));
-    $ADMIN->add('localplugins', $admincategory);
-    $settings = new admin_settingpage('local_coursegen_settings', get_string('generalsettings', 'local_coursegen'));
-
-    // Custom checkbox: rejects enabling the feature while mod_subsection is
-    // disabled, so generated subsections can never silently flatten.
-    $settings->add(new \local_coursegen\admin\setting_enablesubsections(
-        'local_coursegen/enablesubsections',
-        get_string('enablesubsections', 'local_coursegen'),
-        get_string('enablesubsections_desc', 'local_coursegen'),
-        0
-    ));
-
-    $ADMIN->add($pluginname, $settings);
-
-    // Development settings page: service URL overrides for dev/staging
-    // environments, kept apart from the functional settings.
-    $devsettings = new admin_settingpage(
-        'local_coursegen_devsettings',
-        get_string('devsettings', 'local_coursegen')
-    );
-
-    $devsettings->add(new admin_setting_heading(
-        'local_coursegen/devsettingsheading',
-        '',
-        get_string('devsettings_desc', 'local_coursegen')
-    ));
-
-    $devsettings->add(new admin_setting_configtext(
-        'local_coursegen/datacurso_service_url',
-        get_string('datacurso_service_url', 'local_coursegen'),
-        get_string('datacurso_service_url_desc', 'local_coursegen'),
-        '',
-        PARAM_URL
-    ));
-
-    $devsettings->add(new admin_setting_configtext(
-        'local_coursegen/datacurso_service_url_eu',
-        get_string('datacurso_service_url_eu', 'local_coursegen'),
-        get_string('datacurso_service_url_eu_desc', 'local_coursegen'),
-        '',
-        PARAM_URL
-    ));
-
-    $ADMIN->add($pluginname, $devsettings);
-    // Add Manage system instructions page.
-    $ADMIN->add($pluginname, new admin_externalpage(
-        'local_coursegen_manage_system_instructions',
-        get_string('managesysteminstructions', 'local_coursegen'),
-        new moodle_url('/local/coursegen/manage_system_instructions.php'),
-        'local/coursegen:viewsysteminstructions'
-    ));
-
-    $ADMIN->add($pluginname, new admin_externalpage(
-        'local_coursegen_manage_image_generation',
-        get_string('manage_image_generation', 'local_coursegen'),
-        new moodle_url('/local/coursegen/manage_image_generation.php'),
-        'local/coursegen:viewimagegenerationsettings'
-    ));
-
-    $ADMIN->add($pluginname, new admin_externalpage(
-        'local_coursegen_manage_templates',
-        get_string('managetemplates', 'local_coursegen'),
-        new moodle_url('/local/coursegen/manage_templates.php'),
-        'local/coursegen:viewtemplates'
-    ));
-
-    $ADMIN->add($pluginname, new admin_externalpage(
-        'local_coursegen_import_template',
-        get_string('template_import', 'local_coursegen'),
-        new moodle_url('/local/coursegen/import_template.php'),
-        'local/coursegen:edittemplates',
-        true
-    ));
-
-    $ADMIN->add($pluginname, new admin_externalpage(
-        'local_coursegen_edit_template',
-        get_string('template_create', 'local_coursegen'),
-        new moodle_url('/local/coursegen/edit_template.php'),
-        ['local/coursegen:createtemplates', 'local/coursegen:edittemplates'],
-        true
-    ));
-
-    $ADMIN->add($pluginname, new admin_externalpage(
-        'local_coursegen_edit_system_instruction',
-        get_string('editsysteminstruction', 'local_coursegen'),
-        new moodle_url('/local/coursegen/edit_system_instruction.php'),
-        ['local/coursegen:createsysteminstructions', 'local/coursegen:editsysteminstructions'],
-        true
-    ));
+// The "Create a new course with AI" page is also used by Workplace tenant
+// administrators, who have no site configuration rights: it is registered outside the
+// $hassiteconfig block with its own access check, which accepts system-level
+// and category-level course creators alike (see \local_coursegen\local\permission).
+// The "Restore course" sibling only exists for users holding moodle/site:config.
+// The external pages are built by \local_coursegen\admin\external_page, which
+// falls back to core admin pages gated by the capability on plain Moodle LMS.
+// The entry is hidden while the plugin is disabled in the Datacurso AI provider, or the provider is missing
+// (the admin tree is also built while installing a site, before the dependency can be checked).
+if (class_exists(plugin_settings::class) && plugin_settings::is_enabled('local_coursegen')) {
+    $ADMIN->add('courses', \local_coursegen\admin\external_page::create(
+        'local_coursegen_addnewcourseai',
+        get_string('courseai_admin_addnewcourse', 'local_coursegen'),
+        (new moodle_url('/local/coursegen/aicoursecreation.php'))->out(false),
+        \local_coursegen\local\permission::CREATION_CAPABILITIES,
+        static fn(): bool => \local_coursegen\local\permission::can_create_course_with_ai()
+    ), $ADMIN->locate('restorecourse') ? 'restorecourse' : null);
 }
+
+// The plugin category also hosts pages meant for tenant administrators, so it is
+// created for every admin tree user (an admin category hides itself when none of
+// its pages is accessible). The "Local plugins" category only exists for users
+// holding moodle/site:config; for anyone else the category hangs from "Courses".
+$admincategory = new admin_category($pluginname, get_string('pluginname', $pluginname));
+$ADMIN->add($ADMIN->locate('localplugins') ? 'localplugins' : 'courses', $admincategory);
+
+// Every configuration page below applies to the tenant the user is currently in
+// (tenant administrators: their own tenant; site administrators: the tenant they
+// switched to). They are registered outside the $hassiteconfig block so tenant
+// administrators reach them, each gated by its own plugin capability.
+
+// General settings, stored for the current tenant.
+$settings = new admin_settingpage(
+    'local_coursegen_settings',
+    get_string('generalsettings', 'local_coursegen'),
+    'local/coursegen:managetenantsettings'
+);
+
+$settings->add(new \local_coursegen\admin\setting_tenant_scope_notice('local_coursegen/generaltenantscopenotice'));
+
+// Custom checkbox: rejects enabling the feature while mod_subsection is
+// disabled, so generated subsections can never silently flatten.
+$settings->add(new \local_coursegen\admin\setting_enablesubsections(
+    'local_coursegen/enablesubsections',
+    get_string('enablesubsections', 'local_coursegen'),
+    get_string('enablesubsections_desc', 'local_coursegen'),
+    0
+));
+
+$ADMIN->add($pluginname, $settings);
+
+// Development settings page: service URL overrides for dev/staging
+// environments, kept apart from the functional settings. Also per tenant.
+$devsettings = new admin_settingpage(
+    'local_coursegen_devsettings',
+    get_string('devsettings', 'local_coursegen'),
+    'local/coursegen:managetenantsettings'
+);
+
+$devsettings->add(new \local_coursegen\admin\setting_tenant_scope_notice('local_coursegen/devtenantscopenotice'));
+
+$devsettings->add(new admin_setting_heading(
+    'local_coursegen/devsettingsheading',
+    '',
+    get_string('devsettings_desc', 'local_coursegen')
+));
+
+// HTTPS is enforced: the overrides carry prompts and syllabus files, so
+// plain HTTP is only accepted for localhost under developer debugging.
+$devsettings->add(new \local_coursegen\admin\setting_https_url(
+    'local_coursegen/datacurso_service_url',
+    get_string('datacurso_service_url', 'local_coursegen'),
+    get_string('datacurso_service_url_desc', 'local_coursegen'),
+    '',
+    PARAM_URL
+));
+
+$devsettings->add(new \local_coursegen\admin\setting_https_url(
+    'local_coursegen/datacurso_service_url_eu',
+    get_string('datacurso_service_url_eu', 'local_coursegen'),
+    get_string('datacurso_service_url_eu_desc', 'local_coursegen'),
+    '',
+    PARAM_URL
+));
+
+$ADMIN->add($pluginname, $devsettings);
+
+// Image generation policy of the current tenant.
+$ADMIN->add($pluginname, \local_coursegen\admin\external_page::create(
+    'local_coursegen_manage_image_generation',
+    get_string('manage_image_generation', 'local_coursegen'),
+    (new moodle_url('/local/coursegen/manage_image_generation.php'))->out(false),
+    'local/coursegen:viewimagegenerationsettings'
+));
+
+// System instructions of the current tenant.
+$ADMIN->add($pluginname, \local_coursegen\admin\external_page::create(
+    'local_coursegen_manage_system_instructions',
+    get_string('managesysteminstructions', 'local_coursegen'),
+    (new moodle_url('/local/coursegen/manage_system_instructions.php'))->out(false),
+    'local/coursegen:viewsysteminstructions'
+));
+
+$ADMIN->add($pluginname, \local_coursegen\admin\external_page::create(
+    'local_coursegen_edit_system_instruction',
+    get_string('editsysteminstruction', 'local_coursegen'),
+    (new moodle_url('/local/coursegen/edit_system_instruction.php'))->out(false),
+    ['local/coursegen:createsysteminstructions', 'local/coursegen:editsysteminstructions'],
+    null,
+    true
+));
+
+// Course templates of the current tenant.
+$ADMIN->add($pluginname, \local_coursegen\admin\external_page::create(
+    'local_coursegen_manage_templates',
+    get_string('managetemplates', 'local_coursegen'),
+    (new moodle_url('/local/coursegen/manage_templates.php'))->out(false),
+    'local/coursegen:viewtemplates'
+));
+
+$ADMIN->add($pluginname, \local_coursegen\admin\external_page::create(
+    'local_coursegen_import_template',
+    get_string('template_import', 'local_coursegen'),
+    (new moodle_url('/local/coursegen/import_template.php'))->out(false),
+    'local/coursegen:edittemplates',
+    null,
+    true
+));
+
+$ADMIN->add($pluginname, \local_coursegen\admin\external_page::create(
+    'local_coursegen_edit_template',
+    get_string('template_create', 'local_coursegen'),
+    (new moodle_url('/local/coursegen/edit_template.php'))->out(false),
+    ['local/coursegen:createtemplates', 'local/coursegen:edittemplates'],
+    null,
+    true
+));

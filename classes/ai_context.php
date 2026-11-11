@@ -16,7 +16,7 @@
 
 namespace local_coursegen;
 
-use aiprovider_datacurso\httpclient\ai_course_api;
+use local_coursegen\local\api_client_factory;
 
 /**
  * Class ai_context
@@ -50,50 +50,11 @@ class ai_context {
                 'site_id' => $siteid,
             ];
 
-            $baseurl = get_config('local_coursegen', 'datacurso_service_url') ?: null;
-            $baseurleu = get_config('local_coursegen', 'datacurso_service_url_eu') ?: null;
-
-            $client = new ai_course_api(null, $baseurl, $baseurleu);
+            $client = api_client_factory::ai_course_api_for_current_tenant();
             $client->request('POST', '/context/upload-model-context', $postdata);
         } catch (\Exception $e) {
             // Show error notification to the user.
             \core\notification::error(get_string('error_upload_failed_system_instruction', 'local_coursegen', $e->getMessage()));
-        }
-    }
-
-    /**
-     * Save syllabus PDF file from draft area to system context.
-     *
-     * @param int $itemid Item ID used to store the syllabus file in system context.
-     * @param int|null $draftitemid Draft item ID from the syllabus file picker
-     * @return bool True if syllabus was saved successfully, false otherwise
-     */
-    public static function save_syllabus_from_draft(int $itemid, ?int $draftitemid = null): bool {
-        if (!$draftitemid) {
-            return false;
-        }
-
-        // Syllabus file options - only PDF files allowed.
-        $fileoptions = [
-            'subdirs' => 0,
-            'maxfiles' => 1,
-            'accepted_types' => ['.pdf'],
-        ];
-
-        try {
-            file_save_draft_area_files(
-                $draftitemid,
-                \context_system::instance()->id,
-                'local_coursegen',
-                self::CONTEXT_TYPE_SYLLABUS,
-                $itemid,
-                $fileoptions
-            );
-            return true;
-        } catch (\Exception $e) {
-            // Log the error or handle it as needed.
-            debugging('Error saving syllabus from draft: ' . $e->getMessage(), DEBUG_DEVELOPER);
-            return false;
         }
     }
 
@@ -148,10 +109,7 @@ class ai_context {
         }
 
         if ($aicontext->context_type === self::CONTEXT_TYPE_SYLLABUS) {
-            $fs = get_file_storage();
-            $context = \context_course::instance($courseid);
-            $files = $fs->get_area_files($context->id, 'local_coursegen', 'syllabus', 0, 'itemid', false);
-            if (empty($files)) {
+            if (!self::course_has_syllabus_file($courseid)) {
                 return null;
             }
             return (object) [
@@ -172,5 +130,31 @@ class ai_context {
         }
 
         return null;
+    }
+
+    /**
+     * Whether any planning session of the course has a stored syllabus file.
+     *
+     * Syllabus files live in the SYSTEM context with the planning session id
+     * as item id (see courseai_syllabus_upload).
+     *
+     * @param int $courseid Course ID
+     * @return bool
+     */
+    private static function course_has_syllabus_file(int $courseid): bool {
+        global $DB;
+
+        $fs = get_file_storage();
+        $syscontextid = \context_system::instance()->id;
+        $sessionids = $DB->get_fieldset_select('local_coursegen_course_sessions', 'id', 'courseid = ?', [$courseid]);
+        foreach ($sessionids as $sessionid) {
+            $syllabusarea = self::CONTEXT_TYPE_SYLLABUS;
+            $files = $fs->get_area_files($syscontextid, 'local_coursegen', $syllabusarea, (int)$sessionid, 'itemid', false);
+            if (!empty($files)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

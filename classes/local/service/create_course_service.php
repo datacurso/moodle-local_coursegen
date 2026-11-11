@@ -17,8 +17,11 @@
 namespace local_coursegen\local\service;
 
 use core_course_category;
+use local_coursegen\event\generation_failed;
+use local_coursegen\event\generation_result_applied;
 use local_coursegen\local\models\course_session;
 use local_coursegen\local\models\template;
+use local_coursegen\local\tenancy;
 
 /**
  * Service responsible for creating a course from an AI planning session.
@@ -48,6 +51,13 @@ class create_course_service {
      */
     public static function create_course(course_session $session, array $resultdata, array $overrides = []): array {
         global $CFG;
+
+        // Resolve the effective category (user override → AI value → site default)
+        // and require course creation permission in that exact category before any
+        // creation work happens. Thrown (not returned) so callers surface it as a
+        // proper permission error.
+        $effectivecategoryid = self::resolve_effective_category($resultdata, $overrides);
+        require_capability('moodle/course:create', \context_coursecat::instance($effectivecategoryid));
 
         try {
             // This request may take a long time depending on the complexity of the prompt that the AI has to resolve.
@@ -91,6 +101,11 @@ class create_course_service {
                 template_course_blocks::copy($course, $sourcecourseid);
                 template_course_custom_fields::copy($course, $sourcecourseid);
             }
+
+            generation_result_applied::create([
+                'context' => \context_course::instance($course->id),
+                'other' => ['courseid' => (int)$course->id],
+            ])->trigger();
 
             // Persist course id in the session record and mark as creating (2).
             $sessionid = (int)$session->get('id');
@@ -171,7 +186,7 @@ class create_course_service {
             // Return success response.
             $message = get_string('coursecreated', 'local_coursegen');
             if (!empty($activityerrors)) {
-                $message .= ' Some activities were skipped due to creation errors.';
+                $message .= ' ' . get_string('coursecreated_partial', 'local_coursegen');
             }
 
             return [
@@ -194,17 +209,67 @@ class create_course_service {
             // Update session status to failed if session exists.
             course_session_service::update_status((int)$session->get('id'), course_session::STATUS_FAILED);
 
+            // Keep the technical detail in developer debugging only: the client
+            // receives a localized message without internal information.
+            debugging('local_coursegen: course creation failed. ' . $e->getMessage());
+
+            generation_failed::create([
+                'context' => \context_system::instance(),
+                'other' => ['reason' => get_class($e)],
+            ])->trigger();
+
             return [
                 'success' => false,
                 'courseid' => 0,
                 'shortname' => '',
                 'fullname' => '',
-                'message' => $e->getMessage(),
+                'message' => get_string('error_course_creation_failed', 'local_coursegen'),
                 'partial' => false,
                 'haswarnings' => false,
                 'warningscount' => 0,
             ];
         }
+    }
+
+    /**
+     * Resolve the category the course will effectively be created in.
+     *
+     * Precedence: user override → AI-generated value → default category
+     * (the category of the user's tenant, else the site default).
+     *
+     * @param array $resultdata Result data from the Datacurso API.
+     * @param array $overrides Optional user overrides for course fields.
+     * @return int Category id.
+     */
+    private static function resolve_effective_category(array $resultdata, array $overrides): int {
+        if (!empty($overrides['category'])) {
+            return (int)$overrides['category'];
+        }
+
+        $config = $resultdata['course_configuration'] ?? null;
+        if (is_array($config) && !empty($config['category'])) {
+            return (int)$config['category'];
+        }
+
+        return self::get_default_categoryid();
+    }
+
+    /**
+     * Default category for a new AI course.
+     *
+     * In Moodle Workplace a tenant owns a course category: courses of its users
+     * default there. Without a tenant category the site default is used.
+     *
+     * @return int Category id, 0 when the site has no category at all.
+     */
+    private static function get_default_categoryid(): int {
+        $tenantcategoryid = tenancy::get_tenant_categoryid(tenancy::get_tenant_id());
+        if ($tenantcategoryid !== null) {
+            return $tenantcategoryid;
+        }
+
+        $defaultcategory = core_course_category::get_default();
+        return $defaultcategory ? (int)$defaultcategory->id : 0;
     }
 
     /**
@@ -216,8 +281,7 @@ class create_course_service {
     private static function build_course_data_from_api(array $resultdata): \stdClass {
         $coursedata = new \stdClass();
 
-        $defaultcategory = core_course_category::get_default();
-        $defaultcategoryid = $defaultcategory ? (int)$defaultcategory->id : 0;
+        $defaultcategoryid = self::get_default_categoryid();
 
         $config = $resultdata['course_configuration'] ?? null;
         if (!is_array($config)) {
@@ -589,7 +653,7 @@ class create_course_service {
                 $activityerrors[] = [
                     'resource_type' => 'subsection',
                     'section' => (int)$subsection['parentsection'],
-                    'message' => $e->getMessage(),
+                    'message' => get_string('error_activity_creation_failed', 'local_coursegen'),
                     'title' => (string)$subsection['name'],
                 ];
                 debugging('local_coursegen: empty subsection creation skipped. ' . $e->getMessage());
@@ -658,7 +722,7 @@ class create_course_service {
                     $errors[] = [
                         'resource_type' => 'subsection',
                         'section' => (int)$sectionnum,
-                        'message' => $e->getMessage(),
+                        'message' => get_string('error_activity_creation_failed', 'local_coursegen'),
                         'title' => (string)$subsections[$subsectionid]['name'],
                     ];
                     unset($subsections[$subsectionid]);
@@ -678,7 +742,7 @@ class create_course_service {
                 $errors[] = [
                     'resource_type' => $resource,
                     'section' => (int)$sectionnum,
-                    'message' => $e->getMessage(),
+                    'message' => get_string('error_activity_creation_failed', 'local_coursegen'),
                     'title' => $title,
                 ];
                 $context = [

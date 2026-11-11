@@ -26,6 +26,9 @@ use local_coursegen\local\models\module_job;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class module_job_service {
+    /** @var string Status set once the job result has been applied: the job is single-use. */
+    const STATUS_CONSUMED = 'consumed';
+
     /**
      * Create and persist a module job record.
      *

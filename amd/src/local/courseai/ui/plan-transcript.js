@@ -34,6 +34,7 @@
 
 import {renderMarkdown} from 'local_coursegen/local/courseai/ui/markdown';
 import {formatSectionMd} from 'local_coursegen/local/courseai/ui/plan_markdown';
+import {escapeHtml} from 'local_coursegen/local/courseai/utils';
 import {get_string} from 'core/str';
 
 /** Collapsed max-height (px) before the detail fades + shows a "Show more" toggle. */
@@ -315,7 +316,7 @@ export const rebuildTranscriptFromPlan = (plan) => {
             + '<path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"/></svg>'
             + '<svg class="check-icon" viewBox="0 0 24 24">'
             + '<polyline points="20 6 9 17 4 12"/></svg></span>'
-            + '<span class="courseai-checklist-name">' + (section.name || '') + '</span>'
+            + '<span class="courseai-checklist-name">' + escapeHtml(String(section.name || '')) + '</span>'
             + '</div>'
             + '<div class="courseai-checklist-detail cg-log-md">' + md + '</div>';
         list.appendChild(item);

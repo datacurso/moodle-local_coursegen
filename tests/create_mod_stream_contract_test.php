@@ -22,6 +22,10 @@ use local_coursegen\local\models\module_job;
 use local_coursegen\local\service\ai_course_api_service;
 use local_coursegen\local\service\create_mod_service;
 
+defined('MOODLE_INTERNAL') || die();
+
+require_once(__DIR__ . '/fixtures/aiprovider_datacurso_stub.php');
+
 /**
  * Contract tests for the individual activity generation request and result.
  *
@@ -46,6 +50,17 @@ use local_coursegen\local\service\create_mod_service;
  * @runTestsInSeparateProcesses
  */
 final class create_mod_stream_contract_test extends \advanced_testcase {
+    /**
+     * Skip the test when the Datacurso AI provider, whose enable gate the tested code calls, is not installed.
+     *
+     * The CI pipeline does not install declared dependencies.
+     */
+    private function require_datacurso_provider(): void {
+        if (!class_exists(\aiprovider_datacurso\local\plugin_settings::class)) {
+            $this->markTestSkipped('aiprovider_datacurso is not installed.');
+        }
+    }
+
     /**
      * Load the testable subclass in the isolated process.
      */
@@ -105,11 +120,15 @@ final class create_mod_stream_contract_test extends \advanced_testcase {
     }
 
     /**
-     * MDL-CTR-001: The individual creation request includes the data the service
-     * requires at the plugin level: instructions, language and the images option.
-     * The H5P framework version travels as an optional field.
+     * When a course context row exists, its type and system instruction name
+     * must reach the persisted module job (the name normalisation was lost in
+     * the migration from the legacy ai_context class: the service aliases the
+     * column as system_instruction_name, not name).
      */
-    public function test_start_request_contains_required_contract_fields(): void {
+    public function test_course_context_reaches_the_stored_job(): void {
+        $this->require_datacurso_provider();
+        global $DB, $USER;
+
         $this->resetAfterTest();
         $this->setAdminUser();
 
@@ -117,8 +136,59 @@ final class create_mod_stream_contract_test extends \advanced_testcase {
         $captured = null;
         $this->inject_api_service($captured);
 
-        // A configured (non-disabled) admin image mode must travel with the request.
-        set_config('generationmode', \local_coursegen\local\image_generation\activities::MODE_MANUAL, 'local_coursegen');
+        $now = time();
+        $instructionid = $DB->insert_record('local_coursegen_system_instruction', (object)[
+            'name' => 'Institutional guideline',
+            'content' => 'Follow the style guide.',
+            'deleted' => 0,
+            'timecreated' => $now,
+            'timemodified' => $now,
+            'usermodified' => $USER->id,
+        ]);
+        $DB->insert_record('local_coursegen_course_context', (object)[
+            'courseid' => $course->id,
+            'context_type' => 'system_instruction',
+            'system_instruction_id' => $instructionid,
+            'lang' => 'en',
+            'prompt_text' => '',
+            'timecreated' => $now,
+            'timemodified' => $now,
+            'usermodified' => $USER->id,
+        ]);
+
+        $result = testable_create_mod_stream::execute($course->id, 1, 'Create a page about photosynthesis', 0, null, 'en');
+        $this->resetDebugging();
+        $this->assertTrue($result['ok'], 'Start must succeed: ' . ($result['message'] ?? ''));
+
+        $job = $DB->get_record('local_coursegen_module_jobs', ['job_id' => 'job-1'], '*', MUST_EXIST);
+        $this->assertSame('system_instruction', $job->context_type);
+        $this->assertSame(
+            'Institutional guideline',
+            $job->system_instruction_name,
+            'The stored job must carry the system instruction name resolved from the course context.'
+        );
+    }
+
+    /**
+     * MDL-CTR-001: The individual creation request includes the data the service
+     * requires at the plugin level: instructions, language and the images option.
+     * The H5P framework version travels as an optional field.
+     */
+    public function test_start_request_contains_required_contract_fields(): void {
+        $this->require_datacurso_provider();
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $course = $this->getDataGenerator()->create_course();
+        $captured = null;
+        $this->inject_api_service($captured);
+
+        // A configured (non-disabled) image mode of the user's tenant must travel with the request.
+        \local_coursegen\local\tenant_config::set(
+            'generationmode',
+            \local_coursegen\local\image_generation\activities::MODE_MANUAL,
+            \local_coursegen\local\tenancy::get_tenant_id()
+        );
 
         $result = testable_create_mod_stream::execute($course->id, 1, 'Create an H5P quiz about volcanoes', 1, null, 'es');
         // One pre-existing developer notice: execute_parameters() declares
@@ -162,6 +232,7 @@ final class create_mod_stream_contract_test extends \advanced_testcase {
      * (regression observed on sites without generationmode configured).
      */
     public function test_disabled_image_mode_is_not_sent_with_images_enabled(): void {
+        $this->require_datacurso_provider();
         $this->resetAfterTest();
         $this->setAdminUser();
 
@@ -203,10 +274,43 @@ final class create_mod_stream_contract_test extends \advanced_testcase {
     }
 
     /**
+     * An invalid init response is logged as key names plus status only: the
+     * full service response body (which may embed generated content) must not
+     * reach the developer log nor the client.
+     */
+    public function test_invalid_init_response_logs_keys_only(): void {
+        $this->require_datacurso_provider();
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $course = $this->getDataGenerator()->create_course();
+
+        $service = $this->getMockBuilder(ai_course_api_service::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods(['start_activity', 'get_mod_streaming_url_for_job'])
+            ->getMock();
+        // No thread_id: the response is invalid. It carries a marker that must never be logged.
+        $service->method('start_activity')
+            ->willReturn(['status' => 'error', 'detail' => 'SENSITIVE-RESPONSE-BODY']);
+        testable_create_mod_stream::$mockservice = $service;
+
+        $result = testable_create_mod_stream::execute($course->id, 1, 'Create a page', 0, null, 'en');
+
+        $this->assertFalse($result['ok']);
+        $debuggings = $this->getDebuggingMessages();
+        $this->resetDebugging();
+        $alldebugging = json_encode($debuggings);
+        $this->assertStringNotContainsString('SENSITIVE-RESPONSE-BODY', $alldebugging);
+        $this->assertStringContainsString('detail', $alldebugging, 'The key names present must be logged.');
+        $this->assertStringNotContainsString('SENSITIVE-RESPONSE-BODY', json_encode($result));
+    }
+
+    /**
      * MDL-INT-010: The site H5P framework version is composed as major.minor and
      * accompanies the individual activity creation request.
      */
     public function test_h5p_core_api_version_composed_from_site_framework(): void {
+        $this->require_datacurso_provider();
         $this->resetAfterTest();
         $this->setAdminUser();
 
@@ -240,6 +344,7 @@ final class create_mod_stream_contract_test extends \advanced_testcase {
      * is sent without that field and the generation continues.
      */
     public function test_generation_continues_when_h5p_core_api_unresolvable(): void {
+        $this->require_datacurso_provider();
         $this->resetAfterTest();
         $this->setAdminUser();
 
@@ -283,6 +388,7 @@ final class create_mod_stream_contract_test extends \advanced_testcase {
      * the AI service is never called and no job record is persisted.
      */
     public function test_enrolled_student_cannot_start_generation(): void {
+        $this->require_datacurso_provider();
         $this->resetAfterTest();
 
         $generator = $this->getDataGenerator();

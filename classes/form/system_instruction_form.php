@@ -24,12 +24,17 @@
 
 namespace local_coursegen\form;
 
+use local_coursegen\local\service\system_instruction_service;
+
 defined('MOODLE_INTERNAL') || die();
 
 require_once($CFG->libdir . '/formslib.php');
 
 /**
  * System instruction form class.
+ *
+ * Custom data: tenantid (int), the current tenant, which owns the instruction;
+ * names are validated for uniqueness within that tenant.
  */
 class system_instruction_form extends \moodleform {
     /**
@@ -55,7 +60,7 @@ class system_instruction_form extends \moodleform {
         $mform->setType('content_editor', PARAM_RAW);
         $mform->addHelpButton('content_editor', 'systeminstructioncontent', 'local_coursegen');
 
-        // Hidden fields.
+        // Hidden fields. The tenant is never submitted: the page always uses the current tenant.
         $mform->addElement('hidden', 'id');
         $mform->setType('id', PARAM_INT);
 
@@ -84,30 +89,28 @@ class system_instruction_form extends \moodleform {
      * @return array
      */
     public function validation($data, $files) {
-        global $DB;
-
         $errors = parent::validation($data, $files);
 
-        if (empty(trim($data['name']))) {
+        $name = trim((string) ($data['name'] ?? ''));
+        if ($name === '') {
             $errors['name'] = get_string('required');
         } else {
-            // Check if name is unique.
-            $name = trim($data['name']);
-
-            // If editing, exclude current record from uniqueness check.
-            if (!empty($data['id'])) {
-                $sql = "SELECT id FROM {local_coursegen_system_instruction} WHERE name = ? AND deleted = 0 AND id != ?";
-                $params = [$name, $data['id']];
-            } else {
-                $sql = "SELECT id FROM {local_coursegen_system_instruction} WHERE name = ? AND deleted = 0";
-                $params = [$name];
-            }
-
-            if ($DB->record_exists_sql($sql, $params)) {
+            // Names are unique within the tenant; when editing, the record itself is excluded.
+            $excludeid = !empty($data['id']) ? (int) $data['id'] : null;
+            if (!system_instruction_service::validate_unique_name($name, $this->get_tenantid(), $excludeid)) {
                 $errors['name'] = get_string('systeminstructionnameexists', 'local_coursegen');
             }
         }
 
         return $errors;
+    }
+
+    /**
+     * Tenant owning the instruction, from the form custom data.
+     *
+     * @return int
+     */
+    private function get_tenantid(): int {
+        return (int) ($this->_customdata['tenantid'] ?? \local_coursegen\local\tenancy::get_tenant_id());
     }
 }

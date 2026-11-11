@@ -22,24 +22,22 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-use local_coursegen\local\service\access_guard;
+use aiprovider_datacurso\local\plugin_settings;
 
 require('../../config.php');
 require_once($CFG->libdir . '/filelib.php');
 
 require_login();
+plugin_settings::require_enabled('local_coursegen');
 
-// Check permissions.
+// Check permissions: system-level or category-level (Workplace tenant administrators).
+\local_coursegen\local\permission::require_create_course_with_ai();
+
+// Set up the page through the admin tree entry registered in settings.php (the
+// Workplace page, or the core page gated by the capability on plain Moodle LMS).
+\local_coursegen\admin\external_page::setup('local_coursegen_addnewcourseai', ['pagelayout' => 'popup']);
 $systemcontext = context_system::instance();
-require_capability('moodle/course:create', $systemcontext);
-$creationmodes = ['local/coursegen:createfreecoursewithai', 'local/coursegen:createtemplatecoursewithai'];
-access_guard::require_any($creationmodes, $systemcontext);
-
-// Set up the page.
 $url = new moodle_url('/local/coursegen/aicoursecreation.php');
-$PAGE->set_url($url);
-$PAGE->set_context($systemcontext);
-$PAGE->set_pagelayout('popup');
 $PAGE->set_title(get_string('createwithai', 'local_coursegen'));
 // Boost's popup layout still reserves margin-top on #page for a site navbar
 // that this page never renders (nonavbar) — drop it so the app layout can
@@ -62,6 +60,8 @@ $PAGE->requires->css(new moodle_url('/local/coursegen/styles/start_chooser.css',
 
 use local_coursegen\local\models\course_session;
 use local_coursegen\local\service\course_session_service;
+use local_coursegen\local\service\system_instruction_service;
+use local_coursegen\local\tenancy;
 
 $resumesessionid = optional_param('sessionid', 0, PARAM_INT);
 $templatesession = null;
@@ -124,9 +124,10 @@ $hasbothmodes = $canfree && $cantemplate;
 // A resumed session skips the choice, as it was already made.
 $startchooser = $hasbothmodes && !$resumesessionid && $modeparam === null;
 
-// Load system instructions (directrices institucionales).
+// Load the system instructions (institutional guidelines) the user's tenant may
+// use: its own private ones plus the site ones.
 $systeminstructions = [];
-$records = $DB->get_records('local_coursegen_system_instruction', ['deleted' => 0], 'name ASC');
+$records = system_instruction_service::get_available(tenancy::get_tenant_id());
 foreach ($records as $record) {
     $systeminstructions[] = [
         'id' => 'si_' . $record->id,
@@ -260,6 +261,13 @@ $templatecontext = [
     'subsectionsenabled' => $subsectionsenabled,
     'closeurl' => (new moodle_url('/my/courses.php'))->out(false),
     'sidebarclosed' => !$sidebarpinned,
+    // Initial (empty) guideline listboxes; JavaScript re-renders them from the same templates.
+    'guidelinelist' => [
+        'listlabel' => get_string('courseai_guidelines_list_label', 'local_coursegen'),
+        'emptytext' => get_string('courseai_no_results', 'local_coursegen'),
+        'hasitems' => false,
+        'items' => [],
+    ],
 ];
 
 echo $OUTPUT->header();

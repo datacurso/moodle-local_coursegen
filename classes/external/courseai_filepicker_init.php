@@ -25,10 +25,12 @@
 
 namespace local_coursegen\external;
 
+use aiprovider_datacurso\local\plugin_settings;
 use context_system;
 use external_api;
 use external_function_parameters;
 use external_single_structure;
+use local_coursegen\local\permission;
 use external_value;
 
 defined('MOODLE_INTERNAL') || die();
@@ -53,9 +55,12 @@ class courseai_filepicker_init extends external_api {
      * Initialise and return filepicker options.
      *
      * @return array
+     * @throws \moodle_exception plugindisabled or plugindisabled_admin when the plugin is disabled.
      */
     public static function execute(): array {
         global $PAGE;
+
+        plugin_settings::require_enabled('local_coursegen');
 
         $params = self::validate_parameters(self::execute_parameters(), []);
 
@@ -63,8 +68,7 @@ class courseai_filepicker_init extends external_api {
         self::validate_context($context);
 
         // Check permissions.
-        require_capability('moodle/course:create', $context);
-        require_capability('local/coursegen:uploadcoursesyllabus', $context);
+        permission::require_create_course_with(['local/coursegen:uploadcoursesyllabus']);
 
         $draftitemid = file_get_unused_draft_itemid();
         $clientid = uniqid('local_coursegen_courseai_syllabus_');

@@ -37,6 +37,7 @@ import {
     regenOnSectionActivity,
     regenOnSectionActivityDetail,
 } from 'local_coursegen/local/courseai/ui/regen-block';
+import {escapeHtml} from 'local_coursegen/local/courseai/utils';
 
 /**
  * Whether the current stream is ADDING or REGENERATING a whole section. Those
@@ -216,7 +217,7 @@ export const handleSection = (data, ctx) => {
             + '<path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"/></svg>'
             + '<svg class="check-icon" viewBox="0 0 24 24">'
             + '<polyline points="20 6 9 17 4 12"/></svg></span>'
-            + '<span class="courseai-checklist-name">' + data.name + '</span>'
+            + '<span class="courseai-checklist-name">' + escapeHtml(String(data.name || '')) + '</span>'
             + '</div>'
             + '<div class="courseai-checklist-detail cg-log-md"></div>';
         targetList.appendChild(item);

@@ -78,7 +78,7 @@ export const addPlanSection = (section, ctx) => {
                 return `
                 <li class="ps-activity">
                     <span class="ps-badge ps-badge--${escapeHtml(activityType)}">
-                        <img src="${iconUrl}"
+                        <img src="${escapeHtml(iconUrl)}"
                              class="ps-badge-icon"
                              alt=""
                              onerror="this.style.display='none'">
@@ -143,7 +143,7 @@ export const addActivityToSection = (data, ctx) => {
     const iconUrl = getActivityIconUrl(activityType);
     activityItem.innerHTML = `
         <span class="ps-badge ps-badge--${escapeHtml(activityType)}">
-            <img src="${iconUrl}"
+            <img src="${escapeHtml(iconUrl)}"
                  class="ps-badge-icon"
                  alt=""
                  onerror="this.style.display='none'">

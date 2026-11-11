@@ -30,6 +30,9 @@ use aiprovider_datacurso\httpclient\ai_course_api;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class api_client_factory {
+    /** Name this plugin gives the services, which accept or refuse requests by plugin and release. */
+    public const COMPONENT = 'local_coursegen';
+
     /** @var object|null Test double injected from PHPUnit, if any. */
     private static ?object $testclient = null;
 
@@ -51,7 +54,22 @@ class api_client_factory {
             }
         }
 
-        return new ai_course_api(null, $baseurl, $baseurleu);
+        return new ai_course_api(null, $baseurl, $baseurleu, self::COMPONENT);
+    }
+
+    /**
+     * Build the AI course API client with the service URLs of the current user's tenant.
+     *
+     * The URLs are the values of the tenant (tenant_config); an empty or missing
+     * value falls back to the client defaults.
+     *
+     * @return ai_course_api
+     */
+    public static function ai_course_api_for_current_tenant(): ai_course_api {
+        $baseurl = tenant_config::get('datacurso_service_url') ?: null;
+        $baseurleu = tenant_config::get('datacurso_service_url_eu') ?: null;
+
+        return self::ai_course_api($baseurl, $baseurleu);
     }
 
     /**

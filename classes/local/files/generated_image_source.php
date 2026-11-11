@@ -16,7 +16,7 @@
 
 namespace local_coursegen\local\files;
 
-use aiprovider_datacurso\httpclient\ai_course_api;
+use local_coursegen\local\api_client_factory;
 
 /**
  * The images the AI service made, named by the path it holds them at.
@@ -104,9 +104,7 @@ final class generated_image_source implements file_source {
      * @return \stored_file|null
      */
     public static function download_from_service(string $path, array $record): ?\stored_file {
-        $baseurl = get_config('local_coursegen', 'datacurso_service_url') ?: null;
-        $baseurleu = get_config('local_coursegen', 'datacurso_service_url_eu') ?: null;
-        $client = new ai_course_api(null, $baseurl, $baseurleu);
+        $client = api_client_factory::ai_course_api_for_current_tenant();
         $endpoint = '/files/download?path=' . urlencode($path);
         return $client->download_file($endpoint, $record['filename'], $record);
     }

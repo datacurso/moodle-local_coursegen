@@ -75,6 +75,7 @@ $functions = [
         'description' => 'Send human feedback for AI activity generation job',
         'type' => 'write',
         'ajax' => true,
+        'capabilities' => 'moodle/course:manageactivities,local/coursegen:createactivitywithai',
         'loginrequired' => true,
     ],
     'local_coursegen_activity_filepicker_init' => [
@@ -101,7 +102,7 @@ $functions = [
         'description' => 'Save image generation settings for course and activity creation',
         'type' => 'write',
         'ajax' => true,
-        'capabilities' => 'moodle/site:config,local/coursegen:editimagegenerationsettings',
+        'capabilities' => 'local/coursegen:editimagegenerationsettings',
         'loginrequired' => true,
     ],
     'local_coursegen_start_course_planning' => [

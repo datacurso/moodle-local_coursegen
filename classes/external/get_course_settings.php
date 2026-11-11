@@ -24,11 +24,13 @@
 
 namespace local_coursegen\external;
 
+use aiprovider_datacurso\local\plugin_settings;
 use external_api;
 use external_function_parameters;
 use external_multiple_structure;
 use external_value;
 use external_single_structure;
+use local_coursegen\local\permission;
 use local_coursegen\local\service\ai_course_api_service;
 use local_coursegen\local\service\course_session_service;
 use local_coursegen\local\service\course_review_service;
@@ -59,9 +61,12 @@ class get_course_settings extends external_api {
      *
      * @param int $recordid Session record ID.
      * @return array Course settings (fullname, shortname, category, categories).
+     * @throws \moodle_exception plugindisabled or plugindisabled_admin when the plugin is disabled.
      */
     public static function execute($recordid) {
         global $USER;
+
+        plugin_settings::require_enabled('local_coursegen');
 
         $params = self::validate_parameters(self::execute_parameters(), [
             'recordid' => $recordid,
@@ -69,7 +74,11 @@ class get_course_settings extends external_api {
 
         $context = context_system::instance();
         self::validate_context($context);
-        require_capability('local/coursegen:createfreecoursewithai', $context);
+        permission::require_create_course_with(['local/coursegen:createfreecoursewithai']);
+
+        // Categories where the user can actually create courses (system-level
+        // creators get every category, category-level creators only theirs).
+        $catlist = \core_course_category::make_categories_list('moodle/course:create');
 
         $recordid = (int)$params['recordid'];
 
@@ -77,15 +86,34 @@ class get_course_settings extends external_api {
         $session = course_session_service::get_user_session($recordid, $USER->id);
 
         // Fetch the AI-generated result data from the Datacurso API.
-        $apiservice = new ai_course_api_service();
+        $apiservice = static::get_api_service();
         $result = $apiservice->get_course_result((string)$session->get('session_id'));
         $resultdata = $result['result'] ?? [];
 
         $settings = create_course_service::get_course_settings($session, $resultdata);
 
-        $categories = course_review_service::available_categories();
+        // Offer only the categories where the user can actually create courses.
+        $categories = [];
+        foreach ($catlist as $id => $pathname) {
+            $categories[] = [
+                'id' => (int)$id,
+                'pathname' => $pathname,
+            ];
+        }
 
         return $settings + ['categories' => $categories];
+    }
+
+    /**
+     * Build the AI course API service used by this endpoint.
+     *
+     * Extracted as a protected factory so PHPUnit tests can override it
+     * through a testable subclass (late static binding).
+     *
+     * @return ai_course_api_service
+     */
+    protected static function get_api_service(): ai_course_api_service {
+        return new ai_course_api_service();
     }
 
     /**

@@ -16,12 +16,17 @@
 
 namespace local_coursegen\external;
 
+use aiprovider_datacurso\local\plugin_settings;
 use context_system;
 use external_api;
 use external_function_parameters;
 use external_single_structure;
 use external_value;
+use local_coursegen\event\generation_failed;
+use local_coursegen\local\permission;
 use local_coursegen\local\service\course_planning_service;
+use local_coursegen\local\service\system_instruction_service;
+use local_coursegen\local\tenancy;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -64,6 +69,7 @@ class start_course_planning extends external_api {
      * @param int $systeminstructionid System instruction ID.
      * @param bool $withsubsections Organise sections into subsections.
      * @return array
+     * @throws \moodle_exception plugindisabled or plugindisabled_admin when the plugin is disabled.
      */
     public static function execute(
         string $prompt,
@@ -73,6 +79,8 @@ class start_course_planning extends external_api {
         bool $withsubsections = false
     ): array {
         global $USER;
+
+        plugin_settings::require_enabled('local_coursegen');
 
         $params = self::validate_parameters(self::execute_parameters(), [
             'prompt' => $prompt,
@@ -84,10 +92,14 @@ class start_course_planning extends external_api {
 
         $context = context_system::instance();
         self::validate_context($context);
-        require_capability('moodle/course:create', $context);
-        require_capability('local/coursegen:createfreecoursewithai', $context);
+        permission::require_create_course_with(['local/coursegen:createfreecoursewithai']);
         if ($params['withimages']) {
-            require_capability('local/coursegen:generatecourseimages', $context);
+            permission::require_create_course_with(['local/coursegen:generatecourseimages']);
+        }
+
+        // A tenant may only plan with its own instructions or the site ones.
+        if ((int) $params['systeminstructionid'] > 0) {
+            system_instruction_service::assert_accessible((int) $params['systeminstructionid'], tenancy::get_tenant_id());
         }
 
         try {
@@ -100,12 +112,19 @@ class start_course_planning extends external_api {
                 (bool)$params['withsubsections']
             );
         } catch (\Exception $e) {
+            // Keep the technical detail in developer debugging only: the client
+            // receives a localized message without internal information.
+            debugging('Unexpected error while starting course planning: ' . $e->getMessage());
+            generation_failed::create([
+                'context' => $context,
+                'other' => ['reason' => get_class($e)],
+            ])->trigger();
             return [
                 'success' => false,
                 'sessionid' => 0,
                 'threadid' => '',
                 'streamingurl' => '',
-                'message' => $e->getMessage(),
+                'message' => get_string('error_starting_course_planning', 'local_coursegen'),
             ];
         }
     }

@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10-wp] - 2026111101
+
+### Added
+- **This branch is the course template generation made to run on Moodle Workplace**  
+  It is the line of the course templates (generation, stop and resume, questions, import of a template, the buttons and cards of the thread) with what Workplace needs on top of it: the settings, the system instructions, the image policy and the service addresses belong to the tenant of the person; the tenant administrator holds the capabilities of the templates; creating a course with AI is allowed to a course creator of a category, not only of the system, through one of the two modes; the entry of the launcher, the button of My courses and the pages of the administration are hidden while the plugin is disabled in the provider. The plugin requires `tool_tenant` and `tool_wp`, and the release ends in `-wp`.
+- **A site that already had the plugin gets what it lacks**  
+  The upgrade creates, from the install file, the tables, columns and indexes of the templates and of the tenants that the site does not have, gives the tenant administrator the capabilities of the templates and hands the data of the site to the default tenant. What the site has is left alone.
+
+### Changed
+- **The service of the templates is reached with the addresses of the tenant**  
+  The service of the templates and the images it makes are fetched with the service addresses of the tenant of the person, not with those of the site.
+
 ## [2.0.10] - 2026110915
 
 ### Changed
@@ -829,6 +841,148 @@ All notable changes to this project will be documented in this file. Each change
 
 - **Course template picker on the AI course creation page**  
   Selecting "Create course from template" now starts with a single native, searchable field to pick the template — no other fields are shown until a template is chosen. Once selected, the template's sections and activities render inline, with locked items clearly marked and support for adding new activities at any point in the list, even next to locked ones.
+
+# History of the Workplace line before this branch
+
+## 2.0.13-wp
+
+**Released on:** 2026-11-09
+
+**Compatibility note:** This version is compatible only with **Moodle Workplace 4.5**.
+
+## Added
+
+- **The plugin can be switched off from the Datacurso AI provider**
+  The plugin can now be switched off from the Datacurso AI provider (the Enabled switch of Course Creator AI in the provider's plugins list); the plugin has no "Enabled" setting of its own. The switch lives in the provider per tenant: turning it off for one tenant affects only the users of that tenant, and tenants without their own value follow the provider's site default. The plugin never had a switch of its own, so there are no old values to migrate on upgrade. While it is off, the *Create with AI* button on My courses (or on the Dashboard when My courses is disabled), the *Create with AI* entry of the Workplace launcher, the *Create course with AI* entry under Site administration > Courses and the activity AI button on course pages are hidden; the course creation page and every web service of the course and activity creation flows refuse with the Datacurso AI provider's message (users are told to contact the administrator, and site administrators get a link to the provider's plugins list); and syllabus files are no longer served. The plugin's per-tenant administration pages (general and development settings, system instructions and image generation, with its web service) stay available so it can be configured before it is switched on. With the plugin on, nothing changes. Requires `aiprovider_datacurso` 2026110901.
+
+## 2.0.12-wp
+
+**Released on:** 2026-11-04
+
+**Compatibility note:** This version is compatible only with **Moodle Workplace 4.5**.
+
+## Fixed
+
+- **Starting a course plan no longer fails on sites with an outdated sessions table**
+  On some sites the table that stores course planning sessions kept the `courseid` column as required, or lacked the `coursedata` column, even though earlier upgrade steps should have fixed it. Starting a course plan then failed with the generic message "An error occurred while starting course planning". An upgrade step now checks the real table and only repairs what is wrong, so it is safe on sites that were already correct.
+
+## 2.0.11-wp
+
+**Released on:** 2026-10-26
+
+**Compatibility note:** This version is compatible only with **Moodle Workplace 4.5**.
+
+## Changed
+- **Requires the provider that sends the build number**
+  The course service now validates the plugin by its build number, which `aiprovider_datacurso` sends in `X-Plugin-Build` from `1.6.4-wp`. The dependency on `aiprovider_datacurso` is raised to `2026102601`, so this plugin cannot be installed or run with a provider older than the release that sends it.
+
+## 2.0.10-wp
+
+**Released on:** 2026-10-26
+
+**Compatibility note:** This version is compatible only with **Moodle Workplace 4.5**.
+
+## Added
+
+- **Multi-tenancy for Moodle Workplace**  
+  Every Workplace tenant is fully independent: it has its own plugin configuration, stored in the new `local_coursegen_tenant_config` table, with no site-wide layer. A value a tenant has not set uses the plugin default.
+- **Per-tenant general and development settings**  
+  The `General settings` and `Development settings` pages read and save the values of the tenant the user is currently in, and are available to tenant administrators through the `local/coursegen:managetenantsettings` capability. The HTTPS rule for the service URLs and the `mod_subsection` guard are kept.
+- **Per-tenant image generation settings**  
+  The `Manage image generation` page and the `local_coursegen_manage_image_generation` web service read and save the settings of the current tenant, and the image policy sent to the AI service uses the settings of the user's tenant. The web service is declared with the `local/coursegen:manageimagegeneration` capability.
+- **Per-tenant system instructions**  
+  System instructions belong to a tenant (`tenantid` column) and are private to it: no other tenant can see, edit or use them, and names are unique per tenant. Starting a course plan with an instruction of another tenant is rejected.
+- **Tenant scope notice**  
+  Every plugin configuration page shows a read-only notice naming the tenant its values apply to. There is no tenant selector: pages and web services always use the tenant of the current user, and site administrators configure another tenant by switching to it with the Workplace tenant switcher.
+- **Course creation for tenant administrators**  
+  `Create a new course with AI` is available to users who can create courses in any category (for example the Workplace tenant manager role in the tenant category), not only at system level. The page is listed in the Workplace admin tree and launcher, and AI courses are created in the tenant category by default.
+- **Tenant data cleanup**  
+  Deleting a Workplace tenant removes its configuration and its system instructions, and detaches those instructions from the courses that referenced them.
+
+## Changed
+
+- **The course service is told which release of this plugin is calling**
+  Every call to the course service now carries `X-Plugin-Name: local_coursegen` and `X-Plugin-Version` (this release). The service can then ask for an update when the release is too old, and the person sees the message from the Datacurso provider instead of a generic error. All the clients are built through `api_client_factory`; a test fails if a class builds one by hand. Requires `aiprovider_datacurso` 1.6.3 or later.
+- **Moodle Workplace only**  
+  This branch requires Moodle Workplace 4.5: `tool_tenant` and `tool_wp` are declared as dependencies and `$plugin->supported` is `[405, 405]`. Installing it on Moodle LMS fails on the missing dependencies by design.
+- **Single-tenant fallback for CI on Moodle LMS**  
+  The code no longer calls `tool_tenant` or `tool_wp` when they are missing: without them the plugin installs and runs as a single tenant (tenant id `0`, no tenant scope notice, core admin pages gated by the plugin capabilities), so the automated tests can run on Moodle LMS. Workplace tests and Behat scenarios are skipped there. Workplace remains a declared dependency.
+- **Tenant administrator role receives the plugin capabilities on upgrade**  
+  The install and upgrade steps add `local/coursegen:createcoursewithai`, `local/coursegen:managesysteminstructions`, `local/coursegen:manageimagegeneration` and the new `local/coursegen:managetenantsettings` to the Workplace `Tenant administrator` role, so existing sites change that role when upgrading.
+- **Existing data moves to the Default tenant**  
+  The upgrade moves the plugin settings stored in `config_plugins` (service URLs, subsections and image generation settings) to the Workplace Default tenant, keeping any value that tenant already had, and removes them from `config_plugins`. Existing system instructions are assigned to the Default tenant as well.
+
+## 2.0.6
+
+**Released on:** Unreleased
+
+**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.2**.
+
+## Fixed
+
+- **"Create with AI" button missing on My courses in Moodle 5.2**  
+  Moodle 5.2 moved the "Manage courses" and "Create course" buttons from the My courses page header into the Course overview block, so the plugin no longer found the header container it injected its button into and the button silently disappeared for users with enrolled courses. The button is now spliced server side into the page HTML by a `before_http_headers` hook, which starts the output buffer once the page URL, context and login are known (the previous `after_config` buffering ran before any of them were set). It is placed next to core's course action buttons in the page header (Moodle 4.5/5.0), right after the "Create course" form inside the Course overview block (Moodle 5.2) or in the empty-state action bar (all versions), so it is part of the initial page response and does not depend on JavaScript.
+- **Bootstrap 5 compatibility on Moodle 5.0+**  
+  The institutional guideline preview now uses Moodle's `core/modal` API instead of a jQuery Bootstrap 4 modal that never opened on Moodle 5.0, tooltips declare both `data-toggle` and `data-bs-toggle`, and CSS colours fall back from Bootstrap 5 `--bs-*` variables to their Bootstrap 4 names.
+- **Question bank defaults on Moodle 5.0**  
+  Quiz questions are created in the module default category through `question_get_default_category()` on Moodle 5.0, since the previous helper is deprecated there.
+
+## Changed
+
+- **My courses is disabled by default on fresh Moodle 5.2 installs**  
+  The "Create with AI" button on My courses needs that page to be enabled. On a fresh Moodle 5.2 site, enable it in `Site administration > Appearance > Navigation > Enable My courses`; upgraded sites keep their existing setting.
+- **Tests and CI for Moodle 5.0**  
+  The plugin CI workflow installs the DataCurso AI provider from the branch matching each Moodle version, the Behat course page scenarios assert the plugin's own AI button rather than core's activity chooser (renamed on Moodle 5.0), and a plugin data generator seeds institutional guidelines so the preview dialogue is covered by Behat.
+- **Guideline popover and preview markup moved from JavaScript to Mustache templates**  
+  The institutional guideline list, its compact toolbar variant and the preview dialogue body were built as HTML strings inside `amd/src/local/courseai/context/guideline.js`. They are now rendered from `local_coursegen/local/courseai/guideline_list`, `guideline_list_compact` and `guideline_preview` through `core/templates`, so the markup is theme-overridable, escaped by the template engine and covered by PHPUnit; list clicks are delegated on the container and stale renders while typing in the search box are dropped.
+- **Guideline list templates are self-contained listboxes**  
+  `local_coursegen/local/courseai/guideline_list` and `guideline_list_compact` now render the whole `<ul role="listbox">` (with a `listlabel` context variable for its accessible name) instead of bare `<li>` fragments, so they validate on their own and the `.mustachelintignore` exception is gone. The page renders them once through the same partials inside `[data-region="guideline-list"]` / `[data-region="guideline-list-compact"]` wrappers, JavaScript replaces the whole list inside those wrappers and delegates clicks on them; the `#guidelineList` / `#guidelineListCompact` ids are unchanged.
+
+## 2.0.5
+
+**Released on:** 2026-09-11
+
+**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
+
+## Security
+
+- **DOM XSS closed in the AI streaming render pipelines**  
+  The course planning buffer and the single-activity stream were inserted as HTML after Markdown parsing without sanitization. Both flows are now routed through the plugin's central sanitizer (DOMPurify with a strict tag/attribute allow-list, failing closed to plain text), section names and activity types are escaped or validated against a module allow-list, and the local escaper covers attribute contexts.
+- **Whole-course creation flow now enforces capabilities**  
+  Course confirmation, plan feedback, session state, settings and item regeneration endpoints previously relied on session ownership alone. All of them now require `moodle/course:create` and `local/coursegen:createcoursewithai` inside the method, and the effective target category is validated with `moodle/course:create` at category context before any course is created.
+- **Generation jobs anchored to their owner and consumed once**  
+  Module materialization loads the job by job id, course and user before contacting the provider, takes section and position from the persisted job instead of client parameters, rejects already-consumed jobs (no duplicate activities on replay), adds a unique database index on the job id, and removes a dead legacy class that kept the vulnerable lookup pattern.
+- **Technical exception messages no longer reach the browser**  
+  Five endpoints returned raw exception text. Clients now receive localized generic messages while the technical detail stays in the server debug log; per-activity error messages accumulated during course creation are sanitized as well.
+- **Service URLs require HTTPS**  
+  Both configurable service URLs must use HTTPS to be saved; plain-HTTP local addresses are accepted only while the site runs in developer debugging mode.
+
+## Added
+
+- **Auditable events for AI generation**  
+  Five plugin events — generation job started, external file transfer, generation result applied, generation failure and authorization denial — now leave an audit trail with course, user and job identifiers, never including prompts or personal content.
+- **Complete Privacy API coverage**  
+  The privacy provider declares the external Datacurso AI service location with every transferred field, declares the planning prompt field, exports and deletes syllabus files in all GDPR deletion variants (including plugin uninstall), models course-bound data in course context with a course-deletion cleanup observer, and anonymizes shared site configuration rows instead of destroying them when a user is deleted.
+
+## Fixed
+
+- **Image generation management usable by delegated managers**  
+  The save endpoint of the image generation admin page required `moodle/site:config` while the page itself was gated by `local/coursegen:manageimagegeneration`, leaving non-admin managers with a visible but unusable page. Both now check the same capability.
+- **Institutional guideline name reaches the generation job**  
+  The single-activity stream stored the guideline name from a property the context service never returned, so the stored job always lost it. The correct field is now read.
+- **Missing English strings for the syllabus and planning UI**  
+  Six strings existed only in translations and rendered as `[[key]]` placeholders for English users; they are now defined in the English pack and translated across all supported languages.
+
+## 2.0.4
+
+**Released on:** 2026-08-27
+
+**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
+
+## Fixed
+
+- **Missing Spanish translations added to the course creation assistant**  
+  The plan review screen, activity generation progress messages, stop/resume/retry controls, and the activity log were showing in English regardless of the site's language, because their strings had no Spanish translation. All of them are now translated.
 
 ## 2.0.3
 

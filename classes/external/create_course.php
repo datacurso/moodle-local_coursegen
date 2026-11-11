@@ -24,10 +24,12 @@
 
 namespace local_coursegen\external;
 
+use aiprovider_datacurso\local\plugin_settings;
 use external_api;
 use external_function_parameters;
 use external_value;
 use external_single_structure;
+use local_coursegen\local\permission;
 use local_coursegen\local\service\ai_course_api_service;
 use local_coursegen\local\service\course_review_service;
 use local_coursegen\local\service\course_session_service;
@@ -69,9 +71,12 @@ class create_course extends external_api {
      * @param int $category Optional override for the course category ID
      * @return array Result of the course content application
      * @throws moodle_exception
+     * @throws \moodle_exception plugindisabled or plugindisabled_admin when the plugin is disabled.
      */
     public static function execute($recordid, $fullname = '', $shortname = '', $category = 0) {
         global $USER;
+
+        plugin_settings::require_enabled('local_coursegen');
 
         $params = self::validate_parameters(self::execute_parameters(), [
             'recordid' => $recordid,
@@ -82,7 +87,7 @@ class create_course extends external_api {
 
         $context = context_system::instance();
         self::validate_context($context);
-        require_capability('local/coursegen:createfreecoursewithai', $context);
+        permission::require_create_course_with(['local/coursegen:createfreecoursewithai']);
 
         $recordid = (int)$params['recordid'];
 

@@ -22,6 +22,8 @@ use local_coursegen\local\service\create_mod_service;
 
 defined('MOODLE_INTERNAL') || die();
 
+require_once(__DIR__ . '/fixtures/aiprovider_datacurso_stub.php');
+
 require_once(__DIR__ . '/fixtures/h5p_package_fixture.php');
 
 /**
@@ -132,8 +134,9 @@ final class h5pactivity_download_config_test extends \advanced_testcase {
         $this->resetAfterTest();
         $this->setAdminUser();
 
-        set_config('datacurso_service_url', 'https://dev-us.example.com/api/v1', 'local_coursegen');
-        set_config('datacurso_service_url_eu', 'https://dev-eu.example.com/api/v1', 'local_coursegen');
+        $tenantid = \local_coursegen\local\tenancy::get_tenant_id();
+        \local_coursegen\local\tenant_config::set('datacurso_service_url', 'https://dev-us.example.com/api/v1', $tenantid);
+        \local_coursegen\local\tenant_config::set('datacurso_service_url_eu', 'https://dev-eu.example.com/api/v1', $tenantid);
 
         $course = $this->getDataGenerator()->create_course();
         $this->set_current_course($course);
@@ -155,8 +158,9 @@ final class h5pactivity_download_config_test extends \advanced_testcase {
         $this->resetAfterTest();
         $this->setAdminUser();
 
-        unset_config('datacurso_service_url', 'local_coursegen');
-        unset_config('datacurso_service_url_eu', 'local_coursegen');
+        $tenantid = \local_coursegen\local\tenancy::get_tenant_id();
+        \local_coursegen\local\tenant_config::unset('datacurso_service_url', $tenantid);
+        \local_coursegen\local\tenant_config::unset('datacurso_service_url_eu', $tenantid);
 
         $course = $this->getDataGenerator()->create_course();
         $this->set_current_course($course);

@@ -25,11 +25,13 @@
 
 namespace local_coursegen\external;
 
+use aiprovider_datacurso\local\plugin_settings;
 use context_system;
 use external_api;
 use external_function_parameters;
 use external_single_structure;
 use external_value;
+use local_coursegen\local\permission;
 use local_coursegen\local\models\course_session;
 use local_coursegen\local\service\access_guard;
 use local_coursegen\local\service\ai_course_api_service;
@@ -59,9 +61,12 @@ class get_course_session_state extends external_api {
      *
      * @param int $recordid Session record ID.
      * @return array
+     * @throws \moodle_exception plugindisabled or plugindisabled_admin when the plugin is disabled.
      */
     public static function execute(int $recordid): array {
         global $USER;
+
+        plugin_settings::require_enabled('local_coursegen');
 
         $params = self::validate_parameters(self::execute_parameters(), [
             'recordid' => $recordid,
@@ -75,6 +80,11 @@ class get_course_session_state extends external_api {
         );
 
         $session = course_session_service::get_user_session((int)$params['recordid'], (int)$USER->id);
+
+        // Owning the session is not enough: resuming exposes planning data and
+        // backend state, so require the same capabilities as start_course_planning.
+        permission::require_create_course_with_ai();
+
         $sessionid = (string)$session->get('session_id');
         if ($sessionid === '') {
             throw new \moodle_exception('error_no_session_found', 'local_coursegen');

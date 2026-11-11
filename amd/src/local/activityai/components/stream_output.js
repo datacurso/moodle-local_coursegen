@@ -23,7 +23,7 @@
 
 import {BaseComponent} from 'core/reactive';
 
-import * as markedModule from 'local_coursegen/marked';
+import {renderMarkdown} from 'local_coursegen/local/courseai/ui/markdown';
 import {regions, activityRegions} from 'local_coursegen/selectors';
 import {loadActivityaiStrings} from 'local_coursegen/local/activityai/i18n';
 
@@ -38,7 +38,6 @@ export default class extends BaseComponent {
             SELECTED_FILE_NAME: activityRegions.selectedFileName,
         };
 
-        this.markedParser = markedModule.parse ? markedModule : markedModule.marked;
         this.statusHistoryByRunId = new Map();
         this.texts = {};
         this.textsLoadingPromise = null;
@@ -121,7 +120,9 @@ export default class extends BaseComponent {
             return String(value || '')
                 .replaceAll('&', '&amp;')
                 .replaceAll('<', '&lt;')
-                .replaceAll('>', '&gt;');
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#039;');
         };
 
         const previousHistory = this.statusHistoryByRunId.get(runId) || [];
@@ -225,7 +226,9 @@ export default class extends BaseComponent {
                 '</div>';
         }
 
-        const markdownHtml = this.markedParser.parse(element.markdown || '');
+        // Rendered through the central markdown module so the model output is
+        // sanitized with the shared DOMPurify allow-list before it reaches innerHTML.
+        const markdownHtml = renderMarkdown(element.markdown || '');
 
         wrapper.innerHTML = promptHtml + statusBeforeHtml + markdownHtml + statusAfterHtml + errorHtml;
 

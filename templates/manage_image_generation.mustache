@@ -19,9 +19,16 @@
 
     Manage image generation settings page.
 
+    Settings are saved for the tenant the user is currently in.
+
     Context variables required for this template:
     * canedit bool - The user may change the settings: without it the fields are read-only
       and there is no save button.
+    * currentmode string - Current generation mode: disabled, manual or auto.
+    * overridecourse bool - Whether course level overrides are allowed.
+    * overrideactivity bool - Whether activity level overrides are allowed.
+    * ismoddisabled, ismodemanual, ismodeauto bool - Which mode card is selected.
+    * activities array - Activity rows with: id, iconurl, name, tooltip, enabled, show, parts.
 
     Example context (json):
     {
@@ -65,7 +72,7 @@
                             <div class="font-weight-bold text-dark">{{#str}} override_course, local_coursegen {{/str}}</div>
                         </td>
                         <td class="align-middle py-3">
-                            <div class="custom-control custom-switch" data-toggle="tooltip" title="{{#str}} tooltip_override_course, local_coursegen {{/str}}">
+                            <div class="custom-control custom-switch" data-toggle="tooltip" data-bs-toggle="tooltip" title="{{#str}} tooltip_override_course, local_coursegen {{/str}}">
                                 <input type="checkbox" class="custom-control-input" id="override-course" name="overridecourse" value="1" {{#overridecourse}}checked{{/overridecourse}}>
                                 <label class="custom-control-label" for="override-course" style="cursor: pointer;"></label>
                             </div>
@@ -76,7 +83,7 @@
                             <div class="font-weight-bold text-dark">{{#str}} override_activity, local_coursegen {{/str}}</div>
                         </td>
                         <td class="align-middle py-3">
-                            <div class="custom-control custom-switch" data-toggle="tooltip" title="{{#str}} tooltip_override_activity, local_coursegen {{/str}}">
+                            <div class="custom-control custom-switch" data-toggle="tooltip" data-bs-toggle="tooltip" title="{{#str}} tooltip_override_activity, local_coursegen {{/str}}">
                                 <input type="checkbox" class="custom-control-input" id="override-activity" name="overrideactivity" value="1" {{#overrideactivity}}checked{{/overrideactivity}}>
                                 <label class="custom-control-label" for="override-activity" style="cursor: pointer;"></label>
                             </div>
@@ -157,13 +164,13 @@
                             <td class="align-middle py-3">
                                 <div class="d-flex align-items-center">
                                     <div class="mr-2">
-                                        <img src="{{iconurl}}" class="icon" alt="{{name}}" style="width: 20px; height: 20px;" />
+                                        <img src="{{iconurl}}" class="icon" alt="{{name}}" style="width: 20px; height: 20px;">
                                     </div>
                                     <span class="font-weight-bold text-dark">{{name}}</span>
                                 </div>
                             </td>
                             <td class="align-middle py-3 text-right">
-                                <div class="custom-control custom-switch d-inline-block" data-toggle="tooltip" title="{{tooltip}}">
+                                <div class="custom-control custom-switch d-inline-block" data-toggle="tooltip" data-bs-toggle="tooltip" title="{{tooltip}}">
                                     <input type="checkbox" class="custom-control-input" id="switch-{{id}}" value="1" data-action="local_coursegen/image_generation/toggle_activity" data-target="content-{{id}}" {{#enabled}}checked{{/enabled}}>
                                     <label class="custom-control-label" for="switch-{{id}}" style="cursor: pointer;"></label>
                                 </div>

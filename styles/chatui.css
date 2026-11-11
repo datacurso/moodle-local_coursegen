@@ -24,7 +24,7 @@
 }
 
 .ai-prompt-textarea::-webkit-scrollbar-thumb {
-  background-color: var(--secondary);
+  background-color: var(--bs-secondary, var(--secondary));
   border-radius: 10px;
 }
 

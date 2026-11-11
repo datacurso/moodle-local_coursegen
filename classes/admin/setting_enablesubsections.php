@@ -30,13 +30,16 @@ require_once($CFG->libdir . '/adminlib.php');
  * validation error — which re-renders the form without redirecting, leaving
  * the checkbox ticked and re-posting on every reload — the value is
  * force-saved as DISABLED and the reason surfaces as an error notification
- * after the normal redirect.
+ * after the normal redirect. The value belongs to the tenant the user is
+ * currently in ({@see tenant_scoped_setting}).
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class setting_enablesubsections extends admin_setting_configcheckbox {
+    use tenant_scoped_setting;
+
     /**
      * Save the setting, forcing it off when mod_subsection is disabled.
      *

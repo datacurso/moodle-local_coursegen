@@ -16,7 +16,9 @@
 
 namespace local_coursegen\hook;
 
+use aiprovider_datacurso\local\plugin_settings;
 use core\hook\output\before_footer_html_generation;
+use local_coursegen\local\permission;
 
 /**
  * Hook to load the floating chat
@@ -27,11 +29,15 @@ use core\hook\output\before_footer_html_generation;
  */
 class chat_hook {
     /**
-     * Hook to add AI buttons and check AI course creation
+     * Hook to add AI buttons and check AI course creation; nothing is added while the plugin is disabled.
      *
      * @param before_footer_html_generation $hook The hook event.
+     * @return void
      */
     public static function before_footer_html_generation(before_footer_html_generation $hook): void {
+        if (!plugin_settings::is_enabled('local_coursegen')) {
+            return;
+        }
         self::add_activity_ai_button();
     }
 

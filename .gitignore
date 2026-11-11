@@ -1,1 +1,3 @@
 .atl
+phpunit.xml
+tests/phpunit.xml
