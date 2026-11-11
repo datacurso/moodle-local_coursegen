@@ -31,6 +31,31 @@ use local_coursegen\local\tenancy;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class create_course_service {
+    /** @var callable|null Hears of each activity created: (string $step, int $done, int $total). */
+    private static $progress = null;
+
+    /**
+     * Set who hears of the steps of the creation, or null for nobody.
+     *
+     * @param callable|null $callback Called with (string $step, int $done, int $total).
+     */
+    public static function on_progress(?callable $callback): void {
+        self::$progress = $callback;
+    }
+
+    /**
+     * Tell the one who listens that a step was done.
+     *
+     * @param string $step
+     * @param int $done
+     * @param int $total
+     */
+    private static function report_progress(string $step, int $done, int $total): void {
+        if (self::$progress !== null) {
+            (self::$progress)($step, $done, $total);
+        }
+    }
+
     /**
      * Execute course creation from AI-generated result data.
      *
@@ -703,7 +728,11 @@ class create_course_service {
             debugging('local_coursegen: subsections in result but mod_subsection unavailable; flattening into parent sections.');
         }
 
+        $total = count($activities);
+        $done = 0;
         foreach ($activities as $activity) {
+            self::report_progress('activities', $done, $total);
+            $done++;
             $sectionnum = 0;
             if (isset($activity['parameters']) && isset($activity['parameters']['section'])) {
                 $sectionnum = $activity['parameters']['section'];
