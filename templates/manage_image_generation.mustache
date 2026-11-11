@@ -22,6 +22,8 @@
     Settings are saved for the tenant the user is currently in.
 
     Context variables required for this template:
+    * canedit bool - The user may change the settings: without it the fields are read-only
+      and there is no save button.
     * currentmode string - Current generation mode: disabled, manual or auto.
     * overridecourse bool - Whether course level overrides are allowed.
     * overrideactivity bool - Whether activity level overrides are allowed.
@@ -30,6 +32,7 @@
 
     Example context (json):
     {
+        "canedit": true,
         "currentmode": "manual",
         "overridecourse": true,
         "overrideactivity": false,
@@ -43,6 +46,7 @@
 <div style="max-width: 900px; padding-bottom: 3rem;">
 
     <form data-region="local_coursegen/image_generation/form">
+    <fieldset{{^canedit}} disabled{{/canedit}}>
 
         <input type="hidden" data-region="local_coursegen/image_generation/input_mode" name="generationmode" value="{{currentmode}}">
 
@@ -210,12 +214,15 @@
             </div>
         </div>
 
+        {{#canedit}}
         <div class="mt-4 pt-3 text-right">
             <button type="submit" data-action="local_coursegen/image_generation/save" class="btn btn-primary">
                 {{#str}} savechanges, core {{/str}}
             </button>
         </div>
+        {{/canedit}}
 
+    </fieldset>
     </form>
 </div>
 

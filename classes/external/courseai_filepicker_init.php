@@ -68,7 +68,7 @@ class courseai_filepicker_init extends external_api {
         self::validate_context($context);
 
         // Check permissions.
-        permission::require_create_course_with_ai();
+        permission::require_create_course_with(['local/coursegen:uploadcoursesyllabus']);
 
         $draftitemid = file_get_unused_draft_itemid();
         $clientid = uniqid('local_coursegen_courseai_syllabus_');

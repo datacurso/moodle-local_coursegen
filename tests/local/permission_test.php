@@ -52,7 +52,7 @@ final class permission_test extends \advanced_testcase {
     public function test_system_capabilities_allow(): void {
         $this->resetAfterTest();
         $user = $this->create_user_with_capabilities(
-            ['moodle/course:create', 'local/coursegen:createcoursewithai'],
+            ['moodle/course:create', 'local/coursegen:createfreecoursewithai'],
             \context_system::instance()
         );
         $this->setUser($user);
@@ -68,7 +68,7 @@ final class permission_test extends \advanced_testcase {
         $this->resetAfterTest();
         $category = $this->getDataGenerator()->create_category();
         $user = $this->create_user_with_capabilities(
-            ['moodle/course:create', 'local/coursegen:createcoursewithai'],
+            ['moodle/course:create', 'local/coursegen:createfreecoursewithai'],
             \context_coursecat::instance($category->id)
         );
         $this->setUser($user);
@@ -103,7 +103,7 @@ final class permission_test extends \advanced_testcase {
     public function test_without_course_create_denies(): void {
         $this->resetAfterTest();
         $user = $this->create_user_with_capabilities(
-            ['local/coursegen:createcoursewithai'],
+            ['local/coursegen:createfreecoursewithai'],
             \context_system::instance()
         );
         $this->setUser($user);
@@ -144,7 +144,7 @@ final class permission_test extends \advanced_testcase {
         $this->setAdminUser();
         $category = $this->getDataGenerator()->create_category();
         $allowed = $this->create_user_with_capabilities(
-            ['moodle/course:create', 'local/coursegen:createcoursewithai'],
+            ['moodle/course:create', 'local/coursegen:createfreecoursewithai'],
             \context_coursecat::instance($category->id)
         );
         $denied = $this->getDataGenerator()->create_user();

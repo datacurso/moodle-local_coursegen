@@ -153,4 +153,27 @@ final class h5pactivity_settings_test extends \advanced_testcase {
 
         $this->assertDebuggingNotCalled();
     }
+
+    /**
+     * A mold-generated activity carries the rebuild keys instead of the
+     * download ones. They are consumed upstream by the parameters handler, so
+     * they must not spam developer debugging either - while passing_score keeps
+     * working exactly as before alongside them.
+     */
+    public function test_mold_rebuild_keys_produce_no_debugging(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $cm = $this->create_h5pactivity(0.0);
+
+        (new h5pactivity_settings($cm, [
+            'mold_source_cmid' => 1598,
+            'content_json' => '{"gamemapSteps":{}}',
+            'h5p_json' => '{"mainLibrary":"H5P.GameMap"}',
+            'passing_score' => 85,
+        ]))->add_settings();
+
+        $this->assertDebuggingNotCalled();
+        $this->assertSame(85.0, (float) $this->fetch_grade_item($cm)->gradepass);
+    }
 }

@@ -99,6 +99,27 @@ class module_job_service {
     }
 
     /**
+     * Get a module job by external job id for a given user, whichever course it belongs to.
+     *
+     * @param string $jobid External job/thread identifier.
+     * @param int $userid User id.
+     * @return module_job
+     * @throws \moodle_exception When the user has no job with that identifier.
+     */
+    public static function get_user_job_by_external_id(string $jobid, int $userid): module_job {
+        $job = module_job::get_record([
+            'job_id' => $jobid,
+            'userid' => $userid,
+        ]);
+
+        if (!$job) {
+            throw new \moodle_exception('error_no_module_job_found', 'local_coursegen');
+        }
+
+        return $job;
+    }
+
+    /**
      * Update job status.
      *
      * @param int $id Module job record id.

@@ -34,9 +34,20 @@ class tool_tenant {
      */
     public static function get_tenant_admin_capabilities(): array {
         return [
-            'local/coursegen:createcoursewithai' => CAP_ALLOW,
-            'local/coursegen:managesysteminstructions' => CAP_ALLOW,
-            'local/coursegen:manageimagegeneration' => CAP_ALLOW,
+            'local/coursegen:createfreecoursewithai' => CAP_ALLOW,
+            'local/coursegen:createtemplatecoursewithai' => CAP_ALLOW,
+            'local/coursegen:uploadcoursesyllabus' => CAP_ALLOW,
+            'local/coursegen:generatecourseimages' => CAP_ALLOW,
+            'local/coursegen:viewsysteminstructions' => CAP_ALLOW,
+            'local/coursegen:createsysteminstructions' => CAP_ALLOW,
+            'local/coursegen:editsysteminstructions' => CAP_ALLOW,
+            'local/coursegen:deletesysteminstructions' => CAP_ALLOW,
+            'local/coursegen:viewimagegenerationsettings' => CAP_ALLOW,
+            'local/coursegen:editimagegenerationsettings' => CAP_ALLOW,
+            'local/coursegen:viewtemplates' => CAP_ALLOW,
+            'local/coursegen:createtemplates' => CAP_ALLOW,
+            'local/coursegen:edittemplates' => CAP_ALLOW,
+            'local/coursegen:deletetemplates' => CAP_ALLOW,
             'local/coursegen:managetenantsettings' => CAP_ALLOW,
         ];
     }

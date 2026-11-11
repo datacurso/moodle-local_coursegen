@@ -35,7 +35,7 @@ $confirm = optional_param('confirm', 0, PARAM_INT);
 
 require_login(null, false);
 \local_coursegen\admin\external_page::setup('local_coursegen_manage_system_instructions');
-require_capability('local/coursegen:managesysteminstructions', context_system::instance());
+require_capability('local/coursegen:viewsysteminstructions', context_system::instance());
 
 // The instructions always belong to the tenant the user is currently in.
 $tenantid = tenancy::get_tenant_id();
@@ -47,6 +47,7 @@ $PAGE->set_heading(get_string('managesysteminstructions', 'local_coursegen'));
 
 // Handle delete action: only instructions owned by the current tenant can be deleted.
 if ($action === 'delete' && $id > 0) {
+    require_capability('local/coursegen:deletesysteminstructions', context_system::instance());
     $instruction = system_instruction_service::require_owned($id, $tenantid);
 
     if ($confirm) {

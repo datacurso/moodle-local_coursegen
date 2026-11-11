@@ -49,6 +49,10 @@ export const makeResumeHelpers = ({state, elements, texts, params}) => {
      * @returns {number}
      */
     const getResumeSessionId = () => {
+        // A session made from a template is not the resume of a free-mode plan, whatever the address says.
+        if (params?.templatesession) {
+            return 0;
+        }
         const fromParams = Number(params?.resumesessionid || 0);
         if (fromParams > 0) {
             return fromParams;

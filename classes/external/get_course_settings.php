@@ -33,6 +33,7 @@ use external_single_structure;
 use local_coursegen\local\permission;
 use local_coursegen\local\service\ai_course_api_service;
 use local_coursegen\local\service\course_session_service;
+use local_coursegen\local\service\course_review_service;
 use local_coursegen\local\service\create_course_service;
 use context_system;
 
@@ -73,7 +74,7 @@ class get_course_settings extends external_api {
 
         $context = context_system::instance();
         self::validate_context($context);
-        permission::require_create_course_with_ai();
+        permission::require_create_course_with(['local/coursegen:createfreecoursewithai']);
 
         // Categories where the user can actually create courses (system-level
         // creators get every category, category-level creators only theirs).

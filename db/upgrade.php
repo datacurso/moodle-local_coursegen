@@ -272,6 +272,176 @@ function xmldb_local_coursegen_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026090900, 'local', 'coursegen');
     }
 
+    if ($oldversion < 2026091504) {
+        // The template tables were created by the step 2026072002, which a site already past that version never
+        // ran, so the steps below failed on tables that did not exist. Create the missing ones first; the ones
+        // that exist are left as they are.
+        // Define table local_coursegen_template.
+        $table = new xmldb_table('local_coursegen_template');
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('name', XMLDB_TYPE_CHAR, '255', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('description', XMLDB_TYPE_TEXT, null, null, null, null, null);
+        $table->add_field('courseid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('maxsections', XMLDB_TYPE_INTEGER, '10', null, null, null, null);
+        $table->add_field('nolimit', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('allowedtypes', XMLDB_TYPE_TEXT, null, null, null, null, null);
+        $table->add_field('namingpattern', XMLDB_TYPE_CHAR, '255', null, null, null, null);
+        $table->add_field('namingstart', XMLDB_TYPE_INTEGER, '2', null, XMLDB_NOTNULL, null, '1');
+        $table->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('timemodified', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('usermodified', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+        $table->add_key('courseid', XMLDB_KEY_FOREIGN, ['courseid'], 'course', ['id']);
+        $table->add_key('usermodified', XMLDB_KEY_FOREIGN, ['usermodified'], 'user', ['id']);
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // Define table local_coursegen_tpl_section.
+        $table = new xmldb_table('local_coursegen_tpl_section');
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('templateid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('sectionid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('sectionnum', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('behavior', XMLDB_TYPE_CHAR, '20', null, XMLDB_NOTNULL, null, 'aimodify');
+        $table->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('timemodified', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+        $table->add_key('templateid', XMLDB_KEY_FOREIGN, ['templateid'], 'local_coursegen_template', ['id']);
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // Define table local_coursegen_tpl_activity.
+        $table = new xmldb_table('local_coursegen_tpl_activity');
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('templateid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('sectionid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('cmid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('action', XMLDB_TYPE_CHAR, '20', null, XMLDB_NOTNULL, null, 'modify');
+        $table->add_field('useasreference', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '1');
+        $table->add_field('templatescope', XMLDB_TYPE_CHAR, '20', null, XMLDB_NOTNULL, null, 'course');
+        $table->add_field('prompt', XMLDB_TYPE_TEXT, null, null, null, null, null);
+        $table->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('timemodified', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+        $table->add_key('templateid', XMLDB_KEY_FOREIGN, ['templateid'], 'local_coursegen_template', ['id']);
+        $table->add_key('cmid', XMLDB_KEY_FOREIGN, ['cmid'], 'course_modules', ['id']);
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // Define table local_coursegen_tpl_instance.
+        $table = new xmldb_table('local_coursegen_tpl_instance');
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('templateid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('sectionid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('sourcecmid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('sourcename', XMLDB_TYPE_CHAR, '255', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('name', XMLDB_TYPE_CHAR, '255', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('typelabel', XMLDB_TYPE_CHAR, '255', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('modname', XMLDB_TYPE_CHAR, '100', null, null, null, null);
+        $table->add_field('prompt', XMLDB_TYPE_TEXT, null, null, null, null, null);
+        $table->add_field('aftercmid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('sortorder', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('timemodified', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+        $table->add_key('templateid', XMLDB_KEY_FOREIGN, ['templateid'], 'local_coursegen_template', ['id']);
+        $table->add_key('sourcecmid', XMLDB_KEY_FOREIGN, ['sourcecmid'], 'course_modules', ['id']);
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // The template fields were renamed to say what they do (anchorcmid ->
+        // aftercmid, behavior 'custom' -> 'aimodify'), but the rename was made
+        // inside the 2026072002 block above: any site already past that
+        // savepoint skipped it entirely and kept the old schema. Moodle's
+        // update_record() drops columns a table does not have WITHOUT error,
+        // so such a site silently discarded every instance position on save
+        // instead of failing loudly. Migrate both here, guarded so the step is
+        // a no-op on installs that already carry the final shape.
+        $table = new xmldb_table('local_coursegen_tpl_instance');
+        $oldfield = new xmldb_field('anchorcmid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0', 'prompt');
+        $newfield = new xmldb_field('aftercmid');
+        $needsrename = $dbman->table_exists($table)
+            && $dbman->field_exists($table, $oldfield)
+            && !$dbman->field_exists($table, $newfield);
+        if ($needsrename) {
+            $dbman->rename_field($table, $oldfield, 'aftercmid');
+        }
+
+        // Section behaviour 'custom' is the former name of 'aimodify'. Stored
+        // rows still carrying it reach the AI service verbatim, where that
+        // value means nothing.
+        $DB->set_field('local_coursegen_tpl_section', 'behavior', 'aimodify', ['behavior' => 'custom']);
+
+        // Coursegen savepoint reached.
+        upgrade_plugin_savepoint(true, 2026091504, 'local', 'coursegen');
+    }
+
+    if ($oldversion < 2026091613) {
+        // uid names this virtual instance in the generation payload; an
+        // instance has no course module, so this is its only identifier.
+        // A row with no uid is named lazily by template_export_uids::instance_uid().
+        $table = new xmldb_table('local_coursegen_tpl_instance');
+        $field = new xmldb_field('uid', XMLDB_TYPE_CHAR, '36', null, XMLDB_NOTNULL, null, '', 'id');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        upgrade_plugin_savepoint(true, 2026091613, 'local', 'coursegen');
+    }
+
+    if ($oldversion < 2026093003) {
+        // A template can now hold spaces the professor fills with an activity
+        // of their own: virtual ones (their own table) and existing
+        // activities marked to be replaced (two fields on the activity row).
+        $table = new xmldb_table('local_coursegen_tpl_space');
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('uid', XMLDB_TYPE_CHAR, '36', null, XMLDB_NOTNULL, null, '');
+        $table->add_field('templateid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('sectionid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('modname', XMLDB_TYPE_CHAR, '100', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('required', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '1');
+        $table->add_field('instruction', XMLDB_TYPE_TEXT, null, null, null, null, null);
+        $table->add_field('aftercmid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('sortorder', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('timemodified', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+        $table->add_key('templateid', XMLDB_KEY_FOREIGN, ['templateid'], 'local_coursegen_template', ['id']);
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        $table = new xmldb_table('local_coursegen_tpl_activity');
+        $field = new xmldb_field('spacerequired', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '1', 'prompt');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+        $field = new xmldb_field('spaceinstruction', XMLDB_TYPE_TEXT, null, null, null, null, null, 'spacerequired');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        upgrade_plugin_savepoint(true, 2026093003, 'local', 'coursegen');
+    }
+
+    if ($oldversion < 2026100221) {
+        // The files a teacher brought for the places of a template are no longer kept: a space takes one file
+        // and keeps it under its own area.
+        $fs = get_file_storage();
+        $files = $DB->get_records_select(
+            'files',
+            "component = 'local_coursegen' AND filearea IN ('referencestaged', 'referencefile') AND filename <> '.'"
+        );
+        foreach ($files as $record) {
+            $fs->get_file_instance($record)->delete();
+        }
+        upgrade_plugin_savepoint(true, 2026100221, 'local', 'coursegen');
+    }
+
     if ($oldversion < 2026100500) {
         // Define table local_coursegen_tenant_config to be created: per-tenant
         // overrides of the plugin settings (tenant 0 keeps using config_plugins).
@@ -341,6 +511,56 @@ function xmldb_local_coursegen_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026100600, 'local', 'coursegen');
     }
 
+    if ($oldversion < 2026101222) {
+        // The list of sessions must not read the whole payload of every session (megabytes each): what it shows
+        // is kept in small columns of its own.
+        $table = new xmldb_table('local_coursegen_course_sessions');
+        $fields = [
+            new xmldb_field('templateid', XMLDB_TYPE_INTEGER, '10', null, null, null, null, 'coursedata'),
+            new xmldb_field('title', XMLDB_TYPE_CHAR, '255', null, null, null, null, 'templateid'),
+            new xmldb_field('shortname', XMLDB_TYPE_CHAR, '100', null, null, null, null, 'title'),
+        ];
+        foreach ($fields as $field) {
+            if (!$dbman->field_exists($table, $field)) {
+                $dbman->add_field($table, $field);
+            }
+        }
+        // The sessions that already exist are read one at a time.
+        $ids = $DB->get_fieldset_select('local_coursegen_course_sessions', 'id', 'templateid IS NULL AND title IS NULL');
+        foreach ($ids as $id) {
+            $row = $DB->get_record('local_coursegen_course_sessions', ['id' => $id], 'id, coursedata');
+            $data = json_decode((string) $row->coursedata, true);
+            if (!is_array($data)) {
+                continue;
+            }
+            $update = ['id' => $id];
+            if (isset($data['templateid'])) {
+                $update['templateid'] = (int) $data['templateid'];
+            }
+            if (!empty($data['fullname'])) {
+                $update['title'] = \core_text::substr((string) $data['fullname'], 0, 255);
+            }
+            if (!empty($data['shortname'])) {
+                $update['shortname'] = \core_text::substr((string) $data['shortname'], 0, 100);
+            }
+            if (count($update) > 1) {
+                $DB->update_record('local_coursegen_course_sessions', (object) $update);
+            }
+            unset($row, $data);
+        }
+        upgrade_plugin_savepoint(true, 2026101222, 'local', 'coursegen');
+    }
+
+    if ($oldversion < 2026102637) {
+        // A template can be hidden from the creation of a course without being deleted.
+        $table = new xmldb_table('local_coursegen_template');
+        $field = new xmldb_field('visible', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '1', 'namingstart');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+        upgrade_plugin_savepoint(true, 2026102637, 'local', 'coursegen');
+    }
+
     if ($oldversion < 2026110400) {
         // Repair sites where the course sessions table kept courseid as NOT NULL
         // and/or lacks coursedata (steps 2026021801 and 2026021803 did not take effect).
@@ -378,6 +598,41 @@ function xmldb_local_coursegen_upgrade($oldversion) {
 
         // Coursegen savepoint reached.
         upgrade_plugin_savepoint(true, 2026110400, 'local', 'coursegen');
+    }
+
+    if ($oldversion < 2026111101) {
+        // A Workplace site that had the plugin before this branch has none of what came with it: the tables and
+        // columns of the course templates, and the tenant tables and columns. Everything the install file defines
+        // and the site lacks is created here, so no step above has to be repeated; what the site has is left alone.
+        global $CFG;
+        $installfile = new xmldb_file($CFG->dirroot . '/local/coursegen/db/install.xml');
+        $installfile->loadXMLStructure();
+        $schema = $installfile->getStructure();
+        foreach ($schema->getTables() as $table) {
+            if (!$dbman->table_exists($table)) {
+                $dbman->create_table($table);
+                continue;
+            }
+            foreach ($table->getFields() as $field) {
+                if (!$dbman->field_exists($table, $field)) {
+                    $dbman->add_field($table, $field);
+                }
+            }
+            foreach ($table->getIndexes() as $index) {
+                if (!$dbman->index_exists($table, $index)) {
+                    $dbman->add_index($table, $index);
+                }
+            }
+        }
+
+        // The capabilities that came with the templates exist and the tenant administrator holds them; the data
+        // that belonged to the site goes to the default tenant (safe to run again).
+        update_capabilities('local_coursegen');
+        \local_coursegen\local\tenancy::add_plugin_capabilities_to_tenant_admin_role();
+        \local_coursegen\local\tenant_migration::migrate_site_data_to_default_tenant();
+
+        // Coursegen savepoint reached.
+        upgrade_plugin_savepoint(true, 2026111101, 'local', 'coursegen');
     }
 
     return true;

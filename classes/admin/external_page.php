@@ -48,7 +48,7 @@ class external_page {
      * @param string $name Unique page name (admin tree section).
      * @param string $visiblename Localised page name.
      * @param string $url Page URL.
-     * @param string $capability Plugin capability required at system level.
+     * @param string|string[] $capability Plugin capability required at system level; with several, any one is enough.
      * @param callable|null $accesscheck Workplace access check, null to check $capability at system level.
      * @param bool $hidden Whether the page is hidden from the admin tree.
      * @return \admin_externalpage
@@ -57,14 +57,14 @@ class external_page {
         string $name,
         string $visiblename,
         string $url,
-        string $capability,
+        string|array $capability,
         ?callable $accesscheck = null,
         bool $hidden = false
     ): \admin_externalpage {
         if (!self::is_workplace_available()) {
             return new \admin_externalpage($name, $visiblename, $url, $capability, $hidden);
         }
-        $accesscheck = $accesscheck ?? static fn(): bool => has_capability($capability, \context_system::instance());
+        $accesscheck = $accesscheck ?? static fn(): bool => has_any_capability((array) $capability, \context_system::instance());
         return new \tool_wp\admin_externalpage($name, $visiblename, $url, $accesscheck, $hidden);
     }
 

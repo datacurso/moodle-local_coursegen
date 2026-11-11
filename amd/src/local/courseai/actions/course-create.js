@@ -142,10 +142,11 @@ export const showCourseReviewPanel = async(state, elements, texts, getCourseSett
  * @param {Function} createCourse
  * @param {Function} showCompletionView
  * @param {Object|null} overrides
+ * @param {Function|null} onError Called with the error instead of showing it; resolves true to try again.
  * @returns {Promise<Object|null>}
  */
 export const createCourseFromSession = async(
-    state, elements, texts, stepsUi, Notification, createCourse, showCompletionView, overrides = null
+    state, elements, texts, stepsUi, Notification, createCourse, showCompletionView, overrides = null, onError = null
 ) => {
     if (!state.sessionid) { return; }
 
@@ -201,6 +202,14 @@ export const createCourseFromSession = async(
         if (progressInterval) { clearInterval(progressInterval); }
         if (elements.pcStep) { elements.pcStep.textContent = texts.courseai_state_error; }
         if (pcSubtitle) { pcSubtitle.textContent = error?.message || texts.courseai_error_create_course; }
+        if (onError) {
+            if (await onError(error)) {
+                return createCourseFromSession(
+                    state, elements, texts, stepsUi, Notification, createCourse, showCompletionView, overrides, onError
+                );
+            }
+            return null;
+        }
         await Notification.exception(error);
         return null;
     }

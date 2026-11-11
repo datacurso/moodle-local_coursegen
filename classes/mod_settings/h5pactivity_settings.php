@@ -34,8 +34,19 @@ require_once($CFG->libdir . '/gradelib.php');
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class h5pactivity_settings extends base_settings {
-    /** @var string[] Keys consumed by this handler or upstream by the parameters handler. */
-    private const CONSUMED_KEYS = ['file_path', 'file_name', 'passing_score'];
+    /**
+     * @var string[] Keys consumed by this handler or upstream by the parameters handler.
+     *
+     * Two package flows reach this type, and each one owns its own keys:
+     * file_path/file_name for the model-driven activity, whose package the
+     * service writes and the plugin downloads, and mold_source_cmid plus the
+     * two filled texts for a mold, whose package the plugin rebuilds out of the
+     * mold's own .h5p (see \local_coursegen\mod_parameters\h5pactivity_parameters).
+     */
+    private const CONSUMED_KEYS = [
+        'file_path', 'file_name', 'passing_score',
+        'mold_source_cmid', 'content_json', 'h5p_json',
+    ];
 
     /**
      * Add specific settings for the H5P activity module.

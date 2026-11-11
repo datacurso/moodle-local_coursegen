@@ -101,7 +101,7 @@ class manage_image_generation extends external_api {
 
         $context = context_system::instance();
         self::validate_context($context);
-        require_capability('local/coursegen:manageimagegeneration', $context);
+        require_capability('local/coursegen:editimagegenerationsettings', $context);
 
         image_settings::save_settings($params, tenancy::get_tenant_id());
 

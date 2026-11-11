@@ -83,7 +83,7 @@ export default class extends BaseComponent {
             });
         }
 
-        const footercontext = {languages: languageItems};
+        const footercontext = {languages: languageItems, canimages: state.page.canimages};
         const footerHTML = await Templates.render('local_coursegen/activity_chat_footer', footercontext);
 
         const title = await getString('addactivityai_modaltitle', 'local_coursegen');

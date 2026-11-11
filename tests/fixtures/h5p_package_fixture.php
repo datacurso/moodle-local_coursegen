@@ -30,11 +30,40 @@ namespace local_coursegen;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 final class h5p_package_fixture {
+    /**
+     * @var string The raw h5p.json of a marker-bearing mold package.
+     *
+     * Written as a literal, never through json_encode(): the export ships this
+     * text byte for byte and the tests compare it as such.
+     */
+    public const MOLD_H5P_JSON = '{"title":"Mapa del juego ⟦coursegen:titulo del mapa⟧",'
+        . '"mainLibrary":"H5P.Fixture","language":"es","embedTypes":["div"],'
+        . '"preloadedDependencies":[{"machineName":"H5P.Image","majorVersion":"1","minorVersion":"1"},'
+        . '{"machineName":"H5P.Fixture","majorVersion":"1","minorVersion":"5"}]}';
+
+    /**
+     * @var string The raw content/content.json of a marker-bearing mold package.
+     *
+     * Shaped like a Game Map mold: the stage labels are the marked strings and
+     * their telemetry pins them onto the drawn background.
+     */
+    public const MOLD_CONTENT_JSON = '{"gamemapSteps":{"backgroundImageSettings":'
+        . '{"backgroundImage":{"path":"images/background.png","width":1280,"height":720}},'
+        . '"gamemap":{"elements":[{"id":"1","label":"⟦coursegen:tema 1 del silabo⟧",'
+        . '"telemetry":{"x":"12.5","y":"40.25"}},{"id":"2","label":"⟦coursegen:tema 2 del silabo⟧",'
+        . '"telemetry":{"x":"48","y":"61.75"}}]}}}';
+
+    /** @var string A binary-ish entry standing in for the mold's drawn background. */
+    public const MOLD_BACKGROUND = "\x89PNG\r\n\x1a\n background bytes \x00\xff";
+
     /** @var string|null Cached bytes of the valid fixture package. */
     private static ?string $bytes = null;
 
     /** @var string|null Cached bytes of the zip without an h5p.json manifest. */
     private static ?string $byteswithoutmanifest = null;
+
+    /** @var string|null Cached bytes of the marker-bearing mold package. */
+    private static ?string $moldbytes = null;
 
     /**
      * Bytes of a structurally valid .h5p package (zip with h5p.json).
@@ -69,6 +98,27 @@ final class h5p_package_fixture {
             ]);
         }
         return self::$byteswithoutmanifest;
+    }
+
+    /**
+     * Bytes of a mold package whose two text entries carry markers.
+     *
+     * A mold is the package the export reads its text out of, so this one owns
+     * a real main library with its versions, marked strings in both text
+     * entries and a non-text entry the rebuild has to preserve untouched.
+     *
+     * @return string
+     */
+    public static function mold_bytes(): string {
+        if (self::$moldbytes === null) {
+            self::$moldbytes = self::build_zip([
+                'h5p.json' => self::MOLD_H5P_JSON,
+                'content/content.json' => self::MOLD_CONTENT_JSON,
+                'content/images/background.png' => self::MOLD_BACKGROUND,
+                'H5P.Fixture-1.5/library.json' => '{"machineName":"H5P.Fixture"}',
+            ]);
+        }
+        return self::$moldbytes;
     }
 
     /**

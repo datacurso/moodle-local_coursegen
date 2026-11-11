@@ -31,12 +31,14 @@ use local_coursegen\output\tenant_scope_notice;
 
 require_login(null, false);
 \local_coursegen\admin\external_page::setup('local_coursegen_manage_image_generation');
-require_capability('local/coursegen:manageimagegeneration', context_system::instance());
+require_capability('local/coursegen:viewimagegenerationsettings', context_system::instance());
 
 // The settings always belong to the tenant the user is currently in.
 $tenantid = tenancy::get_tenant_id();
 
 $PAGE->set_url(new moodle_url('/local/coursegen/manage_image_generation.php'));
+
+$canedit = has_capability('local/coursegen:editimagegenerationsettings', context_system::instance());
 
 // Show a standard success notification if coming back from a save redirect.
 if (optional_param('saved', 0, PARAM_BOOL)) {
@@ -83,6 +85,7 @@ foreach (activities::get_definitions() as $definition) {
 }
 
 $context = [
+    'canedit' => $canedit,
     'overridecourse'   => $settings[image_settings::KEY_OVERRIDE_COURSE] === 1,
     'overrideactivity' => $settings[image_settings::KEY_OVERRIDE_ACTIVITY] === 1,
 

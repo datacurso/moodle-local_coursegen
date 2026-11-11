@@ -1,0 +1,45 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+{{!
+    @template local_coursegen/preview_choice_options
+
+    A previewed choice's own options, ported from
+    mod/choice/renderer.php display_options().
+
+    Context variables required for this template:
+    * action - string, the form's target url.
+    * layoutclass - string, "horizontal" or "vertical".
+    * sesskey - string.
+    * coursemoduleid - int.
+    * options - array of {type, name, id, value, disabled, text, isfull,
+                fulltext, showavailable, responsestext, limittext}.
+}}
+<form method="POST" action="{{{action}}}" class="{{layoutclass}}">
+    <ul class="choices list-unstyled unstyled">
+        {{#options}}
+        <li class="option me-3">
+            <input type="{{type}}" name="{{name}}" id="{{id}}" value="{{value}}" class="mx-1"{{#disabled}} disabled="disabled"{{/disabled}}>
+            <label for="{{id}}">{{{text}}}{{#isfull}} {{{fulltext}}}{{/isfull}}{{#showavailable}}<br>{{{responsestext}}}<br>{{{limittext}}}{{/showavailable}}</label>
+        </li>
+        {{/options}}
+        <li class="clearfloat"></li>
+    </ul>
+    <div class="clearfloat"></div>
+    <input type="hidden" name="sesskey" value="{{sesskey}}">
+    <input type="hidden" name="action" value="makechoice">
+    <input type="hidden" name="id" value="{{coursemoduleid}}">
+</form>

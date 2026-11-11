@@ -73,7 +73,7 @@ class courseai_syllabus_upload extends external_api {
 
         // Check permissions.
         $context = context_system::instance();
-        permission::require_create_course_with_ai();
+        permission::require_create_course_with(['local/coursegen:uploadcoursesyllabus']);
 
         try {
             // Get session record.

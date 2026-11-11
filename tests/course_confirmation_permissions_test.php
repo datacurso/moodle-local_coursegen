@@ -102,7 +102,7 @@ final class course_confirmation_permissions_test extends \advanced_testcase {
     }
 
     /**
-     * Give the user the local/coursegen:createcoursewithai capability at system level.
+     * Give the user the local/coursegen:createfreecoursewithai capability at system level.
      *
      * @param int $userid User id.
      * @return void
@@ -110,7 +110,7 @@ final class course_confirmation_permissions_test extends \advanced_testcase {
     private function allow_createcoursewithai_at_system(int $userid): void {
         $systemcontext = \context_system::instance();
         $roleid = create_role('AI course creator', 'aicoursecreator', '');
-        assign_capability('local/coursegen:createcoursewithai', CAP_ALLOW, $roleid, $systemcontext->id, true);
+        assign_capability('local/coursegen:createfreecoursewithai', CAP_ALLOW, $roleid, $systemcontext->id, true);
         role_assign($roleid, $userid, $systemcontext->id);
     }
 
@@ -129,7 +129,7 @@ final class course_confirmation_permissions_test extends \advanced_testcase {
     }
 
     /**
-     * Give the user local/coursegen:createcoursewithai in one category only.
+     * Give the user local/coursegen:createfreecoursewithai in one category only.
      *
      * @param int $userid User id.
      * @param \core_course_category $category Category where the user may use the AI.
@@ -138,7 +138,7 @@ final class course_confirmation_permissions_test extends \advanced_testcase {
     private function allow_createcoursewithai_in_category(int $userid, \core_course_category $category): void {
         $categorycontext = \context_coursecat::instance($category->id);
         $roleid = create_role('Category AI course creator', 'cataicoursecreator', '');
-        assign_capability('local/coursegen:createcoursewithai', CAP_ALLOW, $roleid, $categorycontext->id, true);
+        assign_capability('local/coursegen:createfreecoursewithai', CAP_ALLOW, $roleid, $categorycontext->id, true);
         role_assign($roleid, $userid, $categorycontext->id);
     }
 

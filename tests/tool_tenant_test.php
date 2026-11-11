@@ -30,9 +30,20 @@ final class tool_tenant_test extends \advanced_testcase {
 
     /** @var string[] Capabilities the tenant administrator must receive. */
     private const EXPECTED = [
-        'local/coursegen:createcoursewithai',
-        'local/coursegen:managesysteminstructions',
-        'local/coursegen:manageimagegeneration',
+        'local/coursegen:createfreecoursewithai',
+        'local/coursegen:createtemplatecoursewithai',
+        'local/coursegen:uploadcoursesyllabus',
+        'local/coursegen:generatecourseimages',
+        'local/coursegen:viewsysteminstructions',
+        'local/coursegen:createsysteminstructions',
+        'local/coursegen:editsysteminstructions',
+        'local/coursegen:deletesysteminstructions',
+        'local/coursegen:viewimagegenerationsettings',
+        'local/coursegen:editimagegenerationsettings',
+        'local/coursegen:viewtemplates',
+        'local/coursegen:createtemplates',
+        'local/coursegen:edittemplates',
+        'local/coursegen:deletetemplates',
         'local/coursegen:managetenantsettings',
     ];
 

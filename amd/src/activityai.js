@@ -40,8 +40,9 @@ let modalControllerRegistered = false;
  * @param {boolean} isMoodle45 Whether the Moodle version is 4.5.
  * @param {Array} languages Available languages.
  * @param {string} defaultlang Default language code.
+ * @param {boolean} canimages Whether the server allows generating images with the activity.
  */
-export const init = async(courseid, isMoodle45 = false, languages = [], defaultlang = 'en') => {
+export const init = async(courseid, isMoodle45 = false, languages = [], defaultlang = 'en', canimages = false) => {
     ismoodle45 = Boolean(isMoodle45);
 
     const languageList = Array.isArray(languages) ? languages : [];
@@ -56,6 +57,7 @@ export const init = async(courseid, isMoodle45 = false, languages = [], defaultl
             ismoodle45,
             languages: languageList,
             defaultlang: resolvedDefaultLang,
+            canimages,
         },
         session: {
             sectionnum: null,

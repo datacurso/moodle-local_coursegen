@@ -92,7 +92,10 @@ class start_course_planning extends external_api {
 
         $context = context_system::instance();
         self::validate_context($context);
-        permission::require_create_course_with_ai();
+        permission::require_create_course_with(['local/coursegen:createfreecoursewithai']);
+        if ($params['withimages']) {
+            permission::require_create_course_with(['local/coursegen:generatecourseimages']);
+        }
 
         // A tenant may only plan with its own instructions or the site ones.
         if ((int) $params['systeminstructionid'] > 0) {

@@ -1,0 +1,138 @@
+/* The first screen of the course-creation page, and the top bar's crumb that
+   names the chosen starting point. Loaded next to aicoursecreation.css and
+   built on its design tokens. */
+
+/* ─── PATH TINTS ────────────────────────────────────────────────────────
+   Shared by the start cards. */
+:root {
+  --tpl-tint: hsl(190, 60%, 94%);
+  --tpl-tint-fg: hsl(190, 60%, 28%);
+}
+
+/* ─── STEP ONE: HOW DO YOU WANT TO START ─────────────────────────────────
+   Two cards, centred, and nothing else: the paths, the splitter and the
+   planning column are not rendered until a card is picked. */
+.courseai-workspace.is-choosing {
+  align-items: center;
+}
+.courseai-start {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  padding: 24px;
+}
+.courseai-start-inner {
+  width: min(820px, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+}
+.courseai-start-title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -.01em;
+  text-align: center;
+  color: var(--fg);
+}
+.courseai-start-subtitle {
+  margin: -10px 0 0;
+  color: var(--muted-fg);
+  font-size: 15px;
+  text-align: center;
+}
+.courseai-start-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  width: 100%;
+}
+.courseai-start-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 220px;
+  padding: 22px 22px 20px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--card);
+  text-align: left;
+  text-decoration: none;
+  color: var(--fg);
+  font: inherit;
+  cursor: pointer;
+  transition: transform var(--t-base) var(--ease), border-color var(--t-base) var(--ease), box-shadow var(--t-base) var(--ease);
+}
+.courseai-start-card:hover,
+.courseai-start-card:focus-visible {
+  transform: translateY(-2px);
+  border-color: var(--muted-fg);
+  box-shadow: var(--shadow-elevated);
+  color: var(--fg);
+  text-decoration: none;
+}
+.courseai-start-card:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.courseai-start-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+}
+.courseai-start-card--free .courseai-start-icon { background: var(--brand-soft); color: var(--brand); }
+.courseai-start-card--template .courseai-start-icon { background: var(--tpl-tint); color: var(--tpl-tint-fg); }
+.courseai-start-card-title { font-size: 18px; font-weight: 700; }
+.courseai-start-card-desc { color: var(--muted-fg); font-size: 14.5px; line-height: 1.45; }
+.courseai-start-card-for {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted-fg);
+  font-size: 13px;
+}
+.courseai-start-badge {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--success-soft);
+  color: var(--success-strong);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.courseai-start-note { margin: 0; color: var(--muted-fg); font-size: 13px; text-align: center; }
+@media (max-width: 720px) {
+  .courseai-start-cards { grid-template-columns: 1fr; }
+}
+
+/* ─── THE PATH CRUMB IN THE TOP BAR ──────────────────────────────────────
+   "‹ Create with AI / From template": a quiet button that leads back to the
+   cards; once planning starts it is disabled, drops the chevron and stays
+   as the path's name. */
+.courseai-topbar-path {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 10px 0 6px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted-fg);
+  font: inherit;
+  font-size: 13.5px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.courseai-topbar-path:hover { background: var(--muted); color: var(--fg); }
+.courseai-topbar-path:disabled { color: var(--muted-fg); cursor: default; background: transparent; }
+.courseai-topbar-path-chevron { flex: none; }
+.courseai-topbar-path.is-locked .courseai-topbar-path-chevron { display: none; }
+.courseai-topbar-path-sep { color: var(--border); margin: 0 2px; }
+.courseai-topbar-path-name { font-weight: 600; color: var(--fg); }

@@ -64,8 +64,12 @@ class system_instruction_list implements renderable, templatable {
             ];
         }
 
+        $context = \context_system::instance();
         return [
             'addurl' => $editurl->out(false),
+            'cancreate' => has_capability('local/coursegen:createsysteminstructions', $context),
+            'canedit' => has_capability('local/coursegen:editsysteminstructions', $context),
+            'candelete' => has_capability('local/coursegen:deletesysteminstructions', $context),
             'hasinstructions' => !empty($rows),
             'instructions' => $rows,
         ];

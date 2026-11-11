@@ -1,0 +1,49 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+{{!
+    @template local_coursegen/preview_scorm_toc_node
+
+    One learning object in a previewed SCORM package's table of contents.
+    Recursive: calls itself for a node's own children. Exactly one of
+    reallink/hooklink/spanwrap/bare is true, matching the one form
+    scorm_format_toc_for_treeview() would have printed for this object.
+
+    Context variables required for this template:
+    * label - string, already-rendered HTML (the status icon and the title).
+    * reallink, hooklink, spanwrap, bare - bool.
+    * haschildren - bool.
+
+    Context variables optional for this template:
+    * url - string, required when reallink is true.
+    * scoid - int, required when reallink or hooklink is true.
+    * title - string, required when hooklink is true.
+    * children - array, required when haschildren is true, each shaped the
+                 way this same template expects.
+}}
+<li>
+    {{#reallink}}<a href="{{{url}}}" data-scoid="{{scoid}}">{{{label}}}</a>{{/reallink}}
+    {{#hooklink}}<a data-scoid="{{scoid}}" title="{{title}}">{{{label}}}</a>{{/hooklink}}
+    {{#spanwrap}}<span>{{{label}}}</span>{{/spanwrap}}
+    {{#bare}}{{{label}}}{{/bare}}
+    {{#haschildren}}
+    <ul>
+        {{#children}}
+        {{> local_coursegen/preview_scorm_toc_node }}
+        {{/children}}
+    </ul>
+    {{/haschildren}}
+</li>

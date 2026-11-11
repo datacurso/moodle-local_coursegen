@@ -77,6 +77,21 @@ class course_session extends persistent {
                 'null' => NULL_ALLOWED,
                 'default' => null,
             ],
+            'templateid' => [
+                'type' => PARAM_INT,
+                'null' => NULL_ALLOWED,
+                'default' => null,
+            ],
+            'title' => [
+                'type' => PARAM_TEXT,
+                'null' => NULL_ALLOWED,
+                'default' => null,
+            ],
+            'shortname' => [
+                'type' => PARAM_TEXT,
+                'null' => NULL_ALLOWED,
+                'default' => null,
+            ],
             'timecreated' => [
                 'type' => PARAM_INT,
                 'null' => NULL_NOT_ALLOWED,

@@ -51,7 +51,8 @@ export const parseCourseaiData = (params) => {
         }
     }
 
-    return {guidelines, languages, defaultLang};
+    const coursetemplates = params?.coursetemplates || [];
+    return {guidelines, languages, defaultLang, coursetemplates};
 };
 
 /**

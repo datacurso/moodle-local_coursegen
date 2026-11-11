@@ -33,6 +33,7 @@ use external_single_structure;
 use external_value;
 use local_coursegen\local\permission;
 use local_coursegen\local\models\course_session;
+use local_coursegen\local\service\access_guard;
 use local_coursegen\local\service\ai_course_api_service;
 use local_coursegen\local\service\course_session_service;
 
@@ -73,6 +74,10 @@ class get_course_session_state extends external_api {
 
         $context = context_system::instance();
         self::validate_context($context);
+        access_guard::require_any(
+            ['local/coursegen:createfreecoursewithai', 'local/coursegen:createtemplatecoursewithai'],
+            $context
+        );
 
         $session = course_session_service::get_user_session((int)$params['recordid'], (int)$USER->id);
 

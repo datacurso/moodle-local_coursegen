@@ -86,6 +86,27 @@ class course_session_service {
     }
 
     /**
+     * Get a course planning session by its external session identifier for the given user.
+     *
+     * @param string $sessionid External session (thread) identifier.
+     * @param int $userid User ID.
+     * @return course_session
+     * @throws \moodle_exception When the user has no session with that identifier.
+     */
+    public static function get_user_session_by_external_id(string $sessionid, int $userid): course_session {
+        $session = course_session::get_record([
+            'session_id' => $sessionid,
+            'userid' => $userid,
+        ]);
+
+        if (!$session) {
+            throw new \moodle_exception('error_no_session_found', 'local_coursegen');
+        }
+
+        return $session;
+    }
+
+    /**
      * Whether a user may view the stored syllabus file of a planning session.
      *
      * Allowed for the session owner, or for holders of the
@@ -127,22 +148,59 @@ class course_session_service {
             $params = [$userid, course_session::STATUS_CREATED];
         }
 
-        $records = $DB->get_records_select(
-            'local_coursegen_course_sessions',
-            $where,
+        // A session made from a template keeps megabytes in coursedata: the list never reads them. What it shows is in
+        // the small columns; a free-mode session has little data and keeps it.
+        $records = $DB->get_records_sql(
+            'SELECT id, courseid, userid, session_id, status, templateid, title, shortname, timecreated, timemodified,
+                    CASE WHEN templateid IS NULL THEN coursedata ELSE NULL END AS coursedata
+               FROM {local_coursegen_course_sessions}
+              WHERE ' . $where . '
+           ORDER BY timecreated DESC',
             $params,
-            'timecreated DESC'
+            0,
+            $limit > 0 ? $limit : 0
         );
 
         $sessions = [];
-        $count = 0;
         foreach ($records as $record) {
-            if ($limit > 0 && $count >= $limit) {
-                break;
-            }
             $sessions[] = new course_session(0, $record);
-            $count++;
         }
         return $sessions;
+    }
+
+    /**
+     * Keep the file a session was made from, where the syllabus of a planning session is kept.
+     *
+     * A course made from a template offers this same file to its students later (template_syllabus_linker), so it is
+     * kept beyond the draft area the professor uploaded it to, which Moodle empties after a few days.
+     *
+     * @param int $sessionid Session record ID (syllabus file item id).
+     * @param \stored_file $file The uploaded file.
+     */
+    public static function keep_syllabus(int $sessionid, \stored_file $file): void {
+        $fs = get_file_storage();
+        $contextid = \context_system::instance()->id;
+        $fs->delete_area_files($contextid, 'local_coursegen', 'syllabus', $sessionid);
+        $fs->create_file_from_storedfile([
+            'contextid' => $contextid,
+            'component' => 'local_coursegen',
+            'filearea' => 'syllabus',
+            'itemid' => $sessionid,
+            'filepath' => '/',
+        ], $file);
+    }
+
+    /**
+     * The file a session was made from, or null when none was uploaded.
+     *
+     * @param int $sessionid Session record ID (syllabus file item id).
+     * @return \stored_file|null
+     */
+    public static function syllabus_file(int $sessionid): ?\stored_file {
+        $fs = get_file_storage();
+        $contextid = \context_system::instance()->id;
+        $files = $fs->get_area_files($contextid, 'local_coursegen', 'syllabus', $sessionid, 'id', false);
+        $file = reset($files);
+        return $file ?: null;
     }
 }

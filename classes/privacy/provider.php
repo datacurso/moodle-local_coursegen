@@ -57,7 +57,7 @@ class provider implements
                 'prompt_text', 'timecreated', 'timemodified', 'usermodified',
             ],
             'local_coursegen_course_sessions' => [
-                'courseid', 'userid', 'session_id', 'status', 'coursedata', 'timecreated', 'timemodified',
+                'courseid', 'userid', 'session_id', 'status', 'templateid', 'title', 'shortname', 'timecreated', 'timemodified',
             ],
             'local_coursegen_module_jobs' => [
                 'courseid', 'userid', 'job_id', 'status', 'generate_images',

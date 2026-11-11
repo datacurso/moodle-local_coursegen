@@ -24,11 +24,11 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-// v2: the width range/default changed (and old values were corrupted by a vw
-// default the splitter could not parse), so ignore any pre-v2 persisted width.
-const STORAGE_KEY = 'local_coursegen_left_w_v2';
-const DEFAULT_W = 560;
-const MIN_W = 320;
+// v3: the default narrowed to a conversation-column width and the range moved
+// with it, so a width persisted under an older key is not carried over.
+const STORAGE_KEY = 'local_coursegen_left_w_v3';
+const DEFAULT_W = 450;
+const MIN_W = 360;
 const MAX_W = 720;
 const ARROW_STEP = 24;
 const CSS_PROP = '--cg-left-w';
@@ -82,7 +82,10 @@ const readPersistedWidth = () => {
             return null;
         }
         const parsed = parseInt(raw, 10);
-        return isNaN(parsed) ? null : parsed;
+        if (isNaN(parsed)) {
+            return null;
+        }
+        return parsed;
     } catch (e) {
         return null;
     }
@@ -202,7 +205,10 @@ export const createSplitter = ({workspace, divider}) => {
      */
     const onKeyDown = (e) => {
         const currentRaw = workspace.style.getPropertyValue(CSS_PROP);
-        const current = currentRaw ? parseInt(currentRaw, 10) : DEFAULT_W;
+        let current = DEFAULT_W;
+        if (currentRaw) {
+            current = parseInt(currentRaw, 10);
+        }
         let next = current;
 
         if (e.key === 'ArrowLeft') {

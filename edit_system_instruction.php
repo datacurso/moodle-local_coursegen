@@ -33,7 +33,10 @@ $id = optional_param('id', 0, PARAM_INT);
 
 require_login(null, false);
 \local_coursegen\admin\external_page::setup('local_coursegen_edit_system_instruction');
-require_capability('local/coursegen:managesysteminstructions', context_system::instance());
+require_capability(
+    $id > 0 ? 'local/coursegen:editsysteminstructions' : 'local/coursegen:createsysteminstructions',
+    context_system::instance()
+);
 
 // The instruction always belongs to the tenant the user is currently in.
 $tenantid = tenancy::get_tenant_id();

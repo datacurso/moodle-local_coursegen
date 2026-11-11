@@ -16,11 +16,15 @@
 
 namespace local_coursegen\local\service;
 
+use local_coursegen\local\files\activity_file_pass;
+use local_coursegen\local\files\file_copy_exception;
 use local_coursegen\mod_settings\base_settings;
+use local_coursegen\utils\generated_files_scope;
 use local_coursegen\utils\text_editor_parameter_cleaner;
 
 defined('MOODLE_INTERNAL') || die();
 require_once($CFG->dirroot . '/course/externallib.php');
+require_once($CFG->dirroot . '/course/lib.php');
 require_once($CFG->dirroot . '/course/modlib.php');
 
 /**
@@ -38,10 +42,41 @@ class create_mod_service {
      * @param object $course Course object
      * @param int $sectionnum Section number where the module will be created
      * @param int|null $beforemod Before module id where the module will be created
+     * @param int|null $sourcecourseid Course whose files the payload's texts may
+     *     reference by pluginfile URL (the template's base course); null lets any
+     *     course the current user can access through.
      *
      * @return object New course module.
      */
-    public static function create_from_ai_result($resultinfo, $course, $sectionnum, $beforemod = null) {
+    public static function create_from_ai_result(
+        $resultinfo,
+        $course,
+        $sectionnum,
+        $beforemod = null,
+        ?int $sourcecourseid = null
+    ) {
+        $generatedfiles = $resultinfo['generated_files'] ?? [];
+        if (!$generatedfiles) {
+            return self::create_module($resultinfo, $course, $sectionnum, $beforemod, $sourcecourseid);
+        }
+        // The files the AI service made for this activity are in scope while its texts are saved.
+        $creation = static function () use ($resultinfo, $course, $sectionnum, $beforemod, $sourcecourseid) {
+            return self::create_module($resultinfo, $course, $sectionnum, $beforemod, $sourcecourseid);
+        };
+        return generated_files_scope::run($generatedfiles, $creation);
+    }
+
+    /**
+     * Create the module once the files of its result are in scope.
+     *
+     * @param array $resultinfo Result info from response of AI service
+     * @param object $course Course object
+     * @param int $sectionnum Section number where the module will be created
+     * @param int|null $beforemod Before module id where the module will be created
+     * @param int|null $sourcecourseid Course whose files the payload's rich text may reference.
+     * @return object New course module.
+     */
+    private static function create_module($resultinfo, $course, $sectionnum, $beforemod, ?int $sourcecourseid) {
 
         self::validate_resultinfo($resultinfo);
 
@@ -53,7 +88,13 @@ class create_mod_service {
 
         $mform = self::create_mod_form_instance($modname, $data, $cw, $cm, $course);
 
-        $parameters = self::prepare_parameters($modname, $resultinfo['parameters'], $sectionnum, $beforemod, $module->id);
+        $parameters = self::prepare_parameters(
+            $modname,
+            $resultinfo['parameters'],
+            $sectionnum,
+            $beforemod,
+            $module->id
+        );
 
         $newcm = add_moduleinfo($parameters, $course, $mform);
 
@@ -61,7 +102,39 @@ class create_mod_service {
 
         self::apply_mod_settings($modname, $newcm, $modsettings);
 
+        self::give_files($modname, $newcm, (string) ($parameters->name ?? ''), $sourcecourseid);
+
         return $newcm;
+    }
+
+    /**
+     * Give the new activity every file its texts reference.
+     *
+     * Runs once the activity and everything its settings create exist, so the
+     * rows of every text are real whatever the module is. When a file cannot be
+     * given, the activity is removed again and the error is raised.
+     *
+     * @param string $modname Module plugin name.
+     * @param object $newcm Newly created course module.
+     * @param string $name The activity's name, for the error.
+     * @param int|null $sourcecourseid Course whose files the texts may reference.
+     * @return void
+     */
+    private static function give_files(string $modname, $newcm, string $name, ?int $sourcecourseid): void {
+        $activity = (object) [
+            'id' => (int) $newcm->coursemodule,
+            'instance' => (int) $newcm->instance,
+            'modname' => $modname,
+            'course' => (int) $newcm->course,
+        ];
+        $pass = activity_file_pass::for_new_activity($sourcecourseid);
+        try {
+            $pass->run($activity, $name);
+        } catch (file_copy_exception $exception) {
+            // An activity whose files are missing would stay in the course half made.
+            course_delete_module($activity->id);
+            throw $exception;
+        }
     }
 
     /**
@@ -154,7 +227,13 @@ class create_mod_service {
      * @param int $moduleid Module id from 'modules' table.
      * @return object Parameters ready for add_moduleinfo().
      */
-    private static function prepare_parameters($modname, $rawparameters, $sectionnum, $beforemod, $moduleid) {
+    private static function prepare_parameters(
+        $modname,
+        $rawparameters,
+        $sectionnum,
+        $beforemod,
+        $moduleid
+    ) {
         $cleanedparameters = text_editor_parameter_cleaner::clean_text_editor_objects($rawparameters);
         $parameters = (object)$cleanedparameters;
         $parameters->section = $sectionnum;
@@ -256,7 +335,11 @@ class create_mod_service {
      * @param array|null $modsettings Settings to apply.
      * @return void
      */
-    private static function apply_mod_settings(string $modname, $newcm, ?array $modsettings): void {
+    private static function apply_mod_settings(
+        string $modname,
+        $newcm,
+        ?array $modsettings
+    ): void {
         if (empty($modsettings)) {
             return;
         }

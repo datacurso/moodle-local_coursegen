@@ -23,7 +23,7 @@ use local_coursegen\local\tenant_config;
 /**
  * Permission and tenant contract of the image generation management web service.
  *
- * The admin page is gated by local/coursegen:manageimagegeneration, so the
+ * The admin page is gated by local/coursegen:viewimagegenerationsettings and saved with local/coursegen:editimagegenerationsettings, so the
  * save endpoint must accept exactly the same holders: gating the save on
  * moodle/site:config produced a visible-but-rejected page for managers.
  * The settings are always written to the tenant of the calling user: the
@@ -93,7 +93,7 @@ final class manage_image_generation_permissions_test extends \advanced_testcase 
         $user = $this->getDataGenerator()->create_user();
         $context = \context_system::instance();
         $roleid = $this->getDataGenerator()->create_role(['shortname' => 'imgmanager']);
-        assign_capability('local/coursegen:manageimagegeneration', CAP_ALLOW, $roleid, $context->id);
+        assign_capability('local/coursegen:editimagegenerationsettings', CAP_ALLOW, $roleid, $context->id);
         role_assign($roleid, $user->id, $context->id);
         $this->setUser($user);
 

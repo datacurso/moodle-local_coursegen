@@ -31,10 +31,26 @@ require_once($CFG->libdir . '/questionlib.php');
 class quiz_settings extends base_settings {
     /**
      * Add specific settings for book module.
+     *
+     * The sections come last on purpose: quiz_add_quiz_question() shifts the
+     * firstslot of every section after the page it inserts on, so a section
+     * rebuilt before the questions exist would end up pointing somewhere else.
      */
     public function add_settings() {
+        $quiz = $this->quiz_setup();
+        $added = 0;
         foreach ($this->modsettings['questions'] as $question) {
-            $this->add_question($question);
+            $added += $this->add_question($question, $quiz) ? 1 : 0;
+        }
+        if ($added > 0) {
+            // Once for the whole quiz: done after every question, they made a quiz of a hundred questions take
+            // seconds, because each one went over all the questions added before it.
+            quiz_delete_previews($quiz->quiz);
+            $quiz->quizobj->get_grade_calculator()->recompute_quiz_sumgrades();
+        }
+
+        if (!empty($this->modsettings['sections'])) {
+            $this->add_sections($this->modsettings['sections']);
         }
     }
 
@@ -48,37 +64,38 @@ class quiz_settings extends base_settings {
     const CALCULATED_QTYPES = ['calculated', 'calculatedmulti'];
 
     /**
-     * Resolve (creating it when missing) the default question category of a module context.
+     * What every question of the quiz shares: its context, its question category, the quiz and its settings.
      *
-     * Moodle 5.0 moved default-category creation into question_get_default_category()
-     * and deprecated question_make_default_categories(); Moodle 4.5 only offers the latter.
+     * Read once for the whole quiz; the capabilities and the check that the quiz can be edited are made here.
      *
-     * @param \context $context The quiz module context.
-     * @return \stdClass The default question category record.
+     * @return \stdClass With context, categoryinfo, quiz and quizobj.
      */
-    private function get_default_question_category(\context $context): \stdClass {
-        global $CFG;
-
-        if ($CFG->branch >= 500) {
-            return question_get_default_category($context->id, true);
-        }
-        return question_make_default_categories([$context]);
+    protected function quiz_setup(): \stdClass {
+        $context = \context_module::instance($this->cm->coursemodule);
+        require_capability('moodle/question:add', $context);
+        require_capability('mod/quiz:manage', $context);
+        [$quiz, $cm] = get_module_from_cmid($this->cm->coursemodule);
+        $quizobj = new \mod_quiz\quiz_settings($quiz, $cm, get_course($cm->course));
+        $quizobj->get_structure()->check_can_be_edited();
+        return (object) [
+            'context' => $context,
+            'categoryinfo' => question_make_default_categories([$context]),
+            'quiz' => $quiz,
+            'quizobj' => $quizobj,
+        ];
     }
 
     /**
      * Add question to quiz.
      *
      * @param array $aiquestiondata Question data.
+     * @param \stdClass $setup What the questions of the quiz share (see quiz_setup()).
+     * @return bool Whether the question was added.
      */
-    protected function add_question($aiquestiondata) {
-        global $DB, $USER;
-        $cm = $this->cm;
-        $context = \context_module::instance($cm->coursemodule);
-        require_capability('moodle/question:add', $context);
-
-        $DB->get_record('quiz', ['id' => $cm->instance], '*', MUST_EXIST);
-
-        $categoryinfo = $this->get_default_question_category($context);
+    protected function add_question($aiquestiondata, \stdClass $setup): bool {
+        global $USER;
+        $context = $setup->context;
+        $categoryinfo = $setup->categoryinfo;
 
         if (in_array($aiquestiondata['qtype'], self::CALCULATED_QTYPES, true)) {
             try {
@@ -91,7 +108,7 @@ class quiz_settings extends base_settings {
                         . ($aiquestiondata['name'] ?? '') . '": ' . $exception->getMessage(),
                     DEBUG_DEVELOPER
                 );
-                return;
+                return false;
             }
         } else {
             $category = "{$categoryinfo->id},{$categoryinfo->contextid}";
@@ -104,29 +121,217 @@ class quiz_settings extends base_settings {
 
             $qtypeobj = \question_bank::get_qtype($aiquestiondata['qtype']);
 
-            $question = $qtypeobj->save_question($questionrecord, (object)$aiquestiondata);
+            // A penalty Moodle cannot store (a number out of range, or text) is the default one.
+            if (isset($aiquestiondata['penalty'])) {
+                $penalty = is_numeric($aiquestiondata['penalty']) ? (float) $aiquestiondata['penalty'] : -1.0;
+                $aiquestiondata['penalty'] = ($penalty >= 0.0 && $penalty <= 1.0) ? round($penalty, 7) : 0.3333333;
+            }
+
+            try {
+                $question = $qtypeobj->save_question($questionrecord, (object)$aiquestiondata);
+            } catch (\Throwable $exception) {
+                // One question that cannot be stored must not stop the quiz at that point: the rest are added.
+                debugging(
+                    'coursegen: could not create ' . $aiquestiondata['qtype'] . ' question "'
+                        . ($aiquestiondata['name'] ?? '') . '": ' . $exception->getMessage(),
+                    DEBUG_DEVELOPER
+                );
+                return false;
+            }
         }
 
         // Purge this question from the cache.
         \question_bank::notify_question_edited($question->id);
 
-        require_capability('mod/quiz:manage', $context);
-
-        [$quiz, $cm] = get_module_from_cmid($cm->coursemodule);
-
-        // Get the course object and related bits.
-        $course = get_course($cm->course);
-        $quizobj = new \mod_quiz\quiz_settings($quiz, $cm, $course);
-        $structure = $quizobj->get_structure();
-        $gradecalculator = $quizobj->get_grade_calculator();
+        $this->add_question_tags($aiquestiondata, (int) $question->id, $context);
 
         // Add a single question to the current quiz.
-        $structure->check_can_be_edited();
         quiz_require_question_use($question->id);
-        $addonpage = optional_param('addonpage', 0, PARAM_INT);
-        quiz_add_quiz_question($question->id, $quiz, $addonpage);
-        quiz_delete_previews($quiz);
-        $gradecalculator->recompute_quiz_sumgrades();
+        quiz_add_quiz_question(
+            $question->id,
+            $setup->quiz,
+            $this->slot_page($aiquestiondata),
+            $this->slot_maxmark($aiquestiondata)
+        );
+        $this->apply_slot_options((int) $setup->quiz->id, (int) $question->id, $aiquestiondata);
+        return true;
+    }
+
+    /**
+     * Re-apply the mold's tags to the question just created.
+     *
+     * The mold's tags may have been set at its own course context as well as at
+     * the question's; they all land on the generated question's context here,
+     * because the course they were set in is not the generated one.
+     *
+     * @param array $aiquestiondata Question payload.
+     * @param int $questionid The created question id.
+     * @param \context_module $context The generated quiz's context.
+     */
+    protected function add_question_tags($aiquestiondata, int $questionid, $context): void {
+        $tags = $aiquestiondata['tags'] ?? null;
+        if (!is_array($tags) || !$tags) {
+            return;
+        }
+
+        \core_tag_tag::set_item_tags('core_question', 'question', $questionid, $context, array_values($tags));
+    }
+
+    /**
+     * Apply the two slot columns quiz_add_quiz_question() does not take.
+     *
+     * requireprevious gates the question behind the previous one and
+     * displaynumber overrides the number the student sees; both live on
+     * quiz_slots, so they can only be set once the slot exists. The two
+     * mod_quiz\structure setters own them, which keeps the slot events - and,
+     * for the display number, the structure refresh - that a raw set_field
+     * would skip.
+     *
+     * A payload with neither key touches nothing, so it behaves exactly as it
+     * always has.
+     *
+     * @param int $quizid The generated quiz's instance id.
+     * @param int $questionid The question whose slot to adjust.
+     * @param array $aiquestiondata Question payload.
+     */
+    protected function apply_slot_options(int $quizid, int $questionid, $aiquestiondata): void {
+        $displaynumber = $aiquestiondata['displaynumber'] ?? '';
+        $requireprevious = !empty($aiquestiondata['requireprevious']);
+        if ((string) $displaynumber === '' && !$requireprevious) {
+            return;
+        }
+
+        $structure = \mod_quiz\quiz_settings::create($quizid)->get_structure();
+        $slotid = null;
+        foreach ($structure->get_slots() as $slot) {
+            if ((int) $slot->questionid === $questionid) {
+                $slotid = (int) $slot->id;
+                break;
+            }
+        }
+        if ($slotid === null) {
+            return;
+        }
+
+        if ($requireprevious) {
+            $structure->update_question_dependency($slotid, true);
+        }
+        if ((string) $displaynumber !== '') {
+            $structure->update_slot_display_number($slotid, (string) $displaynumber);
+        }
+    }
+
+    /**
+     * Rebuild the quiz's section headings from the mold.
+     *
+     * mod_quiz creates every quiz with one section starting at slot 1
+     * (mod/quiz/lib.php), so that row is UPDATED rather than joined by a second
+     * first section: quiz_sections has a unique (quizid, firstslot) index.
+     *
+     * The rows are written directly because mod_quiz exposes no setter that can
+     * express them: structure::add_section_heading() takes a PAGE number and
+     * derives firstslot from the first slot on it, so it cannot place a section
+     * that starts inside a page, nor two sections that share one. The heading
+     * and the shuffle flag of the section that already exists are the only
+     * parts an API could set, and splitting the write in two just to use it
+     * would leave the row half-built if the second half failed.
+     *
+     * A section starting past the last slot is dropped: mod_quiz cannot render
+     * a section with no slots in it.
+     *
+     * @param array $sections The mold's sections, in firstslot order.
+     */
+    protected function add_sections($sections): void {
+        global $DB;
+
+        $quizid = (int) $this->cm->instance;
+        $slotcount = $DB->count_records('quiz_slots', ['quizid' => $quizid]);
+        if ($slotcount === 0) {
+            return;
+        }
+
+        $wanted = [];
+        foreach ($sections as $section) {
+            $firstslot = (int) ($section['firstslot'] ?? 0);
+            if ($firstslot < 1 || $firstslot > $slotcount || isset($wanted[$firstslot])) {
+                continue;
+            }
+            $wanted[$firstslot] = [
+                'heading' => (string) ($section['heading'] ?? ''),
+                'shufflequestions' => empty($section['shufflequestions']) ? 0 : 1,
+            ];
+        }
+        if (!isset($wanted[1])) {
+            // Every quiz must own the slot it starts at; a set of sections that
+            // does not cover slot 1 would hide the first questions altogether.
+            return;
+        }
+        ksort($wanted);
+
+        $existing = array_values($DB->get_records('quiz_sections', ['quizid' => $quizid], 'firstslot ASC'));
+        $default = array_shift($existing);
+        foreach ($existing as $extra) {
+            // Nothing else may hold a firstslot the rebuilt sections will claim.
+            $DB->delete_records('quiz_sections', ['id' => $extra->id]);
+        }
+
+        foreach ($wanted as $firstslot => $section) {
+            $row = (object) [
+                'quizid' => $quizid,
+                'firstslot' => $firstslot,
+                'heading' => $section['heading'],
+                'shufflequestions' => $section['shufflequestions'],
+            ];
+            if ($default !== null) {
+                $row->id = $default->id;
+                $DB->update_record('quiz_sections', $row);
+                $default = null;
+                continue;
+            }
+            $DB->insert_record('quiz_sections', $row);
+        }
+    }
+
+    /**
+     * The page this question's slot must land on.
+     *
+     * A mold's question carries the page it was authored on, which is the only
+     * source that works outside the web flow: the legacy fallback reads the
+     * 'addonpage' HTTP parameter - the editing page the user came from - so in
+     * any other context every question landed on page 0 (append at the end)
+     * and the mold's layout was lost. The model-driven path ships no page and
+     * keeps that fallback.
+     *
+     * Still unsupported on the way back in, and unsupportable: a random slot
+     * draws from a question bank category of the template's own course, which
+     * the generated course does not have, and quiz_add_quiz_question() throws
+     * on random questions anyway. The export says so out loud instead.
+     *
+     * @param array $aiquestiondata Question payload.
+     * @return int The page for quiz_add_quiz_question(); 0 means "append".
+     */
+    protected function slot_page($aiquestiondata): int {
+        if (isset($aiquestiondata['page'])) {
+            // Cast is load-bearing: quiz_add_quiz_question() only honours a
+            // given page when it is a real int (is_int) and at least 1.
+            return (int) $aiquestiondata['page'];
+        }
+
+        return optional_param('addonpage', 0, PARAM_INT);
+    }
+
+    /**
+     * The mark this question's slot must be worth.
+     *
+     * The mark of a slot lives in quiz_slots.maxmark, not on the question, so
+     * without it every generated slot silently inherited question.defaultmark
+     * and the mold's weighting was lost. Null keeps that default.
+     *
+     * @param array $aiquestiondata Question payload.
+     * @return float|null The maxmark for quiz_add_quiz_question(), or null.
+     */
+    protected function slot_maxmark($aiquestiondata): ?float {
+        return isset($aiquestiondata['maxmark']) ? (float) $aiquestiondata['maxmark'] : null;
     }
 
     /**

@@ -83,9 +83,20 @@ final class upgrade_test extends \advanced_testcase {
         );
 
         $expected = [
-            'local/coursegen:createcoursewithai',
-            'local/coursegen:managesysteminstructions',
-            'local/coursegen:manageimagegeneration',
+            'local/coursegen:createfreecoursewithai',
+            'local/coursegen:createtemplatecoursewithai',
+            'local/coursegen:uploadcoursesyllabus',
+            'local/coursegen:generatecourseimages',
+            'local/coursegen:viewsysteminstructions',
+            'local/coursegen:createsysteminstructions',
+            'local/coursegen:editsysteminstructions',
+            'local/coursegen:deletesysteminstructions',
+            'local/coursegen:viewimagegenerationsettings',
+            'local/coursegen:editimagegenerationsettings',
+            'local/coursegen:viewtemplates',
+            'local/coursegen:createtemplates',
+            'local/coursegen:edittemplates',
+            'local/coursegen:deletetemplates',
             'local/coursegen:managetenantsettings',
         ];
         foreach ($expected as $capability) {

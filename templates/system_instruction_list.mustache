@@ -28,6 +28,9 @@
 
     Context variables required for this template:
     * addurl string          - URL of the "Add system instruction" page.
+    * cancreate bool         - True when the user may add instructions.
+    * canedit bool           - True when the user may edit instructions.
+    * candelete bool         - True when the user may delete instructions.
     * hasinstructions bool   - True when instructions is non-empty.
     * instructions array     - Rows with: id int, name string, timecreated int, timemodified int,
                                editurl string, deleteurl string.
@@ -35,6 +38,9 @@
     Example context (json):
     {
         "addurl": "https://example.com/local/coursegen/edit_system_instruction.php",
+        "cancreate": true,
+        "canedit": true,
+        "candelete": true,
         "hasinstructions": true,
         "instructions": [
             {
@@ -49,9 +55,11 @@
     }
 }}
 <div class="local_coursegen-system-instruction-list" data-region="local_coursegen/system-instruction-list">
-    <div class="mb-3">
-        <a href="{{addurl}}" class="btn btn-secondary">{{#str}} addsysteminstruction, local_coursegen {{/str}}</a>
-    </div>
+    {{#cancreate}}
+        <div class="mb-3">
+            <a href="{{addurl}}" class="btn btn-secondary">{{#str}} addsysteminstruction, local_coursegen {{/str}}</a>
+        </div>
+    {{/cancreate}}
     {{#hasinstructions}}
         <table class="table table-striped">
             <thead>
@@ -69,12 +77,16 @@
                         <td>{{#userdate}} {{timecreated}}, {{#str}} strftimedatetime, core_langconfig {{/str}} {{/userdate}}</td>
                         <td>{{#userdate}} {{timemodified}}, {{#str}} strftimedatetime, core_langconfig {{/str}} {{/userdate}}</td>
                         <td>
-                            <a href="{{editurl}}" title="{{#str}} edit, local_coursegen {{/str}}">{{!
-                                }}{{#pix}} t/edit, core, {{#str}} edit, local_coursegen {{/str}} {{/pix}}{{!
-                            }}</a>
-                            <a href="{{deleteurl}}" title="{{#str}} delete, local_coursegen {{/str}}">{{!
-                                }}{{#pix}} t/delete, core, {{#str}} delete, local_coursegen {{/str}} {{/pix}}{{!
-                            }}</a>
+                            {{#canedit}}
+                                <a href="{{editurl}}" title="{{#str}} edit, local_coursegen {{/str}}">{{!
+                                    }}{{#pix}} t/edit, core, {{#str}} edit, local_coursegen {{/str}} {{/pix}}{{!
+                                }}</a>
+                            {{/canedit}}
+                            {{#candelete}}
+                                <a href="{{deleteurl}}" title="{{#str}} delete, local_coursegen {{/str}}">{{!
+                                    }}{{#pix}} t/delete, core, {{#str}} delete, local_coursegen {{/str}} {{/pix}}{{!
+                                }}</a>
+                            {{/candelete}}
                         </td>
                     </tr>
                 {{/instructions}}

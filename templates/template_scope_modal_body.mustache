@@ -1,0 +1,60 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+{{!
+    @template local_coursegen/template_scope_modal_body
+
+    Body of the single shared "configure template" modal (see
+    local/template/template_scope_modal.js): asks which activities may use
+    an activity marked "Use as template" as their structural mold.
+
+    Data attributes required for JS:
+    * name="template-scope-choice" on both radio inputs, so the modal
+      controller can read whichever is checked when Save is pressed.
+
+    Context variables required for this template:
+    * subject string      - What the choice applies to (an activity name,
+                            or a "N activities selected" phrase for a bulk
+                            apply), interpolated into the subtitle.
+    * coursechecked bool  - Preselect "Whole course".
+    * sectionchecked bool - Preselect "This section only".
+
+    Example context (json):
+    {
+        "subject": "Aspectos Generales",
+        "coursechecked": true,
+        "sectionchecked": false
+    }
+}}
+<p class="text-muted mb-3">
+    {{#str}} template_scope_modal_subtitle, local_coursegen, {{subject}} {{/str}}
+</p>
+<div class="tpl-scope-choices">
+    <label class="tpl-scope-choice">
+        <input type="radio" name="template-scope-choice" value="course"{{#coursechecked}} checked{{/coursechecked}}>
+        <span>
+            <span class="tpl-scope-choice-label">{{#str}} template_activity_scope_course, local_coursegen {{/str}}</span>
+            <span class="tpl-scope-choice-desc">{{#str}} template_activity_scope_course_tip, local_coursegen {{/str}}</span>
+        </span>
+    </label>
+    <label class="tpl-scope-choice">
+        <input type="radio" name="template-scope-choice" value="section"{{#sectionchecked}} checked{{/sectionchecked}}>
+        <span>
+            <span class="tpl-scope-choice-label">{{#str}} template_activity_scope_section, local_coursegen {{/str}}</span>
+            <span class="tpl-scope-choice-desc">{{#str}} template_activity_scope_section_tip, local_coursegen {{/str}}</span>
+        </span>
+    </label>
+</div>

@@ -43,7 +43,7 @@ if (class_exists(plugin_settings::class) && plugin_settings::is_enabled('local_c
         'local_coursegen_addnewcourseai',
         get_string('courseai_admin_addnewcourse', 'local_coursegen'),
         (new moodle_url('/local/coursegen/aicoursecreation.php'))->out(false),
-        \local_coursegen\local\permission::CAP_CREATE_WITH_AI,
+        \local_coursegen\local\permission::CREATION_CAPABILITIES,
         static fn(): bool => \local_coursegen\local\permission::can_create_course_with_ai()
     ), $ADMIN->locate('restorecourse') ? 'restorecourse' : null);
 }
@@ -121,7 +121,7 @@ $ADMIN->add($pluginname, \local_coursegen\admin\external_page::create(
     'local_coursegen_manage_image_generation',
     get_string('manage_image_generation', 'local_coursegen'),
     (new moodle_url('/local/coursegen/manage_image_generation.php'))->out(false),
-    'local/coursegen:manageimagegeneration'
+    'local/coursegen:viewimagegenerationsettings'
 ));
 
 // System instructions of the current tenant.
@@ -129,14 +129,40 @@ $ADMIN->add($pluginname, \local_coursegen\admin\external_page::create(
     'local_coursegen_manage_system_instructions',
     get_string('managesysteminstructions', 'local_coursegen'),
     (new moodle_url('/local/coursegen/manage_system_instructions.php'))->out(false),
-    'local/coursegen:managesysteminstructions'
+    'local/coursegen:viewsysteminstructions'
 ));
 
 $ADMIN->add($pluginname, \local_coursegen\admin\external_page::create(
     'local_coursegen_edit_system_instruction',
     get_string('editsysteminstruction', 'local_coursegen'),
     (new moodle_url('/local/coursegen/edit_system_instruction.php'))->out(false),
-    'local/coursegen:managesysteminstructions',
+    ['local/coursegen:createsysteminstructions', 'local/coursegen:editsysteminstructions'],
+    null,
+    true
+));
+
+// Course templates of the current tenant.
+$ADMIN->add($pluginname, \local_coursegen\admin\external_page::create(
+    'local_coursegen_manage_templates',
+    get_string('managetemplates', 'local_coursegen'),
+    (new moodle_url('/local/coursegen/manage_templates.php'))->out(false),
+    'local/coursegen:viewtemplates'
+));
+
+$ADMIN->add($pluginname, \local_coursegen\admin\external_page::create(
+    'local_coursegen_import_template',
+    get_string('template_import', 'local_coursegen'),
+    (new moodle_url('/local/coursegen/import_template.php'))->out(false),
+    'local/coursegen:edittemplates',
+    null,
+    true
+));
+
+$ADMIN->add($pluginname, \local_coursegen\admin\external_page::create(
+    'local_coursegen_edit_template',
+    get_string('template_create', 'local_coursegen'),
+    (new moodle_url('/local/coursegen/edit_template.php'))->out(false),
+    ['local/coursegen:createtemplates', 'local/coursegen:edittemplates'],
     null,
     true
 ));
