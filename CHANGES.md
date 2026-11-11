@@ -1,3 +1,30 @@
+## 2.0.15-wp
+
+**Released on:** 2026-11-11
+
+**Compatibility note:** This version is compatible only with **Moodle Workplace 4.5**.
+
+## Removed
+
+- **The GitHub workflows are removed**
+  The continuous integration of the plugin runs on Jenkins, so the `.github` folder (`plugin-ci.yml`) is removed, as on the Moodle branch. Test: none, the change removes files
+
+## Fixed
+
+- **The text a person wrote no longer outlives their deletion (Mindfree, LCG-PRIV-004)**
+  When a user was deleted, by a Privacy API request or in Moodle, the custom prompt they wrote for a course stayed in `local_coursegen_course_context.prompt_text`, only losing the reference to its author; and deleting a user in Moodle, which does not run the Privacy API, removed nothing at all. `\local_coursegen\local\service\user_data_eraser` now erases what the plugin keeps of a person, for the Privacy API and for a new `\core\event\user_deleted` observer (registered next to the `tenant_deleted` one): the planning sessions with their syllabus files, the module jobs, and the custom prompt of every course whose prompt they last saved. The system instructions of each tenant are kept on purpose, as institutional configuration, and only lose the reference to the person who last edited them; the Privacy API metadata declares both behaviours. Tests: `tests/privacy_user_text_test.php`
+- **What the course service keeps of a person or a course is exported and deleted with them (Mindfree, LCG-PRIV-001)**
+  Every deletion (a Privacy API request for a user or a course, a deleted user, a deleted course) queues the new adhoc task `\local_coursegen\task\erase_remote_data` with the ids of the sessions and jobs it held and, for a person, the person, before the local rows go; a failed call makes the task run again later. The export of a user includes what the service keeps of them, or says that the service could not be reached. In Workplace each tenant may use its own course service URL: the export and the deletion of a person go to the service of that person's tenant, and the deletion of a course to the service of the tenant of whoever deletes it. `\local_coursegen\local\service\remote_data_service` makes both calls, and the Privacy API metadata declares the retention and the new `thread_ids` field. Tests: `tests/privacy_remote_data_test.php`; `tests/privacy_provider_test.php` no longer reaches the network
+- **A course creator deployed before its provider no longer breaks every page**
+  The page header hook (`mycourses_header_hook`), the footer hook (`chat_hook`), the file serving callback and the Workplace launcher callback (`local_coursegen_theme_workplace_menu_items`) of `lib.php` asked `aiprovider_datacurso\local\plugin_settings` for the plugin state, a class that older providers do not have. When the plugin reached a site before that provider, every page threw `Class "aiprovider_datacurso\local\plugin_settings" not found`, the login page included. Those callbacks now ask `\local_coursegen\local\provider_state`, which reports the plugin as disabled while the provider class does not exist. Tests: `tests/local/provider_state_test.php`
+- **Confirming a course no longer fails when the AI proposes a category the site does not have**
+  When the category proposed by the AI service did not exist, the review panel showed an empty category field but kept the confirm button enabled, and confirming failed with *Can't find data record in database table course_categories*. The proposed category is now used only when it exists and the user may create courses in it; otherwise the default category (the category of the user's tenant, else the site default), and then the first category the review panel offers the user, take its place. The review panel starts on that category, the confirm button stays disabled while the category field is empty, and a picked category that no longer exists is refused with `error_category_unavailable`. Tests: `tests/local/service/create_course_category_test.php`
+
+## Security
+
+- **The text the AI writes is cleaned in a single point before any activity stores it (Mindfree, observation 1)**
+  `create_mod_service::create_from_ai_result()`, the path every activity takes, now passes the whole AI result through `\local_coursegen\utils\ai_text_sanitiser` before Moodle or any activity settings class stores it: a string with markup is cleaned with `clean_text()`, a string that starts with a script scheme (`javascript:`, `vbscript:`) stops being a URL, and any other string is kept as it is. Tests: `tests/ai_text_sanitisation_test.php`, `tests/ai_text_sanitiser_test.php`
+
 ## 2.0.13-wp
 
 **Released on:** 2026-11-09

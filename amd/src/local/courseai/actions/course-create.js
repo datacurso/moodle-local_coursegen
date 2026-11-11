@@ -92,12 +92,21 @@ export const showCourseReviewPanel = async(state, elements, texts, getCourseSett
         // Fall through — plain select still works.
     }
 
+    // A course is never submitted without a category: the one proposed by the AI service
+    // is pre-selected only when it can be used, so the field may start empty. The select
+    // stays in sync with core/form-autocomplete, which dispatches its change event.
+    const syncConfirm = () => {
+        confirmBtn.disabled = !(parseInt(categorySelect.value || '', 10) > 0);
+    };
+    syncConfirm();
+
     return new Promise((resolve) => {
         let resolved = false;
 
         const cleanup = () => {
             confirmBtn.removeEventListener('click', onConfirm);
             cancelBtn.removeEventListener('click', onCancel);
+            categorySelect.removeEventListener('change', syncConfirm);
         };
         const hidePanel = () => { panel.style.display = 'none'; };
 
@@ -126,6 +135,7 @@ export const showCourseReviewPanel = async(state, elements, texts, getCourseSett
 
         confirmBtn.addEventListener('click', onConfirm);
         cancelBtn.addEventListener('click', onCancel);
+        categorySelect.addEventListener('change', syncConfirm);
         panel.style.display = '';
         setTimeout(() => fullnameInput.focus(), 100);
     });

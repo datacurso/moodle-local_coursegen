@@ -28,26 +28,27 @@ class observer {
      * Remove the plugin data attached to a deleted course.
      *
      * Deletes the course context configuration, the planning sessions (with
-     * their stored syllabus files) and the module jobs of the course.
+     * their stored syllabus files) and the module jobs of the course, and queues
+     * the deletion of their threads at the Datacurso course service.
      *
      * @param \core\event\course_deleted $event The course_deleted event.
      * @return void
      */
     public static function course_deleted(\core\event\course_deleted $event): void {
-        global $DB;
+        local\service\user_data_eraser::erase_deleted_course((int)$event->objectid);
+    }
 
-        $courseid = (int)$event->objectid;
-
-        $fs = get_file_storage();
-        $syscontextid = \context_system::instance()->id;
-        $sessionids = $DB->get_fieldset_select('local_coursegen_course_sessions', 'id', 'courseid = ?', [$courseid]);
-        foreach ($sessionids as $sessionid) {
-            $fs->delete_area_files($syscontextid, 'local_coursegen', 'syllabus', (int)$sessionid);
-        }
-
-        $DB->delete_records('local_coursegen_course_sessions', ['courseid' => $courseid]);
-        $DB->delete_records('local_coursegen_module_jobs', ['courseid' => $courseid]);
-        $DB->delete_records('local_coursegen_course_context', ['courseid' => $courseid]);
+    /**
+     * Erase what the plugin keeps of a deleted user: sessions, jobs and the custom prompts they wrote.
+     *
+     * Moodle does not run the Privacy API when it deletes a user, so the plugin does it here
+     * (Mindfree, LCG-PRIV-004).
+     *
+     * @param \core\event\user_deleted $event The user_deleted event.
+     * @return void
+     */
+    public static function user_deleted(\core\event\user_deleted $event): void {
+        local\service\user_data_eraser::erase_user((int)$event->objectid);
     }
 
     /**
