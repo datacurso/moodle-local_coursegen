@@ -126,31 +126,11 @@ class ai_course_api_service {
         if (method_exists($this->client, 'get_license_header')) {
             return $this->client->get_license_header();
         }
-        $key = $this->license_key_of_the_client();
+        $key = (string) get_config('aiprovider_datacurso', 'licensekey');
         if ($key === '') {
             throw new \moodle_exception('invalidlicensekey', 'aiprovider_datacurso');
         }
         return 'License-Key: ' . $key;
-    }
-
-    /**
-     * The key the provider client itself uses for its requests.
-     *
-     * An older provider that serves several tenants takes the key of the tenant of the person, and only falls back to
-     * the site key; reading the site key alone left a tenant's stream without license. The client already holds the
-     * one it uses for every other call, so that one is taken, and the site key is the last resort.
-     *
-     * @return string The key, or an empty string when there is none.
-     */
-    private function license_key_of_the_client(): string {
-        try {
-            $property = new \ReflectionProperty($this->client, 'licensekey');
-            $property->setAccessible(true);
-            $key = trim((string) $property->getValue($this->client));
-        } catch (\ReflectionException $e) {
-            $key = '';
-        }
-        return $key !== '' ? $key : trim((string) get_config('aiprovider_datacurso', 'licensekey'));
     }
 
     /**

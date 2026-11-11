@@ -2,11 +2,11 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
-## [2.0.10] - 2026110914
+## [2.0.10] - 2026110915
 
-### Fixed
-- **The generation of a course from a template could not start on a site that serves several tenants**  
-  The files were sent to the service, but the stream that shows the generation never opened. With a provider that cannot build the license header itself, the plugin took the key of the site, and a tenant has its own: with no site key the stream stopped before it began. The key the provider client already uses for every other call is taken now, and the site key is only the last resort.
+### Changed
+- **The relay of the stream asks the provider for the license header again**  
+  The plugin no longer works out the key of a tenant by itself. A provider that serves several tenants builds the header with `get_license_header()`, as the other providers do, and the plugin keeps reading the site key only when the provider has no such method.
 
 ## [2.0.10] - 2026110913
 
