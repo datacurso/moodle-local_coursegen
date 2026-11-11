@@ -4061,6 +4061,43 @@ body:has(.courseai-workspace.is-planning) { overflow: hidden; }
   background-clip: padding-box;
 }
 
+/* Template mode, once the course is generated: the review of the course data sits in the planning column, which
+   scrolls on its own like the structure does before it, with the same thin scrollbar. */
+.courseai-workspace.is-template .planning-wrap {
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  max-width: none;
+  margin: 0;
+  padding: 8px 22px 28px;
+  scrollbar-width: thin;
+  scrollbar-color: hsl(215 18% 80%) transparent;
+}
+.courseai-workspace.is-template .planning-wrap > * {
+  flex-shrink: 0;
+  align-self: center;
+  width: 100%;
+  max-width: 680px;
+}
+.courseai-workspace.is-template .planning-wrap::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.courseai-workspace.is-template .planning-wrap::-webkit-scrollbar-track {
+  background: transparent;
+}
+.courseai-workspace.is-template .planning-wrap::-webkit-scrollbar-thumb {
+  background: hsl(215 16% 86%);
+  border-radius: 8px;
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+.courseai-workspace.is-template .planning-wrap::-webkit-scrollbar-thumb:hover {
+  background: hsl(215 16% 72%);
+  background-clip: padding-box;
+}
+
 /* ============================================================
    §8 Detailed preview — EXACT Custom Sections replica
    The center preview emits core_courseformat markup so the loaded
