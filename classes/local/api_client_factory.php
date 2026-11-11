@@ -66,10 +66,29 @@ class api_client_factory {
      * @return ai_course_api
      */
     public static function ai_course_api_for_current_tenant(): ai_course_api {
-        $baseurl = tenant_config::get('datacurso_service_url') ?: null;
-        $baseurleu = tenant_config::get('datacurso_service_url_eu') ?: null;
+        $baseurl = self::service_url('datacurso_service_url');
+        $baseurleu = self::service_url('datacurso_service_url_eu');
 
         return self::ai_course_api($baseurl, $baseurleu);
+    }
+
+    /**
+     * The address of a service for the current tenant.
+     *
+     * The tenant's own value wins. A tenant that has none uses the one of the default tenant, where the address that
+     * the site had before the settings belonged to the tenants was handed to; an address says where the service is
+     * and is not content of a tenant. With none in either, the client default is used.
+     *
+     * @param string $name Setting name.
+     * @return string|null The address, or null for the client default.
+     */
+    private static function service_url(string $name): ?string {
+        $own = tenant_config::get($name);
+        if ($own) {
+            return $own;
+        }
+        $defaulttenant = tenancy::get_default_tenant_id();
+        return (tenant_config::get($name, null, $defaulttenant)) ?: null;
     }
 
     /**

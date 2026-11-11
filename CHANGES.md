@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10-wp] - 2026111103
+
+### Fixed
+- **A tenant with no service address of its own reached the production service, which has no templates**  
+  When the settings began to belong to the tenants, the address that the site had was handed to the default tenant, so the other tenants fell back to the production service and the generation from a template failed with "HTTP 404". A tenant that has no address of its own now uses the one of the default tenant, and its own still wins when it has one.
+
 ## [2.0.10-wp] - 2026111102
 
 ### Fixed

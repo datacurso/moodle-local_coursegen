@@ -90,6 +90,28 @@ final class api_client_factory_tenant_test extends \advanced_testcase {
     }
 
     /**
+     * A tenant with no address of its own uses the one of the default tenant, and its own wins when it has one.
+     */
+    public function test_tenant_without_urls_uses_those_of_the_default_tenant(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        $defaulttenant = tenancy::get_default_tenant_id();
+        tenant_config::set('datacurso_service_url', 'https://default.example.com/api/v1', $defaulttenant);
+        [$tenanta, $usera] = $this->create_tenant_with_user();
+        [, $userb] = $this->create_tenant_with_user();
+        tenant_config::set('datacurso_service_url', 'https://tenant-a.example.com/api/v1', $tenanta);
+        $this->inject_test_client();
+
+        $this->setUser($userb);
+        api_client_factory::ai_course_api_for_current_tenant();
+        $this->assertSame(['baseurl' => 'https://default.example.com/api/v1', 'baseurleu' => null], api_client_factory::get_last_urls());
+
+        $this->setUser($usera);
+        api_client_factory::ai_course_api_for_current_tenant();
+        $this->assertSame(['baseurl' => 'https://tenant-a.example.com/api/v1', 'baseurleu' => null], api_client_factory::get_last_urls());
+    }
+
+    /**
      * Empty or missing URLs are passed as null so the client falls back to its defaults.
      */
     public function test_empty_urls_are_passed_as_null(): void {
