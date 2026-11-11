@@ -204,29 +204,31 @@ final class course_import_safety_test extends \advanced_testcase {
      * @param \core\lock\lock $lock Its lock, which can no longer be released through it.
      */
     private function kill_other_process(\moodle_database $other, \core\lock\lock $lock): void {
-        // Read the factory first: a successful release() drops the lock's reference to it.
         $factory = (fn() => $this->factory)->call($lock);
         if ($factory instanceof \core\lock\timing_wrapper_lock_factory) {
             $factory = $factory->get_real_factory();
         }
 
         $other->dispose();
-        try {
-            $lock->release();
-        } catch (\Throwable $e) {
-            // Expected on some drivers: the connection is gone, and the database freed the lock with it.
-            unset($e);
-        }
 
-        // Whether release() threw or not, the factory may still list the lock, and its shutdown
-        // handler would try to release it again through the closed connection, which fails the run
-        // after all tests passed. It forgets it, as the dead process would have. The MySQL factory
-        // lists its locks in openlocks and the PostgreSQL factory in resourcetokens.
+        // Nothing may go through the closed connection afterwards: a query on it makes the driver
+        // take back the closed handle (moodle_read_slave_trait), and its destructor then closes it
+        // a second time at shutdown, which fails the run after all tests passed. The factory
+        // forgets the lock, as the dead process would have: the MySQL factory lists its locks in
+        // openlocks, the PostgreSQL factory in resourcetokens and the static locksbytoken.
         foreach (['openlocks', 'resourcetokens'] as $property) {
             if (property_exists($factory, $property)) {
                 (fn() => $this->$property = [])->call($factory);
             }
         }
+        if (property_exists($factory, 'locksbytoken')) {
+            $dbid = spl_object_id($other);
+            (fn() => self::$locksbytoken[$dbid] = [])->call($factory);
+        }
+
+        // The lock is detached from its factory, so release() only marks it released.
+        (fn() => $this->factory = null)->call($lock);
+        $lock->release();
     }
 
     /**
