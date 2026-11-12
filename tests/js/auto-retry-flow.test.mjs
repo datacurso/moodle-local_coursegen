@@ -78,3 +78,47 @@ test('a failure that is not about the connection goes straight to the person', a
     // the run waits for the person: nothing more to do in this test, the next one resets it
     run.catch(() => undefined);
 });
+
+test('a failure that the service marks as retriable is retried by itself, as one that the relay marks as retryable', async() => {
+    const run = stream.runGenerationStream('/relay', async() => ({courseurl: '/course'}), 7, context);
+    await settle();
+    RelaySource.instances[0].emit('message', {
+        type: 'failed', message: 'We could not complete your request right now.', code: 'generation_failed', retriable: true,
+    });
+    await settle();
+
+    assert.equal(retryCalls().length, 1, 'the run was asked to go on by itself');
+    assert.equal(RelaySource.instances.length, 2, 'and the stream was opened again');
+    completed(RelaySource.instances[1]);
+    assert.deepEqual(await run, {courseurl: '/course'});
+});
+
+test('a run that fails again and again, even if it tells things on the way, runs out of retries', async() => {
+    const run = stream.runGenerationStream('/relay', async() => ({}), 7, context);
+    await settle();
+    for (let i = 0; i < 11; i++) {
+        const source = RelaySource.instances[i];
+        // the service says it is retrying and that an activity failed, then the run fails again
+        source.emit('message', {type: 'template_notice', code: 'retrying', attempt: 1, of: 3, seconds: 2});
+        source.emit('message', {type: 'activity_progress_failed', index: 0, uid: 'a', cmid: -1});
+        source.emit('message', {type: 'failed', message: 'x', code: 'generation_failed', retriable: true});
+        await settle();
+    }
+    assert.equal(retryCalls().length, 10, 'ten retries by itself, and then the person decides');
+    assert.equal(RelaySource.instances.length, 11);
+    run.catch(() => undefined);
+});
+
+test('a run that writes an activity between two failures starts counting again', async() => {
+    const run = stream.runGenerationStream('/relay', async() => ({courseurl: '/course'}), 7, context);
+    await settle();
+    for (let i = 0; i < 12; i++) {
+        const source = RelaySource.instances[i];
+        source.emit('message', {type: 'activity_progress_done', index: 0, uid: 'a', cmid: -1});
+        source.emit('message', {type: 'failed', message: 'x', code: 'generation_failed', retriable: true});
+        await settle();
+    }
+    assert.equal(retryCalls().length, 12, 'it never runs out while it keeps moving');
+    completed(RelaySource.instances[12]);
+    assert.deepEqual(await run, {courseurl: '/course'});
+});

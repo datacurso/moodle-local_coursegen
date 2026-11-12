@@ -102,7 +102,8 @@ const handleStreamMessage = (state, progress, applyEvent, onFail, resolve, rejec
     } else if (outcome === 'failed') {
         failPass(
             state, onFail, reject, data.message || 'The generation could not be completed.', data.code || 'failed',
-            data.retryable === true
+            // The relay of Moodle spells it retryable and the service retriable: both say that waiting can mend it.
+            data.retryable === true || data.retriable === true
         );
     }
 };

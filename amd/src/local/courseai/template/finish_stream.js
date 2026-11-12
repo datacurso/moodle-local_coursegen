@@ -81,13 +81,15 @@ const openOnce = (url, onProgress) => new Promise((resolve, reject) => {
         source.close();
         action();
     };
-    const failWith = (message, errorcode) => settle(() => reject(Object.assign(new Error(message), {errorcode})));
+    const failWith = (message, errorcode, retryable = false) => settle(() => reject(
+        Object.assign(new Error(message), {errorcode, retryable})
+    ));
 
     source.addEventListener('progress', (event) => onProgress(dataOf(event)));
     source.addEventListener('result', (event) => settle(() => resolve(dataOf(event))));
     source.addEventListener('failed', (event) => {
         const data = dataOf(event);
-        failWith(data.message || '', data.errorcode || 'failed');
+        failWith(data.message || '', data.errorcode || 'failed', data.retryable === true);
     });
     source.addEventListener('done', () => failWith('The creation ended without an answer.', 'connection'));
     source.onerror = (error) => failWith((error && error.message) || 'The connection was lost.', 'connection');
@@ -130,7 +132,9 @@ export const finishTemplateGenerationStream = async(
             // eslint-disable-next-line no-await-in-loop
             return await open(url, onProgress);
         } catch (error) {
-            if (error.errorcode !== 'connection' || attempt >= ATTEMPTS) {
+            // What waiting mends: the connection of the page, and what the server says may be retried (the service
+            // could not be reached from Moodle, or answered with an error that passes).
+            if (!(error.errorcode === 'connection' || error.retryable === true) || attempt >= ATTEMPTS) {
                 throw error;
             }
         }
