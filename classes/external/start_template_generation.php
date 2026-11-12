@@ -104,7 +104,9 @@ class start_template_generation extends external_api {
         // Read first: a reference marker with no usable target is refused before a session exists.
         $referenceuploads = template_reference_uploads::plan($payload);
         $template = \local_coursegen\local\models\template::get_record(['id' => $params['templateid']]);
-        $slots = template_course_image_slots::for_course(get_course((int) $template->get('courseid')));
+        $slots = $params['withimages']
+            ? template_course_image_slots::for_course(get_course((int) $template->get('courseid')))
+            : [];
         $referenceuploads = array_merge($referenceuploads, template_course_image_slots::uploads($slots));
 
         $api = new template_ai_api_service();
