@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10-wp] - 2026111111
+
+### Fixed
+- **The retries that the page makes by itself have no buttons and a message anyone can read**  
+  While the retries run by themselves the card shows only what happened, in plain words, and which retry it is with the time left for the next one. Nothing technical is shown (no error codes, no names of the transport). The buttons appear only when the retries have run out and the person has to decide.
+- **A failure of the connection and a failure of the AI look the same**  
+  Both are an amber step in the thread without buttons; when the AI is the one that fails, the card says there is a problem with the artificial intelligence.
+- **The ten retries are one count, whoever makes them**  
+  The retries of the service and the ones of the page no longer count twice or restart one after the other. They are one count of ten, with waits that double each time (10, 20, 40, 80 seconds, up to two minutes), and the count starts again from the first retry after something recovers. There is one retry card at a time, and it no longer flickers between two different counts.
+
 ## [2.0.10-wp] - 2026111110
 
 ### Fixed
