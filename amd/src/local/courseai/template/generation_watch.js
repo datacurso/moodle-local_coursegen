@@ -54,15 +54,17 @@ const finishPass = (state, action) => {
  * @param {string} message
  * @param {string} [code] The code the service gave to the failure.
  * @param {boolean} [retryable] Whether trying again can mend it: the connection, or what the service says.
+ * @param {boolean} [fromService] Whether the failure is one that the AI service reported, and not of the connection.
  * @returns {void}
  */
 const failPass = (
-    state, onFail, reject, message, code = 'connection', retryable = code === 'connection'
+    state, onFail, reject, message, code = 'connection', retryable = code === 'connection', fromService = false
 ) => finishPass(state, () => {
     onFail(message);
     const error = new Error(message);
     error.code = code;
     error.retryable = retryable;
+    error.fromService = fromService;
     reject(error);
 });
 
@@ -103,7 +105,9 @@ const handleStreamMessage = (state, progress, applyEvent, onFail, resolve, rejec
         failPass(
             state, onFail, reject, data.message || 'The generation could not be completed.', data.code || 'failed',
             // The relay of Moodle spells it retryable and the service retriable: both say that waiting can mend it.
-            data.retryable === true || data.retriable === true
+            data.retryable === true || data.retriable === true,
+            // Only the service names the failure with a code: the relay of Moodle, when it cannot reach the service, does not.
+            !!data.code
         );
     }
 };
