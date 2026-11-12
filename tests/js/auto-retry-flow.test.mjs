@@ -93,19 +93,31 @@ test('a failure that the service marks as retriable is retried by itself, as one
     assert.deepEqual(await run, {courseurl: '/course'});
 });
 
-test('a run that fails again and again, even if it tells things on the way, runs out of retries', async() => {
+test('the retries of the service and of the page are one count of ten', async() => {
     const run = stream.runGenerationStream('/relay', async() => ({}), 7, context);
     await settle();
-    for (let i = 0; i < 11; i++) {
+    for (let i = 0; i < 10; i++) {
         const source = RelaySource.instances[i];
-        // the service says it is retrying and that an activity failed, then the run fails again
-        source.emit('message', {type: 'template_notice', code: 'retrying', attempt: 1, of: 3, seconds: 2});
+        // the service says it made its first retry and that an activity failed, then the run fails again
+        source.emit('message', {type: 'template_notice', code: 'retrying', attempt: 1, of: 10, seconds: 2});
         source.emit('message', {type: 'activity_progress_failed', index: 0, uid: 'a', cmid: -1});
         source.emit('message', {type: 'failed', message: 'x', code: 'generation_failed', retriable: true});
         await settle();
     }
-    assert.equal(retryCalls().length, 10, 'ten retries by itself, and then the person decides');
-    assert.equal(RelaySource.instances.length, 11);
+    assert.equal(retryCalls().length, 9, 'the retry of the service is one of the ten: nine are left, then the person decides');
+    assert.equal(RelaySource.instances.length, 10);
+    run.catch(() => undefined);
+});
+
+test('when the service used its ten retries the page does not add ten more', async() => {
+    const run = stream.runGenerationStream('/relay', async() => ({}), 7, context);
+    await settle();
+    const source = RelaySource.instances[0];
+    source.emit('message', {type: 'template_notice', code: 'retrying', attempt: 10, of: 10, seconds: 120});
+    source.emit('message', {type: 'failed', message: 'x', code: 'generation_failed', retriable: true});
+    await settle();
+
+    assert.equal(retryCalls().length, 0, 'nothing is retried by the page');
     run.catch(() => undefined);
 });
 
