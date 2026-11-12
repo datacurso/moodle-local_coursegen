@@ -21,6 +21,8 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+import {creationPercent} from 'local_coursegen/local/courseai/template/creation_progress';
+
 /**
  * Show the inline course-review panel, load categories from the backend,
  * and resolve to the user's overrides object (or null if cancelled).
@@ -155,28 +157,38 @@ export const createCourseFromSession = async(
     let progressInterval = null;
 
     try {
-        if (elements.pcStep) { elements.pcStep.textContent = texts.courseai_state_completed; }
-        if (elements.pcTitle) { elements.pcTitle.textContent = texts.courseai_course_creating; }
-        if (pcSubtitle) { pcSubtitle.textContent = texts.courseai_course_creating_subtitle; }
+        // A creation that reports each step shows the real progress, from zero and with what it is doing; one that
+        // does not (the free creation) keeps the animation up to a point.
+        const reportsProgress = createCourse.reportsProgress === true;
+        if (reportsProgress) {
+            if (elements.pcStep) { elements.pcStep.textContent = texts.courseai_state_saving; }
+            if (elements.pcTitle) { elements.pcTitle.textContent = texts.courseai_course_writing; }
+            if (pcSubtitle) { pcSubtitle.textContent = texts.courseai_course_writing_subtitle; }
+            stepsUi.setProgress(0);
+        } else {
+            if (elements.pcStep) { elements.pcStep.textContent = texts.courseai_state_completed; }
+            if (elements.pcTitle) { elements.pcTitle.textContent = texts.courseai_course_creating; }
+            if (pcSubtitle) { pcSubtitle.textContent = texts.courseai_course_creating_subtitle; }
 
-        // Read current displayed progress from the DOM so we continue smoothly
-        // from wherever the review panel left off, instead of recalculating from stale SSE state.
-        const currentPctText = pcPct ? pcPct.textContent : '';
-        const parsedPct = parseInt(currentPctText, 10);
-        const startProgress = !isNaN(parsedPct) && parsedPct >= 0 ? parsedPct : 92;
-        const targetProgress = 98;
-        const duration = 2000;
-        const intervalMs = 100;
-        const startTime = Date.now();
+            // Read current displayed progress from the DOM so we continue smoothly
+            // from wherever the review panel left off, instead of recalculating from stale SSE state.
+            const currentPctText = pcPct ? pcPct.textContent : '';
+            const parsedPct = parseInt(currentPctText, 10);
+            const startProgress = !isNaN(parsedPct) && parsedPct >= 0 ? parsedPct : 92;
+            const targetProgress = 98;
+            const duration = 2000;
+            const intervalMs = 100;
+            const startTime = Date.now();
 
-        progressInterval = setInterval(() => {
-            const elapsed = Date.now() - startTime;
-            const progress = Math.min(1, elapsed / duration);
-            const eased = 1 - Math.pow(1 - progress, 3); // ease-out
-            const currentProgress = startProgress + (eased * (targetProgress - startProgress));
-            stepsUi.setProgress(Math.round(currentProgress));
-            if (currentProgress >= targetProgress) { clearInterval(progressInterval); }
-        }, intervalMs);
+            progressInterval = setInterval(() => {
+                const elapsed = Date.now() - startTime;
+                const progress = Math.min(1, elapsed / duration);
+                const eased = 1 - Math.pow(1 - progress, 3); // ease-out
+                const currentProgress = startProgress + (eased * (targetProgress - startProgress));
+                stepsUi.setProgress(Math.round(currentProgress));
+                if (currentProgress >= targetProgress) { clearInterval(progressInterval); }
+            }, intervalMs);
+        }
 
         const payload = {recordid: state.sessionid};
         if (overrides) {
@@ -195,10 +207,15 @@ export const createCourseFromSession = async(
             rejectIdle = reject;
             armIdleTimer();
         });
+        let percent = 0;
         const onProgress = (news) => {
             armIdleTimer();
             if (pcSubtitle && news && news.message) {
                 pcSubtitle.textContent = news.message;
+            }
+            if (reportsProgress && news) {
+                percent = creationPercent(news.step, Number(news.done) || 0, Number(news.total) || 0, percent);
+                stepsUi.setProgress(percent);
             }
         };
         let result;
