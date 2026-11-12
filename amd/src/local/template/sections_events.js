@@ -49,6 +49,7 @@
 
 import {typeSupportsModify} from 'local_coursegen/local/template/type_action_sync';
 import {bindSelectionAndBulk} from 'local_coursegen/local/template/selection_bulk';
+import {cascadeBehavior} from 'local_coursegen/local/template/section_cascade';
 import {
     applyTemplateVisual,
     openScopeModalForNewSelection,
@@ -239,6 +240,8 @@ const bindActivityActionSelects = (container, state) => {
  */
 const handleSectionBehaviorChange = (ctx) => {
     ctx.state.sectionBehavior[ctx.sid] = ctx.select.value;
+    // The subsections of a unit follow it (flexsections); a section with none is left alone.
+    cascadeBehavior(ctx.select.closest(Selectors.rows.section), ctx.select.value, ctx.state);
     markDirty();
 };
 

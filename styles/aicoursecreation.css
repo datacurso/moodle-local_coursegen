@@ -2649,6 +2649,10 @@ svg { display: block; flex-shrink: 0; }
   background: var(--muted);
   opacity: .9;
 }
+/* Subsections of a flexsections course sit under their unit, one step in per level. */
+#tplModeStructure .course-section.cg-section-depth-1 { margin-left: 1.5rem; }
+#tplModeStructure .course-section.cg-section-depth-2 { margin-left: 3rem; }
+#tplModeStructure .course-section.cg-section-depth-3 { margin-left: 4.5rem; }
 #tplModeStructure .cg-tpl-locked-badge { font-weight: 500; }
 #tplModeStructure .cg-tpl-locked-note { font-size: 11px; }
 

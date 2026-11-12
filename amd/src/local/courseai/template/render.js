@@ -100,6 +100,7 @@ const buildContext = (state) => ({
         index: sectionindex,
         name: section.name,
         locked: section.locked,
+        depth: section.depth || 0,
         collapsed: !!section.collapsed,
         activitiescount: section.activities.length,
         activities: section.activities.map((activity, index) => buildActivityContext(activity, state, sectionindex, index)),

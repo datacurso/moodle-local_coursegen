@@ -46,6 +46,10 @@ trait get_template_structure_schema {
                     'name'   => new external_value(PARAM_TEXT, 'Section name'),
                     'behavior' => new external_value(PARAM_ALPHA, 'Admin-configured section behavior (custom/keep)'),
                     'locked' => new external_value(PARAM_BOOL, 'Whether the section is kept as-is from the template'),
+                    'parent' => new external_value(PARAM_INT,
+                        'Number of the parent section; only for a course whose format has subsections', VALUE_OPTIONAL),
+                    'depth' => new external_value(PARAM_INT,
+                        'Levels under the top; only for a course whose format has subsections', VALUE_OPTIONAL),
                     'activities' => new external_multiple_structure(
                         new external_single_structure([
                             'id'       => new external_value(PARAM_ALPHANUMEXT,

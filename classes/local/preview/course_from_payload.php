@@ -18,6 +18,7 @@ namespace local_coursegen\local\preview;
 
 use html_writer;
 use local_coursegen\local\models\template_activity;
+use local_coursegen\local\service\template_section_tree;
 use moodle_url;
 
 /**
@@ -57,6 +58,8 @@ class course_from_payload {
         $sections = [];
         $initial = null;
         $sectionsinfo = $payload['sections_info'] ?? [];
+        $isflex = self::is_flexsections($payload);
+        $tree = template_section_tree::from_entries($sectionsinfo);
         foreach ($sectionsinfo as $info) {
             $number = $info['section'] ?? 0;
             $number = (int) $number;
@@ -65,6 +68,9 @@ class course_from_payload {
             }
             $sectionactivities = $bysection[$number] ?? [];
             $section = self::section($info, $sectionactivities, $sessionid);
+            if ($isflex) {
+                $section['depth'] = $tree->depth_of($number);
+            }
             if ($number === 0 && $only !== null) {
                 continue;
             }
@@ -87,6 +93,44 @@ class course_from_payload {
             'sections' => $sections,
             'hassections' => !empty($sections),
         ];
+    }
+
+    /**
+     * The rules that put each subsection of a flexsections course under its unit.
+     *
+     * The sections are drawn in order, which for this format is depth-first, by
+     * the template every format shares; the nesting is the left margin of each
+     * nested section, so none of them is taken out of its place.
+     *
+     * @param array $payload What was sent to the service.
+     * @return string CSS, empty when the course has no nesting.
+     */
+    public static function indent_css(array $payload): string {
+        if (!self::is_flexsections($payload)) {
+            return '';
+        }
+        $sectionsinfo = $payload['sections_info'] ?? [];
+        $tree = template_section_tree::from_entries($sectionsinfo);
+        $css = '';
+        foreach ($sectionsinfo as $info) {
+            $number = (int) ($info['section'] ?? 0);
+            $depth = $tree->depth_of($number);
+            if ($depth > 0) {
+                $css .= '.local-coursegen-course-preview #section-' . $number . ' { margin-left: ' . ($depth * 2) . "rem; }\n";
+            }
+        }
+        return $css;
+    }
+
+    /**
+     * Whether the course being previewed is laid out in sections and subsections.
+     *
+     * @param array $payload
+     * @return bool
+     */
+    private static function is_flexsections(array $payload): bool {
+        $configuration = $payload['course_configuration'] ?? [];
+        return ($configuration['format'] ?? '') === 'flexsections';
     }
 
     /**

@@ -147,6 +147,12 @@ if ($section === null && grid_from_payload::should_render_grid_preview($payload)
     $template = 'format_grid/local/content';
 }
 
+// A flexsections course shows its subsections under their unit.
+$indent = course_from_payload::indent_css($payload);
+if ($indent !== '') {
+    echo html_writer::tag('style', $indent);
+}
+
 echo html_writer::start_tag('div', ['class' => 'course-content']);
 echo $OUTPUT->render_from_template($template, $content);
 echo html_writer::end_tag('div');
