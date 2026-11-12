@@ -1,11 +1,14 @@
-## [2.0.15] - 2026-11-10
+## [2.0.16] - 2026-11-12
 
-**Compatibility note:** This version is compatible with **Moodle 5.3** only. Requires `aiprovider_datacurso` 2.2.0 (2026110900) or later.
+**Compatibility note:** This version is compatible from **Moodle 5.0** to **Moodle 5.3**. Requires `aiprovider_datacurso` 2.2.0 (2026110900) or later.
+
+## Changed
+
+- **The declared compatibility is Moodle 5.0 to Moodle 5.3**
+  `$plugin->requires` is now Moodle 5.0 (`2025041400`) and `$plugin->supported` is `[500, 503]`, the same range as `aiprovider_datacurso` 2.2.0 and later, which this version requires. Moodle 4.5 sites keep the `MOODLE_405_STABLE` branch. No test applies.
 
 ## Removed
 
-- **The declared compatibility is narrowed to Moodle 5.3**
-  `$plugin->supported` is now `[503, 503]`: the Jenkins pipeline of this branch tests Moodle 5.3 only, with MariaDB. No test applies.
 - **The GitHub workflows are removed**
   The release workflow (`.github/workflows/moodle-release.yml`) interpolated the release tag inside its shell script, the pattern reported as AIP-SEC-004 and CDR-SEC-003 (High) in other plugins of the suite. The continuous integration and the release of the plugin run on Jenkins, so the whole `.github` folder is removed instead of fixed. Test: none, the change removes files
 
