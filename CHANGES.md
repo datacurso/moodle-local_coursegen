@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10-wp] - 2026111113
+
+### Fixed
+- **A retry says it resumes, it does not say it starts again**  
+  When the generation is retried, by itself or by the person, the thread reads "Resuming the generation where it was…" instead of "Starting the generation…", and the count of pictures it already showed is kept.
+
 ## [2.0.10-wp] - 2026111112
 
 ### Fixed
