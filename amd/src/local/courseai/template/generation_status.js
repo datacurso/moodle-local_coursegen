@@ -80,9 +80,10 @@ const ensureElements = () => {
 /**
  * Empty everything this module shows: a new run, or a phase that has nothing to add.
  *
+ * @param {boolean} [keepProgress] A run that goes on where it was keeps the count and the pictures it already showed.
  * @returns {void}
  */
-export const resetStatus = () => {
+export const resetStatus = (keepProgress = false) => {
     const elements = ensureElements();
     if (!elements) {
         return;
@@ -90,6 +91,9 @@ export const resetStatus = () => {
     clearTimeout(noticeTimer);
     elements.notice.hidden = true;
     elements.notice.textContent = '';
+    if (keepProgress) {
+        return;
+    }
     elements.counter.hidden = true;
     elements.counter.textContent = '';
     elements.pictures.replaceChildren();

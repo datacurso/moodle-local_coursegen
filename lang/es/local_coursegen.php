@@ -920,6 +920,7 @@ $string['courseai_template_generating_title'] = 'Creando el curso a partir de la
 $string['courseai_template_stage_activities'] = 'Generando las actividades del curso…';
 $string['courseai_template_stage_activity_images'] = 'Preparando las imágenes de las actividades…';
 $string['courseai_template_stage_connecting'] = 'Iniciando la generación…';
+$string['courseai_template_stage_resuming'] = 'Retomando la generación donde iba…';
 $string['courseai_template_stage_paused'] = 'Detenida. Lo que se hizo se conserva.';
 $string['courseai_template_stage_stopping'] = 'Deteniendo…';
 $string['courseai_template_stage_asking'] = 'Esperando tus respuestas…';

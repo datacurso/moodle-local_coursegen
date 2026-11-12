@@ -93,6 +93,7 @@ const STAGE_STRINGS = {
     section_images: 'courseai_template_stage_section_images',
     saving: 'courseai_template_stage_saving',
     connecting: 'courseai_template_stage_connecting',
+    resuming: 'courseai_template_stage_resuming',
     stopping: 'courseai_template_stage_stopping',
     paused: 'courseai_template_stage_paused',
     asking: 'courseai_template_stage_asking',
@@ -495,8 +496,9 @@ const runPasses = async(streamUrl, buildCourse, sessionId, control) => {
             if (await retryByItself(error, sessionId, () => ++run.failures, () => run.failures)) {
                 document.body.classList.remove(PAUSED_CLASS);
                 showGeneratingHeader((await getLabels()).title);
-                await paintStage('connecting');
-                resetStatus();
+                // The run goes on where it was: it is not told as a new one, and the count of pictures stays.
+                await paintStage('resuming');
+                resetStatus(true);
                 control.begin();
                 continue;
             }
@@ -508,8 +510,8 @@ const runPasses = async(streamUrl, buildCourse, sessionId, control) => {
             }
             document.body.classList.remove(PAUSED_CLASS);
             showGeneratingHeader((await getLabels()).title);
-            await paintStage('connecting');
-            resetStatus();
+            await paintStage('resuming');
+            resetStatus(true);
             try {
                 await retryTemplateGeneration(sessionId);
             } catch (retryError) {
