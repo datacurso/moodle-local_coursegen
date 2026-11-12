@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026111101
+
+### Added
+- **A template made with the Flexible sections format keeps its units and the subsections inside them**  
+  The sections and subsections of the template course show up indented in the template settings, in the list the professor reads and in the preview of the course, and changing what a unit does (keep it or let the AI modify it) changes it for the subsections inside it. The course that is created has the same units with the same subsections in the same order, each with the look, order and settings of its template section. Courses in any other format are created exactly as before.
+- **A Flexible sections template can hold more or fewer units than the template course has**  
+  When a number of units is asked for, the last unit of the template (with its subsections and the activities the AI writes in them) is copied as many times as needed, right after the last unit and before the sections that close the course, or whole units are dropped from the end. The structure is sent to the AI service already resized, since the service never adds or removes sections. The activities the template keeps as they are stay only in their own section. The professor chooses the number in a "Number of units" field above the structure, which only shows for a template with units and starts at the template's own count (a different number is sent as the optional `units` argument of `local_coursegen_start_template_generation`; the count of the template is not sent at all). The number is kept between 1 and 50 on the server too, and the activities of every unit that is dropped are dropped with it, also when no section closes the course.
+
+### Fixed
+- **The "Number of units" field no longer shows, empty, for a template without units, and the top bar counts follow the number of units**  
+  A template made with a format other than Flexible sections (topics, grid) showed the field with nothing in it, because its flex layout overrode the hidden state; it now stays hidden unless the template has units. The sections and activities in the top bar now change with the number of units asked: more units add the last unit with its subsections and the activities the AI writes in it, fewer units remove whole units with everything inside them.
+
 ## [2.0.10] - 2026111100
 
 ### Added
