@@ -89,6 +89,7 @@ class quiz_settings extends base_settings {
      */
     protected function add_question($aiquestiondata, \stdClass $setup): bool {
         global $USER;
+        $aiquestiondata = self::without_draft_areas($aiquestiondata);
         $context = $setup->context;
         $categoryinfo = $setup->categoryinfo;
 
@@ -150,6 +151,36 @@ class quiz_settings extends base_settings {
         );
         $this->apply_slot_options((int) $setup->quiz->id, (int) $question->id, $aiquestiondata);
         return true;
+    }
+
+    /**
+     * The texts of a question with no draft area to merge.
+     *
+     * Each text of the payload comes with an empty draft area that the cleaner opened for it, and Moodle looks into it
+     * (and into the area of the question) for every text it saves: dozens of queries for each question. The files a text
+     * references are given to the activity afterwards by the pass over its texts, so the draft areas hold nothing.
+     *
+     * The question text and its general feedback are saved by a call that returns the text untouched when told to ignore
+     * the merge; every other text is saved by a call that takes the text as it is when it has no draft area.
+     *
+     * @param array $data The question, or a part of it.
+     * @param bool $top Whether $data is the question itself.
+     * @return array The same, with the draft area of every text left out.
+     */
+    private static function without_draft_areas(array $data, bool $top = true): array {
+        foreach ($data as $key => $value) {
+            if (!is_array($value)) {
+                continue;
+            }
+            if (array_key_exists('text', $value) && array_key_exists('itemid', $value)) {
+                $direct = $top && in_array($key, ['questiontext', 'generalfeedback'], true);
+                $value['itemid'] = $direct ? IGNORE_FILE_MERGE : 0;
+                $data[$key] = $value;
+            } else {
+                $data[$key] = self::without_draft_areas($value, false);
+            }
+        }
+        return $data;
     }
 
     /**

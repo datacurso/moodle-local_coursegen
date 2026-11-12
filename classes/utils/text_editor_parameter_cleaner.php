@@ -38,6 +38,27 @@ require_once($CFG->libdir . '/filelib.php');
  * every file its texts reference, whatever field they are in.
  */
 class text_editor_parameter_cleaner {
+    /** @var bool Whether the texts get a draft area of their own (see clean_without_draft_areas()). */
+    private static bool $withdraftareas = true;
+
+    /**
+     * Clean text editor objects without opening a draft area for any of them.
+     *
+     * A draft area costs queries, and the texts of the questions of a quiz are saved with none (see
+     * quiz_settings), so the ones that go there do not need it opened.
+     *
+     * @param array $parameters Parameters to clean
+     * @return array Cleaned parameters; every text has itemid 0
+     */
+    public static function clean_without_draft_areas($parameters) {
+        self::$withdraftareas = false;
+        try {
+            return self::clean_text_editor_objects($parameters);
+        } finally {
+            self::$withdraftareas = true;
+        }
+    }
+
     /**
      * Clean text editor objects in activity parameters.
      *
@@ -111,7 +132,7 @@ class text_editor_parameter_cleaner {
      */
     private static function normalize_text_editor_object($editorobject) {
         $itemid = (int)($editorobject['itemid'] ?? 0);
-        if ($itemid <= 0) {
+        if ($itemid <= 0 && self::$withdraftareas) {
             $itemid = file_get_unused_draft_itemid();
         }
 

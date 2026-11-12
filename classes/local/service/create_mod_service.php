@@ -102,7 +102,9 @@ class create_mod_service {
 
         self::apply_mod_settings($modname, $newcm, $modsettings);
 
-        self::give_files($modname, $newcm, (string) ($parameters->name ?? ''), $sourcecourseid);
+        if (activity_file_pass::payload_may_hold_files($resultinfo)) {
+            self::give_files($modname, $newcm, (string) ($parameters->name ?? ''), $sourcecourseid);
+        }
 
         return $newcm;
     }
@@ -234,7 +236,16 @@ class create_mod_service {
         $beforemod,
         $moduleid
     ) {
+        // The questions of a quiz are saved without draft areas, so none is opened for their texts.
+        $questions = null;
+        if (is_array($rawparameters['mod_settings']['questions'] ?? null)) {
+            $questions = $rawparameters['mod_settings']['questions'];
+            unset($rawparameters['mod_settings']['questions']);
+        }
         $cleanedparameters = text_editor_parameter_cleaner::clean_text_editor_objects($rawparameters);
+        if ($questions !== null) {
+            $cleanedparameters['mod_settings']['questions'] = text_editor_parameter_cleaner::clean_without_draft_areas($questions);
+        }
         $parameters = (object)$cleanedparameters;
         $parameters->section = $sectionnum;
         $parameters->beforemod = $beforemod;
