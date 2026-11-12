@@ -311,4 +311,23 @@ final class template_export_service_test extends \advanced_testcase {
         }
         return null;
     }
+
+    /**
+     * A reference marker in the template asks for a picture only when the person chose to have images.
+     */
+    public function test_pictures_of_the_course_are_asked_only_when_images_are_on(): void {
+        $this->resetAfterTest(true);
+        $this->setAdminUser();
+
+        $course = $this->getDataGenerator()->create_course([
+            'summary' => '<p>Welcome</p>[[coursegen:reference: a calm cover]]',
+        ]);
+        $templateid = $this->create_template($course->id)->get('id');
+
+        $without = template_export_service::build_init_payload($templateid, '', '', false);
+        $this->assertSame([], $without['image_slots']);
+
+        $with = template_export_service::build_init_payload($templateid, '', '', true);
+        $this->assertCount(1, $with['image_slots']);
+    }
 }

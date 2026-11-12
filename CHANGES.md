@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026110925
+
+### Fixed
+- **No pictures are made when the person chose no images**  
+  A reference marker in the template (the cover of the course, the picture of a section) still asked the AI service for a picture even when the person had turned images off, so the thread kept saying that images were being made. With images off, no picture of the course is asked for, and the markers are still taken out of the texts.
+
 ## [2.0.10] - 2026110924
 
 ### Fixed

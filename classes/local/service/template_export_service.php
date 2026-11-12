@@ -107,8 +107,11 @@ class template_export_service {
             'course_configuration' => $courseconfiguration,
             'sections_info' => $sectionsinfo,
             'activities' => $activities,
-            // The pictures of the course itself the author asked to be made again, with their instruction.
-            'image_slots' => template_course_image_slots::payload(template_course_image_slots::for_course($course)),
+            // The pictures of the course itself the author asked to be made again, with their instruction. When the person
+            // chose no images there are none to make: a marker in the template does not override that choice.
+            'image_slots' => $withimages
+                ? template_course_image_slots::payload(template_course_image_slots::for_course($course))
+                : [],
             'general_instruction' => $generalinstruction,
             'lang' => $lang,
             'lang_auto' => $langauto,
