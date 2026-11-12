@@ -134,6 +134,63 @@ final class courseai_page_template_mode_test extends \advanced_testcase {
     }
 
     /**
+     * The number of units is a hidden numeric field above the structure, shown only by the JS for a template with units.
+     */
+    public function test_template_mode_has_hidden_units_field_above_the_structure(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $html = $this->render_page(true);
+
+        $regionpos = strpos($html, 'data-region="local_coursegen/template/units"');
+        $this->assertNotFalse($regionpos, 'Units field region missing');
+        $this->assertGreaterThan(strpos($html, 'id="tplModeDetails"'), $regionpos);
+        $this->assertLessThan(strpos($html, 'id="tplModeStructure"'), $regionpos);
+
+        $this->assertMatchesRegularExpression(
+            '/<div[^>]*data-region="local_coursegen\/template\/units"[^>]*\shidden[\s>]/',
+            $html,
+            'The field stays hidden until a template with units is loaded'
+        );
+        // Bootstrap display utilities are !important and would beat the hidden attribute, showing an empty field.
+        preg_match('/<div[^>]*data-region="local_coursegen\/template\/units"[^>]*>/', $html, $wrapper);
+        $this->assertDoesNotMatchRegularExpression(
+            '/class="[^"]*\b(d-flex|d-block|d-inline|d-inline-flex|d-grid)\b/',
+            $wrapper[0],
+            'A display utility on the hidden element overrides the hidden attribute'
+        );
+        $this->assertMatchesRegularExpression(
+            '/<input(?=[^>]*type="number")(?=[^>]*min="1")(?=[^>]*data-action="local_coursegen\/template\/units-input")[^>]*>/',
+            $html
+        );
+        $this->assertStringContainsString(get_string('courseai_template_units_label', 'local_coursegen'), $html);
+    }
+
+    /**
+     * Free mode has no units field.
+     */
+    public function test_free_mode_has_no_units_field(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $this->assertStringNotContainsString('local_coursegen/template/units', $this->render_page(false));
+    }
+
+    /**
+     * The strings of the field exist in every pack that has the template form (English and Spanish).
+     */
+    public function test_units_strings_exist_in_english_and_spanish(): void {
+        foreach (['en', 'es'] as $lang) {
+            $string = [];
+            include(__DIR__ . "/../lang/{$lang}/local_coursegen.php");
+            foreach (['courseai_template_units_label', 'courseai_template_units_help'] as $key) {
+                $this->assertArrayHasKey($key, $string, "{$key} missing in {$lang}");
+                $this->assertNotSame('', $string[$key]);
+            }
+        }
+    }
+
+    /**
      * Template mode renders the shared splitter and a main column holding the
      * structure containers, with the empty state shown before a pick.
      */

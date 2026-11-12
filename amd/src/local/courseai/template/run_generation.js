@@ -24,6 +24,7 @@
 import {announceSession} from 'local_coursegen/local/courseai/template/session_name';
 import Notification from 'core/notification';
 import {startTemplateGeneration} from './repository';
+import {requestedUnits} from './state';
 import {GenerationStopped, runGenerationStream} from './generation_stream';
 import {usePreviewSession} from './preview';
 import {reviewAndCreate} from './finish';
@@ -68,7 +69,8 @@ export const runGeneration = async(tplState, tplSelect, genBtn, state, host) => 
             tplState.prompt || '',
             parseInt(tplState.syllabusdraftitemid || 0, 10) || 0,
             tplState.lang || '',
-            Boolean(tplState.generateimages)
+            Boolean(tplState.generateimages),
+            requestedUnits(tplState)
         );
         usePreviewSession(started.sessionid);
         announceSession(started.sessionid);

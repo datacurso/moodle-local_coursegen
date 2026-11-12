@@ -39,6 +39,10 @@ trait get_template_structure_schema {
             'nolimit' => new external_value(PARAM_BOOL, 'Whether the section limit is disabled'),
             'maxsections' => new external_value(PARAM_INT, 'Maximum total sections allowed'),
             'remainingsections' => new external_value(PARAM_INT, 'Additional sections the professor may still add'),
+            'unitcount' => new external_value(PARAM_INT,
+                'Units of the template; only for a course whose format has them', VALUE_OPTIONAL),
+            'maxunits' => new external_value(PARAM_INT,
+                'Most units the professor may ask for; only for a course whose format has them', VALUE_OPTIONAL),
             'sections' => new external_multiple_structure(
                 new external_single_structure([
                     'id'     => new external_value(PARAM_INT, 'Section ID'),

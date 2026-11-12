@@ -30,10 +30,12 @@ use external_function_parameters;
 use external_single_structure;
 use external_value;
 use local_coursegen\local\models\course_session;
+use local_coursegen\local\models\template;
 use local_coursegen\local\service\template_ai_api_service;
 use local_coursegen\local\service\template_course_image_slots;
 use local_coursegen\local\service\template_export_service;
 use local_coursegen\local\service\template_reference_uploads;
+use local_coursegen\local\service\template_units;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -60,6 +62,12 @@ class start_template_generation extends external_api {
                 ''
             ),
             'withimages' => new external_value(PARAM_BOOL, 'Whether to generate images', VALUE_DEFAULT, false),
+            'units' => new external_value(
+                PARAM_INT,
+                'Number of units wanted; only a template with units (Flexible sections) takes it, null for its own',
+                VALUE_DEFAULT,
+                null
+            ),
         ]);
     }
 
@@ -71,9 +79,10 @@ class start_template_generation extends external_api {
      * @param int $draftitemid
      * @param string $lang
      * @param bool $withimages
+     * @param int|null $units Number of units wanted, null for the template's own.
      * @return array
      */
-    public static function execute($templateid, $prompt = '', $draftitemid = 0, $lang = '', $withimages = false) {
+    public static function execute($templateid, $prompt = '', $draftitemid = 0, $lang = '', $withimages = false, $units = null) {
         global $USER;
 
         $params = self::validate_parameters(self::execute_parameters(), [
@@ -82,6 +91,7 @@ class start_template_generation extends external_api {
             'draftitemid' => $draftitemid,
             'lang' => $lang,
             'withimages' => $withimages,
+            'units' => $units,
         ]);
 
         $context = context_system::instance();
@@ -93,16 +103,17 @@ class start_template_generation extends external_api {
         if ($params['withimages']) {
             require_capability('local/coursegen:generatecourseimages', $context);
         }
-        $payload = template_export_service::build_init_payload(
+        $payload = self::payload_for(
             $params['templateid'],
             $params['prompt'],
             $params['lang'],
-            (bool) $params['withimages']
+            (bool) $params['withimages'],
+            $params['units']
         );
 
         // Read first: a reference marker with no usable target is refused before a session exists.
         $referenceuploads = template_reference_uploads::plan($payload);
-        $template = \local_coursegen\local\models\template::get_record(['id' => $params['templateid']]);
+        $template = template::get_record(['id' => $params['templateid']]);
         $slots = template_course_image_slots::for_course(get_course((int) $template->get('courseid')));
         $referenceuploads = array_merge($referenceuploads, template_course_image_slots::uploads($slots));
 
@@ -141,6 +152,34 @@ class start_template_generation extends external_api {
             'sessionid' => (int) $session->get('id'),
             'streamurl' => $api->stream_url($threadid),
         ];
+    }
+
+    /**
+     * The payload of the run, with the units the professor asked for when they differ from the template's.
+     *
+     * The number comes from the client, so it is kept between 1 and the maximum here, and a template
+     * with no units (any other format) or an unchanged count is exported exactly as it is.
+     *
+     * @param int $templateid
+     * @param string $prompt
+     * @param string $lang
+     * @param bool $withimages
+     * @param int|null $units
+     * @return array
+     */
+    public static function payload_for(int $templateid, string $prompt, string $lang, bool $withimages, ?int $units): array {
+        $template = template::get_record(['id' => $templateid]);
+        if (!$template) {
+            throw new \moodle_exception('invalidtemplate', 'local_coursegen');
+        }
+        $modinfo = get_fast_modinfo(get_course((int) $template->get('courseid')));
+        return template_export_service::build_init_payload(
+            $templateid,
+            $prompt,
+            $lang,
+            $withimages,
+            template_units::requested($modinfo, $units)
+        );
     }
 
     /**

@@ -948,6 +948,19 @@
           </div>
         </div>
 
+        {{! How many units to make. Hidden until a template whose format has units
+            (Flexible sections) is loaded; template_mode.js shows it, sets its
+            maximum and keeps template state in step with it. }}
+        <div class="cg-units-field mb-3" data-region="local_coursegen/template/units" hidden>
+          <div class="d-flex align-items-center gap-2">
+            <label class="mb-0 fw-bold" for="tplUnitsInput">{{#str}}courseai_template_units_label, local_coursegen{{/str}}</label>
+            <input type="number" class="form-control w-auto" id="tplUnitsInput" min="1" step="1" inputmode="numeric"
+                   data-action="local_coursegen/template/units-input"
+                   aria-describedby="tplUnitsHelp">
+            <small class="text-muted" id="tplUnitsHelp">{{#str}}courseai_template_units_help, local_coursegen{{/str}}</small>
+          </div>
+        </div>
+
         {{! Dynamic structure — populated by JS when template is selected }}
         <div id="tplModeStructure"></div>
       </div>
