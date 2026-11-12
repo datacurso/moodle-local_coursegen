@@ -36,6 +36,18 @@ use local_coursegen\local\models\course_session;
  * Import bookkeeping is stored as the "import" object inside the session
  * coursedata JSON bag; no schema change is required.
  *
+ * Only one import runs on a target course at a time: the import holds a lock on
+ * the target for its whole length, and a second one is refused without touching
+ * anything. The rename of the original and the creation of the copy are recorded
+ * in the same transaction that makes them, so an import whose process died (time
+ * or memory limit, a restart of the service) can always be undone afterwards:
+ * recover_interrupted_imports() rolls back every import left running whose lock
+ * is free, before a new import on the same target and from a scheduled task.
+ *
+ * The copy takes the place of the original: its names and its idnumber. Anything
+ * that refers to the original by its id (logs, badges, certificates, reports,
+ * integrations keyed by id) stays with the original, which is kept hidden.
+ *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
@@ -68,6 +80,30 @@ class course_import_service {
     /** @var int Digits of the time stamp suffix. */
     private const STAMP_LENGTH = 10;
 
+    /** @var string Error class recorded when another import is running on the same target. */
+    public const ERROR_IN_PROGRESS = 'import_in_progress';
+
+    /** @var string Error class recorded for an import whose process died and that was rolled back. */
+    public const ERROR_INTERRUPTED = 'import_interrupted';
+
+    /** @var string Lock type of the imports, one resource per target course. */
+    private const LOCK_TYPE = 'local_coursegen_import';
+
+    /**
+     * @var int Seconds after which a lock left by a dead process expires (row-based lock factory only).
+     *
+     * The database lock factories release it as soon as the process dies.
+     */
+    public const LOCK_MAX_LIFETIME = 4 * HOURSECS;
+
+    /**
+     * @var \core\lock\lock_factory|null Lock factory shared by the request.
+     *
+     * Shared on purpose: a factory refuses a second lock on a resource it holds, but two factories
+     * on the same database connection would each grant it.
+     */
+    private static ?\core\lock\lock_factory $lockfactory = null;
+
     /** @var string[] Restore settings the service decides whatever the acting user may configure. */
     private const OWNED_RESTORE_SETTINGS = ['keep_roles_and_enrolments', 'keep_groups_and_groupings'];
 
@@ -90,7 +126,34 @@ class course_import_service {
         $staging = $DB->get_record('course', ['id' => $stagingcourseid], '*', MUST_EXIST);
         self::require_import_capabilities($target, $staging, $userid);
 
-        $session = new course_session($sessionid);
+        $lock = self::acquire_target_lock((int)$target->id);
+        if ($lock === null) {
+            // Another import is running on this target: nothing is touched, the staging course is kept.
+            self::fail_without_changes($sessionid, (int)$staging->id, self::ERROR_IN_PROGRESS, $userid);
+            return ['success' => false, 'copycourseid' => 0, 'errorclass' => self::ERROR_IN_PROGRESS];
+        }
+
+        try {
+            // An earlier import on this target whose process died is undone first, so this one
+            // starts from the original course and its original names.
+            self::recover_target((int)$target->id);
+            $target = $DB->get_record('course', ['id' => $targetcourseid], '*', MUST_EXIST);
+            return self::run_import(new course_session($sessionid), $target, $staging, $userid);
+        } finally {
+            $lock->release();
+        }
+    }
+
+    /**
+     * Run the import once the target is locked: copy, restore, import, and roll back on any failure.
+     *
+     * @param course_session $session Planning session.
+     * @param \stdClass $target Target course record.
+     * @param \stdClass $staging Staging course record.
+     * @param int $userid Acting user.
+     * @return array {success: bool, copycourseid: int, errorclass: string}
+     */
+    private static function run_import(course_session $session, \stdClass $target, \stdClass $staging, int $userid): array {
         self::update_session($session, course_session::STATUS_IMPORTING, null, [
             'targetcourseid' => (int)$target->id,
             'stagingcourseid' => (int)$staging->id,
@@ -99,6 +162,7 @@ class course_import_service {
             'originalfullname' => $target->fullname,
             'originalvisible' => (int)$target->visible,
             'originalvisibleold' => (int)$target->visibleold,
+            'originalidnumber' => (string)$target->idnumber,
             'renamedshortname' => '',
             'state' => self::STATE_RUNNING,
             'errorclass' => '',
@@ -115,16 +179,14 @@ class course_import_service {
             // the name settings are locked for the acting user.
             $backupid = static::backup_course((int)$target->id, \backup::MODE_SAMESITE, $userid, $tempdirs, true);
 
-            [$names, $copyid] = self::rename_original_and_create_copy($target);
+            $copyid = self::rename_original_and_create_copy($target, $session);
             $renamed = true;
-            self::update_session($session, null, null, [
-                'copycourseid' => $copyid,
-                'renamedshortname' => $names['shortname'],
-            ]);
 
             self::restore_copy_with_original_names($backupid, $target, $copyid, $userid);
+            self::set_course_idnumber($copyid, (string)$target->idnumber);
             self::import_staging_into_copy($staging, $copyid, $userid, $tempdirs);
         } catch (\Throwable $e) {
+            static::interrupt_point();
             $copydeleted = self::rollback($target, $copyid, $renamed, $tempdirs);
             self::update_session($session, course_session::STATUS_FAILED, (int)$staging->id, [
                 'copycourseid' => $copydeleted ? 0 : $copyid,
@@ -168,12 +230,182 @@ class course_import_service {
      */
     public static function mark_queued(int $sessionid, int $stagingcourseid, int $targetcourseid): void {
         $session = new course_session($sessionid);
+        if ((self::import_bookkeeping($session)['state'] ?? '') === self::STATE_RUNNING) {
+            // An earlier attempt died mid-way: its bookkeeping is what lets the next run, or the
+            // scheduled recovery, undo it, so it is kept as it is.
+            return;
+        }
         self::update_session($session, null, null, [
             'targetcourseid' => $targetcourseid,
             'stagingcourseid' => $stagingcourseid,
             'state' => self::STATE_QUEUED,
             'errorclass' => '',
         ]);
+    }
+
+    /**
+     * Take the lock of a target course, without waiting.
+     *
+     * @param int $targetcourseid Target course id.
+     * @return \core\lock\lock|null The lock, or null when an import is running on the target.
+     */
+    public static function acquire_target_lock(int $targetcourseid): ?\core\lock\lock {
+        if (self::$lockfactory === null) {
+            self::$lockfactory = \core\lock\lock_config::get_lock_factory(self::LOCK_TYPE);
+        }
+        $lock = self::$lockfactory->get_lock('course_' . $targetcourseid, 0, self::LOCK_MAX_LIFETIME);
+        return $lock === false ? null : $lock;
+    }
+
+    /**
+     * Roll back every import left running by a process that died.
+     *
+     * An import is left running when its process died between the rename of the original and
+     * the end of the import. Its lock is then free (the database lock factories release it with
+     * the process), which tells it apart from an import still at work, whose lock is held and
+     * which is left alone. Each interrupted import is rolled back from its recorded bookkeeping:
+     * the copy is deleted, the original gets its names, visibility and idnumber back, and the
+     * session is marked failed, keeping the staging course.
+     *
+     * @return int Number of imports rolled back.
+     */
+    public static function recover_interrupted_imports(): int {
+        $recovered = 0;
+        foreach (self::running_imports() as $targetid => $sessionids) {
+            $lock = self::acquire_target_lock($targetid);
+            if ($lock === null) {
+                continue;
+            }
+            try {
+                $recovered += self::recover_target($targetid);
+            } finally {
+                $lock->release();
+            }
+        }
+        return $recovered;
+    }
+
+    /**
+     * Roll back the imports left running on one target; the caller holds its lock.
+     *
+     * Run before an import starts, the session about to run included: it is only recorded as
+     * running when an earlier attempt of it died.
+     *
+     * @param int $targetid Target course id.
+     * @return int Number of imports rolled back.
+     */
+    private static function recover_target(int $targetid): int {
+        $recovered = 0;
+        foreach (self::running_imports()[$targetid] ?? [] as $sessionid) {
+            self::roll_back_interrupted(new course_session($sessionid));
+            $recovered++;
+        }
+        return $recovered;
+    }
+
+    /**
+     * Sessions whose import is recorded as running, grouped by target course.
+     *
+     * @return array<int, int[]> Session ids keyed by target course id.
+     */
+    private static function running_imports(): array {
+        $running = [];
+        foreach (course_session::get_records(['status' => course_session::STATUS_IMPORTING]) as $session) {
+            $import = self::import_bookkeeping($session);
+            if (($import['state'] ?? '') === self::STATE_RUNNING && !empty($import['targetcourseid'])) {
+                $running[(int)$import['targetcourseid']][] = (int)$session->get('id');
+            }
+        }
+        return $running;
+    }
+
+    /**
+     * Roll back an interrupted import from the bookkeeping of its session.
+     *
+     * Every step checks the current state first, so a recovery that is itself interrupted can
+     * run again.
+     *
+     * @param course_session $session Session of the interrupted import.
+     * @return void
+     */
+    private static function roll_back_interrupted(course_session $session): void {
+        global $DB;
+
+        $import = self::import_bookkeeping($session);
+        $copyid = (int)($import['copycourseid'] ?? 0);
+        if ($copyid > 0) {
+            self::delete_course_bypassing_bin($copyid);
+        }
+
+        $targetid = (int)($import['targetcourseid'] ?? 0);
+        $renamed = (string)($import['renamedshortname'] ?? '');
+        $current = $DB->get_record('course', ['id' => $targetid], 'id, shortname');
+        if ($current && $renamed !== '' && $current->shortname === $renamed) {
+            self::set_course_names($targetid, (string)$import['originalshortname'], (string)$import['originalfullname']);
+            self::set_course_visibility($targetid, (int)$import['originalvisible'], (int)$import['originalvisibleold']);
+            self::set_course_idnumber($targetid, (string)($import['originalidnumber'] ?? ''));
+        }
+
+        $stagingid = (int)($import['stagingcourseid'] ?? 0);
+        self::discard_stored_backups($targetid, (int)$session->get('userid'), (int)($import['timestarted'] ?? 0));
+        self::update_session($session, course_session::STATUS_FAILED, $stagingid ?: null, [
+            'copycourseid' => 0,
+            'state' => self::STATE_FAILED,
+            'errorclass' => self::ERROR_INTERRUPTED,
+            'timefinished' => time(),
+        ]);
+        generation_failed::create([
+            'context' => \context_system::instance(),
+            'userid' => (int)$session->get('userid'),
+            'other' => ['reason' => self::ERROR_INTERRUPTED],
+        ])->trigger();
+    }
+
+    /**
+     * Mark an import failed before it changed anything: the original and the staging course stay as they are.
+     *
+     * Used when another import holds the target, and by the adhoc task when the feature or the
+     * permissions of the user are gone by the time it runs.
+     *
+     * @param int $sessionid Planning session id.
+     * @param int $stagingcourseid Staging course id, kept for a later retry.
+     * @param string $errorclass Reason recorded in the bookkeeping.
+     * @param int $userid Acting user.
+     * @return void
+     */
+    public static function fail_without_changes(int $sessionid, int $stagingcourseid, string $errorclass, int $userid): void {
+        self::update_session(new course_session($sessionid), course_session::STATUS_FAILED, $stagingcourseid, [
+            'state' => self::STATE_FAILED,
+            'errorclass' => $errorclass,
+            'timefinished' => time(),
+        ]);
+        generation_failed::create([
+            'context' => \context_system::instance(),
+            'userid' => $userid,
+            'other' => ['reason' => $errorclass],
+        ])->trigger();
+    }
+
+    /**
+     * The import bookkeeping of a session.
+     *
+     * @param course_session $session Planning session.
+     * @return array The "import" object of the coursedata bag, empty when there is none.
+     */
+    private static function import_bookkeeping(course_session $session): array {
+        $coursedata = json_decode((string)$session->get('coursedata'), true);
+        return is_array($coursedata['import'] ?? null) ? $coursedata['import'] : [];
+    }
+
+    /**
+     * Point reached when the import fails, right before it is rolled back.
+     *
+     * A seam for tests: a process that dies there leaves the import running, which is what
+     * recover_interrupted_imports() repairs.
+     *
+     * @return void
+     */
+    protected static function interrupt_point(): void {
     }
 
     /**
@@ -221,27 +453,54 @@ class course_import_service {
     }
 
     /**
-     * Rename and hide the original course and create the copy under the original names, in one transaction.
+     * Rename and hide the original course, free its idnumber and create the copy under the original names, in one transaction.
      *
      * There is no unique index on course.shortname, so both steps share a
      * transaction to close the window in which another request could take
      * the freed shortname. The original is hidden in the same step so that
      * rollback() covers it: it stays hidden and renamed when the import succeeds.
+     * The bookkeeping of the session (renamed names, copy id) is written in the
+     * same transaction, so an import whose process dies is never left with a
+     * renamed original or a copy that the session does not know about.
      *
-     * @param \stdClass $target Target course record (original names and visibility).
-     * @return array {0: array names given to the original, 1: int copy course id}
+     * @param \stdClass $target Target course record (original names, idnumber and visibility).
+     * @param course_session $session Planning session holding the import bookkeeping.
+     * @return int Copy course id.
      */
-    private static function rename_original_and_create_copy(\stdClass $target): array {
+    private static function rename_original_and_create_copy(\stdClass $target, course_session $session): int {
         global $DB;
 
         $transaction = $DB->start_delegated_transaction();
         $names = self::compute_renamed_names($target->shortname, $target->fullname, time());
         self::set_course_names((int)$target->id, $names['shortname'], $names['fullname']);
         self::set_course_visibility((int)$target->id, 0, 0);
+        self::set_course_idnumber((int)$target->id, '');
         $copyid = (int)\restore_dbops::create_new_course($target->fullname, $target->shortname, $target->category);
+        self::update_session($session, null, null, [
+            'copycourseid' => $copyid,
+            'renamedshortname' => $names['shortname'],
+        ]);
         $transaction->allow_commit();
 
-        return [$names, $copyid];
+        return $copyid;
+    }
+
+    /**
+     * Set the idnumber of a course.
+     *
+     * The idnumber moves with the names: the copy takes it, so what identifies the course by
+     * idnumber (an enrolment sync, for one) follows the course in use, and the original, kept
+     * hidden, loses it until a rollback gives it back.
+     *
+     * @param int $courseid Course id.
+     * @param string $idnumber New idnumber, empty to clear it.
+     * @return void
+     */
+    private static function set_course_idnumber(int $courseid, string $idnumber): void {
+        global $DB;
+
+        $DB->set_field('course', 'idnumber', $idnumber, ['id' => $courseid]);
+        rebuild_course_cache($courseid, true);
     }
 
     /**
@@ -625,25 +884,72 @@ class course_import_service {
             throw new \moodle_exception('error_import_users_required', 'local_coursegen');
         }
         $backupid = $bc->get_backupid();
-        self::execute_silently(function () use ($bc) {
-            $bc->execute_plan();
-        });
+        $started = time();
+        try {
+            self::execute_silently(function () use ($bc) {
+                static::execute_backup_plan($bc);
+            });
+        } catch (\Throwable $e) {
+            // A backup with user data may already sit in the course backup area: it goes with the failure.
+            $bc->destroy();
+            self::discard_stored_backups($courseid, $userid, $started);
+            throw $e;
+        }
         $results = $bc->get_results();
         $bc->destroy();
 
         // Outside import mode the engine zips the backup into the course backup
         // area and drops the unpacked directory. Unpack it again for the restore
         // and remove the stored file so nothing is left behind (same as
-        // core_course_external::duplicate_course()).
+        // core_course_external::duplicate_course()), whatever happens while unpacking.
         if (!empty($results['backup_destination'])) {
             $file = $results['backup_destination'];
-            if (!file_exists($basepath . '/moodle_backup.xml')) {
-                $file->extract_to_pathname(get_file_packer('application/vnd.moodle.backup'), $basepath);
+            try {
+                if (!file_exists($basepath . '/moodle_backup.xml')) {
+                    $file->extract_to_pathname(get_file_packer('application/vnd.moodle.backup'), $basepath);
+                }
+            } finally {
+                $file->delete();
             }
-            $file->delete();
         }
 
         return $backupid;
+    }
+
+    /**
+     * Execute the plan of a backup controller.
+     *
+     * A seam for tests, which make the backup fail after it has been stored.
+     *
+     * @param \backup_controller $bc Backup controller.
+     * @return void
+     */
+    protected static function execute_backup_plan(\backup_controller $bc): void {
+        $bc->execute_plan();
+    }
+
+    /**
+     * Delete the backups the import stored in the backup area of a course.
+     *
+     * Only the files of the acting user created since the backup started are deleted: the
+     * backups people made by hand stay.
+     *
+     * @param int $courseid Course backed up.
+     * @param int $userid Acting user.
+     * @param int $since Time the backup started.
+     * @return void
+     */
+    private static function discard_stored_backups(int $courseid, int $userid, int $since): void {
+        $context = \context_course::instance($courseid, IGNORE_MISSING);
+        if (!$context) {
+            return;
+        }
+        $files = get_file_storage()->get_area_files($context->id, 'backup', 'course', false, 'id', false);
+        foreach ($files as $file) {
+            if ((int)$file->get_userid() === $userid && (int)$file->get_timecreated() >= $since) {
+                $file->delete();
+            }
+        }
     }
 
     /**
@@ -745,6 +1051,7 @@ class course_import_service {
         if ($renamed) {
             self::set_course_names((int)$target->id, $target->shortname, $target->fullname);
             self::set_course_visibility((int)$target->id, (int)$target->visible, (int)$target->visibleold);
+            self::set_course_idnumber((int)$target->id, (string)$target->idnumber);
         }
         self::remove_temp_dirs($tempdirs);
 
