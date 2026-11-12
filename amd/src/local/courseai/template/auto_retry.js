@@ -120,7 +120,10 @@ export const waitBeforeRetry = async({attempt, total, seconds, aiFailed = false}
 
     const stage = document.getElementById('tplGenStage');
     await countdown(seconds, (left) => {
-        const line = status.replace('{$a->attempt}', shownAttempt).replace('{$a->total}', shownTotal).replace('{$a->seconds}', left);
+        const line = status
+            .replace('{$a->attempt}', shownAttempt)
+            .replace('{$a->total}', shownTotal)
+            .replace('{$a->seconds}', left);
         view.status.textContent = line;
         if (stage) {
             stage.textContent = line;
