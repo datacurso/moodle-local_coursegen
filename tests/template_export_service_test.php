@@ -255,6 +255,67 @@ final class template_export_service_test extends \advanced_testcase {
     }
 
     /**
+     * A flexsections course: 1 and 4 are units (children 2, 3 and 5, 6), 7 closes the course.
+     *
+     * @return \stdClass
+     */
+    private function create_flexsections_course(): \stdClass {
+        $course = $this->getDataGenerator()->create_course(['format' => 'flexsections', 'numsections' => 0]);
+        $format = course_get_format($course);
+        $parents = [1 => 0, 2 => 1, 3 => 1, 4 => 0, 5 => 4, 6 => 4, 7 => 0];
+        foreach ($parents as $number => $parent) {
+            $section = course_create_section($course, $number);
+            $format->update_section_format_options(['id' => $section->id, 'parent' => $parent]);
+        }
+        rebuild_course_cache($course->id, true);
+        return get_course($course->id);
+    }
+
+    /**
+     * Asking for more units than a flexsections template has clones the last unit and moves the closing section.
+     */
+    public function test_a_flexsections_template_is_expanded_to_the_units_asked_for(): void {
+        global $DB;
+        $this->resetAfterTest(true);
+        $this->setAdminUser();
+
+        $course = $this->create_flexsections_course();
+        $template = $this->create_template($course->id);
+        $page = $this->getDataGenerator()->create_module('page', ['course' => $course->id, 'section' => 5]);
+        $this->mark_with_action($template->get('id'), (int) $page->cmid, 'template');
+        $instance = $this->create_instance($template->get('id'), (int) $page->cmid);
+        $instance->set('sectionid', $DB->get_field('course_sections', 'id', ['course' => $course->id, 'section' => 5]));
+        $instance->update();
+
+        $payload = template_export_service::build_init_payload($template->get('id'), '', '', false, 3);
+
+        $sections = $payload['sections_info'];
+        $this->assertCount(11, $sections);
+        $this->assertSame(10, $payload['course_configuration']['numsections']);
+        $this->assertSame([0, 0, 1, 1, 0, 4, 4, 0, 7, 7, 0], array_column($sections, 'parent_section'));
+        $this->assertSame(7, $sections[10]['source_section']);
+        $instances = array_filter($payload['activities'], static fn($a) => $a['template_behavior']['action'] === 'instance');
+        $this->assertSame([5, 8], array_column(array_column($instances, 'parameters'), 'section'));
+    }
+
+    /**
+     * Without a count, or for another format, the sections are the template's own.
+     */
+    public function test_the_units_asked_for_change_nothing_unless_the_format_is_flexsections(): void {
+        $this->resetAfterTest(true);
+        $this->setAdminUser();
+
+        $flex = $this->create_flexsections_course();
+        $same = template_export_service::build_init_payload($this->create_template($flex->id)->get('id'));
+        $this->assertCount(8, $same['sections_info']);
+        $this->assertArrayNotHasKey('source_section', $same['sections_info'][1]);
+
+        $topics = $this->getDataGenerator()->create_course(['format' => 'topics', 'numsections' => 3]);
+        $payload = template_export_service::build_init_payload($this->create_template($topics->id)->get('id'), '', '', false, 6);
+        $this->assertCount(4, $payload['sections_info']);
+    }
+
+    /**
      * Save an "exclude" action for one cmid of this template.
      *
      * @param int $templateid

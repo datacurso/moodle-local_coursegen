@@ -52,13 +52,16 @@ final class template_settings_copier {
      * @param array $payloadactivities Every activity entry of the result, kept ones included.
      * @param array $generatedcms Payload cmid => created cmid, for the generated activities.
      * @param array $keptcms Base course cmid => created cmid, for the copied kept activities.
+     * @param template_section_map|null $sectionmap Where each section of the template went in the new course;
+     *     null when the sections are the template's own.
      */
     public static function copy_into(
         int $templateid,
         int $courseid,
         array $payloadactivities,
         array $generatedcms,
-        array $keptcms
+        array $keptcms,
+        ?template_section_map $sectionmap = null
     ): void {
         global $DB;
 
@@ -68,7 +71,7 @@ final class template_settings_copier {
         }
         $counterparts = kept_link_rewriter::counterparts($payloadactivities, $generatedcms, $keptcms);
         $created = self::created_by_source($payloadactivities, $generatedcms, $keptcms);
-        $sections = self::sections_by_number($basecourseid, $courseid);
+        $sections = self::sections_by_number($basecourseid, $courseid, $sectionmap);
         $sources = $created === [] ? [] : $DB->get_records_list('course_modules', 'id', array_keys($created));
 
         $maps = self::maps($basecourseid, $courseid, $counterparts, $created, $sources, $sections);
@@ -156,9 +159,10 @@ final class template_settings_copier {
      *
      * @param int $basecourseid
      * @param int $courseid
+     * @param template_section_map|null $sectionmap Where each section of the template went; null for the same number.
      * @return array<int,array{source: \stdClass, target: \stdClass}>
      */
-    private static function sections_by_number(int $basecourseid, int $courseid): array {
+    private static function sections_by_number(int $basecourseid, int $courseid, ?template_section_map $sectionmap = null): array {
         global $DB;
 
         $columns = 'id, section, visible, availability';
@@ -169,8 +173,9 @@ final class template_settings_copier {
         $pairs = [];
         foreach ($DB->get_records('course_sections', ['course' => $basecourseid], 'section', $columns) as $source) {
             $number = (int) $source->section;
-            if (isset($bynumber[$number])) {
-                $pairs[$number] = ['source' => $source, 'target' => $bynumber[$number]];
+            $targetnumber = ($sectionmap === null) ? $number : $sectionmap->target_of_source($number);
+            if ($targetnumber !== null && isset($bynumber[$targetnumber])) {
+                $pairs[$number] = ['source' => $source, 'target' => $bynumber[$targetnumber]];
             }
         }
         return $pairs;

@@ -102,9 +102,13 @@ class create_course_service {
 
             // Process sections if provided in the response.
             if (!empty($resultdata['sections_info'])) {
-                self::process_course_sections($course->id, $resultdata['sections_info']);
+                $sectionsinfo = $resultdata['sections_info'];
                 if ($sourcecourseid !== null) {
-                    template_section_look::apply(get_course($course->id), $resultdata['sections_info'], $sourcecourseid);
+                    $sectionsinfo = self::with_stored_structure($session, $sectionsinfo);
+                }
+                self::process_course_sections($course->id, $sectionsinfo);
+                if ($sourcecourseid !== null) {
+                    template_section_look::apply(get_course($course->id), $sectionsinfo, $sourcecourseid);
                 }
             }
 
@@ -360,6 +364,24 @@ class create_course_service {
         }
 
         return $coursedata;
+    }
+
+    /**
+     * The sections of the result, with the structure of the payload that was sent.
+     *
+     * A flexsections course made with another number of units than the
+     * template's was resized before it was sent; the structure (parents and the
+     * template section each one comes from) lives in the stored payload, not
+     * in what the service answers.
+     *
+     * @param course_session $session
+     * @param array $sectionsinfo The result's sections_info.
+     * @return array
+     */
+    private static function with_stored_structure(course_session $session, array $sectionsinfo): array {
+        $coursedata = json_decode((string) $session->get('coursedata'), true);
+        $sent = $coursedata['payload']['sections_info'] ?? [];
+        return template_unit_resizer::with_structure_of($sectionsinfo, $sent);
     }
 
     /**

@@ -42,7 +42,22 @@ class template_section_look {
 
         foreach ($sectionsinfo as $info) {
             $number = (int) $info['section'];
-            self::apply_to_section($course, $sourcecourse, $sections[$number], $sourcesections[$number], $info);
+            // A resized flexsections course says which section of the template each one comes from.
+            $sourcenumber = (int) ($info['source_section'] ?? $number);
+            if (!isset($sections[$number])) {
+                debugging('The new course has no section ' . $number . '; its look is skipped.', DEBUG_DEVELOPER);
+                continue;
+            }
+            if (!isset($sourcesections[$sourcenumber])) {
+                // The template changed after the payload was built: the section of the same number is the best guess.
+                debugging('The template has no section ' . $sourcenumber . ' (the source of section ' . $number .
+                    ').', DEBUG_DEVELOPER);
+                if (!isset($sourcesections[$number])) {
+                    continue;
+                }
+                $sourcenumber = $number;
+            }
+            self::apply_to_section($course, $sourcecourse, $sections[$number], $sourcesections[$sourcenumber], $info);
         }
         rebuild_course_cache($course->id, true);
     }
@@ -67,6 +82,10 @@ class template_section_look {
 
         $options = $info['format_options'] ?? [];
         if (!empty($options)) {
+            if (isset($info['parent_section']) && array_key_exists('parent', $options)) {
+                // The template's own parent number is only right while the numbering is the template's.
+                $options['parent'] = (int) $info['parent_section'];
+            }
             $options['id'] = $section->id;
             course_get_format($course)->update_section_format_options($options);
         }

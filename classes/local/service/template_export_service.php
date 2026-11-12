@@ -46,13 +46,16 @@ class template_export_service {
      * @param string $generalinstruction The professor's single prompt/syllabus instruction.
      * @param string $lang The language the professor picked for the generated course, empty to keep the template's.
      * @param bool $withimages Whether the professor asked for the images to be generated.
+     * @param int|null $units How many units a flexsections course has to hold; null keeps the template's own.
+     *                        Another format has no units, so it is left as it is.
      * @return array
      */
     public static function build_init_payload(
         int $templateid,
         string $generalinstruction = '',
         string $lang = '',
-        bool $withimages = false
+        bool $withimages = false,
+        ?int $units = null
     ): array {
         global $CFG;
 
@@ -84,6 +87,13 @@ class template_export_service {
         $realactivities = self::real_activities($modinfo, $actions);
         $instanceactivities = self::instance_activities($templateid, $modinfo);
         $activities = array_merge($realactivities, $instanceactivities);
+        if ($units !== null && $course->format === 'flexsections') {
+            // The service keeps the structure it is given, so the units are made as many as wanted here.
+            $templatesections = count($sectionsinfo);
+            $sectionsinfo = template_unit_resizer::resize($sectionsinfo, $units);
+            $activities = template_unit_resizer::activities($activities, $sectionsinfo, $templatesections);
+            $numsections = count($sectionsinfo) - 1;
+        }
 
         $courseconfiguration = [
             'fullname' => $course->fullname,
