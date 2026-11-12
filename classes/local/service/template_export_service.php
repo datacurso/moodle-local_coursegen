@@ -48,6 +48,7 @@ class template_export_service {
      * @param bool $withimages Whether the professor asked for the images to be generated.
      * @param int|null $units How many units a flexsections course has to hold; null keeps the template's own.
      *                        Another format has no units, so it is left as it is.
+     * @param string $instructions The institutional guidelines text; the payload has no such key when it is empty.
      * @return array
      */
     public static function build_init_payload(
@@ -55,7 +56,8 @@ class template_export_service {
         string $generalinstruction = '',
         string $lang = '',
         bool $withimages = false,
-        ?int $units = null
+        ?int $units = null,
+        string $instructions = ''
     ): array {
         global $CFG;
 
@@ -111,7 +113,7 @@ class template_export_service {
             'course_settings' => template_course_settings::export($course),
         ];
 
-        return [
+        $payload = [
             'course_configuration' => $courseconfiguration,
             'sections_info' => $sectionsinfo,
             'activities' => $activities,
@@ -125,6 +127,11 @@ class template_export_service {
             // thread_id), so the run must not start until they have landed.
             'defer_start' => true,
         ];
+        if ($instructions !== '') {
+            // Only when a guideline was chosen, so the payload stays as it was for everyone else.
+            $payload['instructions'] = $instructions;
+        }
+        return $payload;
     }
 
     /**

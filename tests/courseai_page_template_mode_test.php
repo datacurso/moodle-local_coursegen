@@ -70,6 +70,62 @@ final class courseai_page_template_mode_test extends \advanced_testcase {
     }
 
     /**
+     * Template mode has the institutional guidelines: button, popover and one chip, inside the input bar.
+     */
+    public function test_template_mode_input_bar_has_the_guidelines_controls(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $html = $this->render_page(true);
+        $inputbarpos = strpos($html, 'data-region="tpl-input-bar"');
+        $this->assertNotFalse($inputbarpos);
+
+        foreach ([
+                'id="tplBtnGuidelines"',
+                'id="tplGuidelinesPopover"',
+                'id="tplGuidelinesPopoverClose"',
+                'id="tplGuidelineSearch"',
+                'id="tplGuidelineList"',
+                'id="tplChipGuideline"',
+                'id="tplChipGuidelineName"',
+                'id="tplChipGuidelineView"',
+                'id="tplChipGuidelineRemove"',
+            ] as $needle) {
+            $this->assertSame(1, substr_count($html, $needle), "{$needle} must render exactly once");
+            $this->assertGreaterThan($inputbarpos, strpos($html, $needle), "{$needle} must be inside the input bar");
+        }
+        $this->assertSame(1, substr_count($html, 'class="chip chip-guideline hidden" id="tplChipGuideline"'));
+        $this->assertStringContainsString('aria-controls="tplGuidelinesPopover"', $html);
+    }
+
+    /**
+     * No id is repeated on the page, in either mode, and the free-mode guideline ids are untouched.
+     */
+    public function test_guideline_ids_are_unique_and_free_mode_keeps_its_own(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $freeids = ['btnDirectrices', 'guidelinesPopover', 'guidelineSearch', 'guidelineList', 'chipGuideline',
+            'chipGuidelineName', 'chipGuidelineEyeBtn', 'guidelineBadge'];
+        $free = $this->render_page(false);
+        $template = $this->render_page(true);
+
+        foreach ($freeids as $id) {
+            $this->assertSame(1, substr_count($free, 'id="' . $id . '"'), "free mode {$id}");
+            $this->assertSame(0, substr_count($template, 'id="' . $id . '"'), "template mode must not reuse {$id}");
+        }
+        foreach ([$free, $template] as $html) {
+            preg_match_all('/\sid="([^"]+)"/', $html, $matches);
+            $counts = array_count_values($matches[1]);
+            $repeated = array_keys(array_filter($counts, fn($count) => $count > 1));
+            $this->assertSame([], $repeated, 'Repeated ids: ' . implode(', ', $repeated));
+        }
+        foreach (['tplBtnGuidelines', 'tplChipGuideline', 'tplGuidelineList'] as $id) {
+            $this->assertSame(0, substr_count($free, 'id="' . $id . '"'), "free mode has no {$id}");
+        }
+    }
+
+    /**
      * Template mode renders the left panel: picker form first, input bar below.
      */
     public function test_template_mode_renders_left_panel_with_picker_and_input_bar(): void {

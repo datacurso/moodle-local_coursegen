@@ -41,6 +41,7 @@
  * @param {string} [inputbar.lang] - Course language code.
  * @param {number} [inputbar.syllabusdraftitemid] - Draft area of the attached syllabus.
  * @param {string} [inputbar.syllabusfilename] - Attached syllabus filename.
+ * @param {number} [inputbar.guidelineid] - Institutional guideline (system instruction) id, 0 for none.
  * @returns {Object}
  */
 export const createTemplateState = (inputbar = {}) => ({
@@ -59,7 +60,29 @@ export const createTemplateState = (inputbar = {}) => ({
     lang: inputbar.lang || '',
     syllabusdraftitemid: inputbar.syllabusdraftitemid || 0,
     syllabusfilename: inputbar.syllabusfilename || '',
+    guidelineid: inputbar.guidelineid || 0,
 });
+
+/**
+ * The numeric id of a guideline, from the id the page lists it under ('si_12') or a number.
+ *
+ * @param {string|number|null} value
+ * @returns {number} 0 when there is no usable id.
+ */
+export const guidelineIdOf = (value) => {
+    const match = String(value ?? '').match(/^(?:si_)?(\d+)$/);
+    return match ? parseInt(match[1], 10) : 0;
+};
+
+/**
+ * Choose the guideline of the run, replacing any previous one; null clears it.
+ *
+ * @param {Object} state
+ * @param {string|number|null} value
+ */
+export const setGuideline = (state, value) => {
+    state.guidelineid = guidelineIdOf(value);
+};
 
 /**
  * Populate state from a get_template_structure response.

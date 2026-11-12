@@ -70,7 +70,8 @@ export const runGeneration = async(tplState, tplSelect, genBtn, state, host) => 
             parseInt(tplState.syllabusdraftitemid || 0, 10) || 0,
             tplState.lang || '',
             Boolean(tplState.generateimages),
-            requestedUnits(tplState)
+            requestedUnits(tplState),
+            tplState.guidelineid || 0
         );
         usePreviewSession(started.sessionid);
         announceSession(started.sessionid);

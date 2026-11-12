@@ -31,6 +31,7 @@ use external_single_structure;
 use external_value;
 use local_coursegen\local\models\course_session;
 use local_coursegen\local\models\template;
+use local_coursegen\local\service\system_instruction_service;
 use local_coursegen\local\service\template_ai_api_service;
 use local_coursegen\local\service\template_course_image_slots;
 use local_coursegen\local\service\template_export_service;
@@ -68,6 +69,12 @@ class start_template_generation extends external_api {
                 VALUE_DEFAULT,
                 null
             ),
+            'systeminstructionid' => new external_value(
+                PARAM_INT,
+                'Institutional guideline (system instruction) id; its text is read here, never taken from the client',
+                VALUE_DEFAULT,
+                null
+            ),
         ]);
     }
 
@@ -80,9 +87,18 @@ class start_template_generation extends external_api {
      * @param string $lang
      * @param bool $withimages
      * @param int|null $units Number of units wanted, null for the template's own.
+     * @param int|null $systeminstructionid Institutional guideline id, null for none.
      * @return array
      */
-    public static function execute($templateid, $prompt = '', $draftitemid = 0, $lang = '', $withimages = false, $units = null) {
+    public static function execute(
+        $templateid,
+        $prompt = '',
+        $draftitemid = 0,
+        $lang = '',
+        $withimages = false,
+        $units = null,
+        $systeminstructionid = null
+    ) {
         global $USER;
 
         $params = self::validate_parameters(self::execute_parameters(), [
@@ -92,7 +108,9 @@ class start_template_generation extends external_api {
             'lang' => $lang,
             'withimages' => $withimages,
             'units' => $units,
+            'systeminstructionid' => $systeminstructionid,
         ]);
+        $guidelineid = (int) ($params['systeminstructionid'] ?? 0);
 
         $context = context_system::instance();
         self::validate_context($context);
@@ -103,12 +121,13 @@ class start_template_generation extends external_api {
         if ($params['withimages']) {
             require_capability('local/coursegen:generatecourseimages', $context);
         }
-        $payload = self::payload_for(
-            $params['templateid'],
+        [$payload, $coursedata] = self::prepare(
+            (int) $params['templateid'],
             $params['prompt'],
             $params['lang'],
             (bool) $params['withimages'],
-            $params['units']
+            $params['units'],
+            $guidelineid
         );
 
         // Read first: a reference marker with no usable target is refused before a session exists.
@@ -130,11 +149,7 @@ class start_template_generation extends external_api {
         // a preview reading it back later must see what the run saw, not the
         // template's course as it happens to look whenever the preview loads.
         // The syllabus's name is kept too, so the course says later what it was made from.
-        $coursedata = [
-            'templateid' => $params['templateid'],
-            'payload' => $payload,
-            'syllabus' => $file !== null ? $file->get_filename() : '',
-        ];
+        $coursedata['syllabus'] = $file !== null ? $file->get_filename() : '';
         $session = new course_session(0, (object) [
             'userid' => (int) $USER->id,
             'session_id' => $threadid,
@@ -155,6 +170,34 @@ class start_template_generation extends external_api {
     }
 
     /**
+     * The payload of the run and the data its session keeps, both built from the same guideline id.
+     *
+     * The syllabus name is not known yet, so it starts empty and the caller sets it once the file is attached.
+     *
+     * @param int $templateid
+     * @param string $prompt
+     * @param string $lang
+     * @param bool $withimages
+     * @param int|null $units
+     * @param int|null $systeminstructionid Institutional guideline id, null for none.
+     * @return array [payload, coursedata]
+     */
+    public static function prepare(
+        int $templateid,
+        string $prompt,
+        string $lang,
+        bool $withimages,
+        ?int $units,
+        ?int $systeminstructionid = null
+    ): array {
+        $guidelineid = (int) $systeminstructionid;
+        $payload = self::payload_for($templateid, $prompt, $lang, $withimages, $units, $guidelineid);
+        // A deleted or empty guideline sends no text, so the session must not claim it was used.
+        $kept = isset($payload['instructions']) ? $guidelineid : 0;
+        return [$payload, self::coursedata_for($templateid, $payload, '', $kept)];
+    }
+
+    /**
      * The payload of the run, with the units the professor asked for when they differ from the template's.
      *
      * The number comes from the client, so it is kept between 1 and the maximum here, and a template
@@ -165,9 +208,17 @@ class start_template_generation extends external_api {
      * @param string $lang
      * @param bool $withimages
      * @param int|null $units
+     * @param int|null $systeminstructionid Institutional guideline id; only its stored text travels, and only when it resolves.
      * @return array
      */
-    public static function payload_for(int $templateid, string $prompt, string $lang, bool $withimages, ?int $units): array {
+    public static function payload_for(
+        int $templateid,
+        string $prompt,
+        string $lang,
+        bool $withimages,
+        ?int $units,
+        ?int $systeminstructionid = null
+    ): array {
         $template = template::get_record(['id' => $templateid]);
         if (!$template) {
             throw new \moodle_exception('invalidtemplate', 'local_coursegen');
@@ -178,8 +229,48 @@ class start_template_generation extends external_api {
             $prompt,
             $lang,
             $withimages,
-            template_units::requested($modinfo, $units)
+            template_units::requested($modinfo, $units),
+            self::guideline_text((int) $systeminstructionid)
         );
+    }
+
+    /**
+     * The stored text of a guideline, empty when none was chosen or it is missing, deleted or empty.
+     *
+     * Same resolution as the free mode, which ignores such an id silently.
+     *
+     * @param int $systeminstructionid
+     * @return string
+     */
+    private static function guideline_text(int $systeminstructionid): string {
+        if ($systeminstructionid <= 0) {
+            return '';
+        }
+        return system_instruction_service::get_instruction_content($systeminstructionid);
+    }
+
+    /**
+     * What the session keeps of the run: the template, the exact payload, the syllabus and, when chosen, the guideline.
+     *
+     * The guideline keys are the ones the free mode stores, and are only there when a guideline was chosen.
+     *
+     * @param int $templateid
+     * @param array $payload
+     * @param string $syllabus Name of the attached syllabus, empty for none.
+     * @param int $systeminstructionid
+     * @return array
+     */
+    public static function coursedata_for(int $templateid, array $payload, string $syllabus, int $systeminstructionid): array {
+        $coursedata = [
+            'templateid' => $templateid,
+            'payload' => $payload,
+            'syllabus' => $syllabus,
+        ];
+        if ($systeminstructionid > 0) {
+            $coursedata['local_coursegen_use_system_instruction'] = 1;
+            $coursedata['local_coursegen_select_system_instruction'] = $systeminstructionid;
+        }
+        return $coursedata;
     }
 
     /**

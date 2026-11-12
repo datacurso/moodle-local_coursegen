@@ -14,7 +14,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * The template mode input bar: prompt, language, images toggle and syllabus attach.
+ * The template mode input bar: prompt, language, images toggle, syllabus attach and guidelines.
  *
  * @module     local_coursegen/local/courseai/template/input_bar
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -25,6 +25,8 @@ import Notification from 'core/notification';
 import YUI from 'core/yui';
 import {initFilepicker} from '../../../repository/courseai';
 import {bindToggleWrap, showFilePicker} from '../context/filepicker';
+import {refreshChipsRow} from './chips_row';
+import {wireGuidelinePicker} from './guideline_picker';
 
 /**
  * Show/refresh or hide the input bar's syllabus chip to match tplState.
@@ -33,7 +35,6 @@ import {bindToggleWrap, showFilePicker} from '../context/filepicker';
  */
 const refreshSyllabusChip = (tplState) => {
     const hasFile = !!tplState.syllabusdraftitemid;
-    const chipsRow = document.getElementById('tplChipsRow');
     const chip = document.getElementById('tplChipSyllabus');
     const chipName = document.getElementById('tplChipSyllabusName');
     if (chipName) {
@@ -42,9 +43,7 @@ const refreshSyllabusChip = (tplState) => {
     if (chip) {
         chip.classList.toggle('hidden', !hasFile);
     }
-    if (chipsRow) {
-        chipsRow.style.display = hasFile ? '' : 'none';
-    }
+    refreshChipsRow();
 };
 
 /**
@@ -116,6 +115,9 @@ export const wireInputBar = (tplState, state) => {
             });
         });
     }
+
+    // Institutional guidelines — same popover/chip behaviour as free mode, one per course.
+    wireGuidelinePicker(tplState, state);
 
     const removeBtn = document.getElementById('tplChipSyllabusRemove');
     if (removeBtn) {

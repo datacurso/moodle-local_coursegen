@@ -338,6 +338,7 @@ const clearStructure = (tplState, container, state) => {
         lang: tplState.lang,
         syllabusdraftitemid: tplState.syllabusdraftitemid,
         syllabusfilename: tplState.syllabusfilename,
+        guidelineid: tplState.guidelineid,
     }));
     state.templateStructureLoaded = false;
 };
