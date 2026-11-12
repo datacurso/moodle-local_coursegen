@@ -32,12 +32,12 @@ final class activity_file_pass_payload_test extends \advanced_testcase {
     /**
      * A payload with plain texts has nothing for the pass to do.
      */
-    public function test_a_payload_without_signs_needs_no_pass(): void {
+    public function test_a_payload_without_file_references_has_none(): void {
         $payload = [
             'resource_type' => 'quiz',
             'parameters' => ['name' => 'Quiz', 'mod_settings' => ['questions' => [['questiontext' => ['text' => '<p>1 < 2?</p>']]]]],
         ];
-        $this->assertFalse(activity_file_pass::payload_may_hold_files($payload));
+        $this->assertFalse(activity_file_pass::payload_has_file_references($payload));
     }
 
     /**
@@ -46,9 +46,9 @@ final class activity_file_pass_payload_test extends \advanced_testcase {
      * @dataProvider signs_provider
      * @param string $text A text with a sign.
      */
-    public function test_a_payload_with_a_sign_needs_the_pass(string $text): void {
+    public function test_a_payload_with_a_file_reference_has_one(string $text): void {
         $payload = ['resource_type' => 'page', 'parameters' => ['page' => ['text' => $text, 'format' => 1]]];
-        $this->assertTrue(activity_file_pass::payload_may_hold_files($payload));
+        $this->assertTrue(activity_file_pass::payload_has_file_references($payload));
     }
 
     /**

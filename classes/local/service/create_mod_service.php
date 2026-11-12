@@ -102,7 +102,7 @@ class create_mod_service {
 
         self::apply_mod_settings($modname, $newcm, $modsettings);
 
-        if (activity_file_pass::payload_may_hold_files($resultinfo)) {
+        if (activity_file_pass::payload_has_file_references($resultinfo)) {
             self::give_files($modname, $newcm, (string) ($parameters->name ?? ''), $sourcecourseid);
         }
 
