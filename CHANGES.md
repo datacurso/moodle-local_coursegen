@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026111102
+
+### Added
+- **The institutional guidelines ("Directrices") can be used when a course is made from a template**  
+  The input bar of the template form has a Directrices button, next to the syllabus one, that opens the same searchable list of guidelines as the free mode. One guideline can be chosen per course (choosing another replaces it), it shows as a chip that can be previewed or removed, and the generation is given its text as institutional guidelines, exactly as in the free mode. Only the id of the guideline travels from the browser: the text is read on the server, and a guideline that no longer exists is ignored. Nothing changes when no guideline is chosen, and the id is kept with the session as in the free mode.
+
 ## [2.0.10] - 2026111101
 
 ### Added
