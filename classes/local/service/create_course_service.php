@@ -49,10 +49,10 @@ class create_course_service {
     public static function create_course(course_session $session, array $resultdata, array $overrides = []): array {
         global $CFG;
 
-        // Resolve the effective category (user override → AI value → site default)
-        // and require course creation permission in that exact category before any
-        // creation work happens. Thrown (not returned) so callers surface it as a
-        // proper permission error.
+        // Resolve the effective category (user override → usable AI value → usable
+        // default category → first usable category) and require course creation
+        // permission in that exact category before any creation work happens. Thrown
+        // (not returned) so callers surface it as a proper permission error.
         $effectivecategoryid = self::resolve_effective_category($resultdata, $overrides);
         require_capability('moodle/course:create', \context_coursecat::instance($effectivecategoryid));
 
@@ -76,9 +76,9 @@ class create_course_service {
             if (!empty($overrides['shortname'])) {
                 $coursedata->shortname = (string)\core_text::substr(trim($overrides['shortname']), 0, 100);
             }
-            if (!empty($overrides['category'])) {
-                $coursedata->category = (int)$overrides['category'];
-            }
+            // The course goes where the permission was checked, never to a category
+            // proposed by the AI service that this site does not have.
+            $coursedata->category = $effectivecategoryid;
 
             $coursedata = self::ensure_unique_course_fields($coursedata);
 
@@ -207,24 +207,79 @@ class create_course_service {
     /**
      * Resolve the category the course will effectively be created in.
      *
-     * Precedence: user override → AI-generated value → default category
-     * (the category of the user's tenant, else the site default).
+     * A category the user picked in the review panel is kept: it must still exist, and the
+     * permission check that follows refuses it when the user cannot create courses there.
+     * The category proposed by the AI service is only a suggestion, made without knowing the
+     * categories of this site, so it is used only when it exists and the user may create
+     * courses in it. Otherwise the default category (the category of the user's tenant, else
+     * the site default), and then the first category where the user may create courses, take
+     * its place.
      *
      * @param array $resultdata Result data from the Datacurso API.
      * @param array $overrides Optional user overrides for course fields.
      * @return int Category id.
+     * @throws \moodle_exception When the picked category does not exist, or no category is usable.
      */
-    private static function resolve_effective_category(array $resultdata, array $overrides): int {
+    public static function resolve_effective_category(array $resultdata, array $overrides): int {
         if (!empty($overrides['category'])) {
-            return (int)$overrides['category'];
+            $categoryid = (int)$overrides['category'];
+            if (!self::category_exists($categoryid)) {
+                throw new \moodle_exception('error_category_unavailable', 'local_coursegen');
+            }
+            return $categoryid;
         }
 
+        $candidates = [];
         $config = $resultdata['course_configuration'] ?? null;
         if (is_array($config) && !empty($config['category'])) {
-            return (int)$config['category'];
+            $candidates[] = (int)$config['category'];
+        }
+        $candidates[] = self::get_default_categoryid();
+        foreach ($candidates as $categoryid) {
+            if (self::category_exists($categoryid) && self::can_create_in($categoryid)) {
+                return $categoryid;
+            }
         }
 
-        return self::get_default_categoryid();
+        $firstallowed = self::first_allowed_category();
+        if ($firstallowed > 0) {
+            return $firstallowed;
+        }
+        throw new \moodle_exception('error_category_unavailable', 'local_coursegen');
+    }
+
+    /**
+     * Whether a course category exists on this site.
+     *
+     * @param int $categoryid Category id.
+     * @return bool
+     */
+    private static function category_exists(int $categoryid): bool {
+        global $DB;
+        return $categoryid > 0 && $DB->record_exists('course_categories', ['id' => $categoryid]);
+    }
+
+    /**
+     * Whether the current user may create courses in an existing category.
+     *
+     * @param int $categoryid Existing category id.
+     * @return bool
+     */
+    private static function can_create_in(int $categoryid): bool {
+        return has_capability('moodle/course:create', \context_coursecat::instance($categoryid));
+    }
+
+    /**
+     * The first category, in category sort order, where the current user may create courses.
+     *
+     * Same list the review panel offers (get_course_settings external function), so the
+     * fallback never lands outside what the user is shown, for instance in another tenant.
+     *
+     * @return int Category id, or 0 when there is none.
+     */
+    public static function first_allowed_category(): int {
+        $categories = core_course_category::make_categories_list('moodle/course:create');
+        return $categories ? (int)array_key_first($categories) : 0;
     }
 
     /**
@@ -295,10 +350,17 @@ class create_course_service {
      */
     public static function get_course_settings(course_session $session, array $resultdata): array {
         $coursedata = self::build_course_data_from_api($resultdata);
+        // Offer the category the course would be created in, so the review panel never
+        // starts on a category this site does not have or the user cannot use.
+        try {
+            $category = self::resolve_effective_category($resultdata, []);
+        } catch (\moodle_exception $e) {
+            $category = 0;
+        }
         return [
             'fullname' => $coursedata->fullname ?? '',
             'shortname' => $coursedata->shortname ?? '',
-            'category' => $coursedata->category ?? 0,
+            'category' => $category,
         ];
     }
 

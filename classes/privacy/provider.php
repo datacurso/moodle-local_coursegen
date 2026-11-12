@@ -32,6 +32,9 @@ use core_privacy\local\request\approved_userlist;
 use core_privacy\local\request\contextlist;
 use core_privacy\local\request\userlist;
 use core_privacy\local\request\writer;
+use local_coursegen\local\service\remote_data_service;
+use local_coursegen\local\service\user_data_eraser;
+use local_coursegen\local\tenancy;
 use stdClass;
 
 /**
@@ -96,6 +99,8 @@ class provider implements
             'site_id' => 'privacy:metadata:datacurso_course_service:site_id',
             'site_url' => 'privacy:metadata:datacurso_course_service:site_url',
             'timezone' => 'privacy:metadata:datacurso_course_service:timezone',
+            // Privacy export and deletion (POST /privacy/export, /privacy/delete).
+            'thread_ids' => 'privacy:metadata:datacurso_course_service:thread_ids',
         ], 'privacy:metadata:datacurso_course_service');
 
         return $collection;
@@ -265,6 +270,38 @@ class provider implements
                 ], $file);
             }
         }
+
+        self::export_remote_data($user, $context);
+    }
+
+    /**
+     * Export what the Datacurso course service keeps of the user's threads (Mindfree, LCG-PRIV-001).
+     *
+     * The request goes to the course service of the user's own tenant. When the service cannot be
+     * reached, the export says so instead of failing: the rest of the user's data is still exported,
+     * and the service deletes its copy when the retention expires.
+     *
+     * @param stdClass $user The user being exported.
+     * @param \context_user $context Their user context.
+     */
+    protected static function export_remote_data(stdClass $user, \context_user $context): void {
+        $subcontext = [
+            get_string('privacy:metadata:local_coursegen', 'local_coursegen'),
+            get_string('privacy:remote_service', 'local_coursegen'),
+        ];
+        try {
+            $service = new remote_data_service(null, tenancy::get_tenant_id((int)$user->id));
+            $threads = $service->export_user((int)$user->id);
+        } catch (\Throwable $e) {
+            debugging('Could not export the data kept by the course service: ' . $e->getMessage(), DEBUG_DEVELOPER);
+            writer::with_context($context)->export_data($subcontext, (object)[
+                'status' => get_string('privacy:remote_unavailable', 'local_coursegen'),
+            ]);
+            return;
+        }
+        if ($threads !== []) {
+            writer::with_context($context)->export_data($subcontext, (object)['threads' => $threads]);
+        }
     }
 
     /**
@@ -318,23 +355,13 @@ class provider implements
     /**
      * Perform deletion of user data given a userid.
      *
-     * Personal rows (sessions and their syllabus files, jobs) are deleted;
-     * shared configuration rows (system instructions and course context) are
-     * kept and anonymized instead, so other users keep working setups.
+     * See user_data_eraser: personal rows and the custom prompts the user wrote are deleted; the
+     * system instructions, institutional configuration, are kept without the reference to the user.
      *
      * @param int $userid The user ID
      */
     private static function delete_user_data(int $userid) {
-        global $DB;
-
-        $sessionids = $DB->get_fieldset_select('local_coursegen_course_sessions', 'id', 'userid = ?', [$userid]);
-        self::delete_syllabus_files($sessionids);
-        $DB->delete_records('local_coursegen_course_sessions', ['userid' => $userid]);
-        $DB->delete_records('local_coursegen_module_jobs', ['userid' => $userid]);
-
-        // Anonymize the shared configuration instead of destroying it.
-        $DB->set_field('local_coursegen_system_instruction', 'usermodified', 0, ['usermodified' => $userid]);
-        $DB->set_field('local_coursegen_course_context', 'usermodified', 0, ['usermodified' => $userid]);
+        user_data_eraser::erase_user($userid);
     }
 
     /**
@@ -344,37 +371,7 @@ class provider implements
      * @param int|null $userid Restrict the deletion to this user, or null for every user.
      */
     private static function delete_course_data(int $courseid, ?int $userid = null) {
-        global $DB;
-
-        $sessionfilter = ['courseid' => $courseid];
-        $jobfilter = ['courseid' => $courseid];
-        $contextfilter = ['courseid' => $courseid];
-        if ($userid !== null) {
-            $sessionfilter['userid'] = $userid;
-            $jobfilter['userid'] = $userid;
-            $contextfilter['usermodified'] = $userid;
-        }
-
-        $sessionids = array_keys($DB->get_records('local_coursegen_course_sessions', $sessionfilter, '', 'id'));
-        self::delete_syllabus_files($sessionids);
-        $DB->delete_records('local_coursegen_course_sessions', $sessionfilter);
-        $DB->delete_records('local_coursegen_module_jobs', $jobfilter);
-
-        // The course context configuration is shared: anonymize it.
-        $DB->set_field('local_coursegen_course_context', 'usermodified', 0, $contextfilter);
-    }
-
-    /**
-     * Delete the stored syllabus files of the given planning sessions.
-     *
-     * @param array $sessionids Session record ids (file item ids).
-     */
-    private static function delete_syllabus_files(array $sessionids) {
-        $fs = get_file_storage();
-        $syscontextid = \context_system::instance()->id;
-        foreach ($sessionids as $sessionid) {
-            $fs->delete_area_files($syscontextid, 'local_coursegen', 'syllabus', (int)$sessionid);
-        }
+        user_data_eraser::erase_course($courseid, $userid);
     }
 
     /**

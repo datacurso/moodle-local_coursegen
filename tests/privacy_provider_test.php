@@ -16,6 +16,7 @@
 
 namespace local_coursegen;
 
+use aiprovider_datacurso\httpclient\ai_course_api;
 use context_course;
 use context_system;
 use context_user;
@@ -24,6 +25,7 @@ use core_privacy\local\request\approved_contextlist;
 use core_privacy\local\request\userlist;
 use core_privacy\local\request\writer;
 use core_privacy\tests\provider_testcase;
+use local_coursegen\local\api_client_factory;
 use local_coursegen\privacy\provider;
 use stdClass;
 
@@ -43,6 +45,23 @@ final class privacy_provider_test extends provider_testcase {
         parent::setUp();
         $this->resetAfterTest();
         $this->setAdminUser();
+
+        // The course service holds nothing for these users: exports and deletions here are about
+        // the plugin tables (privacy_remote_data_test covers the service).
+        $client = $this->getMockBuilder(ai_course_api::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods(['request'])
+            ->getMock();
+        $client->method('request')->willReturn(['threads' => [], 'deleted' => 0]);
+        api_client_factory::set_test_client($client);
+    }
+
+    /**
+     * Tests tear down.
+     */
+    public function tearDown(): void {
+        api_client_factory::set_test_client(null);
+        parent::tearDown();
     }
 
     /**
