@@ -26,7 +26,7 @@
  */
 
 import {getString} from 'core/str';
-import {clearServiceRetry, showServiceRetry} from 'local_coursegen/local/courseai/template/auto_retry';
+import {serviceRecovered, showServiceRetry} from 'local_coursegen/local/courseai/template/auto_retry';
 
 const NOTICE_ID = 'cgGenNotice';
 const PICTURES_ID = 'cgGenPictures';
@@ -103,7 +103,7 @@ export const resetStatus = () => {
  */
 export const showNotice = async(data) => {
     if (data.code === 'retry_over') {
-        clearServiceRetry();
+        serviceRecovered();
         return '';
     }
     if (data.code === 'retrying') {

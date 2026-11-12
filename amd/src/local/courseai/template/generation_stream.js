@@ -68,7 +68,7 @@ import {
     renderControl,
 } from 'local_coursegen/local/courseai/template/generation_control';
 import {askToRetry} from 'local_coursegen/local/courseai/template/generation_retry';
-import {clearRetryCard, waitBeforeRetry} from 'local_coursegen/local/courseai/template/auto_retry';
+import {retriesOver, waitBeforeRetry} from 'local_coursegen/local/courseai/template/auto_retry';
 import {ATTEMPTS, delayFor, isRetryable} from 'local_coursegen/local/courseai/template/retry_schedule';
 import {resetStatus} from 'local_coursegen/local/courseai/template/generation_status';
 import {applySessionName} from 'local_coursegen/local/courseai/template/session_name';
@@ -465,7 +465,11 @@ const runPasses = async(streamUrl, buildCourse, sessionId, control) => {
                         if (eventData.type === 'activity_progress_done') {
                             run.moved = true;
                         }
-                        clearRetryCard();
+                        // The card stays until the run really moves or ends: the notices and the failures that come
+                        // first are part of the same retry.
+                        if (['activity_progress_done', 'completed', 'review_needed'].includes(eventData.type)) {
+                            retriesOver();
+                        }
                         if (eventData.type === 'course_configuration') {
                             applySessionName(sessionId, eventData);
                         }
@@ -496,7 +500,7 @@ const runPasses = async(streamUrl, buildCourse, sessionId, control) => {
                 control.begin();
                 continue;
             }
-            clearRetryCard();
+            retriesOver();
             // The retries ran out, or the failure is not one that waiting mends: the person decides.
             if (!await askToRetry(error.code)) {
                 closeView(error.message);

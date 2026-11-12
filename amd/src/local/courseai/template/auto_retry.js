@@ -24,7 +24,7 @@
 
 import {getStrings} from 'core/str';
 import {currentFeed} from 'local_coursegen/local/courseai/template/thread_feed';
-import {countdown} from 'local_coursegen/local/courseai/template/retry_schedule';
+import {ATTEMPTS, countdown} from 'local_coursegen/local/courseai/template/retry_schedule';
 import {showWorkingIndicator} from 'local_coursegen/local/courseai/ui/feedback-progress';
 
 const CARD_ID = 'cgAutoRetryCard';
@@ -44,6 +44,21 @@ const STRINGS = [
  */
 export const clearRetryCard = () => {
     document.getElementById(CARD_ID)?.remove();
+};
+
+/** How many retries the service announced in this run, and whether the page has started its own. */
+let serviceRetries = 0;
+let pageRetrying = false;
+
+/**
+ * The retries are over, because the run moved, ended or the person has to decide: nothing is left on the screen and
+ * the next failure starts counting from the first retry.
+ */
+export const retriesOver = () => {
+    pageRetrying = false;
+    serviceRetries = 0;
+    clearRetryCard();
+    document.getElementById(SERVICE_CARD_ID)?.remove();
 };
 
 /**
@@ -90,8 +105,12 @@ export const waitBeforeRetry = async({attempt, total, seconds, aiFailed = false}
         STRINGS.map((key) => ({key, component: 'local_coursegen'}))
     );
     clearRetryCard();
-    // One retry on the screen at a time: the one of the page takes over from the one of the service.
+    // One retry on the screen at a time: the one of the page takes over from the one of the service, and goes on
+    // counting where the service stopped, so the person reads one count and not two.
+    pageRetrying = true;
     clearServiceRetry();
+    const shownAttempt = serviceRetries + attempt;
+    const shownTotal = serviceRetries + total;
     // The same words as the retry of the service, so the person reads one story while the AI is the one that fails.
     const view = buildCard(aiFailed ? aiReason : connectionReason);
     view.card.id = CARD_ID;
@@ -101,18 +120,28 @@ export const waitBeforeRetry = async({attempt, total, seconds, aiFailed = false}
 
     const stage = document.getElementById('tplGenStage');
     await countdown(seconds, (left) => {
-        const line = status.replace('{$a->attempt}', attempt).replace('{$a->total}', total).replace('{$a->seconds}', left);
+        const line = status.replace('{$a->attempt}', shownAttempt).replace('{$a->total}', shownTotal).replace('{$a->seconds}', left);
         view.status.textContent = line;
         if (stage) {
             stage.textContent = line;
         }
     });
 
-    view.status.textContent = running.replace('{$a->attempt}', attempt).replace('{$a->total}', total);
+    view.status.textContent = running.replace('{$a->attempt}', shownAttempt).replace('{$a->total}', shownTotal);
     if (stage) {
         stage.textContent = view.status.textContent;
     }
     return 'retry';
+};
+
+/**
+ * The service got through its retries (the AI answered again): the next failure starts counting from the first retry.
+ */
+export const serviceRecovered = () => {
+    if (!pageRetrying) {
+        serviceRetries = 0;
+    }
+    clearServiceRetry();
 };
 
 let serviceTurn = 0;
@@ -139,6 +168,10 @@ export const clearServiceRetry = () => {
  * @returns {Promise<string>} The line shown.
  */
 export const showServiceRetry = async(data) => {
+    if (pageRetrying) {
+        // The page is the one that retries now: what the service does inside each of its retries is not shown.
+        return '';
+    }
     const strings = await getStrings(STRINGS.map((key) => ({key, component: 'local_coursegen'})));
     const [status, running, , reasonText] = strings;
     clearServiceRetry();
@@ -153,8 +186,10 @@ export const showServiceRetry = async(data) => {
     feed.append(view.card);
     view.card.scrollIntoView({block: 'nearest'});
 
+    // The service retries first and the page after it: one count for both, so the total is the two series together.
+    serviceRetries = data.of || 0;
     const attempt = data.attempt || 0;
-    const total = data.of || 0;
+    const total = serviceRetries + ATTEMPTS;
     const stage = document.getElementById('tplGenStage');
     // The line under the title, the one in the status bar of the thread and the card say the same, every second.
     const say = (line) => {
