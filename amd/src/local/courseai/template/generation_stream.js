@@ -399,7 +399,7 @@ const retryByItself = async(error, sessionId, next, count) => {
     while (isRetryable(reason) && retriesUsedByService() + count() < ATTEMPTS) {
         // What the person reads is the cause the series started with: when the AI failed first, the retries that follow
         // are about the AI, even if the pass that failed again ended without saying why.
-        const ownsFailure = reason.code !== 'connection' && reason.errorcode !== 'connection';
+        const ownsFailure = reason.fromService === true;
         if (ownsFailure) {
             aiInSeries = true;
         } else if (count() === 0) {
