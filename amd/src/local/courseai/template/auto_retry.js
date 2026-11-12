@@ -35,8 +35,6 @@ const SERVICE_CARD_LINGER_SECONDS = 20;
 const STRINGS = [
     'courseai_template_retry_status',
     'courseai_template_retry_running',
-    'courseai_template_retry_now',
-    'courseai_template_retry_stop',
     'courseai_template_retry_default_reason',
     'courseai_template_service_retry_reason',
     'courseai_template_service_retry_reason_status',
@@ -50,17 +48,15 @@ export const clearRetryCard = () => {
 };
 
 /**
- * Build the card: the reason, a line that says which retry it is and the time left, and the two buttons.
+ * Build the card: the reason and a line that says which retry it is and the time left. The retries are made by
+ * themselves, so the card has no buttons: the person decides only when they have run out.
  *
  * @param {string} reason What went wrong, in the words of the person's language.
- * @param {Object} text The strings of the card.
- * @param {boolean} [withButtons] Whether the card offers to retry now or to stop: not when the service is the one retrying.
- * @returns {{card: HTMLElement, status: HTMLElement, now: HTMLButtonElement, stop: HTMLButtonElement}}
+ * @returns {{card: HTMLElement, status: HTMLElement}}
  */
-const buildCard = (reason, text, withButtons = true) => {
+const buildCard = (reason) => {
     const card = document.createElement('div');
-    card.id = CARD_ID;
-    card.className = 'cg-log-entry cg-log-entry--turn-ai';
+    card.className = 'cg-log-entry cg-log-entry--turn-ai cg-log-entry--retrying';
     card.setAttribute('role', 'status');
     const bar = document.createElement('span');
     bar.className = 'cg-log-bar';
@@ -71,62 +67,34 @@ const buildCard = (reason, text, withButtons = true) => {
     message.className = 'cg-log-msg';
     const heading = document.createElement('strong');
     heading.className = 'd-block mb-1';
-    heading.textContent = reason || text.reason;
+    heading.textContent = reason;
     const status = document.createElement('span');
-    status.className = 'd-block mb-2 cg-retry-status';
-    const buttons = document.createElement('span');
-    buttons.className = 'cg-card-actions';
-    const now = document.createElement('button');
-    now.type = 'button';
-    now.className = 'cg-card-button cg-card-button--primary';
-    now.textContent = text.now;
-    const stop = document.createElement('button');
-    stop.type = 'button';
-    stop.className = 'cg-card-button';
-    stop.textContent = text.stop;
-    buttons.append(now, stop);
+    status.className = 'd-block cg-retry-status';
     message.append(heading, status);
-    if (withButtons) {
-        message.append(buttons);
-    }
     content.append(message);
     card.append(bar, content);
-    return {card, status, now, stop};
+    return {card, status};
 };
 
 /**
  * Show a retry that is coming, and wait for it.
  *
- * The wait ends when the time runs out or when the person asks to retry at once; the person can also stop the
- * retries, and then the decision is theirs.
- *
  * @param {Object} what
  * @param {number} what.attempt Number of the retry, from 1.
  * @param {number} what.total How many retries there are.
  * @param {number} what.seconds Seconds until it.
- * @param {string} what.reason What went wrong.
- * @returns {Promise<string>} 'retry' to retry now, 'stop' when the person stopped the retries.
+ * @returns {Promise<string>} Always 'retry'.
  */
-export const waitBeforeRetry = async({attempt, total, seconds, reason}) => {
-    const [status, running, now, stop, defaultReason] = await getStrings(
+export const waitBeforeRetry = async({attempt, total, seconds}) => {
+    const [status, running, defaultReason] = await getStrings(
         STRINGS.map((key) => ({key, component: 'local_coursegen'}))
     );
     clearRetryCard();
-    const view = buildCard(reason, {now, stop, reason: defaultReason});
+    const view = buildCard(defaultReason);
+    view.card.id = CARD_ID;
     const feed = currentFeed() || document.getElementById('courseaiChatScroll') || document.body;
     feed.append(view.card);
     view.card.scrollIntoView({block: 'nearest'});
-
-    let release = null;
-    const early = new Promise((resolve) => {
-        release = resolve;
-    });
-    let stopped = false;
-    view.now.addEventListener('click', () => release());
-    view.stop.addEventListener('click', () => {
-        stopped = true;
-        release();
-    });
 
     const stage = document.getElementById('tplGenStage');
     await countdown(seconds, (left) => {
@@ -135,18 +103,12 @@ export const waitBeforeRetry = async({attempt, total, seconds, reason}) => {
         if (stage) {
             stage.textContent = line;
         }
-    }, {skip: early});
+    });
 
-    if (stopped) {
-        clearRetryCard();
-        return 'stop';
-    }
     view.status.textContent = running.replace('{$a->attempt}', attempt).replace('{$a->total}', total);
     if (stage) {
         stage.textContent = view.status.textContent;
     }
-    view.now.disabled = true;
-    view.stop.disabled = true;
     return 'retry';
 };
 
@@ -175,11 +137,11 @@ export const clearServiceRetry = () => {
  */
 export const showServiceRetry = async(data) => {
     const strings = await getStrings(STRINGS.map((key) => ({key, component: 'local_coursegen'})));
-    const [status, running, , , , reasonText, reasonWithStatus] = strings;
+    const [status, running, , reasonText, reasonWithStatus] = strings;
     clearServiceRetry();
     const turn = serviceTurn;
     const reason = data.status ? reasonWithStatus.replace('{$a->status}', data.status) : reasonText;
-    const view = buildCard(reason, {now: '', stop: '', reason: reasonText}, false);
+    const view = buildCard(reason);
     view.card.id = SERVICE_CARD_ID;
     serviceCard = view.card;
     const feed = currentFeed() || document.getElementById('courseaiChatScroll') || document.body;

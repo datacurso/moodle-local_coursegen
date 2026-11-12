@@ -140,6 +140,22 @@ body.cg-generating.cg-generation-paused
   color: var(--cg-amber-ink);
 }
 
+/* A retry that the page or the service makes by itself looks the same whatever failed: an amber step, nothing turns. */
+body .tpl-left-panel .cg-thread-feed > .cg-log-entry--retrying {
+  background: var(--warn-soft);
+}
+
+body .tpl-left-panel .cg-thread-feed > .cg-log-entry--retrying .cg-log-bar {
+  border: 2px solid var(--warn);
+  background: radial-gradient(circle, var(--warn) 0 2.5px, transparent 3px);
+  animation: none;
+}
+
+body .tpl-left-panel .cg-thread-feed > .cg-log-entry--retrying .cg-log-msg {
+  color: var(--cg-amber-ink);
+  font-weight: 500;
+}
+
 /* The thread has two feeds, one above the list of the activities and one under it. The step the run is on is the
    last of the feed that has the newest entries, so the last step of the upper feed is a plain one as soon as the
    lower feed has something. */

@@ -397,15 +397,7 @@ const retryByItself = async(error, sessionId, next, count) => {
         const attempt = next();
         // The retries of one failure are made one after the other: each one waits for the one before it.
         // eslint-disable-next-line no-await-in-loop
-        const action = await waitBeforeRetry({
-            attempt,
-            total: ATTEMPTS,
-            seconds: delayFor(attempt),
-            reason: reason.message,
-        });
-        if (action === 'stop') {
-            return false;
-        }
+        await waitBeforeRetry({attempt, total: ATTEMPTS, seconds: delayFor(attempt)});
         try {
             // eslint-disable-next-line no-await-in-loop
             await retryTemplateGeneration(sessionId);
