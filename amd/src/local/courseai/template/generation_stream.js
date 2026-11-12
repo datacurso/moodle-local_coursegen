@@ -68,7 +68,7 @@ import {
     renderControl,
 } from 'local_coursegen/local/courseai/template/generation_control';
 import {askToRetry} from 'local_coursegen/local/courseai/template/generation_retry';
-import {retriesOver, waitBeforeRetry} from 'local_coursegen/local/courseai/template/auto_retry';
+import {retriesOver, retriesUsedByService, waitBeforeRetry} from 'local_coursegen/local/courseai/template/auto_retry';
 import {ATTEMPTS, delayFor, isRetryable} from 'local_coursegen/local/courseai/template/retry_schedule';
 import {resetStatus} from 'local_coursegen/local/courseai/template/generation_status';
 import {applySessionName} from 'local_coursegen/local/courseai/template/session_name';
@@ -396,7 +396,7 @@ let aiInSeries = false;
  */
 const retryByItself = async(error, sessionId, next, count) => {
     let reason = error;
-    while (isRetryable(reason) && count() < ATTEMPTS) {
+    while (isRetryable(reason) && retriesUsedByService() + count() < ATTEMPTS) {
         // What the person reads is the cause the series started with: when the AI failed first, the retries that follow
         // are about the AI, even if the pass that failed again ended without saying why.
         const ownsFailure = reason.code !== 'connection' && reason.errorcode !== 'connection';

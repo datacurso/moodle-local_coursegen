@@ -46,8 +46,8 @@ export const clearRetryCard = () => {
     document.getElementById(CARD_ID)?.remove();
 };
 
-/** How many retries the service announced in this run, and whether the page has started its own. */
-let serviceRetries = 0;
+/** How many retries the service has made in this series (they count in the same ten), and whether the page took over. */
+let serviceUsed = 0;
 let pageRetrying = false;
 
 /**
@@ -56,7 +56,7 @@ let pageRetrying = false;
  */
 export const retriesOver = () => {
     pageRetrying = false;
-    serviceRetries = 0;
+    serviceUsed = 0;
     clearRetryCard();
     document.getElementById(SERVICE_CARD_ID)?.remove();
 };
@@ -106,11 +106,11 @@ export const waitBeforeRetry = async({attempt, total, seconds, aiFailed = false}
     );
     clearRetryCard();
     // One retry on the screen at a time: the one of the page takes over from the one of the service, and goes on
-    // counting where the service stopped, so the person reads one count and not two.
+    // counting where the service stopped: the ten retries are one count, whoever makes them.
     pageRetrying = true;
     clearServiceRetry();
-    const shownAttempt = serviceRetries + attempt;
-    const shownTotal = serviceRetries + total;
+    const shownAttempt = serviceUsed + attempt;
+    const shownTotal = total;
     // The same words as the retry of the service, so the person reads one story while the AI is the one that fails.
     const view = buildCard(aiFailed ? aiReason : connectionReason);
     view.card.id = CARD_ID;
@@ -140,9 +140,16 @@ export const waitBeforeRetry = async({attempt, total, seconds, aiFailed = false}
 /**
  * The service got through its retries (the AI answered again): the next failure starts counting from the first retry.
  */
+/**
+ * How many of the ten retries the service already used.
+ *
+ * @returns {number}
+ */
+export const retriesUsedByService = () => serviceUsed;
+
 export const serviceRecovered = () => {
     if (!pageRetrying) {
-        serviceRetries = 0;
+        serviceUsed = 0;
     }
     clearServiceRetry();
 };
@@ -189,10 +196,10 @@ export const showServiceRetry = async(data) => {
     feed.append(view.card);
     view.card.scrollIntoView({block: 'nearest'});
 
-    // The service retries first and the page after it: one count for both, so the total is the two series together.
-    serviceRetries = data.of || 0;
+    // The retries of the service and of the page are one count of ten.
     const attempt = data.attempt || 0;
-    const total = serviceRetries + ATTEMPTS;
+    serviceUsed = Math.max(serviceUsed, attempt);
+    const total = data.of || ATTEMPTS;
     const stage = document.getElementById('tplGenStage');
     // The line under the title, the one in the status bar of the thread and the card say the same, every second.
     const say = (line) => {
