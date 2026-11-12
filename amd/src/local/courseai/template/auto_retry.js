@@ -82,14 +82,16 @@ const buildCard = (reason) => {
  * @param {number} what.attempt Number of the retry, from 1.
  * @param {number} what.total How many retries there are.
  * @param {number} what.seconds Seconds until it.
+ * @param {boolean} [what.aiFailed] Whether what failed is the AI service and not the connection.
  * @returns {Promise<string>} Always 'retry'.
  */
-export const waitBeforeRetry = async({attempt, total, seconds}) => {
-    const [status, running, defaultReason] = await getStrings(
+export const waitBeforeRetry = async({attempt, total, seconds, aiFailed = false}) => {
+    const [status, running, connectionReason, aiReason] = await getStrings(
         STRINGS.map((key) => ({key, component: 'local_coursegen'}))
     );
     clearRetryCard();
-    const view = buildCard(defaultReason);
+    // The same words as the retry of the service, so the person reads one story while the AI is the one that fails.
+    const view = buildCard(aiFailed ? aiReason : connectionReason);
     view.card.id = CARD_ID;
     const feed = currentFeed() || document.getElementById('courseaiChatScroll') || document.body;
     feed.append(view.card);

@@ -378,6 +378,9 @@ export const runGenerationStream = async(streamUrl, buildCourse, sessionId, cont
     }
 };
 
+/** Whether the failures in a row that are being retried started with the AI failing and not the connection. */
+let aiInSeries = false;
+
 /**
  * Try again by itself, waiting longer each time, and say so while it does.
  *
@@ -394,10 +397,23 @@ export const runGenerationStream = async(streamUrl, buildCourse, sessionId, cont
 const retryByItself = async(error, sessionId, next, count) => {
     let reason = error;
     while (isRetryable(reason) && count() < ATTEMPTS) {
+        // What the person reads is the cause the series started with: when the AI failed first, the retries that follow
+        // are about the AI, even if the pass that failed again ended without saying why.
+        const ownsFailure = reason.code !== 'connection' && reason.errorcode !== 'connection';
+        if (ownsFailure) {
+            aiInSeries = true;
+        } else if (count() === 0) {
+            aiInSeries = false;
+        }
         const attempt = next();
         // The retries of one failure are made one after the other: each one waits for the one before it.
         // eslint-disable-next-line no-await-in-loop
-        await waitBeforeRetry({attempt, total: ATTEMPTS, seconds: delayFor(attempt)});
+        await waitBeforeRetry({
+            attempt,
+            total: ATTEMPTS,
+            seconds: delayFor(attempt),
+            aiFailed: aiInSeries,
+        });
         try {
             // eslint-disable-next-line no-await-in-loop
             await retryTemplateGeneration(sessionId);
