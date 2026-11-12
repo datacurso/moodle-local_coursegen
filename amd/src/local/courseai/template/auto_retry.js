@@ -37,7 +37,6 @@ const STRINGS = [
     'courseai_template_retry_running',
     'courseai_template_retry_default_reason',
     'courseai_template_service_retry_reason',
-    'courseai_template_service_retry_reason_status',
 ];
 
 /**
@@ -137,11 +136,11 @@ export const clearServiceRetry = () => {
  */
 export const showServiceRetry = async(data) => {
     const strings = await getStrings(STRINGS.map((key) => ({key, component: 'local_coursegen'})));
-    const [status, running, , reasonText, reasonWithStatus] = strings;
+    const [status, running, , reasonText] = strings;
     clearServiceRetry();
     const turn = serviceTurn;
-    const reason = data.status ? reasonWithStatus.replace('{$a->status}', data.status) : reasonText;
-    const view = buildCard(reason);
+    // The person is told whose problem it is, never the status code of the provider.
+    const view = buildCard(reasonText);
     view.card.id = SERVICE_CARD_ID;
     serviceCard = view.card;
     const feed = currentFeed() || document.getElementById('courseaiChatScroll') || document.body;
