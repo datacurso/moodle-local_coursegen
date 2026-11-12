@@ -133,6 +133,9 @@ final class course_import_service_test extends \advanced_testcase {
             'moodle/course:visibility',
             'moodle/backup:userinfo',
             'moodle/restore:userinfo',
+            'moodle/course:update',
+            'moodle/course:changeshortname',
+            'moodle/course:changefullname',
         ];
     }
 

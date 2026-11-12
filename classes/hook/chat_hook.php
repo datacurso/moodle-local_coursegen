@@ -16,8 +16,8 @@
 
 namespace local_coursegen\hook;
 
-use aiprovider_datacurso\local\plugin_settings;
 use core\hook\output\before_footer_html_generation;
+use local_coursegen\local\provider_state;
 
 /**
  * Hook to load the floating chat
@@ -34,7 +34,7 @@ class chat_hook {
      * @return void
      */
     public static function before_footer_html_generation(before_footer_html_generation $hook): void {
-        if (!plugin_settings::is_enabled('local_coursegen')) {
+        if (!provider_state::is_enabled()) {
             return;
         }
         self::add_activity_ai_button();

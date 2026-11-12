@@ -277,6 +277,21 @@ Once the Datacurso context is set at the course level, it will be automatically 
 ### IMPORTANT!
 - Do not close the modal window until the process has fully completed to avoid issues with activity creation.
 
+## Import into an existing course
+
+Off by default (*Allow importing into an existing course*, `local_coursegen/enableimportexisting`). When enabled, a generated course can be imported into a course that already exists instead of creating a new one:
+
+- The target course is copied with its settings, participants, roles, groups and grades, and the generated content is imported into the copy (replacing or adding to its content, per *Import content mode*).
+- **The copy is a new course with a new id.** It takes the names and the idnumber of the original, so whatever identifies the course by idnumber (an enrolment sync, for example) follows the course in use. Whatever refers to the original by its id (logs, badges, certificates, reports, integrations keyed by course id) stays with the original, which is renamed, hidden and kept as a backup.
+- Only one import runs on a course at a time; a second one is refused without changing anything.
+- If the process running an import dies (time or memory limit, a restart of the service), the import is rolled back from what it recorded: the scheduled task *Roll back interrupted imports into existing courses* runs every 15 minutes, and a new import on the same course rolls it back first. The original gets its names, visibility and idnumber back and the generated course is kept.
+- The user needs, on the target course, the right to back it up and restore it with user data, to change its visibility, to update it and to change its short and full names; on its category, the right to create courses and to restore user data.
+
+### Recommended roles
+
+- **AI course creator** (`editingteachercoursegenai`), assignable on the site, carries the right to create courses with AI.
+- **AI course creator and importer** (`editingteachercoursegenimportai`) is only created once the import is enabled. It adds the user data backup and restore rights and is assignable on categories and courses, never on the whole site: assign it on the category that holds the target courses, together with the creator role on the site.
+
 ## License
 
 2025 Data Curso LLC <https://datacurso.com>

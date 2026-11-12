@@ -48,10 +48,11 @@ class create_course_service {
     public static function create_course(course_session $session, array $resultdata, array $overrides = []): array {
         global $CFG;
 
-        // Resolve the effective category (user override → AI value → site default)
-        // and require the full creation set in that exact category before any
-        // creation work happens (ticket #9539). Thrown (not returned) so callers
-        // surface it as a proper permission error naming the missing capability.
+        // Resolve the effective category (user override → usable AI value → usable
+        // site default → first usable category) and require the full creation set in
+        // that exact category before any creation work happens (ticket #9539). Thrown
+        // (not returned) so callers surface it as a proper permission error naming the
+        // missing capability.
         $effectivecategoryid = self::resolve_effective_category($resultdata, $overrides);
         creation_permissions::require_for_category($effectivecategoryid);
 
@@ -82,9 +83,9 @@ class create_course_service {
             if (!empty($overrides['shortname'])) {
                 $coursedata->shortname = (string)\core_text::substr(trim($overrides['shortname']), 0, 100);
             }
-            if (!empty($overrides['category'])) {
-                $coursedata->category = (int)$overrides['category'];
-            }
+            // The course goes where the permissions were checked, never to a category
+            // proposed by the AI service that this site does not have.
+            $coursedata->category = $effectivecategoryid;
 
             $coursedata = self::ensure_unique_course_fields($coursedata);
 
@@ -213,24 +214,58 @@ class create_course_service {
     /**
      * Resolve the category the course will effectively be created in.
      *
-     * Precedence: user override → AI-generated value → site default category.
+     * A category the user picked in the review panel is kept: it must still exist, and the
+     * permission check that follows refuses it when the user cannot create courses there.
+     * The category proposed by the AI service is only a suggestion, made without knowing the
+     * categories of this site, so it is used only when it exists and the user holds the
+     * creation set there. Otherwise the site default category, and then the first category
+     * where the user holds the creation set, take its place.
      *
      * @param array $resultdata Result data from the Datacurso API.
      * @param array $overrides Optional user overrides for course fields.
      * @return int Category id.
+     * @throws \moodle_exception When the picked category does not exist, or no category is usable.
      */
-    private static function resolve_effective_category(array $resultdata, array $overrides): int {
+    public static function resolve_effective_category(array $resultdata, array $overrides): int {
         if (!empty($overrides['category'])) {
-            return (int)$overrides['category'];
+            $categoryid = (int)$overrides['category'];
+            if (!self::category_exists($categoryid)) {
+                throw new \moodle_exception('error_category_unavailable', 'local_coursegen');
+            }
+            return $categoryid;
         }
 
+        $candidates = [];
         $config = $resultdata['course_configuration'] ?? null;
         if (is_array($config) && !empty($config['category'])) {
-            return (int)$config['category'];
+            $candidates[] = (int)$config['category'];
+        }
+        $defaultcategory = core_course_category::get_default();
+        if ($defaultcategory) {
+            $candidates[] = (int)$defaultcategory->id;
+        }
+        foreach ($candidates as $categoryid) {
+            if (self::category_exists($categoryid) && creation_permissions::can_create_in($categoryid)) {
+                return $categoryid;
+            }
         }
 
-        $defaultcategory = core_course_category::get_default();
-        return $defaultcategory ? (int)$defaultcategory->id : 0;
+        $firstallowed = creation_permissions::first_allowed_category();
+        if ($firstallowed > 0) {
+            return $firstallowed;
+        }
+        throw new \moodle_exception('error_category_unavailable', 'local_coursegen');
+    }
+
+    /**
+     * Whether a course category exists on this site.
+     *
+     * @param int $categoryid Category id.
+     * @return bool
+     */
+    private static function category_exists(int $categoryid): bool {
+        global $DB;
+        return $categoryid > 0 && $DB->record_exists('course_categories', ['id' => $categoryid]);
     }
 
     /**
@@ -290,10 +325,17 @@ class create_course_service {
      */
     public static function get_course_settings(course_session $session, array $resultdata): array {
         $coursedata = self::build_course_data_from_api($resultdata);
+        // Offer the category the course would be created in, so the review panel never
+        // starts on a category this site does not have or the user cannot use.
+        try {
+            $category = self::resolve_effective_category($resultdata, []);
+        } catch (\moodle_exception $e) {
+            $category = 0;
+        }
         return [
             'fullname' => $coursedata->fullname ?? '',
             'shortname' => $coursedata->shortname ?? '',
-            'category' => $coursedata->category ?? 0,
+            'category' => $category,
         ];
     }
 
