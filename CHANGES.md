@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10-wp] - 2026111115
+
+### Fixed
+- **The streams of the relay carry the licence of the tenant**  
+  With a provider whose clients do not build the `License-Key` header themselves, the relay took the site licence. It now takes the licence of the tenant of the user and falls back to the site one, as the provider clients do.
+
 ## [2.0.10-wp] - 2026111114
 
 ### Fixed
