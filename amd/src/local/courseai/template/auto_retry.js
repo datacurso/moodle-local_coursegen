@@ -90,6 +90,8 @@ export const waitBeforeRetry = async({attempt, total, seconds, aiFailed = false}
         STRINGS.map((key) => ({key, component: 'local_coursegen'}))
     );
     clearRetryCard();
+    // One retry on the screen at a time: the one of the page takes over from the one of the service.
+    clearServiceRetry();
     // The same words as the retry of the service, so the person reads one story while the AI is the one that fails.
     const view = buildCard(aiFailed ? aiReason : connectionReason);
     view.card.id = CARD_ID;
@@ -140,6 +142,8 @@ export const showServiceRetry = async(data) => {
     const strings = await getStrings(STRINGS.map((key) => ({key, component: 'local_coursegen'})));
     const [status, running, , reasonText] = strings;
     clearServiceRetry();
+    // And the other way round: when the service retries again, the card of the page is not left beside it.
+    clearRetryCard();
     const turn = serviceTurn;
     // The person is told whose problem it is, never the status code of the provider.
     const view = buildCard(reasonText);
