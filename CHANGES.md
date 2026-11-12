@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026110929
+
+### Added
+- **The writing of the course in Moodle shows its real progress**  
+  When the person accepts the generation, the card reads "Guardando el curso" and "Escribiendo el curso en Moodle…", and the bar starts at 0 % and moves with each activity written ("Actividades escritas: 35 de 102"), up to 92 %. Copying the activities that stay as they are and arranging the course like the template take it to 96 %, and it reaches 100 % when the course exists. Before, the bar kept the percentage of the generation, stopped at 98 % and did not say what was being done.
+
 ## [2.0.10] - 2026110927
 
 ### Fixed
