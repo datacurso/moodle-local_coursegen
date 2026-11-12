@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026110923
+
+### Fixed
+- **The retries of the page count up to ten even when the run tells things on the way**  
+  A run that failed again and again, with the service telling about its own retries and about activities that failed, started counting from the first retry every time, and never reached the end of the ten. Only an activity that was written counts as the run moving; the rest does not.
+- **A failure that the service marks as retriable is retried by itself**  
+  The relay of Moodle spells it "retryable" and the service "retriable"; the page only knew the first, so a failure of the service went straight to the person.
+- **A failure to reach the service while the course is created is retried by itself**  
+  When Moodle cannot reach the service at the moment of creating the course (a cut connection, a 503), the page retries with the same growing waits and the same line under the title, instead of asking the person.
+- **The line of the retry of the service is kept alive in the status bar of the thread**  
+  It is the same line, counting down every second, as under the title and in the card.
+
 ## [2.0.10] - 2026110922
 
 ### Added

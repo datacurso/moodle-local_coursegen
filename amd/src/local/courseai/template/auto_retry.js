@@ -25,6 +25,7 @@
 import {getStrings} from 'core/str';
 import {currentFeed} from 'local_coursegen/local/courseai/template/thread_feed';
 import {countdown} from 'local_coursegen/local/courseai/template/retry_schedule';
+import {showWorkingIndicator} from 'local_coursegen/local/courseai/ui/feedback-progress';
 
 const CARD_ID = 'cgAutoRetryCard';
 const SERVICE_CARD_ID = 'cgServiceRetryCard';
@@ -188,11 +189,13 @@ export const showServiceRetry = async(data) => {
     const attempt = data.attempt || 0;
     const total = data.of || 0;
     const stage = document.getElementById('tplGenStage');
+    // The line under the title, the one in the status bar of the thread and the card say the same, every second.
     const say = (line) => {
         view.status.textContent = line;
         if (stage) {
             stage.textContent = line;
         }
+        showWorkingIndicator({}, line);
     };
     const fill = (text, left) => text
         .replace('{$a->attempt}', attempt)

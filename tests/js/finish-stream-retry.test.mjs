@@ -47,3 +47,18 @@ test('a failure that waiting does not mend is not retried', async() => {
     await assert.rejects(finishTemplateGenerationStream('https://site.example', 3, {}, () => undefined, {open, pause: noWait}));
     assert.equal(opened, 1);
 });
+
+test('a failure that the server says may be retried is retried like a lost connection', async() => {
+    globalThis.window = {location: {href: 'https://site.example/x'}};
+    let opened = 0;
+    const open = async() => {
+        opened++;
+        if (opened === 1) {
+            throw Object.assign(new Error('the service could not be reached'), {errorcode: 'curlerror', retryable: true});
+        }
+        return {success: true, courseid: 9};
+    };
+    const result = await finishTemplateGenerationStream('https://site.example', 3, {}, () => undefined, {open, pause: noWait});
+    assert.equal(result.courseid, 9);
+    assert.equal(opened, 2);
+});

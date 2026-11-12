@@ -452,7 +452,11 @@ const runPasses = async(streamUrl, buildCourse, sessionId, control) => {
                     streamUrl,
                     progress,
                     (eventData, eventProgress) => {
-                        run.moved = true;
+                        // Only an activity that was written counts as the run moving: notices, failed activities and the
+                        // stages that come again do not, or a run that fails again and again would never run out of retries.
+                        if (eventData.type === 'activity_progress_done') {
+                            run.moved = true;
+                        }
                         clearRetryCard();
                         if (eventData.type === 'course_configuration') {
                             applySessionName(sessionId, eventData);

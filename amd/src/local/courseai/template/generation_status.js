@@ -107,8 +107,10 @@ export const showNotice = async(data) => {
         return '';
     }
     if (data.code === 'retrying') {
-        // The service is trying again after the AI provider failed: the same card as when the connection fails.
-        return showServiceRetry(data);
+        // The service is trying again after the AI provider failed: the same card as when the connection fails. The
+        // card keeps the line of the status bar alive itself, so nothing is returned to be written there once.
+        await showServiceRetry(data);
+        return '';
     }
     const elements = ensureElements();
     const key = NOTICE_STRINGS[data.code];

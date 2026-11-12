@@ -74,10 +74,28 @@ class finish_stream {
             $code = $e instanceof \moodle_exception ? (string) $e->errorcode : 'failed';
             $this->output->send(sse_formatter::event('failed', json_encode([
                 'errorcode' => $code,
+                'retryable' => self::is_retryable($e),
                 'message' => get_string('error_course_creation_failed', 'local_coursegen'),
             ])));
         }
         $this->output->send(sse_formatter::event('done', '{}'));
+    }
+
+    /**
+     * Whether trying again can mend the failure: the service could not be reached or answered with an error of its own
+     * that passes (a timeout, a rate limit, a 5xx). A refusal, a bad request or a missing license is not mended by waiting.
+     *
+     * @param \Throwable $error
+     * @return bool
+     */
+    public static function is_retryable(\Throwable $error): bool {
+        if (!$error instanceof \moodle_exception) {
+            return false;
+        }
+        if (in_array($error->errorcode, ['curlerror', 'emptyresponse'], true)) {
+            return true;
+        }
+        return $error->errorcode === 'httperror' && in_array((int) $error->a, [408, 429, 500, 502, 503, 504], true);
     }
 
     /**
