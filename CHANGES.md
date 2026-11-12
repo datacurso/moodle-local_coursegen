@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026110928
+
+### Fixed
+- **Adding the questions of a quiz takes about half the queries**  
+  Each question opened a draft area for every one of its texts and Moodle read it, and every new activity was walked through the backup API to look for files even when none of its texts referenced one. The texts of the questions are now saved without draft areas, and the pass over the texts of a new activity only runs when the payload has a file reference or a marker. The questions stored are the same: a quiz of thirty questions of four types gives the same rows, with 48 queries for each question instead of 109.
+
 ## [2.0.10] - 2026110927
 
 ### Fixed

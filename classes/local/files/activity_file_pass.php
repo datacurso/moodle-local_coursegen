@@ -38,6 +38,29 @@ final class activity_file_pass {
     private const SIGNS = ['@@PLUGINFILE@@', 'pluginfile.php/', '<img', '![', 'coursegen:image', '{{image'];
 
     /**
+     * Whether the payload of an activity references a file or has an image marker.
+     *
+     * The pass walks the activity through the backup API and reads every row that can hold a text, which costs dozens of
+     * queries for each question of a quiz. Only a text that carries one of the signs is changed, and the texts of a new
+     * activity come from its payload, so a payload without any sign needs no pass.
+     *
+     * @param array $payload The result of the AI service for one activity.
+     * @return bool True when some text has a file reference or an image marker.
+     */
+    public static function payload_has_file_references(array $payload): bool {
+        $json = json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        if ($json === false) {
+            return true;
+        }
+        foreach (self::SIGNS as $sign) {
+            if (str_contains($json, $sign)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * Modules with rows the module's backup structure does not hold, and who finds them: module => provider class.
      *
      * A quiz refers to its questions through the question bank, which a backup keeps apart from the quiz.
