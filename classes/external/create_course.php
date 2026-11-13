@@ -54,6 +54,7 @@ class create_course extends external_api {
             'fullname' => new external_value(PARAM_TEXT, 'Override course fullname', VALUE_OPTIONAL, ''),
             'shortname' => new external_value(PARAM_TEXT, 'Override course shortname', VALUE_OPTIONAL, ''),
             'category' => new external_value(PARAM_INT, 'Override course category ID', VALUE_OPTIONAL, 0),
+            'startdate' => new external_value(PARAM_TEXT, 'Course start day (Y-m-d), empty for the default', VALUE_OPTIONAL, ''),
         ]);
     }
 
@@ -67,10 +68,11 @@ class create_course extends external_api {
      * @param string $fullname Optional override for the course fullname
      * @param string $shortname Optional override for the course shortname
      * @param int $category Optional override for the course category ID
+     * @param string $startdate Optional course start day (Y-m-d)
      * @return array Result of the course content application
      * @throws moodle_exception
      */
-    public static function execute($recordid, $fullname = '', $shortname = '', $category = 0) {
+    public static function execute($recordid, $fullname = '', $shortname = '', $category = 0, $startdate = '') {
         global $USER;
 
         $params = self::validate_parameters(self::execute_parameters(), [
@@ -78,6 +80,7 @@ class create_course extends external_api {
             'fullname' => $fullname,
             'shortname' => $shortname,
             'category' => $category,
+            'startdate' => $startdate,
         ]);
 
         $context = context_system::instance();
@@ -97,7 +100,8 @@ class create_course extends external_api {
         $overrides = course_review_service::overrides(
             (string)$params['fullname'],
             (string)$params['shortname'],
-            (int)$params['category']
+            (int)$params['category'],
+            (string)$params['startdate']
         );
 
         $result = create_course_service::create_course($session, $resultdata, $overrides);

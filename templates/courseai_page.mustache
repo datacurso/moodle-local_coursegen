@@ -1145,6 +1145,8 @@
             </div>
           </div>
 
+          <ul class="alert alert-warning pl-5" id="reviewWarnings" role="status" hidden></ul>
+
           <div class="form-group">
             <label for="reviewFullname">{{#str}}courseai_review_fullname_label, local_coursegen{{/str}}</label>
             <input type="text" id="reviewFullname" class="form-control" maxlength="255"
@@ -1158,9 +1160,15 @@
             <small class="form-text text-muted">{{#str}}courseai_review_shortname_note, local_coursegen{{/str}}</small>
           </div>
 
-          <div class="form-group mb-0">
+          <div class="form-group">
             <label for="reviewCategory">{{#str}}courseai_review_category_label, local_coursegen{{/str}}</label>
             <select id="reviewCategory" class="form-control"></select>
+          </div>
+
+          <div class="form-group mb-0">
+            <label for="reviewStartdate">{{#str}}courseai_review_startdate_label, local_coursegen{{/str}}</label>
+            <input type="date" id="reviewStartdate" class="form-control">
+            <small class="form-text text-muted">{{#str}}courseai_review_startdate_note, local_coursegen{{/str}}</small>
           </div>
 
           <hr class="my-3">

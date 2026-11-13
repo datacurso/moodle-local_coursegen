@@ -69,6 +69,7 @@ class finish_template_generation extends external_api {
             'fullname' => new external_value(PARAM_TEXT, 'Course fullname chosen at the review', VALUE_DEFAULT, ''),
             'shortname' => new external_value(PARAM_TEXT, 'Course shortname chosen at the review', VALUE_DEFAULT, ''),
             'category' => new external_value(PARAM_INT, 'Course category chosen at the review', VALUE_DEFAULT, 0),
+            'startdate' => new external_value(PARAM_TEXT, 'Course start day (Y-m-d) chosen at the review', VALUE_DEFAULT, ''),
         ]);
     }
 
@@ -79,9 +80,10 @@ class finish_template_generation extends external_api {
      * @param string $fullname Course fullname chosen at the review.
      * @param string $shortname Course shortname chosen at the review.
      * @param int $category Course category chosen at the review.
+     * @param string $startdate Course start day (Y-m-d) chosen at the review, empty for none.
      * @return array
      */
-    public static function execute($sessionid, $fullname = '', $shortname = '', $category = 0) {
+    public static function execute($sessionid, $fullname = '', $shortname = '', $category = 0, $startdate = '') {
         global $USER, $CFG;
 
         $params = self::validate_parameters(self::execute_parameters(), [
@@ -89,6 +91,7 @@ class finish_template_generation extends external_api {
             'fullname' => $fullname,
             'shortname' => $shortname,
             'category' => $category,
+            'startdate' => $startdate,
         ]);
 
         $context = context_system::instance();
@@ -120,7 +123,8 @@ class finish_template_generation extends external_api {
         $overrides = course_review_service::overrides(
             (string) $params['fullname'],
             (string) $params['shortname'],
-            (int) $params['category']
+            (int) $params['category'],
+            (string) $params['startdate']
         );
         $created = create_course_service::create_course($session, $result, $overrides);
         course_creation_guard::ensure_created($created);

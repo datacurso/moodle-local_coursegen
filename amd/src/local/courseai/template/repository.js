@@ -89,7 +89,7 @@ export const getTemplateCourseSettings = (sessionId) => fetchMany([{
  * teacher has reviewed its name.
  *
  * @param {number} sessionId
- * @param {Object} overrides What the teacher chose at the review: {fullname, shortname, category}, each optional.
+ * @param {Object} overrides What the teacher chose at the review: {fullname, shortname, category, startdate}, each optional.
  * @returns {Promise<Object>} {success, courseid, fullname, shortname, message, courseurl}
  */
 export const finishTemplateGeneration = (sessionId, overrides) => fetchMany([{
@@ -99,6 +99,7 @@ export const finishTemplateGeneration = (sessionId, overrides) => fetchMany([{
         fullname: overrides.fullname || '',
         shortname: overrides.shortname || '',
         category: overrides.category || 0,
+        startdate: overrides.startdate || '',
     },
 }])[0];
 

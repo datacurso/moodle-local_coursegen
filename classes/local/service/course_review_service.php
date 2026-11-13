@@ -60,9 +60,10 @@ class course_review_service {
      * @param string $fullname
      * @param string $shortname
      * @param int $category
-     * @return array Keys fullname, shortname and category, each only when given.
+     * @param string $startdate The day the course starts, as the form's date field sends it (Y-m-d), or empty.
+     * @return array Keys fullname, shortname, category and startdate (a timestamp), each only when given.
      */
-    public static function overrides(string $fullname, string $shortname, int $category): array {
+    public static function overrides(string $fullname, string $shortname, int $category, string $startdate = ''): array {
         $overrides = [];
         $fullname = trim($fullname);
         if ($fullname !== '') {
@@ -75,6 +76,49 @@ class course_review_service {
         if ($category > 0) {
             $overrides['category'] = $category;
         }
+        $start = self::start_of_day(trim($startdate));
+        if ($start !== null) {
+            $overrides['startdate'] = $start;
+        }
         return $overrides;
+    }
+
+    /**
+     * The worded warnings of a generation, for the review step.
+     *
+     * A warning that is not known is not shown: the review only says what it can word.
+     *
+     * @param array $warnings The result's generation_warnings, each with code, expected and actual.
+     * @return string[]
+     */
+    public static function warning_messages(array $warnings): array {
+        $messages = [];
+        foreach ($warnings as $warning) {
+            if (($warning['code'] ?? '') !== 'units_count_mismatch') {
+                continue;
+            }
+            $messages[] = get_string('courseai_review_warning_units_count_mismatch', 'local_coursegen', (object) [
+                'expected' => (int) ($warning['expected'] ?? 0),
+                'actual' => (int) ($warning['actual'] ?? 0),
+            ]);
+        }
+        return $messages;
+    }
+
+    /**
+     * The timestamp of the start of a day in the user's timezone.
+     *
+     * @param string $date Y-m-d.
+     * @return int|null Null when it is empty or not a real date.
+     */
+    private static function start_of_day(string $date): ?int {
+        if (!preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $date, $parts)) {
+            return null;
+        }
+        [, $year, $month, $day] = array_map('intval', $parts);
+        if (!checkdate($month, $day, $year)) {
+            return null;
+        }
+        return make_timestamp($year, $month, $day);
     }
 }
