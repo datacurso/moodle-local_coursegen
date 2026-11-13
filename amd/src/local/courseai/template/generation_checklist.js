@@ -222,6 +222,24 @@ export const closeActivity = (uid, progress) => {
 };
 
 /**
+ * Mark the row of an activity whose generation failed: it did not finish, so it carries no check and it is not counted.
+ *
+ * @param {string} uid
+ * @param {Object} progress {total, done}
+ */
+export const failActivity = (uid, progress) => {
+    const done = progress.done;
+    const total = progress.total;
+    enqueue(async() => {
+        for (const item of document.querySelectorAll(`.courseai-checklist-list [data-progress-uid="${uid}"]`)) {
+            item.classList.remove('is-loading', 'is-done');
+            item.classList.add('is-failed');
+        }
+        await paintCount({done, total});
+    });
+};
+
+/**
  * Show how many items of the repeat blocks of an activity are written, and the last one, in its rows.
  *
  * @param {string} uid

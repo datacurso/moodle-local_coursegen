@@ -29,6 +29,7 @@
 import {
     addActivity,
     closeActivity,
+    failActivity,
     openChecklist,
     showRepeatProgress,
 } from 'local_coursegen/local/courseai/template/generation_checklist';
@@ -82,15 +83,26 @@ const resetProgress = (progress, data) => {
  * @returns {string} ''
  */
 const finishActivity = (data, progress, paintStage) => {
-    // A failed activity is still counted and still stops looking
-    // "in progress": the run itself then fails, which is what the
-    // professor is told about.
     markRow(data.uid, 'done');
     progress.done += 1;
     closeActivity(data.uid, progress);
     if (progress.total > 0 && progress.done >= progress.total) {
         paintStage('saving');
     }
+    return '';
+};
+
+/**
+ * One activity's generation failed: it stops looking "in progress", but it is not done, so it carries no check, it is
+ * not counted and the header does not move on to saving: the run itself then fails, and a retry makes what is missing.
+ *
+ * @param {Object} data
+ * @param {Object} progress Mutable {total, done} counters.
+ * @returns {string} ''
+ */
+const failActivityRow = (data, progress) => {
+    markRow(data.uid, 'pending');
+    failActivity(data.uid, progress);
     return '';
 };
 
@@ -148,7 +160,7 @@ const EVENT_HANDLERS = {
         return '';
     },
     activity_progress_done: finishActivity,
-    activity_progress_failed: finishActivity,
+    activity_progress_failed: failActivityRow,
     // The AI has questions before it starts: the pass ends so they can be answered, as it does for the review.
     questions: () => 'questions',
     questions_answered: () => '',
