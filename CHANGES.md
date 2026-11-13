@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10-wp] - 2026111118
+
+### Fixed
+- **A template configuration from another site imports**  
+  A file exported where the scope of the activities was empty (an older version, or another site) stopped the import with an error. The empty fields now take their default, so the file imports; the export always writes the scope.
+
 ## [2.0.10-wp] - 2026111117
 
 ### Fixed
