@@ -31,6 +31,13 @@ use local_coursegen\local\service\template_keep_copier;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class activity_spaces {
+    /**
+     * Whether the spaces of other activities (a quiz, a page...) are offered to the teacher. For now what the teacher
+     * brings is only a file, marked in the row of the template's file: these spaces stay in the templates that have
+     * them, but the creation of a course neither shows nor asks for them.
+     */
+    const ENABLED = false;
+
     /** The most activities offered to pick from. */
     const MAX_CANDIDATES = 300;
 

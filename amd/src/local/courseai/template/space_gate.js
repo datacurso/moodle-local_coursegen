@@ -55,65 +55,73 @@ export const clearSpaceGate = () => {
 };
 
 /**
- * One line of the card: what the administrator asked for, and the button that brings it.
+ * One question of the card: what the administrator asked for, and the button that uploads the file.
+ *
+ * The markup is the one of the questions the AI asks (a file question), so the card reads like them.
  *
  * @param {Object} entry {sectionIndex, activityIndex, activity}.
- * @param {Object} texts The strings of the card.
+ * @param {string} upload The text of the button.
  * @param {Function} onBring Called with (sectionIndex, activityIndex) when the button is pressed.
  * @returns {HTMLElement}
  */
-const lineOf = (entry, texts, onBring) => {
+const questionOf = (entry, upload, onBring) => {
     const {activity} = entry;
-    const line = document.createElement('span');
-    line.className = 'd-block mb-2';
-    const what = document.createElement('span');
-    what.className = 'd-block';
-    what.textContent = String(activity.spaceinstruction || '').trim() || activity.name || '';
+    const block = document.createElement('fieldset');
+    block.className = 'cg-question';
+    const prompt = document.createElement('legend');
+    prompt.className = 'cg-question-prompt';
+    prompt.textContent = String(activity.spaceinstruction || '').trim() || activity.name || '';
+    block.append(prompt);
+    if (activity.spaceinstruction && activity.name) {
+        const hint = document.createElement('span');
+        hint.className = 'cg-question-hint';
+        hint.textContent = activity.name;
+        block.append(hint);
+    }
+    const group = document.createElement('div');
+    group.className = 'cg-question-file';
     const button = document.createElement('button');
     button.type = 'button';
-    button.className = 'cg-card-button cg-card-button--primary mt-1';
-    button.textContent = activity.spacekind === 'activity' ? texts.choose : texts.upload;
+    button.className = 'btn btn-sm btn-outline-secondary';
+    button.textContent = upload;
     button.addEventListener('click', () => onBring(entry.sectionIndex, entry.activityIndex));
-    line.append(what, button);
-    return line;
+    group.append(button);
+    block.append(group);
+    return block;
 };
 
 /**
- * Show the card for the spaces that are missing (it replaces the one shown before).
+ * Show the card for the files that are missing (it replaces the one shown before).
  *
  * @param {Object[]} missing What {@see missingSpaces} returned.
- * @param {Function} onBring Called with (sectionIndex, activityIndex) to bring the file (or the activity) of a space.
+ * @param {Function} onBring Called with (sectionIndex, activityIndex) to upload the file of a space.
  * @returns {Promise<void>}
  */
 export const showSpaceGate = async(missing, onBring) => {
-    const one = missing.length === 1 && missing[0].activity.spacekind !== 'activity';
-    const [title, text, upload, choose] = await getStrings([
-        {key: one ? 'courseai_template_space_gate_title' : 'courseai_template_space_gate_title_many', component: 'local_coursegen'},
-        {key: 'courseai_template_space_gate_text', component: 'local_coursegen'},
+    const [title, upload] = await getStrings([
+        {key: missing.length === 1 ? 'courseai_template_space_gate_title' : 'courseai_template_space_gate_title_many',
+            component: 'local_coursegen'},
         {key: 'courseai_template_space_gate_upload', component: 'local_coursegen'},
-        {key: 'courseai_template_space_gate_choose', component: 'local_coursegen'},
     ]);
     clearSpaceGate();
     const card = document.createElement('div');
     card.id = CARD_ID;
-    card.className = 'cg-log-entry cg-log-entry--turn-ai cg-log-entry--retrying';
-    card.setAttribute('role', 'alert');
+    card.className = 'cg-log-entry cg-log-entry--ai cg-log-entry--turn-ai cg-question-card';
+    card.setAttribute('role', 'group');
+    card.setAttribute('aria-label', title);
     const bar = document.createElement('span');
     bar.className = 'cg-log-bar';
     bar.setAttribute('aria-hidden', 'true');
-    const content = document.createElement('span');
-    content.className = 'cg-log-body';
+    const body = document.createElement('span');
+    body.className = 'cg-log-body';
     const message = document.createElement('span');
     message.className = 'cg-log-msg';
     const heading = document.createElement('strong');
-    heading.className = 'd-block mb-1';
+    heading.className = 'd-block mb-2';
     heading.textContent = title;
-    const body = document.createElement('span');
-    body.className = 'd-block mb-2';
-    body.textContent = text;
-    message.append(heading, body, ...missing.map((entry) => lineOf(entry, {upload, choose}, onBring)));
-    content.append(message);
-    card.append(bar, content);
+    message.append(heading, ...missing.map((entry) => questionOf(entry, upload, onBring)));
+    body.append(message);
+    card.append(bar, body);
     const host = document.getElementById('cgNoticeDock') || document.body;
     host.append(card);
     card.scrollIntoView({block: 'nearest'});

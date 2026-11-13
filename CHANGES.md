@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026110938
+
+### Changed
+- **Only a file is what the teacher brings: the spaces of other activities are not offered**  
+  The creation of a course no longer shows nor asks for the spaces of a quiz or another activity that some templates have; they stay saved in the template. What the teacher brings is a file, marked in the row of the template's file.
+- **The card that asks for the file looks like the questions of the AI**  
+  When Generate is pressed with a required file missing, the card has the look of the questions the AI asks in the column: the instruction of the administrator, the name of the file of the template and the button to upload it.
+
 ## [2.0.10] - 2026110937
 
 ### Changed

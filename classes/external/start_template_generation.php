@@ -120,7 +120,10 @@ class start_template_generation extends external_api {
         // Refused before anything is sent: a space that is not the template's, or a required one with no file.
         $spaces = space_files_request::validated($params['templateid'], (int) $USER->id, $params['spacefiles']);
         // The same for the activities the teacher brings to the spaces: each one fits its space, none is missing.
-        $spaceactivities = activity_spaces::validated($params['templateid'], (int) $USER->id, $params['spaceactivities']);
+        $spaceactivities = [];
+        if (activity_spaces::ENABLED) {
+            $spaceactivities = activity_spaces::validated($params['templateid'], (int) $USER->id, $params['spaceactivities']);
+        }
 
         if ($params['withimages']) {
             require_capability('local/coursegen:generatecourseimages', $context);

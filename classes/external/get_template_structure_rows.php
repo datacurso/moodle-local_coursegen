@@ -23,6 +23,7 @@ use local_coursegen\local\models\template_section;
 use local_coursegen\local\models\template_space;
 use local_coursegen\local\service\template_export_uids;
 use local_coursegen\local\service\template_instance_layout;
+use local_coursegen\local\space\activity_spaces;
 use local_coursegen\local\space\space_rules;
 use local_coursegen\output\template_row_options;
 
@@ -84,11 +85,12 @@ trait get_template_structure_rows {
     private static function instances_by_section(template $template): array {
         $instancesbysection = [];
         $templateid = $template->get('id');
-        // The spaces the teacher fills share the anchors of the instances, so both are placed by the same rule.
-        $records = array_merge(
-            template_instance::get_records(['templateid' => $templateid]),
-            template_space::get_records(['templateid' => $templateid])
-        );
+        // The spaces the teacher fills share the anchors of the instances, so both are placed by the same rule. For now
+        // they are not offered (only a file is, in its own row): see activity_spaces::ENABLED.
+        $records = template_instance::get_records(['templateid' => $templateid]);
+        if (activity_spaces::ENABLED) {
+            $records = array_merge($records, template_space::get_records(['templateid' => $templateid]));
+        }
         foreach ($records as $instance) {
             $sectionid = $instance->get('sectionid');
             $instancesbysection[$sectionid][] = $instance;
