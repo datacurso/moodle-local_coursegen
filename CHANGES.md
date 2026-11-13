@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026110944
+
+### Changed
+- **The card that asks for the files works with many of them**  
+  Its title counts them ("7 of 10 files are missing to generate the course") and goes down with each upload; each file is one line with its button on the right, in a list that scrolls instead of growing past part of the column; pressing a file shows its card in the structure (its section opened if it was closed) and marks it for a moment.
+
 ## [2.0.10] - 2026110943
 
 ### Fixed

@@ -41,7 +41,7 @@ import {
 import {renderStructure, wireStructureEvents} from './template/render';
 import {pickSpaceFile, removeSpaceFile, refreshGenerateState} from './template/space_files';
 import {pickSpaceActivity, removeSpaceActivity} from './template/space_activities';
-import {clearSpaceGate, missingSpaces, showSpaceGate} from './template/space_gate';
+import {clearSpaceGate, missingSpaces, requiredSpaceCount, showSpaceGate} from './template/space_gate';
 import {formatTemplate} from './utils';
 
 // The "N sections · M activities" stats template. Fetched once and cached —
@@ -149,7 +149,7 @@ export const wireTemplateMode = (state, host) => {
     const generate = () => {
         const missing = missingSpaces(tplState);
         if (missing.length) {
-            showSpaceGate(missing, bringSpace);
+            showSpaceGate(missing, requiredSpaceCount(tplState), {onBring: bringSpace, onReveal: revealSpace});
             return;
         }
         clearSpaceGate();
@@ -163,6 +163,25 @@ export const wireTemplateMode = (state, host) => {
     };
     const bringSpace = (sectionIndex, activityIndex) => {
         pickSpaceFile(tplState, sectionIndex, activityIndex, afterBrought);
+    };
+    // The card of a file in the structure, brought into view (its section opened if it was closed) and marked for a
+    // moment, so the teacher sees where the file goes.
+    const revealSpace = async(sectionIndex, activityIndex) => {
+        const section = tplState.sections[sectionIndex];
+        if (section?.collapsed) {
+            toggleSectionCollapsed(tplState, sectionIndex);
+            await rerenderStructure();
+        }
+        const position = `[data-section-index="${sectionIndex}"][data-activity-index="${activityIndex}"]`;
+        const spaceCard = container?.querySelector(`[data-region="local_coursegen/template/space-card"]${position}`);
+        if (!spaceCard) {
+            return;
+        }
+        spaceCard.scrollIntoView({block: 'center', behavior: 'smooth'});
+        spaceCard.classList.remove('cg-space-row--flash');
+        // Read once so that the animation starts again when the same card is shown twice in a row.
+        void spaceCard.offsetWidth;
+        spaceCard.classList.add('cg-space-row--flash');
     };
     if (genBtn) {
         genBtn.addEventListener('click', generate);

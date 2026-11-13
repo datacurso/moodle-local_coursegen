@@ -365,3 +365,66 @@
         transition: none;
     }
 }
+
+/* The card that asks for the files when Generate is pressed: one line per file, the text on the left and the button on
+   the right, in a list that never grows past part of the column (it scrolls instead). Pressing the text shows the card
+   of the file in the structure, which is marked for a moment. */
+.cg-space-gate .cg-space-gate-list {
+    max-height: 40vh;
+    margin: 0;
+    padding: 0;
+    overflow-y: auto;
+    list-style: none;
+}
+
+.cg-space-gate .cg-space-gate-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    border-top: 1px dashed var(--border);
+}
+
+.cg-space-gate .cg-space-gate-item:first-child {
+    border-top: 0;
+    padding-top: 0;
+}
+
+.cg-space-gate .cg-space-gate-what {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    text-align: left;
+    cursor: pointer;
+}
+
+.cg-space-gate .cg-space-gate-what:hover .cg-question-prompt {
+    text-decoration: underline;
+}
+
+.cg-space-gate .cg-space-gate-item .btn {
+    flex: 0 0 auto;
+}
+
+@keyframes cg-space-row-flash {
+    0%, 100% {
+        box-shadow: 0 0 0 0 hsl(10 81% 63% / 0);
+    }
+    30% {
+        box-shadow: 0 0 0 4px hsl(10 81% 63% / .35);
+    }
+}
+
+#tplModeStructure .cg-space-row--flash {
+    animation: cg-space-row-flash 1.6s ease-in-out 1;
+}
+
+/* While a card is in the slot of the messages every animation of the page is paused (template_left_column.css); the
+   mark that shows where a file goes is the answer to the teacher's own click, so it plays. */
+body #tplModeStructure .cg-space-row--flash {
+    animation-play-state: running !important;
+}
