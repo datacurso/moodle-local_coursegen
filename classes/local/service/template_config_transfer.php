@@ -78,7 +78,7 @@ final class template_config_transfer {
                 'key' => $key((int) $row->cmid),
                 'action' => $row->action,
                 'useasreference' => (int) $row->useasreference,
-                'templatescope' => $row->templatescope,
+                'templatescope' => (string) $row->templatescope,
                 'prompt' => (string) $row->prompt,
             ];
         }
@@ -253,9 +253,10 @@ final class template_config_transfer {
             $sections[(int) $row['section']]['activities'][] = [
                 'cmid' => $cmid($row['key']),
                 'action' => $row['action'],
-                'useasreference' => $row['useasreference'],
-                'templatescope' => $row['templatescope'],
-                'prompt' => $row['prompt'],
+                'useasreference' => (int) ($row['useasreference'] ?? 1),
+                // A file from a site where these fields are empty, or from an older version, still imports.
+                'templatescope' => (string) ($row['templatescope'] ?? ''),
+                'prompt' => (string) ($row['prompt'] ?? ''),
             ];
         }
         foreach ($data['instances'] as $row) {
