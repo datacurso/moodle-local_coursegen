@@ -261,8 +261,17 @@
     margin: 0;
 }
 
-#tplModeStructure .cg-space-row .cg-space-action {
+#tplModeStructure .cg-space-row {
     cursor: pointer;
+}
+
+#tplModeStructure .cg-space-row:hover {
+    filter: brightness(.985);
+}
+
+#tplModeStructure .cg-space-row:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
 }
 
 /* The row tells where it stands with a mark on its icon, the same marks as the rows being generated: while the

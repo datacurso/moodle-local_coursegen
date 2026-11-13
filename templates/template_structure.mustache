@@ -31,7 +31,7 @@
 
     Data attributes required for JS:
     * data-action="local_coursegen/template/toggle-section" on the section chevron
-    * data-action="local_coursegen/template/pick-space-file" on the button of a space card that opens the
+    * data-action="local_coursegen/template/pick-space-file" on the card of a space: the whole card opens the
       file selector (data-section-index, data-activity-index)
     * data-action="local_coursegen/template/remove-space-file" on the control that empties a space card
       (data-section-index, data-activity-index)
@@ -130,8 +130,13 @@
             {{#isspace}}
             {{! A file the teacher uploads: one more row of the list, with the same icon, name and badge as the others; what
                 the administrator asked for is its description, and the upload is one of the buttons of the row. }}
+            {{! The whole card is the button that opens the file picker; only "remove" inside it does something else. }}
             <div class="activity-item focus-control cg-space-row{{#hasspacefile}} cg-space-row--done{{/hasspacefile}}{{#spacemissing}} cg-space-row--empty{{/spacemissing}}"
-                 data-region="local_coursegen/template/space-card">
+                 data-region="local_coursegen/template/space-card" role="button" tabindex="0"
+                 data-action="local_coursegen/template/pick-space-file"
+                 data-label-busy="{{#str}}courseai_template_space_uploading, local_coursegen{{/str}}"
+                 data-section-index="{{sectionindex}}" data-activity-index="{{index}}"
+                 title="{{#hasspacefile}}{{#str}}courseai_template_space_change, local_coursegen{{/str}}{{/hasspacefile}}{{^hasspacefile}}{{#str}}courseai_template_space_upload, local_coursegen{{/str}}{{/hasspacefile}}">
               <div class="activity-grid">
                 <div class="activity-icon activityiconcontainer smaller {{purpose}} courseicon align-self-start me-2">
                   {{{iconhtml}}}
@@ -159,11 +164,7 @@
                   {{/hasspacefile}}
                 </div>
                 <div class="activity-actions cg-item-actions align-self-start ms-sm-2">
-                  <span class="dp-action-btn cg-space-action" role="button" tabindex="0"
-                        data-action="local_coursegen/template/pick-space-file"
-                        data-label-busy="{{#str}}courseai_template_space_uploading, local_coursegen{{/str}}"
-                        data-section-index="{{sectionindex}}" data-activity-index="{{index}}"
-                        title="{{#hasspacefile}}{{#str}}courseai_template_space_change, local_coursegen{{/str}}{{/hasspacefile}}{{^hasspacefile}}{{#str}}courseai_template_space_upload, local_coursegen{{/str}}{{/hasspacefile}}">
+                  <span class="dp-action-btn cg-space-action">
                     {{#pix}} i/upload, core {{/pix}}
                     <span class="sr-only" data-region="local_coursegen/template/space-button-label">{{#hasspacefile}}{{#str}}courseai_template_space_change, local_coursegen{{/str}}{{/hasspacefile}}{{^hasspacefile}}{{#str}}courseai_template_space_upload, local_coursegen{{/str}}{{/hasspacefile}}</span>
                   </span>
