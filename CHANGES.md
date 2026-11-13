@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10-wp] - 2026111117
+
+### Fixed
+- **An activity that failed is not shown as done**  
+  When the generation of an activity failed, the page marked it with a check, counted it as written ("5 of 5 activities") and, once all of them were counted, moved the header on to saving the course, so a run that had failed looked finished. A failed activity now has no check, it is not counted and the header does not move on; when the run is retried, the activities that are missing are written and then they are marked.
+- **The messages about the run go at the bottom, above the buttons of the run, and each one is said once**  
+  The failure that asks the person to decide and the cards of the retries used to appear in the middle of the thread, over the list of the activities, and a retry was also written in the title and in the line at the bottom. They now go to a slot at the end of the column, above "Stop", with the same look; the retry is said only in its card, the title does not say "Stopped" while it retries by itself, the line that says it is working is not shown while a message about the run is, and the spinners of the page stop while it is, as a plain ring that waits and not as an arc that froze: only the card, with its time left, tells that it retries.
+- **The counter of pictures says which pictures it counts**  
+  "2 of 2 images ready" was read as all the images of the course, but it only counts the cover and the pictures of the sections. It now says so.
+
 ## [2.0.10-wp] - 2026111116
 
 ### Added
