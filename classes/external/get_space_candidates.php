@@ -32,6 +32,10 @@ use external_single_structure;
 use external_value;
 use local_coursegen\local\space\activity_spaces;
 
+defined('MOODLE_INTERNAL') || die();
+
+require_once($CFG->libdir . '/externallib.php');
+
 /**
  * The activities of a type the teacher can bring to a space of a template.
  *
