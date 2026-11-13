@@ -162,6 +162,8 @@ final class template_plan_builder {
             'useasreference' => true,
             'prompt' => '',
             'templatescope' => $scope,
+            'spacerequired' => true,
+            'spaceinstruction' => '',
         ];
     }
 
