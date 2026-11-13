@@ -17,6 +17,7 @@
 namespace local_coursegen\local\models;
 
 use core\persistent;
+use local_coursegen\local\service\template_unit_resizer;
 
 /**
  * Persistent model for table local_coursegen_system_instruction.
@@ -45,6 +46,11 @@ class system_instruction extends persistent {
                 'null' => NULL_ALLOWED,
                 'default' => null,
             ],
+            'units' => [
+                'type' => PARAM_INT,
+                'null' => NULL_ALLOWED,
+                'default' => null,
+            ],
             'deleted' => [
                 'type' => PARAM_INT,
                 'default' => 0,
@@ -62,5 +68,21 @@ class system_instruction extends persistent {
                 'null' => NULL_NOT_ALLOWED,
             ],
         ];
+    }
+
+    /**
+     * Validate the number of units: empty, or between 1 and the most a template can be resized to.
+     *
+     * @param int|null $value
+     * @return true|\lang_string
+     */
+    protected function validate_units($value) {
+        if ($value === null) {
+            return true;
+        }
+        if ($value < 1 || $value > template_unit_resizer::MAX_UNITS) {
+            return new \lang_string('systeminstructionunitsinvalid', 'local_coursegen', template_unit_resizer::MAX_UNITS);
+        }
+        return true;
     }
 }

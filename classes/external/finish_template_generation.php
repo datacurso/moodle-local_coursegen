@@ -42,6 +42,7 @@ use local_coursegen\local\service\template_course_image_applier;
 use local_coursegen\local\service\template_course_order;
 use local_coursegen\local\service\template_keep_copier;
 use local_coursegen\local\service\template_run_history;
+use local_coursegen\local\service\template_section_map;
 use local_coursegen\local\service\template_settings_copier;
 
 defined('MOODLE_INTERNAL') || die();
@@ -68,6 +69,7 @@ class finish_template_generation extends external_api {
             'fullname' => new external_value(PARAM_TEXT, 'Course fullname chosen at the review', VALUE_DEFAULT, ''),
             'shortname' => new external_value(PARAM_TEXT, 'Course shortname chosen at the review', VALUE_DEFAULT, ''),
             'category' => new external_value(PARAM_INT, 'Course category chosen at the review', VALUE_DEFAULT, 0),
+            'startdate' => new external_value(PARAM_TEXT, 'Course start day (Y-m-d) chosen at the review', VALUE_DEFAULT, ''),
         ]);
     }
 
@@ -78,9 +80,10 @@ class finish_template_generation extends external_api {
      * @param string $fullname Course fullname chosen at the review.
      * @param string $shortname Course shortname chosen at the review.
      * @param int $category Course category chosen at the review.
+     * @param string $startdate Course start day (Y-m-d) chosen at the review, empty for none.
      * @return array
      */
-    public static function execute($sessionid, $fullname = '', $shortname = '', $category = 0) {
+    public static function execute($sessionid, $fullname = '', $shortname = '', $category = 0, $startdate = '') {
         global $USER, $CFG;
 
         $params = self::validate_parameters(self::execute_parameters(), [
@@ -88,6 +91,7 @@ class finish_template_generation extends external_api {
             'fullname' => $fullname,
             'shortname' => $shortname,
             'category' => $category,
+            'startdate' => $startdate,
         ]);
 
         $context = context_system::instance();
@@ -119,18 +123,20 @@ class finish_template_generation extends external_api {
         $overrides = course_review_service::overrides(
             (string) $params['fullname'],
             (string) $params['shortname'],
-            (int) $params['category']
+            (int) $params['category'],
+            (string) $params['startdate']
         );
         $created = create_course_service::create_course($session, $result, $overrides);
         course_creation_guard::ensure_created($created);
         $courseid = $created['courseid'] ?? 0;
         $courseid = (int) $courseid;
         $keptcms = [];
+        $sectionmap = self::section_map($session);
         if ($courseid > 0 && $templateid !== null && $templateid > 0) {
-            template_keep_copier::copy_into($templateid, $courseid, $keptcms);
+            template_keep_copier::copy_into($templateid, $courseid, $keptcms, $sectionmap);
         }
         $generatedcms = $created['generatedcms'] ?? [];
-        self::arrange_course($templateid, $courseid, $generatedactivities, $generatedcms, $keptcms);
+        self::arrange_course($templateid, $courseid, $generatedactivities, $generatedcms, $keptcms, $sectionmap);
         self::resolve_activity_links($session, $courseid, $generatedactivities, $generatedcms, $keptcms);
         if ($courseid > 0) {
             $coursedata = json_decode((string) $session->get('coursedata'), true);
@@ -154,20 +160,36 @@ class finish_template_generation extends external_api {
      * @param array $payloadactivities Every activity entry of the result, kept ones included.
      * @param array $generatedcms Payload cmid => created cmid, for the generated activities.
      * @param array $keptcms Payload cmid => created cmid, for the copied kept activities.
+     * @param template_section_map $sectionmap Where each section of the template went in the new course.
      */
     private static function arrange_course(
         ?int $templateid,
         int $courseid,
         array $payloadactivities,
         array $generatedcms,
-        array $keptcms
+        array $keptcms,
+        template_section_map $sectionmap
     ): void {
         if ($courseid <= 0 || $templateid === null || $templateid <= 0) {
             return;
         }
         kept_link_rewriter::rewrite_for_course($courseid, $payloadactivities, $generatedcms, $keptcms);
-        template_course_order::apply($templateid, $courseid, $payloadactivities, $generatedcms, $keptcms);
-        template_settings_copier::copy_into($templateid, $courseid, $payloadactivities, $generatedcms, $keptcms);
+        template_course_order::apply($templateid, $courseid, $payloadactivities, $generatedcms, $keptcms, $sectionmap);
+        template_settings_copier::copy_into($templateid, $courseid, $payloadactivities, $generatedcms, $keptcms, $sectionmap);
+    }
+
+    /**
+     * Which section of the template each section of the new course stands for.
+     *
+     * Read from the payload that was sent, which is where a resized flexsections
+     * course says it; any other course has the template's own sections.
+     *
+     * @param course_session $session
+     * @return template_section_map
+     */
+    private static function section_map(course_session $session): template_section_map {
+        $coursedata = json_decode((string) $session->get('coursedata'), true);
+        return template_section_map::from_sections_info($coursedata['payload']['sections_info'] ?? []);
     }
 
     /**

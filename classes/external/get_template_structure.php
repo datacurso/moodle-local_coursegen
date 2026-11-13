@@ -31,6 +31,8 @@ use external_function_parameters;
 use external_value;
 use context_system;
 use local_coursegen\local\models\template;
+use local_coursegen\local\service\template_unit_resizer;
+use local_coursegen\local\service\template_units;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -96,11 +98,18 @@ class get_template_structure extends external_api {
             $remaining = max(0, $maxsections);
         }
 
-        return [
+        $result = [
             'nolimit' => $nolimit,
             'maxsections' => $maxsections,
             'remainingsections' => $remaining,
             'sections' => $sections,
         ];
+        // Only a course with units (Flexible sections) lets the professor choose how many to make.
+        $units = template_units::count($modinfo);
+        if ($units !== null) {
+            $result['unitcount'] = $units;
+            $result['maxunits'] = template_unit_resizer::MAX_UNITS;
+        }
+        return $result;
     }
 }

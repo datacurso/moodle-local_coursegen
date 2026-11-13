@@ -37,7 +37,10 @@ import {
     createTemplateState,
     applyStructureResponse,
     toggleSectionCollapsed,
+    setUnits,
+    countsForUnits,
 } from './template/state';
+import Selectors from './template/selectors';
 import {renderStructure, wireStructureEvents} from './template/render';
 import {formatTemplate} from './utils';
 
@@ -76,10 +79,45 @@ const updateStats = (tplState, statsTemplate) => {
     if (!statsEl) {
         return;
     }
-    const totalActivities = tplState.sections.reduce((sum, section) => sum + section.activities.length, 0);
-    statsEl.textContent = formatTemplate(statsTemplate, {
-        sections: tplState.sections.length,
-        activities: totalActivities,
+    // The counts follow the number of units asked, not only the template's own sections.
+    const counts = countsForUnits(tplState);
+    statsEl.textContent = formatTemplate(statsTemplate, counts);
+};
+
+/**
+ * Show the units field for a template that has units, with its range and the professor's number.
+ *
+ * @param {Object} tplState
+ */
+const refreshUnitsField = (tplState) => {
+    const field = document.querySelector(Selectors.regions.unitsField);
+    const input = document.querySelector(Selectors.actions.unitsInput);
+    if (!field || !input) {
+        return;
+    }
+    field.hidden = !tplState.unitcount;
+    if (tplState.unitcount) {
+        input.min = 1;
+        input.max = tplState.maxunits;
+        input.value = tplState.units;
+    }
+};
+
+/**
+ * Keep the state in step with the units field.
+ *
+ * @param {Object} tplState
+ */
+const wireUnitsField = (tplState) => {
+    const input = document.querySelector(Selectors.actions.unitsInput);
+    if (!input) {
+        return;
+    }
+    input.addEventListener('change', async() => {
+        setUnits(tplState, input.value);
+        // Show the value that was kept, which may differ from what was typed.
+        input.value = tplState.units;
+        updateStats(tplState, await getStatsTemplate());
     });
 };
 
@@ -109,7 +147,7 @@ export const wireTemplateMode = (state, host) => {
     // Input-bar defaults: no images, page default language, no syllabus yet.
     const tplState = createTemplateState({lang: state.defaultLang || ''});
 
-    wireInputBar(tplState, state);
+    wireUnitsField(tplState);
 
     // Sequence guard: reselecting the template autocomplete before a previous
     // getTemplateStructure() fetch resolves must not let the slower, stale
@@ -128,6 +166,14 @@ export const wireTemplateMode = (state, host) => {
         updateStats(tplState, statsTemplate);
         refreshGenerateState(tplState, genBtn);
     };
+
+    // A guideline with units prefills the units field (and the counts that follow it); removing it restores them.
+    wireInputBar(tplState, state, async() => {
+        refreshUnitsField(tplState);
+        if (tplState.loaded) {
+            updateStats(tplState, await getStatsTemplate());
+        }
+    });
 
     wireStructureEvents(container, {
         onToggleSection: async(sectionIndex) => {
@@ -198,6 +244,7 @@ const loadTemplateStructure = async(templateId, tplState, container, state, requ
             return;
         }
         applyStructureResponse(tplState, data);
+        refreshUnitsField(tplState);
 
         if (detailsEl) {
             detailsEl.style.display = '';
@@ -266,6 +313,10 @@ const clearStructure = (tplState, container, state) => {
     if (detailsEl) {
         detailsEl.style.display = 'none';
     }
+    const unitsField = document.querySelector(Selectors.regions.unitsField);
+    if (unitsField) {
+        unitsField.hidden = true;
+    }
     const workspace = document.getElementById('courseaiWorkspace');
     if (workspace) {
         workspace.classList.remove('tpl-active');
@@ -294,6 +345,8 @@ const clearStructure = (tplState, container, state) => {
         lang: tplState.lang,
         syllabusdraftitemid: tplState.syllabusdraftitemid,
         syllabusfilename: tplState.syllabusfilename,
+        guidelineid: tplState.guidelineid,
+        guidelineunits: tplState.guidelineunits,
     }));
     state.templateStructureLoaded = false;
 };

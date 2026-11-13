@@ -850,6 +850,25 @@
             </button>
           </span>
           {{/canuploadsyllabus}}
+
+          {{! Guideline chip (shown after choosing a guideline) — same pattern as free mode, one per course }}
+          <span class="chip chip-guideline hidden" id="tplChipGuideline">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              <polyline points="9 12 11 14 15 10"/>
+            </svg>
+            <span class="chip-name" id="tplChipGuidelineName"></span>
+            <button class="chip-btn" id="tplChipGuidelineView" type="button" aria-label="{{#str}}courseai_chip_view_guideline, local_coursegen{{/str}}">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>
+              </svg>
+            </button>
+            <button class="chip-btn" id="tplChipGuidelineRemove" type="button" aria-label="{{#str}}courseai_chip_remove_guideline, local_coursegen{{/str}}">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </span>
         </div>
 
         <div class="card-toolbar">
@@ -865,6 +884,38 @@
               </svg>
             </button>
             {{/canuploadsyllabus}}
+
+            {{! Directrices — own popover (same pop-* pattern as free mode), opens upwards as the bar sits at the bottom }}
+            <div class="popover-wrap">
+              <button class="plus-menu-btn" id="tplBtnGuidelines" type="button"
+                      title="{{#str}}courseai_btn_guidelines_title, local_coursegen{{/str}}"
+                      aria-label="{{#str}}courseai_btn_guidelines, local_coursegen{{/str}}"
+                      aria-haspopup="dialog" aria-expanded="false" aria-controls="tplGuidelinesPopover">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                  <polyline points="9 12 11 14 15 10"/>
+                </svg>
+              </button>
+
+              <div class="popover-panel" id="tplGuidelinesPopover" role="dialog" aria-label="{{#str}}courseai_guidelines_dialog_label, local_coursegen{{/str}}">
+                <button class="pop-close-btn" id="tplGuidelinesPopoverClose" type="button" aria-label="{{#str}}closebuttontitle, core{{/str}}">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true">
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                  </svg>
+                </button>
+                <div class="pop-search-row">
+                  <div class="pop-search-inner">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <circle cx="11" cy="11" r="8"/>
+                      <path d="m21 21-4.35-4.35"/>
+                    </svg>
+                    <input type="text" id="tplGuidelineSearch" placeholder="{{#str}}courseai_guidelines_search_placeholder, local_coursegen{{/str}}" autocomplete="off" />
+                  </div>
+                  <p class="pop-note">{{#str}}courseai_guidelines_note_one, local_coursegen{{/str}}</p>
+                </div>
+                <ul class="pop-list" id="tplGuidelineList" role="listbox" aria-label="{{#str}}courseai_guidelines_list_label, local_coursegen{{/str}}"></ul>
+              </div>
+            </div>
 
             {{#cangeneratecourseimages}}
 {{! Generate-images toggle — same toggle-track/thumb pattern as the
@@ -945,6 +996,19 @@
           <div class="prv-header-text">
             <h2 class="prv-header-title" id="tplGenTitle"></h2>
             <p class="prv-header-sub" id="tplGenStage" aria-live="polite"></p>
+          </div>
+        </div>
+
+        {{! How many units to make. Hidden until a template whose format has units
+            (Flexible sections) is loaded; template_mode.js shows it, sets its
+            maximum and keeps template state in step with it. }}
+        <div class="cg-units-field mb-3" data-region="local_coursegen/template/units" hidden>
+          <div class="d-flex align-items-center gap-2">
+            <label class="mb-0 fw-bold" for="tplUnitsInput">{{#str}}courseai_template_units_label, local_coursegen{{/str}}</label>
+            <input type="number" class="form-control w-auto" id="tplUnitsInput" min="1" step="1" inputmode="numeric"
+                   data-action="local_coursegen/template/units-input"
+                   aria-describedby="tplUnitsHelp">
+            <small class="text-muted" id="tplUnitsHelp">{{#str}}courseai_template_units_help, local_coursegen{{/str}}</small>
           </div>
         </div>
 
@@ -1081,6 +1145,8 @@
             </div>
           </div>
 
+          <ul class="alert alert-warning pl-5" id="reviewWarnings" role="status" hidden></ul>
+
           <div class="form-group">
             <label for="reviewFullname">{{#str}}courseai_review_fullname_label, local_coursegen{{/str}}</label>
             <input type="text" id="reviewFullname" class="form-control" maxlength="255"
@@ -1094,9 +1160,15 @@
             <small class="form-text text-muted">{{#str}}courseai_review_shortname_note, local_coursegen{{/str}}</small>
           </div>
 
-          <div class="form-group mb-0">
+          <div class="form-group">
             <label for="reviewCategory">{{#str}}courseai_review_category_label, local_coursegen{{/str}}</label>
             <select id="reviewCategory" class="form-control"></select>
+          </div>
+
+          <div class="form-group mb-0">
+            <label for="reviewStartdate">{{#str}}courseai_review_startdate_label, local_coursegen{{/str}}</label>
+            <input type="date" id="reviewStartdate" class="form-control">
+            <small class="form-text text-muted">{{#str}}courseai_review_startdate_note, local_coursegen{{/str}}</small>
           </div>
 
           <hr class="my-3">

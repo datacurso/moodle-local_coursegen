@@ -37,7 +37,9 @@
     * none
 
     Data attributes required for JS:
-    * data-for="section" data-id on each section card
+    * data-for="section" data-id on each section card; a subsection of a flexsections
+      course also carries data-parent (its parent's section number) and data-depth,
+      so changing the behavior of a section reaches its subsections
     * data-for="cmitem" data-id + data-modname + data-typelabel on each
       real activity row (data-typelabel lets the instance-menu builder read
       a template mold's type label without a string lookup)
@@ -90,6 +92,8 @@
     * scopelabelsection string - "This section only" scope label, for data-tag-section
     * legacyspace bool (per real row) - saved as a space on a type that cannot be one; shows a warning
     * sections array   - Sections, each with: id int, num int, name string,
+                         isnested bool, parentnum int, depth int, indentrem float (a subsection of a
+                         flexsections course only),
                          activitycount int, hasactivities bool,
                          actions array (value, sectionid, label, tip, active),
                          rows array, each either a real activity row
@@ -138,7 +142,7 @@
 }}
 <div class="local_coursegen-template_course_sections" data-region="course-sections">
 {{#sections}}
-    <div class="tpl-section-card" data-for="section" data-id="{{id}}" data-number="{{num}}">
+    <div class="tpl-section-card" data-for="section" data-id="{{id}}" data-number="{{num}}"{{#isnested}} data-parent="{{parentnum}}" data-depth="{{depth}}" style="margin-left: {{indentrem}}rem"{{/isnested}}>
         <div class="tpl-section-header d-flex align-items-center">
             {{#hasactivities}}
             {{! A sibling of the collapse toggle, never inside it: checking

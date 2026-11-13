@@ -36,12 +36,12 @@ class create_course_service {
      * a live API connection.
      *
      * Optional overrides allow the user to modify course identity fields
-     * (fullname, shortname, category) before creation, as set via the review modal.
+     * (fullname, shortname, category, startdate) before creation, as set via the review modal.
      *
      * @param course_session $session Planning session persistent.
      * @param array $resultdata Result data from the Datacurso API (course_configuration, sections, activities).
      * @param array $overrides Optional user overrides for course fields.
-     *     Supported keys: fullname (string), shortname (string), category (int).
+     *     Supported keys: fullname (string), shortname (string), category (int), startdate (int timestamp).
      * @return array Result of the course content application. On success it also
      *     carries 'generatedcms' (payload cmid, negative for a virtual instance => created cmid), which is internal
      *     and must not be returned through a web service.
@@ -81,6 +81,9 @@ class create_course_service {
             if (!empty($overrides['category'])) {
                 $coursedata->category = (int)$overrides['category'];
             }
+            if (!empty($overrides['startdate'])) {
+                $coursedata->startdate = (int)$overrides['startdate'];
+            }
 
             $coursedata = self::ensure_unique_course_fields($coursedata);
 
@@ -102,9 +105,15 @@ class create_course_service {
 
             // Process sections if provided in the response.
             if (!empty($resultdata['sections_info'])) {
-                self::process_course_sections($course->id, $resultdata['sections_info']);
+                $sectionsinfo = $resultdata['sections_info'];
                 if ($sourcecourseid !== null) {
-                    template_section_look::apply(get_course($course->id), $resultdata['sections_info'], $sourcecourseid);
+                    $sectionsinfo = self::with_stored_structure($session, $sectionsinfo);
+                }
+                self::process_course_sections($course->id, $sectionsinfo);
+                if ($sourcecourseid !== null) {
+                    template_section_look::apply(get_course($course->id), $sectionsinfo, $sourcecourseid);
+                    // The names the AI gave are the last word on the sections' names, whatever the look touched.
+                    template_section_names::apply((int) $course->id, $sectionsinfo);
                 }
             }
 
@@ -363,6 +372,24 @@ class create_course_service {
     }
 
     /**
+     * The sections of the result, with the structure of the payload that was sent.
+     *
+     * A flexsections course made with another number of units than the
+     * template's was resized before it was sent; the structure (parents and the
+     * template section each one comes from) lives in the stored payload, not
+     * in what the service answers.
+     *
+     * @param course_session $session
+     * @param array $sectionsinfo The result's sections_info.
+     * @return array
+     */
+    private static function with_stored_structure(course_session $session, array $sectionsinfo): array {
+        $coursedata = json_decode((string) $session->get('coursedata'), true);
+        $sent = $coursedata['payload']['sections_info'] ?? [];
+        return template_unit_resizer::with_structure_of($sectionsinfo, $sent);
+    }
+
+    /**
      * Delete all course sections except section 0 and clear section 0 modules.
      *
      * @param int $courseid Course ID.
@@ -425,7 +452,7 @@ class create_course_service {
 
         foreach ($sectionsinfo as $sectioninfo) {
             $sectionnumber = (int)$sectioninfo['section'];
-            $sectionname = $sectioninfo['name'] ?? '';
+            $sectionname = template_section_names::clean_name((string)($sectioninfo['name'] ?? ''));
 
             if (isset($existingsections[$sectionnumber])) {
                 // Update existing section name.

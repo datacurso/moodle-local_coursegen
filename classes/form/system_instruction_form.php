@@ -28,6 +28,8 @@ defined('MOODLE_INTERNAL') || die();
 
 require_once($CFG->libdir . '/formslib.php');
 
+use local_coursegen\local\service\template_unit_resizer;
+
 /**
  * System instruction form class.
  */
@@ -54,6 +56,11 @@ class system_instruction_form extends \moodleform {
         );
         $mform->setType('content_editor', PARAM_RAW);
         $mform->addHelpButton('content_editor', 'systeminstructioncontent', 'local_coursegen');
+
+        // Optional number of units a template run takes from this guideline.
+        $mform->addElement('text', 'units', get_string('systeminstructionunits', 'local_coursegen'), ['size' => 4]);
+        $mform->setType('units', PARAM_RAW);
+        $mform->addHelpButton('units', 'systeminstructionunits', 'local_coursegen');
 
         // Hidden fields.
         $mform->addElement('hidden', 'id');
@@ -106,6 +113,13 @@ class system_instruction_form extends \moodleform {
             if ($DB->record_exists_sql($sql, $params)) {
                 $errors['name'] = get_string('systeminstructionnameexists', 'local_coursegen');
             }
+        }
+
+        $units = trim((string) ($data['units'] ?? ''));
+        $maxunits = template_unit_resizer::MAX_UNITS;
+        $valid = preg_match('/^\d+$/', $units) && (int) $units >= 1 && (int) $units <= $maxunits;
+        if ($units !== '' && !$valid) {
+            $errors['units'] = get_string('systeminstructionunitsinvalid', 'local_coursegen', $maxunits);
         }
 
         return $errors;

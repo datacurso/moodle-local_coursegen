@@ -477,5 +477,15 @@ function xmldb_local_coursegen_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026102637, 'local', 'coursegen');
     }
 
+    if ($oldversion < 2026111401) {
+        // A guideline can carry the number of units a template run takes; null keeps the template's own.
+        $table = new xmldb_table('local_coursegen_system_instruction');
+        $field = new xmldb_field('units', XMLDB_TYPE_INTEGER, '3', null, null, null, null, 'deleted');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+        upgrade_plugin_savepoint(true, 2026111401, 'local', 'coursegen');
+    }
+
     return true;
 }

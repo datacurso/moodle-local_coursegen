@@ -25,8 +25,11 @@ use core_availability\tree;
  * a plugin adds) is carried as Moodle carries it when a course is restored: the ids a condition holds are pointed
  * at the counterpart in the new course through the condition's own update_dependency_id. A reference that has no
  * counterpart takes the value Moodle's restore gives it (a module or grade item 0, a group or grouping -1), so the
- * restriction is shown as broken and nobody is let in by mistake. The conditions on a date are left out: a date
- * of the template means nothing for a course of another period.
+ * restriction is shown as broken and nobody is let in by mistake. The conditions on a date are moved by the same
+ * number of seconds the new course starts after (or before) the template's course, so the restriction opens at the
+ * same point of the course; only the date of the condition changes, never its operator or what it shows. When there
+ * is no usable shift (the new course has no start date to measure from) the conditions on a date are left out, as a
+ * date of the template means nothing for a course of another period.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -45,14 +48,16 @@ final class template_availability_tree {
      * @param string|null $availability The restrictions as Moodle stores them (JSON), or empty for none.
      * @param array<string,array<int,int>> $maps For each table a condition may refer to: template id => new id.
      * @param array<string,array<int,bool>> $existing For each of those tables, the ids the new course owns.
+     * @param int|null $delta Seconds to move every date condition by; 0 keeps the dates as they are and null
+     *     leaves the date conditions out.
      * @return string|null The restrictions of the new item, or null when there is none.
      */
-    public static function carry(?string $availability, array $maps, array $existing): ?string {
+    public static function carry(?string $availability, array $maps, array $existing, ?int $delta = 0): ?string {
         $structure = json_decode((string) $availability);
         if (!is_object($structure)) {
             return null;
         }
-        $structure = self::without_dates($structure);
+        $structure = ($delta === null) ? self::without_dates($structure) : self::shift_dates($structure, $delta);
         if ($structure === null) {
             return null;
         }
@@ -111,6 +116,37 @@ final class template_availability_tree {
         $set->c = $children;
         if (isset($set->showc)) {
             $set->showc = $shown;
+        }
+        return $set;
+    }
+
+    /**
+     * A set of conditions with the date of every condition on a date moved, whatever the depth of the set.
+     *
+     * Pure: the set it is given is not changed.
+     *
+     * @param \stdClass $set
+     * @param int $delta Seconds to add to each date (negative to move it earlier).
+     * @return \stdClass A copy of the set; operators and what each condition shows are as they were.
+     */
+    public static function shift_dates(\stdClass $set, int $delta): \stdClass {
+        $set = clone $set;
+        if (isset($set->c) && is_array($set->c)) {
+            $children = [];
+            foreach ($set->c as $child) {
+                if (!is_object($child)) {
+                    $children[] = $child;
+                    continue;
+                }
+                $child = clone $child;
+                if (isset($child->c)) {
+                    $child = self::shift_dates($child, $delta);
+                } else if (($child->type ?? '') === 'date' && isset($child->t)) {
+                    $child->t = (int) $child->t + $delta;
+                }
+                $children[] = $child;
+            }
+            $set->c = $children;
         }
         return $set;
     }
