@@ -41,6 +41,7 @@ import {
 import {renderStructure, wireStructureEvents} from './template/render';
 import {pickSpaceFile, removeSpaceFile, refreshGenerateState} from './template/space_files';
 import {pickSpaceActivity, removeSpaceActivity} from './template/space_activities';
+import {clearSpaceGate, missingSpaces, showSpaceGate} from './template/space_gate';
 import {formatTemplate} from './utils';
 
 // The "N sections · M activities" stats template. Fetched once and cached —
@@ -143,11 +144,33 @@ export const wireTemplateMode = (state, host) => {
         },
     });
 
-    // Generate: the button is only on while a template is loaded and every required space has its file.
+    // Generate: a required space still without its file stops it here, before the AI is asked anything; the card that
+    // says so lets the teacher bring the file, and the generation starts as soon as nothing is missing.
+    const generate = () => {
+        const missing = missingSpaces(tplState);
+        if (missing.length) {
+            showSpaceGate(missing, bringSpace);
+            return;
+        }
+        clearSpaceGate();
+        runGeneration(tplState, tplSelect, genBtn, state, host);
+    };
+    const afterBrought = async() => {
+        await rerenderStructure();
+        if (document.getElementById('cgSpaceGateCard')) {
+            generate();
+        }
+    };
+    const bringSpace = (sectionIndex, activityIndex) => {
+        const row = tplState.sections[sectionIndex]?.activities[activityIndex];
+        if (row?.spacekind === 'activity') {
+            pickSpaceActivity(tplState, sectionIndex, activityIndex, afterBrought);
+        } else {
+            pickSpaceFile(tplState, sectionIndex, activityIndex, afterBrought);
+        }
+    };
     if (genBtn) {
-        genBtn.addEventListener('click', () => {
-            runGeneration(tplState, tplSelect, genBtn, state, host);
-        });
+        genBtn.addEventListener('click', generate);
     }
 
     // Template selection — load structure.
@@ -284,6 +307,7 @@ const clearStructure = (tplState, container, state) => {
     if (genBtn) {
         genBtn.disabled = true;
     }
+    clearSpaceGate();
     const statsEl = document.getElementById('tplModeStats');
     if (statsEl) {
         statsEl.textContent = '';

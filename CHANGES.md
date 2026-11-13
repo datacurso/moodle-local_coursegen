@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10-wp] - 2026111121
+
+### Changed
+- **A required space without its file is asked for when Generate is pressed**  
+  Generate is no longer off while a required space is empty. Pressing it stops before the AI is asked anything and shows a card with what the administrator asked for and a button to upload the file (or choose the activity) from there; once nothing is missing, the generation starts by itself.
+- **For now only a file can be what the teacher brings**  
+  In the template editor, "Add activity or space" no longer offers "The teacher provides it" for the other types: what the teacher brings is a file, marked in the row of the template's file as "Space for the teacher". The spaces of other types already saved keep working.
+
 ## [2.0.10-wp] - 2026111120
 
 ### Fixed

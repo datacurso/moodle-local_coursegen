@@ -140,11 +140,13 @@ const handleHidden = (ctx) => {
  * @param {string} [options.mode] 'teacher' (the default) or 'ai' (the AI always creates the activity).
  * @param {string} [options.name] The name of an AI activity.
  * @param {boolean} [options.lockMode] Editing an existing space: the mode cannot be changed.
+ * @param {boolean} [options.teacherDisabled] The teacher cannot bring this type yet (only a file can be): the AI makes it.
  * @param {Function} options.onSave ({mode, name, required, instruction}) => void.
  * @param {Function} [options.onCancel] Called once for any non-save close.
  */
 export const openSpaceModal = async({
     subject, required, instruction, onSave, onCancel, mode = 'teacher', name = '', lockMode = false,
+    teacherDisabled = false,
 }) => {
     const modal = await getModal();
     const body = await Templates.render('local_coursegen/template_space_modal_body', {
@@ -152,8 +154,9 @@ export const openSpaceModal = async({
         requiredchecked: required,
         optionalchecked: !required,
         instruction,
-        teacherchecked: mode !== 'ai',
-        aichecked: mode === 'ai',
+        teacherchecked: mode !== 'ai' && !teacherDisabled,
+        aichecked: mode === 'ai' || teacherDisabled,
+        teacherdisabled: teacherDisabled,
         name,
         lockmode: lockMode,
     });
