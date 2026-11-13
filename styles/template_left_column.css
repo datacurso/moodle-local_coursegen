@@ -347,3 +347,11 @@ body:has(#cgNoticeDock > *) .tpl-left-panel .cg-thread-feed > .cg-log-entry--tur
   animation: none !important;
   border-top-color: hsl(10 81% 63% / .25) !important;
 }
+
+/* The mark on the icon of each activity that is being written, and the one of the thread: a plain ring, with no arc in the
+   colour of the brand that would read as a spinner that stopped. */
+body:has(#cgNoticeDock > *) :is(#prvSections, #tplModeStructure) .cg-gen-active .activity-icon::after,
+body:has(#cgNoticeDock > *) .cg-log-spin {
+  animation: none !important;
+  border-color: hsl(10 81% 63% / .3) !important;
+}
