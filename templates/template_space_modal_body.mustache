@@ -32,6 +32,7 @@
     * instruction string      - The instruction typed so far; may be empty.
     * teacherchecked bool     - Preselect "The teacher provides it".
     * aichecked bool          - Preselect "The AI always creates it".
+    * teacherdisabled bool    - The teacher cannot provide this type yet (only a file can be): the AI creates it.
     * name string             - The name the AI activity will have; may be empty.
     * lockmode bool           - Editing an existing space: the mode cannot be changed.
 
@@ -43,6 +44,7 @@
         "instruction": "",
         "teacherchecked": true,
         "aichecked": false,
+        "teacherdisabled": false,
         "name": ""
     }
 }}
@@ -51,10 +53,11 @@
     <legend class="h6">{{#str}} template_space_mode_label, local_coursegen {{/str}}</legend>
     <div class="form-check mb-2">
         <input class="form-check-input" type="radio" name="template-space-mode" data-region="local_coursegen/template/space-mode-choice"
-               id="{{uniqid}}-mode-teacher" value="teacher"{{#teacherchecked}} checked{{/teacherchecked}}>
+               id="{{uniqid}}-mode-teacher" value="teacher"{{#teacherchecked}} checked{{/teacherchecked}}{{#teacherdisabled}} disabled{{/teacherdisabled}}>
         <label class="form-check-label" for="{{uniqid}}-mode-teacher">
             <strong>{{#str}} template_space_mode_teacher, local_coursegen {{/str}}</strong>
-            <span class="d-block text-muted small">{{#str}} template_space_mode_teacher_desc, local_coursegen, {{subject}} {{/str}}</span>
+            {{^teacherdisabled}}<span class="d-block text-muted small">{{#str}} template_space_mode_teacher_desc, local_coursegen, {{subject}} {{/str}}</span>{{/teacherdisabled}}
+            {{#teacherdisabled}}<span class="d-block text-muted small">{{#str}} template_space_mode_teacher_files_only, local_coursegen {{/str}}</span>{{/teacherdisabled}}
         </label>
     </div>
     <div class="form-check">

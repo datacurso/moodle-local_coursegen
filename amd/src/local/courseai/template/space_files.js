@@ -30,7 +30,7 @@ import YUI from 'core/yui';
 import {initFilepicker} from '../../../repository/courseai';
 import {showFilePicker} from '../context/filepicker';
 import Selectors from './selectors';
-import {setSpaceFile, clearSpaceFile, hasMissingRequiredSpace} from './state';
+import {setSpaceFile, clearSpaceFile} from './state';
 
 /**
  * Whether a generation is on screen, from which on the files can no longer change.
@@ -143,10 +143,11 @@ export const removeSpaceFile = async(tplState, sectionIndex, activityIndex, onCh
 };
 
 /**
- * Let the Generate button follow the required spaces: it stays off while one has no file.
+ * Turn the Generate button on once a template is loaded.
  *
- * Nothing happens before a template is loaded, or while a generation is on
- * screen: from then on the button belongs to the review.
+ * A required space without its file does not turn it off: pressing it says what is missing and lets the teacher bring
+ * it (see space_gate). Nothing happens before a template is loaded, or while a generation is on screen: from then on
+ * the button belongs to the review.
  *
  * @param {Object} tplState
  * @param {HTMLButtonElement|null} genBtn
@@ -155,5 +156,5 @@ export const refreshGenerateState = (tplState, genBtn) => {
     if (!genBtn || !tplState.loaded || isGenerating()) {
         return;
     }
-    genBtn.disabled = hasMissingRequiredSpace(tplState);
+    genBtn.disabled = false;
 };

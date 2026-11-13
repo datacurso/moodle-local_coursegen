@@ -199,7 +199,9 @@ export const addSpace = async(item, state, markDirty) => {
         return;
     }
     const onSave = saveNewSpace.bind(null, tbody, beforeEl, picked, markDirty);
-    openSpaceModal({subject: picked.name, required: true, instruction: '', onSave});
+    // For now what the teacher brings is a file, marked in the row of the template's file: an activity added here is
+    // one the AI makes.
+    openSpaceModal({subject: picked.name, required: true, instruction: '', onSave, mode: 'ai', teacherDisabled: true});
 };
 
 /**
