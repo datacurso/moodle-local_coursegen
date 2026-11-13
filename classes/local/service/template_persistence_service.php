@@ -149,11 +149,11 @@ class template_persistence_service {
         $act->set('cmid', $actdata['cmid']);
         $act->set('action', $actdata['action']);
         $act->set('useasreference', (int) $actdata['useasreference']);
-        $templatescope = self::normalise_scope($actdata['templatescope']);
+        $templatescope = self::normalise_scope((string) ($actdata['templatescope'] ?? ''));
         $act->set('templatescope', $templatescope);
-        $act->set('prompt', $actdata['prompt']);
-        $act->set('spacerequired', (int) $actdata['spacerequired']);
-        $instruction = self::space_instruction($actdata['spaceinstruction']);
+        $act->set('prompt', $actdata['prompt'] ?? '');
+        $act->set('spacerequired', (int) ($actdata['spacerequired'] ?? 0));
+        $instruction = self::space_instruction((string) ($actdata['spaceinstruction'] ?? ''));
         $act->set('spaceinstruction', $instruction);
         $act->create();
     }

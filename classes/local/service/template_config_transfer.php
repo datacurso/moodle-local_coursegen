@@ -78,8 +78,10 @@ final class template_config_transfer {
                 'key' => $key((int) $row->cmid),
                 'action' => $row->action,
                 'useasreference' => (int) $row->useasreference,
-                'templatescope' => $row->templatescope,
+                'templatescope' => (string) $row->templatescope,
                 'prompt' => (string) $row->prompt,
+                'spacerequired' => (int) ($row->spacerequired ?? 0),
+                'spaceinstruction' => (string) ($row->spaceinstruction ?? ''),
             ];
         }
         foreach ($DB->get_records('local_coursegen_tpl_instance', $params, 'sectionid, sortorder, id') as $row) {
@@ -253,9 +255,12 @@ final class template_config_transfer {
             $sections[(int) $row['section']]['activities'][] = [
                 'cmid' => $cmid($row['key']),
                 'action' => $row['action'],
-                'useasreference' => $row['useasreference'],
-                'templatescope' => $row['templatescope'],
-                'prompt' => $row['prompt'],
+                'useasreference' => (int) ($row['useasreference'] ?? 1),
+                // A file exported before these fields existed, or from a template without them, still imports.
+                'templatescope' => (string) ($row['templatescope'] ?? ''),
+                'prompt' => (string) ($row['prompt'] ?? ''),
+                'spacerequired' => (int) ($row['spacerequired'] ?? 0),
+                'spaceinstruction' => (string) ($row['spaceinstruction'] ?? ''),
             ];
         }
         foreach ($data['instances'] as $row) {

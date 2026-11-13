@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026110935
+
+### Fixed
+- **The list of the teacher's activities opens**  
+  "Choose activity" in a space failed with an error because the service that lists the activities did not load the library of external functions. It now opens the list.
+- **A template configuration from another site imports**  
+  A file exported where the scope of the activities was empty, or without the fields of the spaces, stopped the import with an error. The empty fields now take their default, so the file imports; the export writes the fields of the spaces too.
+
 ## [2.0.10] - 2026110933
 
 ### Added
