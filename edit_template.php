@@ -64,6 +64,8 @@ if ($id > 0) {
             'useasreference' => (bool) $record->get('useasreference'),
             'prompt' => (string) $record->get('prompt'),
             'templatescope' => (string) $record->get('templatescope'),
+            'spacerequired' => (bool) $record->get('spacerequired'),
+            'spaceinstruction' => (string) $record->get('spaceinstruction'),
         ];
     }
 }
