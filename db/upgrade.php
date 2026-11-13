@@ -633,6 +633,7 @@ function xmldb_local_coursegen_upgrade($oldversion) {
 
         // Coursegen savepoint reached.
         upgrade_plugin_savepoint(true, 2026111101, 'local', 'coursegen');
+    }
 
     if ($oldversion < 2026111119) {
         // A file resource of a template can again be a space the teacher fills with a file.
