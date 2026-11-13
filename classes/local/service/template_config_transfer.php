@@ -80,6 +80,8 @@ final class template_config_transfer {
                 'useasreference' => (int) $row->useasreference,
                 'templatescope' => (string) $row->templatescope,
                 'prompt' => (string) $row->prompt,
+                'spacerequired' => (int) ($row->spacerequired ?? 0),
+                'spaceinstruction' => (string) ($row->spaceinstruction ?? ''),
             ];
         }
         foreach ($DB->get_records('local_coursegen_tpl_instance', $params, 'sectionid, sortorder, id') as $row) {
@@ -254,9 +256,11 @@ final class template_config_transfer {
                 'cmid' => $cmid($row['key']),
                 'action' => $row['action'],
                 'useasreference' => (int) ($row['useasreference'] ?? 1),
-                // A file from a site where these fields are empty, or from an older version, still imports.
+                // A file exported before these fields existed, or from a template without them, still imports.
                 'templatescope' => (string) ($row['templatescope'] ?? ''),
                 'prompt' => (string) ($row['prompt'] ?? ''),
+                'spacerequired' => (int) ($row['spacerequired'] ?? 0),
+                'spaceinstruction' => (string) ($row['spaceinstruction'] ?? ''),
             ];
         }
         foreach ($data['instances'] as $row) {
