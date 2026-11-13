@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10-wp] - 2026111123
+
+### Changed
+- **The file the teacher uploads is one more row of the list**  
+  In the structure of the course, the space is no longer a card of its own: it is a row like the others, with the icon and name of the file, the badge "Your contribution · Required" in the style of "AI will generate it", what the administrator asked for as its description, and the upload as a button of the row.
+
 ## [2.0.10-wp] - 2026111122
 
 ### Changed

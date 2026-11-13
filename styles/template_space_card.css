@@ -249,11 +249,20 @@
     opacity: 0.6;
 }
 
-/* The space sits as its own card: no dashed row separator above it, and no row hover. */
-#tplModeStructure .course-section .section .cg-space-item {
-    border-top: 0;
-    margin-top: 12px;
-    padding-top: 0;
+/* The file the teacher uploads is one more row of the list: the row buttons are the ones of the other rows, and the
+   name of the uploaded file sits under the description with the icon of a file. */
+#tplModeStructure .cg-space-row .cg-space-file {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+#tplModeStructure .cg-space-row .cg-space-file .icon {
+    margin: 0;
+}
+
+#tplModeStructure .cg-space-row .cg-space-action {
+    cursor: pointer;
 }
 
 @media (max-width: 575.98px) {
