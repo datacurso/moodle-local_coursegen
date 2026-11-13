@@ -477,7 +477,7 @@ function xmldb_local_coursegen_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026102637, 'local', 'coursegen');
     }
 
-    if ($oldversion < 2026110932) {
+    if ($oldversion < 2026110935) {
         // A file resource of a template can again be a space the teacher fills with a file.
         $table = new xmldb_table('local_coursegen_tpl_activity');
         $field = new xmldb_field('spacerequired', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '1', 'prompt');
@@ -488,7 +488,7 @@ function xmldb_local_coursegen_upgrade($oldversion) {
         if (!$dbman->field_exists($table, $field)) {
             $dbman->add_field($table, $field);
         }
-        upgrade_plugin_savepoint(true, 2026110932, 'local', 'coursegen');
+        upgrade_plugin_savepoint(true, 2026110935, 'local', 'coursegen');
     }
 
     return true;

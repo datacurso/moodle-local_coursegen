@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026110935
+
+### Fixed
+- **The plugin installs without a debugging message**  
+  The `uid` columns of the instances and the spaces declared an empty default, which Moodle reports while it installs the plugin (and the CI stops on it). They no longer declare one.
+- **The list of the teacher's activities opens**  
+  "Choose activity" in a space failed with an error because the service that lists the activities did not load the library of external functions. It now opens the list.
+- **A template configuration from another site imports**  
+  A file exported where the scope of the activities was empty, or without the fields of the spaces, stopped the import with an error. The empty fields now take their default, so the file imports; the export writes the fields of the spaces too.
+
+### Added
+- **The teacher fills the spaces of a template with one of their own activities**  
+  A space added to a template with "Add activity or space" (a quiz, a file, any type) now reaches the creation screen: it shows as a card where the teacher picks one of their activities of that type, from the courses where they can copy activities. Generate stays off while a required space has none, the choice is checked again when the generation starts, and the activity is copied into the new course in the place of the space. Before, these spaces were saved in the template but the creation screen never read them.
+
+### Added
+- **A file of a template can again be a space the teacher fills**  
+  The space for the teacher's file comes back as it worked before it was removed: in the editor a file resource can be marked as a space, required or optional, with instructions for the teacher; the creation screen shows it as a card where the teacher uploads the file, Generate stays off while a required one is empty, and the file is placed in the new course where the template has it.
+
 ## [2.0.10] - 2026110934
 
 ### Fixed

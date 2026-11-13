@@ -149,7 +149,7 @@
         <TABLE NAME="local_coursegen_tpl_instance" COMMENT="Virtual activities generated from a template mold, saved with a template">
             <FIELDS>
                 <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true" />
-                <FIELD NAME="uid" TYPE="char" LENGTH="36" NOTNULL="true" DEFAULT="" SEQUENCE="false" COMMENT="UUID v4 naming this instance in the generation payload and in the AI answer; an instance has no course module, so this is the only id it has" />
+                <FIELD NAME="uid" TYPE="char" LENGTH="36" NOTNULL="true" SEQUENCE="false" COMMENT="UUID v4 naming this instance in the generation payload and in the AI answer; an instance has no course module, so this is the only id it has" />
                 <FIELD NAME="templateid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
                 <FIELD NAME="sectionid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
                 <FIELD NAME="sourcecmid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="cmid of the action=template activity this instance was created from" />
@@ -173,7 +173,7 @@
         <TABLE NAME="local_coursegen_tpl_space" COMMENT="Spaces the professor must or may fill with an activity of their own, saved with a template">
             <FIELDS>
                 <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true" />
-                <FIELD NAME="uid" TYPE="char" LENGTH="36" NOTNULL="true" DEFAULT="" SEQUENCE="false" COMMENT="UUID v4 naming this space; a space has no course module, so this is the only id it has" />
+                <FIELD NAME="uid" TYPE="char" LENGTH="36" NOTNULL="true" SEQUENCE="false" COMMENT="UUID v4 naming this space; a space has no course module, so this is the only id it has" />
                 <FIELD NAME="templateid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
                 <FIELD NAME="sectionid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
                 <FIELD NAME="modname" TYPE="char" LENGTH="100" NOTNULL="true" SEQUENCE="false" COMMENT="Module type of the activity the professor provides (e.g. resource)" />
