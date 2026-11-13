@@ -136,7 +136,7 @@
                  data-action="local_coursegen/template/pick-space-file"
                  data-label-busy="{{#str}}courseai_template_space_uploading, local_coursegen{{/str}}"
                  data-section-index="{{sectionindex}}" data-activity-index="{{index}}"
-                 title="{{#hasspacefile}}{{#str}}courseai_template_space_change, local_coursegen{{/str}}{{/hasspacefile}}{{^hasspacefile}}{{#str}}courseai_template_space_upload, local_coursegen{{/str}}{{/hasspacefile}}">
+                 aria-label="{{name}}: {{#hasspacefile}}{{#str}}courseai_template_space_change, local_coursegen{{/str}}{{/hasspacefile}}{{^hasspacefile}}{{#str}}courseai_template_space_upload, local_coursegen{{/str}}{{/hasspacefile}}">
               <div class="activity-grid">
                 <div class="activity-icon activityiconcontainer smaller {{purpose}} courseicon align-self-start me-2">
                   {{{iconhtml}}}
@@ -172,7 +172,7 @@
                   <span class="dp-action-btn cg-space-action" role="button" tabindex="0"
                         data-action="local_coursegen/template/remove-space-file"
                         data-section-index="{{sectionindex}}" data-activity-index="{{index}}"
-                        title="{{#str}}courseai_template_space_remove, local_coursegen{{/str}}">
+                        aria-label="{{#str}}courseai_template_space_remove, local_coursegen{{/str}}">
                     {{#pix}} t/delete, core {{/pix}}
                     <span class="sr-only">{{#str}}courseai_template_space_remove, local_coursegen{{/str}}</span>
                   </span>

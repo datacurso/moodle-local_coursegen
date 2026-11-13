@@ -265,8 +265,16 @@
     cursor: pointer;
 }
 
-#tplModeStructure .cg-space-row:hover {
-    filter: brightness(.985);
+/* The hover of the other rows (a shade on the background, aicoursecreation.css), one step stronger in the card's own
+   colour. */
+#tplModeStructure .activity:not(.is-locked) .activity-item.cg-space-row:hover {
+    background: hsl(215 25% 93%);
+    border-radius: 12px;
+}
+
+#tplModeStructure .activity:not(.is-locked) .activity-item.cg-space-row--empty:hover {
+    border-color: hsl(10 81% 63% / .7);
+    background: hsl(10 81% 63% / .11);
 }
 
 #tplModeStructure .cg-space-row:focus-visible {
