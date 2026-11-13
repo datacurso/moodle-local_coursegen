@@ -29,6 +29,8 @@
 export default {
     actions: {
         toggleSection: '[data-action="local_coursegen/template/toggle-section"]',
+        pickSpaceFile: '[data-action="local_coursegen/template/pick-space-file"]',
+        removeSpaceFile: '[data-action="local_coursegen/template/remove-space-file"]',
     },
     classes: {
         generating: 'cg-generating',
@@ -36,5 +38,6 @@ export default {
     },
     regions: {
         generationNotices: '[data-region="local_coursegen/template/generation-notices"]',
+        spaceButtonLabel: '[data-region="local_coursegen/template/space-button-label"]',
     },
 };

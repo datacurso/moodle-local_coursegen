@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026110932
+
+### Added
+- **A file of a template can again be a space the teacher fills**  
+  The space for the teacher's file comes back as it worked before it was removed: in the editor a file resource can be marked as a space, required or optional, with instructions for the teacher; the creation screen shows it as a card where the teacher uploads the file, Generate stays off while a required one is empty, and the file is placed in the new course where the template has it.
+
 ## [2.0.10] - 2026110931
 
 ### Fixed

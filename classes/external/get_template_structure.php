@@ -55,7 +55,7 @@ class get_template_structure extends external_api {
     }
 
     /**
-     * Return the template's structure and locked state.
+     * Return the template's structure, locked state and spaces.
      *
      * @param int $templateid Template ID.
      * @return array

@@ -103,6 +103,8 @@ const buildActivityPayload = (state, activity) => {
         useasreference: state.activityRef[id],
         prompt: state.activityPrompt[id],
         templatescope: state.activityScope[id],
+        spacerequired: state.activitySpace[id].required,
+        spaceinstruction: state.activitySpace[id].instruction,
     };
 };
 
