@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026110942
+
+### Changed
+- **The whole card of the teacher's file opens the file picker**  
+  A click anywhere on the card, or Enter on it, opens the file picker; only "Remove file" inside it does something else.
+
 ## [2.0.10] - 2026110941
 
 ### Changed

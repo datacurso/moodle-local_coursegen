@@ -185,17 +185,19 @@ export const wireStructureEvents = (container, handlers) => {
             return;
         }
 
+        // "Remove" sits inside the card, which as a whole opens the file picker: it is looked for first.
+        const removeEl = event.target.closest(Selectors.actions.removeSpaceFile);
+        if (removeEl) {
+            event.preventDefault();
+            event.stopPropagation();
+            handlers.onRemoveSpaceFile(...positionOf(removeEl));
+            return;
+        }
+
         const pickEl = event.target.closest(Selectors.actions.pickSpaceFile);
         if (pickEl) {
             event.preventDefault();
             handlers.onPickSpaceFile(...positionOf(pickEl));
-            return;
-        }
-
-        const removeEl = event.target.closest(Selectors.actions.removeSpaceFile);
-        if (removeEl) {
-            event.preventDefault();
-            handlers.onRemoveSpaceFile(...positionOf(removeEl));
             return;
         }
 
@@ -210,6 +212,18 @@ export const wireStructureEvents = (container, handlers) => {
         if (dropEl) {
             event.preventDefault();
             handlers.onRemoveSpaceActivity(...positionOf(dropEl));
+        }
+    });
+
+    // The card of a space and its buttons are not <button> elements: Enter and Space press them as a click would.
+    container.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter' && event.key !== ' ') {
+            return;
+        }
+        const pressed = event.target.closest('[role="button"][data-action]');
+        if (pressed && pressed === event.target) {
+            event.preventDefault();
+            pressed.click();
         }
     });
 };
