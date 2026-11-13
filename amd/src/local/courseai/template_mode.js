@@ -162,12 +162,7 @@ export const wireTemplateMode = (state, host) => {
         }
     };
     const bringSpace = (sectionIndex, activityIndex) => {
-        const row = tplState.sections[sectionIndex]?.activities[activityIndex];
-        if (row?.spacekind === 'activity') {
-            pickSpaceActivity(tplState, sectionIndex, activityIndex, afterBrought);
-        } else {
-            pickSpaceFile(tplState, sectionIndex, activityIndex, afterBrought);
-        }
+        pickSpaceFile(tplState, sectionIndex, activityIndex, afterBrought);
     };
     if (genBtn) {
         genBtn.addEventListener('click', generate);
