@@ -55,58 +55,69 @@ export const clearSpaceGate = () => {
 };
 
 /**
- * One question of the card: what the administrator asked for, and the button that uploads the file.
+ * How many required spaces the template has, filled or not: the count the title of the card says.
  *
- * The markup is the one of the questions the AI asks (a file question), so the card reads like them.
+ * @param {Object} tplState
+ * @returns {number}
+ */
+export const requiredSpaceCount = (tplState) => (tplState.sections || [])
+    .reduce((count, section) => count + (section.activities || [])
+        .filter((activity) => activity.isspace && activity.spacerequired).length, 0);
+
+/**
+ * One line of the list: what the administrator asked for (and the file of the template), and the button that uploads
+ * the file. Pressing the text shows the card of the file in the structure.
  *
  * @param {Object} entry {sectionIndex, activityIndex, activity}.
  * @param {string} upload The text of the button.
- * @param {Function} onBring Called with (sectionIndex, activityIndex) when the button is pressed.
+ * @param {Object} actions {onBring, onReveal}, each called with (sectionIndex, activityIndex).
  * @returns {HTMLElement}
  */
-const questionOf = (entry, upload, onBring) => {
+const itemOf = (entry, upload, actions) => {
     const {activity} = entry;
-    const block = document.createElement('fieldset');
-    block.className = 'cg-question';
-    const prompt = document.createElement('legend');
+    const item = document.createElement('li');
+    item.className = 'cg-space-gate-item';
+    const what = document.createElement('button');
+    what.type = 'button';
+    what.className = 'cg-space-gate-what';
+    const prompt = document.createElement('span');
     prompt.className = 'cg-question-prompt';
     prompt.textContent = String(activity.spaceinstruction || '').trim() || activity.name || '';
-    block.append(prompt);
+    what.append(prompt);
     if (activity.spaceinstruction && activity.name) {
         const hint = document.createElement('span');
         hint.className = 'cg-question-hint';
         hint.textContent = activity.name;
-        block.append(hint);
+        what.append(hint);
     }
-    const group = document.createElement('div');
-    group.className = 'cg-question-file';
+    what.addEventListener('click', () => actions.onReveal(entry.sectionIndex, entry.activityIndex));
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'btn btn-sm btn-outline-secondary';
     button.textContent = upload;
-    button.addEventListener('click', () => onBring(entry.sectionIndex, entry.activityIndex));
-    group.append(button);
-    block.append(group);
-    return block;
+    button.addEventListener('click', () => actions.onBring(entry.sectionIndex, entry.activityIndex));
+    item.append(what, button);
+    return item;
 };
 
 /**
  * Show the card for the files that are missing (it replaces the one shown before).
  *
  * @param {Object[]} missing What {@see missingSpaces} returned.
- * @param {Function} onBring Called with (sectionIndex, activityIndex) to upload the file of a space.
+ * @param {number} total How many required files the template asks for.
+ * @param {Object} actions {onBring, onReveal}: upload the file of a space, or show its card in the structure.
  * @returns {Promise<void>}
  */
-export const showSpaceGate = async(missing, onBring) => {
+export const showSpaceGate = async(missing, total, actions) => {
+    const titleKey = total > 1 ? 'courseai_template_space_gate_title_many' : 'courseai_template_space_gate_title';
     const [title, upload] = await getStrings([
-        {key: missing.length === 1 ? 'courseai_template_space_gate_title' : 'courseai_template_space_gate_title_many',
-            component: 'local_coursegen'},
+        {key: titleKey, component: 'local_coursegen', param: {missing: missing.length, total}},
         {key: 'courseai_template_space_gate_upload', component: 'local_coursegen'},
     ]);
     clearSpaceGate();
     const card = document.createElement('div');
     card.id = CARD_ID;
-    card.className = 'cg-log-entry cg-log-entry--ai cg-log-entry--turn-ai cg-question-card';
+    card.className = 'cg-log-entry cg-log-entry--ai cg-log-entry--turn-ai cg-question-card cg-space-gate';
     card.setAttribute('role', 'group');
     card.setAttribute('aria-label', title);
     const bar = document.createElement('span');
@@ -119,7 +130,10 @@ export const showSpaceGate = async(missing, onBring) => {
     const heading = document.createElement('strong');
     heading.className = 'd-block mb-2';
     heading.textContent = title;
-    message.append(heading, ...missing.map((entry) => questionOf(entry, upload, onBring)));
+    const list = document.createElement('ul');
+    list.className = 'cg-space-gate-list';
+    list.append(...missing.map((entry) => itemOf(entry, upload, actions)));
+    message.append(heading, list);
     body.append(message);
     card.append(bar, body);
     const host = document.getElementById('cgNoticeDock') || document.body;
