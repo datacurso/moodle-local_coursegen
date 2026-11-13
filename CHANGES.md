@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026110933
+
+### Added
+- **The teacher fills the spaces of a template with one of their own activities**  
+  A space added to a template with "Add activity or space" (a quiz, a file, any type) now reaches the creation screen: it shows as a card where the teacher picks one of their activities of that type, from the courses where they can copy activities. Generate stays off while a required space has none, the choice is checked again when the generation starts, and the activity is copied into the new course in the place of the space. Before, these spaces were saved in the template but the creation screen never read them.
+
 ## [2.0.10] - 2026110932
 
 ### Added

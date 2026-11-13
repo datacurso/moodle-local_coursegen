@@ -44,6 +44,7 @@ use local_coursegen\local\service\template_keep_copier;
 use local_coursegen\local\service\template_run_history;
 use local_coursegen\local\service\template_settings_copier;
 use local_coursegen\local\service\template_syllabus_linker;
+use local_coursegen\local\space\activity_spaces;
 use local_coursegen\local\space\file_spaces;
 use local_coursegen\local\space\space_file_storage;
 use local_coursegen\local\space\space_resource_file;
@@ -200,9 +201,10 @@ class finish_template_generation extends external_api {
             template_keep_copier::copy_into($templateid, $courseid, $keptcms, $selection->filled_cmids());
         }
         self::place_space_files($session, $selection, $keptcms);
+        $spacecms = self::place_space_activities($session, $templateid, $courseid);
         $generatedcms = $created['generatedcms'] ?? [];
         $report('arrange');
-        self::arrange_course($templateid, $courseid, $generatedactivities, $generatedcms, $keptcms);
+        self::arrange_course($templateid, $courseid, $generatedactivities, $generatedcms, $keptcms, $spacecms);
         self::resolve_activity_links($session, $courseid, $generatedactivities, $generatedcms, $keptcms);
         if ($courseid > 0) {
             template_syllabus_linker::apply(
@@ -222,6 +224,23 @@ class finish_template_generation extends external_api {
         space_file_storage::delete_session((int) $session->get('userid'), (int) $session->get('id'));
 
         return self::created_response($courseid, $CFG->wwwroot);
+    }
+
+    /**
+     * Copy into the new course the activities the teacher brought to the spaces of the template.
+     *
+     * @param course_session $session
+     * @param int|null $templateid
+     * @param int $courseid
+     * @return array Space uid => cmid of the copy in the new course.
+     */
+    private static function place_space_activities(course_session $session, ?int $templateid, int $courseid): array {
+        if ($templateid === null || $templateid <= 0 || $courseid <= 0) {
+            return [];
+        }
+        $coursedata = json_decode((string) $session->get('coursedata'), true);
+        $chosen = (array) ($coursedata['space_activities'] ?? []);
+        return activity_spaces::place($templateid, $courseid, $chosen);
     }
 
     /**
@@ -278,19 +297,21 @@ class finish_template_generation extends external_api {
      * @param array $payloadactivities Every activity entry of the result, kept ones included.
      * @param array $generatedcms Payload cmid => created cmid, for the generated activities.
      * @param array $keptcms Payload cmid => created cmid, for the copied kept activities.
+     * @param array $spacecms Space uid => cmid of the activity the teacher brought, in the new course.
      */
     private static function arrange_course(
         ?int $templateid,
         int $courseid,
         array $payloadactivities,
         array $generatedcms,
-        array $keptcms
+        array $keptcms,
+        array $spacecms = []
     ): void {
         if ($courseid <= 0 || $templateid === null || $templateid <= 0) {
             return;
         }
         kept_link_rewriter::rewrite_for_course($courseid, $payloadactivities, $generatedcms, $keptcms);
-        template_course_order::apply($templateid, $courseid, $payloadactivities, $generatedcms, $keptcms);
+        template_course_order::apply($templateid, $courseid, $payloadactivities, $generatedcms, $keptcms, $spacecms);
         template_settings_copier::copy_into($templateid, $courseid, $payloadactivities, $generatedcms, $keptcms);
     }
 

@@ -45,9 +45,12 @@ export const getTemplateStructure = (templateId) => fetchMany([{
  * @param {string} lang Language the professor picked for the course, empty for the template's own.
  * @param {boolean} withImages Whether the professor asked for the images to be generated.
  * @param {Object[]} spaceFiles The file of each space: {cmid, draftitemid}.
+ * @param {Object[]} spaceActivities The activity the teacher brings to each space: {uid, cmid}.
  * @returns {Promise<Object>} {threadid, sessionid, streamurl}
  */
-export const startTemplateGeneration = (templateId, prompt, draftItemId, lang, withImages, spaceFiles) => fetchMany([{
+export const startTemplateGeneration = (
+    templateId, prompt, draftItemId, lang, withImages, spaceFiles, spaceActivities
+) => fetchMany([{
     methodname: 'local_coursegen_start_template_generation',
     args: {
         templateid: templateId,
@@ -56,6 +59,7 @@ export const startTemplateGeneration = (templateId, prompt, draftItemId, lang, w
         lang: lang || '',
         withimages: Boolean(withImages),
         spacefiles: spaceFiles || [],
+        spaceactivities: spaceActivities || [],
     },
 }])[0];
 

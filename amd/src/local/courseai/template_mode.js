@@ -40,6 +40,7 @@ import {
 } from './template/state';
 import {renderStructure, wireStructureEvents} from './template/render';
 import {pickSpaceFile, removeSpaceFile, refreshGenerateState} from './template/space_files';
+import {pickSpaceActivity, removeSpaceActivity} from './template/space_activities';
 import {formatTemplate} from './utils';
 
 // The "N sections · M activities" stats template. Fetched once and cached —
@@ -133,6 +134,12 @@ export const wireTemplateMode = (state, host) => {
         },
         onRemoveSpaceFile: (sectionIndex, activityIndex) => {
             removeSpaceFile(tplState, sectionIndex, activityIndex, rerenderStructure);
+        },
+        onPickSpaceActivity: (sectionIndex, activityIndex) => {
+            pickSpaceActivity(tplState, sectionIndex, activityIndex, rerenderStructure);
+        },
+        onRemoveSpaceActivity: (sectionIndex, activityIndex) => {
+            removeSpaceActivity(tplState, sectionIndex, activityIndex, rerenderStructure);
         },
     });
 

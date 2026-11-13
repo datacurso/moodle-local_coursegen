@@ -206,6 +206,29 @@ class template_keep_copier {
     }
 
     /**
+     * Copy one activity of any course into a course, in the section of a given number.
+     *
+     * Used for the activities a teacher brings to the spaces of a template.
+     *
+     * @param \cm_info $cm The activity to copy.
+     * @param int $courseid The course it is copied into.
+     * @param int $sectionnumber The section it lands in; the first one when the course has no such section.
+     * @return int|null The cmid of the copy, or null when the copy failed.
+     */
+    public static function copy_activity(\cm_info $cm, int $courseid, int $sectionnumber): ?int {
+        global $CFG;
+        require_once($CFG->dirroot . '/course/lib.php');
+
+        $targetcourse = get_course($courseid);
+        $sectionids = self::target_section_ids($targetcourse);
+        $sectionid = $sectionids[$sectionnumber] ?? ($sectionids[0] ?? 0);
+        if ($sectionid <= 0) {
+            return null;
+        }
+        return self::copy_one($cm, $targetcourse, $sectionid);
+    }
+
+    /**
      * Duplicate one activity into the target course, in the matching section.
      *
      * @param \cm_info $cm Source activity, from the base course.

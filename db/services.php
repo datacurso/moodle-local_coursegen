@@ -221,6 +221,15 @@ $functions = [
         'capabilities' => 'local/coursegen:createtemplatecoursewithai',
         'loginrequired' => true,
     ],
+    'local_coursegen_get_space_candidates' => [
+        'classname' => 'local_coursegen\\external\\get_space_candidates',
+        'methodname' => 'execute',
+        'description' => 'The activities of a type the teacher can bring to a space of a template',
+        'type' => 'read',
+        'ajax' => true,
+        'capabilities' => 'local/coursegen:createtemplatecoursewithai',
+        'loginrequired' => true,
+    ],
     'local_coursegen_template_review_feedback' => [
         'classname' => 'local_coursegen\\external\\template_review_feedback',
         'methodname' => 'execute',
