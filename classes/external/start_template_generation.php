@@ -34,9 +34,10 @@ use local_coursegen\local\models\course_session;
 use local_coursegen\local\service\course_session_service;
 use local_coursegen\local\service\template_ai_api_service;
 use local_coursegen\local\service\template_course_image_slots;
-use local_coursegen\local\space\space_files_request;
 use local_coursegen\local\service\template_export_service;
 use local_coursegen\local\service\template_reference_uploads;
+use local_coursegen\local\space\activity_spaces;
+use local_coursegen\local\space\space_files_request;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -72,6 +73,15 @@ class start_template_generation extends external_api {
                 VALUE_DEFAULT,
                 []
             ),
+            'spaceactivities' => new external_multiple_structure(
+                new external_single_structure([
+                    'uid' => new external_value(PARAM_ALPHANUMEXT, 'Uid of the space of the template'),
+                    'cmid' => new external_value(PARAM_INT, 'Course module id of the activity the teacher brings'),
+                ]),
+                'The activities the teacher brings to the spaces of the template',
+                VALUE_DEFAULT,
+                []
+            ),
         ]);
     }
 
@@ -84,9 +94,11 @@ class start_template_generation extends external_api {
      * @param string $lang
      * @param bool $withimages
      * @param array $spacefiles Each: cmid, draftitemid.
+     * @param array $spaceactivities Each: uid (of the space), cmid (of the activity).
      * @return array
      */
-    public static function execute($templateid, $prompt = '', $draftitemid = 0, $lang = '', $withimages = false, $spacefiles = []) {
+    public static function execute($templateid, $prompt = '', $draftitemid = 0, $lang = '', $withimages = false, $spacefiles = [],
+            $spaceactivities = []) {
         global $USER;
 
         $params = self::validate_parameters(self::execute_parameters(), [
@@ -96,6 +108,7 @@ class start_template_generation extends external_api {
             'lang' => $lang,
             'withimages' => $withimages,
             'spacefiles' => $spacefiles,
+            'spaceactivities' => $spaceactivities,
         ]);
 
         $context = context_system::instance();
@@ -106,6 +119,8 @@ class start_template_generation extends external_api {
         }
         // Refused before anything is sent: a space that is not the template's, or a required one with no file.
         $spaces = space_files_request::validated($params['templateid'], (int) $USER->id, $params['spacefiles']);
+        // The same for the activities the teacher brings to the spaces: each one fits its space, none is missing.
+        $spaceactivities = activity_spaces::validated($params['templateid'], (int) $USER->id, $params['spaceactivities']);
 
         if ($params['withimages']) {
             require_capability('local/coursegen:generatecourseimages', $context);
@@ -142,6 +157,8 @@ class start_template_generation extends external_api {
             'templateid' => $params['templateid'],
             'payload' => $payload,
             'syllabus' => $file !== null ? $file->get_filename() : '',
+            // Copied into the course when it is created, each in the place of its space.
+            'space_activities' => $spaceactivities,
         ];
         $session = new course_session(0, (object) [
             'userid' => (int) $USER->id,

@@ -20,6 +20,7 @@ use local_coursegen\local\models\template;
 use local_coursegen\local\models\template_activity;
 use local_coursegen\local\models\template_instance;
 use local_coursegen\local\models\template_section;
+use local_coursegen\local\models\template_space;
 use local_coursegen\local\service\template_export_uids;
 use local_coursegen\local\service\template_instance_layout;
 use local_coursegen\local\space\space_rules;
@@ -83,7 +84,11 @@ trait get_template_structure_rows {
     private static function instances_by_section(template $template): array {
         $instancesbysection = [];
         $templateid = $template->get('id');
-        $records = template_instance::get_records(['templateid' => $templateid]);
+        // The spaces the teacher fills share the anchors of the instances, so both are placed by the same rule.
+        $records = array_merge(
+            template_instance::get_records(['templateid' => $templateid]),
+            template_space::get_records(['templateid' => $templateid])
+        );
         foreach ($records as $instance) {
             $sectionid = $instance->get('sectionid');
             $instancesbysection[$sectionid][] = $instance;
@@ -185,6 +190,9 @@ trait get_template_structure_rows {
         if ($row['type'] === template_instance_layout::TYPE_INSTANCE) {
             return self::instance_row($row['record']);
         }
+        if ($row['type'] === template_instance_layout::TYPE_SPACE) {
+            return self::activity_space_row($row['record'], $output);
+        }
         $cm = $modinfo->cms[$row['cmid']];
         if (!$cm->uservisible) {
             return null;
@@ -225,16 +233,50 @@ trait get_template_structure_rows {
      * @return array
      */
     private static function space_fields(bool $isspace, array $saved = []): array {
-        $fields = ['isspace' => false, 'spaceinstruction' => '', 'spacerequired' => false];
+        $fields = ['isspace' => false, 'spacekind' => '', 'spaceinstruction' => '', 'spacerequired' => false];
         if (!$isspace) {
             return $fields;
         }
         $instruction = $saved['instruction'] ?? '';
         $required = $saved['required'] ?? false;
         $fields['isspace'] = true;
+        $fields['spacekind'] = 'file';
         $fields['spaceinstruction'] = format_string($instruction);
         $fields['spacerequired'] = (bool) $required;
         return $fields;
+    }
+
+    /**
+     * One space of the template the teacher fills with one of their own activities.
+     *
+     * Its id is the space's uid: the activity the teacher picks is sent back under it.
+     *
+     * @param template_space $space
+     * @param \renderer_base $output
+     * @return array
+     */
+    private static function activity_space_row(template_space $space, $output): array {
+        $modname = (string) $space->get('modname');
+        $typelabel = get_string_manager()->string_exists('modulename', 'mod_' . $modname)
+            ? get_string('modulename', 'mod_' . $modname)
+            : $modname;
+        return [
+            'id' => (string) $space->get('uid'),
+            'name' => $typelabel,
+            'modname' => $modname,
+            'purpose' => self::get_purpose($modname),
+            'typelabel' => $typelabel,
+            'iconhtml' => $output->image_icon('monologo', $modname, 'mod_' . $modname, ['class' => 'icon activityicon']),
+            'locked' => true,
+            'action' => '',
+            'isinstance' => false,
+            'aigenerated' => false,
+            'generationuid' => '',
+            'isspace' => true,
+            'spacekind' => 'activity',
+            'spaceinstruction' => format_string((string) $space->get('instruction')),
+            'spacerequired' => (int) $space->get('required') === 1,
+        ];
     }
 
     /**

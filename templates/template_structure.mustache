@@ -57,8 +57,10 @@
           event and its own preview answer to), sectionindex int, index int,
           typelabel string (optional), isspace bool, spaceinstruction string,
           hasspaceinstruction bool, spacerequired bool, spacemissing bool
-          (required and still without a file), hasspacefile bool,
-          spacefilename string
+          (required and still without its file or activity), hasspacefile bool
+          (the space has its file or activity), spacefilename string (the file, or
+          the activity with its course), isactivityspace bool (the teacher brings
+          one of their own activities instead of a file)
 
     Example context (json):
     {
@@ -129,7 +131,7 @@
             <div class="cg-space-card{{#spacerequired}} cg-space-card--required{{/spacerequired}}{{#hasspacefile}} cg-space-card--done{{/hasspacefile}}{{#spacemissing}} cg-space-card--empty{{/spacemissing}}"
                  data-region="local_coursegen/template/space-card">
               <span class="cg-space-card__icon" aria-hidden="true">
-                {{#hasspacefile}}{{#pix}} i/checked, core {{/pix}}{{/hasspacefile}}{{^hasspacefile}}{{#pix}} i/upload, core {{/pix}}{{/hasspacefile}}
+                {{#hasspacefile}}{{#pix}} i/checked, core {{/pix}}{{/hasspacefile}}{{^hasspacefile}}{{#isactivityspace}}{{{iconhtml}}}{{/isactivityspace}}{{^isactivityspace}}{{#pix}} i/upload, core {{/pix}}{{/isactivityspace}}{{/hasspacefile}}
               </span>
               <div class="cg-space-card__body">
                 <p class="cg-space-card__eyebrow">
@@ -152,17 +154,50 @@
                 {{/hasspaceinstruction}}
                 <div class="cg-space-card__status" role="status" aria-live="polite">
                   {{#hasspacefile}}
-                  <span class="cg-space-card__file">{{#pix}} e/insert_file, core {{/pix}}<span class="cg-space-card__filename">{{spacefilename}}</span></span>
+                  <span class="cg-space-card__file">{{^isactivityspace}}{{#pix}} e/insert_file, core {{/pix}}{{/isactivityspace}}<span class="cg-space-card__filename">{{spacefilename}}</span></span>
                   {{/hasspacefile}}
                   {{^hasspacefile}}
+                  {{#isactivityspace}}
+                  <span class="cg-space-card__hint">{{#str}}courseai_template_space_activity_hint, local_coursegen{{/str}}</span>
+                  {{#spacemissing}}
+                  <span class="cg-space-card__alert">{{#str}}courseai_template_space_activity_missing_card, local_coursegen{{/str}}</span>
+                  {{/spacemissing}}
+                  {{/isactivityspace}}
+                  {{^isactivityspace}}
                   <span class="cg-space-card__hint">{{#str}}courseai_template_space_hint, local_coursegen{{/str}}</span>
                   {{#spacemissing}}
                   <span class="cg-space-card__alert">{{#str}}courseai_template_space_missing, local_coursegen{{/str}}</span>
                   {{/spacemissing}}
+                  {{/isactivityspace}}
                   {{/hasspacefile}}
                 </div>
               </div>
               <div class="cg-space-card__actions cg-space-controls">
+                {{#isactivityspace}}
+                {{^hasspacefile}}
+                <button type="button" class="cg-space-card__button"
+                        data-action="local_coursegen/template/pick-space-activity"
+                        data-label-busy="{{#str}}courseai_template_space_activity_loading, local_coursegen{{/str}}"
+                        data-section-index="{{sectionindex}}" data-activity-index="{{index}}">
+                  <span class="cg-space-card__spinner" aria-hidden="true"></span>
+                  <span data-region="local_coursegen/template/space-button-label">{{#str}}courseai_template_space_activity_choose, local_coursegen{{/str}}</span>
+                </button>
+                {{/hasspacefile}}
+                {{#hasspacefile}}
+                <button type="button" class="cg-space-card__link"
+                        data-action="local_coursegen/template/pick-space-activity"
+                        data-label-busy="{{#str}}courseai_template_space_activity_loading, local_coursegen{{/str}}"
+                        data-section-index="{{sectionindex}}" data-activity-index="{{index}}">
+                  <span data-region="local_coursegen/template/space-button-label">{{#str}}courseai_template_space_activity_change, local_coursegen{{/str}}</span>
+                </button>
+                <button type="button" class="cg-space-card__link cg-space-card__link--danger"
+                        data-action="local_coursegen/template/remove-space-activity"
+                        data-section-index="{{sectionindex}}" data-activity-index="{{index}}">
+                  {{#str}}courseai_template_space_activity_remove, local_coursegen{{/str}}
+                </button>
+                {{/hasspacefile}}
+                {{/isactivityspace}}
+                {{^isactivityspace}}
                 {{^hasspacefile}}
                 <button type="button" class="cg-space-card__button"
                         data-action="local_coursegen/template/pick-space-file"
@@ -186,6 +221,7 @@
                   {{#str}}courseai_template_space_remove, local_coursegen{{/str}}
                 </button>
                 {{/hasspacefile}}
+                {{/isactivityspace}}
               </div>
             </div>
             {{/isspace}}

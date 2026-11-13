@@ -19,6 +19,7 @@ namespace local_coursegen\local\service;
 use course_modinfo;
 use local_coursegen\local\models\template;
 use local_coursegen\local\models\template_instance;
+use local_coursegen\local\models\template_space;
 
 /**
  * Puts the activities of a course built from a template in the order the template shows them.
@@ -44,13 +45,15 @@ final class template_course_order {
      * @param array $payloadactivities Every activity entry of the result, kept ones included.
      * @param array $generatedcms Payload cmid => created cmid, for the generated activities.
      * @param array $keptcms Base course cmid => created cmid, for the copied kept activities.
+     * @param array $spacecms Space uid => created cmid, for the activities the teacher brought to the spaces.
      */
     public static function apply(
         int $templateid,
         int $courseid,
         array $payloadactivities,
         array $generatedcms,
-        array $keptcms
+        array $keptcms,
+        array $spacecms = []
     ): void {
         global $DB;
 
@@ -59,7 +62,8 @@ final class template_course_order {
             return;
         }
         $basemodinfo = get_fast_modinfo($template->get('courseid'));
-        $createdbyuid = link_targets::build($payloadactivities, $generatedcms, $keptcms);
+        // The copies of the spaces answer to the uid of their space, as the generated activities answer to theirs.
+        $createdbyuid = link_targets::build($payloadactivities, $generatedcms, $keptcms) + $spacecms;
         $sectionnumbers = self::section_numbers($basemodinfo);
         $instances = self::instances_by_section($templateid, $sectionnumbers);
 
@@ -89,11 +93,15 @@ final class template_course_order {
      *
      * @param int $templateid
      * @param array<int,int> $sectionnumbers
-     * @return array<int,template_instance[]>
+     * @return array<int,array> Instances and spaces, by section number.
      */
     private static function instances_by_section(int $templateid, array $sectionnumbers): array {
         $bysection = [];
-        foreach (template_instance::get_records(['templateid' => $templateid]) as $instance) {
+        $records = array_merge(
+            template_instance::get_records(['templateid' => $templateid]),
+            template_space::get_records(['templateid' => $templateid])
+        );
+        foreach ($records as $instance) {
             $number = $sectionnumbers[(int) $instance->get('sectionid')] ?? null;
             if ($number === null) {
                 continue;
@@ -154,7 +162,8 @@ final class template_course_order {
      * @return int|null
      */
     private static function row_cmid(array $row, array $createdbyuid, array $keptcms): ?int {
-        if ($row['type'] === template_instance_layout::TYPE_INSTANCE) {
+        $virtual = [template_instance_layout::TYPE_INSTANCE, template_instance_layout::TYPE_SPACE];
+        if (in_array($row['type'], $virtual, true)) {
             $uid = (string) $row['record']->get('uid');
             return $createdbyuid[$uid] ?? null;
         }

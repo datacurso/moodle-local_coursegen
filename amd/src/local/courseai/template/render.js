@@ -30,6 +30,7 @@
 import Templates from 'core/templates';
 import {getStrings} from 'core/str';
 import Selectors from './selectors';
+import {isSpaceFilled} from './state';
 
 /**
  * Resolve a human-readable label per distinct modname present in the state
@@ -61,6 +62,19 @@ const ensureTypeLabels = async(state) => {
 };
 
 /**
+ * What a filled space shows: the name of its file, or its activity with the course it comes from.
+ *
+ * @param {Object} activity
+ * @returns {string}
+ */
+const spaceLabel = (activity) => {
+    if (activity.spaceactivity) {
+        return `${activity.spaceactivity.name} · ${activity.spaceactivity.coursename}`;
+    }
+    return activity.spacefile?.filename || '';
+};
+
+/**
  * The Mustache fields of one activity row.
  *
  * @param {Object} activity
@@ -88,9 +102,10 @@ const buildActivityContext = (activity, state, sectionindex, index) => ({
     spaceinstruction: activity.spaceinstruction || '',
     hasspaceinstruction: !!activity.spaceinstruction,
     spacerequired: !!activity.spacerequired,
-    spacemissing: !!activity.isspace && !!activity.spacerequired && !activity.spacefile,
-    hasspacefile: !!activity.spacefile,
-    spacefilename: activity.spacefile?.filename || '',
+    isactivityspace: activity.spacekind === 'activity',
+    spacemissing: !!activity.isspace && !!activity.spacerequired && !isSpaceFilled(activity),
+    hasspacefile: isSpaceFilled(activity),
+    spacefilename: spaceLabel(activity),
 });
 
 /**
@@ -154,6 +169,8 @@ const positionOf = (control) => [
  * @param {Function} handlers.onToggleSection - (sectionIndex) => void
  * @param {Function} handlers.onPickSpaceFile - (sectionIndex, activityIndex) => void
  * @param {Function} handlers.onRemoveSpaceFile - (sectionIndex, activityIndex) => void
+ * @param {Function} handlers.onPickSpaceActivity - (sectionIndex, activityIndex) => void
+ * @param {Function} handlers.onRemoveSpaceActivity - (sectionIndex, activityIndex) => void
  */
 export const wireStructureEvents = (container, handlers) => {
     if (!container) {
@@ -179,6 +196,20 @@ export const wireStructureEvents = (container, handlers) => {
         if (removeEl) {
             event.preventDefault();
             handlers.onRemoveSpaceFile(...positionOf(removeEl));
+            return;
+        }
+
+        const chooseEl = event.target.closest(Selectors.actions.pickSpaceActivity);
+        if (chooseEl) {
+            event.preventDefault();
+            handlers.onPickSpaceActivity(...positionOf(chooseEl));
+            return;
+        }
+
+        const dropEl = event.target.closest(Selectors.actions.removeSpaceActivity);
+        if (dropEl) {
+            event.preventDefault();
+            handlers.onRemoveSpaceActivity(...positionOf(dropEl));
         }
     });
 };
