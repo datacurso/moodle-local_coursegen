@@ -891,6 +891,7 @@ $string['courseai_start_locked'] = 'The starting point is fixed once planning st
 $string['courseai_template_error_high_demand'] = 'The AI service is busy right now. What was already made is kept: you can try again in a moment.';
 $string['courseai_template_error_text'] = 'Something went wrong, but what was already made is kept. You can try again and only what is missing will be made.';
 $string['courseai_template_error_title'] = 'The generation stopped';
+$string['courseai_template_error_unfillable'] = 'The activities {$a} cannot be generated: their model activity in the template course has no instruction for the AI. Add one to the model activity, or choose another model activity in the template, and generate again.';
 $string['courseai_template_image_counter'] = '{$a->done} of {$a->total} cover and section pictures ready';
 $string['courseai_template_image_done'] = 'Image ready for "{$a->activity}".';
 $string['courseai_template_image_failed'] = 'The image for "{$a->activity}" could not be made.';

@@ -26,6 +26,8 @@ import {getStrings} from 'core/str';
 import {noticeFeed} from 'local_coursegen/local/courseai/template/thread_feed';
 
 const CARD_ID = 'cgRetryCard';
+// The failure of a run whose activities have a mold with nothing for the AI to fill: trying again cannot mend it.
+export const UNFILLABLE = 'template_source_invalid';
 const STRINGS = [
     'courseai_template_error_title',
     'courseai_template_error_text',
@@ -38,12 +40,14 @@ const STRINGS = [
  * Ask whether to try again.
  *
  * @param {string} code The code the service gave to the failure.
+ * @param {string} detail What the service said about it: for a mold with nothing to fill, the names of the activities.
  * @returns {Promise<boolean>} True to try again, false to close.
  */
-export const askToRetry = async(code) => {
-    const [title, text, busy, retry, close] = await getStrings(
-        STRINGS.map((key) => ({key, component: 'local_coursegen'}))
-    );
+export const askToRetry = async(code, detail = '') => {
+    const [title, text, busy, retry, close, unfillable] = await getStrings([
+        ...STRINGS.map((key) => ({key, component: 'local_coursegen'})),
+        {key: 'courseai_template_error_unfillable', component: 'local_coursegen', param: detail},
+    ]);
     document.getElementById(CARD_ID)?.remove();
 
     // The same markup as any other turn of the thread (see ui/log.js), so the failure reads as one more message of
@@ -64,7 +68,7 @@ export const askToRetry = async(code) => {
     heading.textContent = title;
     const body = document.createElement('span');
     body.className = 'd-block mb-2';
-    body.textContent = code === 'high_demand' ? busy : text;
+    body.textContent = code === 'high_demand' ? busy : (code === UNFILLABLE ? unfillable : text);
     const buttons = document.createElement('span');
     buttons.className = 'cg-card-actions';
     const retryButton = document.createElement('button');

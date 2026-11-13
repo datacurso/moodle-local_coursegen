@@ -127,11 +127,24 @@ test('a run that writes an activity between two failures starts counting again',
     await settle();
     for (let i = 0; i < 12; i++) {
         const source = RelaySource.instances[i];
-        source.emit('message', {type: 'activity_progress_done', index: 0, uid: 'a', cmid: -1});
+        source.emit('message', {type: 'activity_progress_done', index: i, uid: `a${i}`, cmid: -1 - i});
         source.emit('message', {type: 'failed', message: 'x', code: 'generation_failed', retriable: true});
         await settle();
     }
     assert.equal(retryCalls().length, 12, 'it never runs out while it keeps moving');
     completed(RelaySource.instances[12]);
     assert.deepEqual(await run, {courseurl: '/course'});
+});
+
+test('an activity written before, told again when the run starts over, is not moving and the count goes on', async() => {
+    const run = stream.runGenerationStream('/relay', async() => ({courseurl: '/course'}), 7, context);
+    await settle();
+    for (let i = 0; i < 12 && RelaySource.instances[i]; i++) {
+        const source = RelaySource.instances[i];
+        source.emit('message', {type: 'activity_progress_done', index: 0, uid: 'a', cmid: -1});
+        source.emit('message', {type: 'failed', message: 'x', code: 'generation_failed', retriable: true});
+        await settle();
+    }
+    assert.ok(retryCalls().length <= 10, `it stops retrying by itself after ten (${retryCalls().length})`);
+    run.catch(() => undefined);
 });

@@ -450,6 +450,8 @@ const runPasses = async(streamUrl, buildCourse, sessionId, control) => {
     };
     // Retries made by itself since the last time the run moved: a run that goes on resets the count.
     const run = {failures: 0, moved: false};
+    // The activities already told as written: a pass that starts again tells them once more, and that is not moving.
+    const written = new Set();
     for (;;) {
         let pass = null;
         try {
@@ -463,7 +465,8 @@ const runPasses = async(streamUrl, buildCourse, sessionId, control) => {
                     (eventData, eventProgress) => {
                         // Only an activity that was written counts as the run moving: notices, failed activities and the
                         // stages that come again do not, or a run that fails again and again would never run out of retries.
-                        if (eventData.type === 'activity_progress_done') {
+                        if (eventData.type === 'activity_progress_done' && !written.has(String(eventData.uid))) {
+                            written.add(String(eventData.uid));
                             run.moved = true;
                         }
                         // The card stays until the run really moves or ends: the notices and the failures that come
@@ -505,7 +508,7 @@ const runPasses = async(streamUrl, buildCourse, sessionId, control) => {
             // The retries ran out, or the failure is not one that waiting mends: only now it reads as stopped, and the
             // person decides. While it retries by itself the title does not say it is stopped, the card says it retries.
             await paintStage('paused');
-            if (!await askToRetry(error.code)) {
+            if (!await askToRetry(error.code, error.message)) {
                 closeView(error.message);
                 throw new GenerationStopped(error.message);
             }
