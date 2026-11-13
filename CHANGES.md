@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10-wp] - 2026111120
+
+### Fixed
+- **The retries by themselves run out when the run does not move**  
+  When a run started over, the activities it had already written were told again, and the page took that as the run moving: the count went back to "Retry 1 of 10" on every pass and never ended. Only an activity written for the first time counts now.
+- **A mold with nothing for the AI to fill stops the run at once and is named**  
+  When the model activity of an activity of the template has no instruction for the AI, trying again gives the same. The run now stops at once, without retrying by itself, and says which activities have to be fixed.
+
 ## [2.0.10-wp] - 2026111119
 
 ### Fixed

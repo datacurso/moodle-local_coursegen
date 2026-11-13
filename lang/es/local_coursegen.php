@@ -887,6 +887,7 @@ $string['courseai_start_locked'] = 'El punto de partida queda fijo al iniciar la
 $string['courseai_template_error_high_demand'] = 'El servicio de IA está ocupado ahora. Lo que ya se hizo se conserva: puedes intentarlo de nuevo en un momento.';
 $string['courseai_template_error_text'] = 'Algo salió mal, pero lo que ya se hizo se conserva. Puedes intentarlo de nuevo y solo se hará lo que falta.';
 $string['courseai_template_error_title'] = 'La generación se detuvo';
+$string['courseai_template_error_unfillable'] = 'No se pueden generar las actividades {$a}: su actividad modelo en el curso de la plantilla no tiene ninguna instrucción para la IA. Agrégale una o elige otra actividad modelo en la plantilla, y vuelve a generar.';
 $string['courseai_template_image_counter'] = '{$a->done} de {$a->total} imágenes de la portada y de las secciones listas';
 $string['courseai_template_image_done'] = 'Imagen lista para "{$a->activity}".';
 $string['courseai_template_image_failed'] = 'No se pudo crear la imagen de "{$a->activity}".';
