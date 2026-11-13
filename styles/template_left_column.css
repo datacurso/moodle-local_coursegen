@@ -321,8 +321,29 @@ body.cg-generation-paused .tpl-left-panel .cg-working-slot {
   display: none;
 }
 
-/* While a message about the run is shown, nothing on the page keeps turning: a spinner that goes on over a failure says
-   that it is advancing and stuck. The card says that it retries, with the time left, and that is what moves. */
+/* While a message about the run is shown, nothing on the page turns or looks like it is turning: a spinner that goes on
+   over a failure says that it advances and is stuck, and an arc that stopped halfway looks like one that froze. The marks
+   of the activities become a plain ring that waits; the card says that it retries, with the time left, and that is what
+   moves. */
 body:has(#cgNoticeDock > *) * {
   animation-play-state: paused !important;
+}
+
+body:has(#cgNoticeDock > *) :is(.spinner-icon, .prv-spin, .pc-spin, .spinner, .planning-loading-spinner) {
+  animation: none !important;
+}
+
+body:has(#cgNoticeDock > *) .spinner-icon path {
+  d: path("M12 2a10 10 0 1 1 -0.01 0");
+  opacity: .45;
+}
+
+body:has(#cgNoticeDock > *) .prv-spin path {
+  d: path("M21 12a9 9 0 1 1 -18 0a9 9 0 1 1 18 0");
+  opacity: .45;
+}
+
+body:has(#cgNoticeDock > *) .tpl-left-panel .cg-thread-feed > .cg-log-entry--turn-ai .cg-log-bar {
+  animation: none !important;
+  border-top-color: hsl(10 81% 63% / .25) !important;
 }

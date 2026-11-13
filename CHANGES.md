@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file. Each change
 
 ### Fixed
 - **The messages about the run go at the bottom, above the buttons of the run, and each one is said once**  
-  The failure that asks the person to decide and the cards of the retries used to appear in the middle of the thread, over the list of the activities, and a retry was also written in the title and in the line at the bottom. They now go to a slot at the end of the column, above "Stop", with the same look; the retry is said only in its card, the title does not say "Stopped" while it retries by itself, the line that says it is working is not shown while a message about the run is, and the spinners of the page stop while it is: only the card, with its time left, tells that it retries.
+  The failure that asks the person to decide and the cards of the retries used to appear in the middle of the thread, over the list of the activities, and a retry was also written in the title and in the line at the bottom. They now go to a slot at the end of the column, above "Stop", with the same look; the retry is said only in its card, the title does not say "Stopped" while it retries by itself, the line that says it is working is not shown while a message about the run is, and the spinners of the page stop while it is, as a plain ring that waits and not as an arc that froze: only the card, with its time left, tells that it retries.
 - **The counter of pictures says which pictures it counts**  
   "2 of 2 images ready" was read as all the images of the course, but it only counts the cover and the pictures of the sections. It now says so.
 
