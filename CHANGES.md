@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026111400
+
+### Added
+- **The dates of the access restrictions follow the start date of the new course**  
+  A course made from a template used to lose every restriction that depended on a date. Now each date of a section or activity restriction (opens on, closes on, in any nested all/any/not-all/not-any group) moves by the number of whole days between the start date of the new course and the start date of the template's course, so the restriction opens at the same point of the course and the distance between two dates stays the same. The operator of each condition and whether it is shown are untouched. When both courses start on the same day, or the template has no start date, the dates stay as they are; when the new course has no start date the dates are left out, as before. The date an activity must be completed by and the date criterion of the course completion are still not copied.
+- **An optional start date can be chosen in the review step**  
+  The review step ("Revisar datos del curso"), before the course is created, has a Start date field next to the name and category. Left empty, the course gets the same start date as before; filled in, the new course starts that day, in the time zone of the person who creates it, and the restrictions on dates move with it. It works in the free mode and in the template mode (`startdate`, a `Y-m-d` day, is an optional argument of `local_coursegen_create_course` and `local_coursegen_finish_template_generation`).
+- **The review step warns when the syllabus and the course do not have the same number of units**  
+  When the generation reports that the syllabus defines a different number of units than the course has, the review step shows a notice (for example "The syllabus defines 5 units but the course has 3. Adjust the units field and regenerate if needed."). It does not block the creation. `local_coursegen_get_template_course_settings` returns the worded notices as `warnings`. The new strings are available in all the language packs of the plugin.
+
+- **An institutional guideline can set the number of units of a template run**  
+  The form of a guideline has an optional "Number of units" field (1 to 50; empty means the template's own number), also shown in the list of guidelines. When a course is made from a template with units (Flexible sections format) with that guideline, the units field of the template form is prefilled with it; choosing another guideline follows it, removing the guideline puts the template's number back, and a number typed by hand is never overwritten. The server resolves the number as: the number asked for in the request, else the units of the chosen guideline, else the template's own, and it is kept between 1 and 50 as before. Templates without units and the free mode ignore it. `local_coursegen_system_instruction` gets a nullable `units` column (upgrade step included).
+
+### Fixed
+- **The section names the AI writes are the names of the sections of the new course**  
+  In a course made from a template the name that the generation gives a section is applied to the section with the same number, after the look and the options of the template are applied, and never touches the number, the section it comes from or the unit it hangs under. A name that is empty or only spaces is ignored, and a name longer than 255 characters is cut instead of making the creation fail.
+
 ## [2.0.10] - 2026111102
 
 ### Added
