@@ -264,6 +264,12 @@
   border-color: var(--muted-fg);
 }
 
+/* An activity whose generation failed: a plain empty ring, no check and no spinner, until a retry writes it. */
+.courseai-checklist-item.is-failed .courseai-checklist-check {
+  background: transparent;
+  border-color: var(--muted-fg);
+}
+
 .courseai-checklist-check svg {
   width: 10px;
   height: 10px;

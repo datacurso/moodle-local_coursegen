@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026110931
+
+### Fixed
+- **An activity that failed is not shown as done**  
+  When the generation of an activity failed, the page marked it with a check, counted it as written ("5 of 5 activities") and, once all of them were counted, moved the header on to saving the course, so a run that had failed looked finished. A failed activity now has no check, it is not counted and the header does not move on; when the run is retried, the activities that are missing are written and then they are marked.
+
 ## [2.0.10] - 2026110930
 
 ### Fixed
