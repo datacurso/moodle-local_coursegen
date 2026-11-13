@@ -792,6 +792,11 @@
           the composer is away, which in template mode is the whole generation. }}
       <div class="cg-working-slot" id="cgWorkingSlot" aria-live="polite"></div>
 
+      {{! The messages about the run itself (a retry that is coming, the failure that asks the person to decide) go here,
+          at the end of the thread and above the buttons of the run, which stay last; each of them is said once, here.
+          It has the class of the feeds so that its cards look like the ones of the thread. }}
+      <div class="cg-log cg-thread-feed cg-notice-dock" id="cgNoticeDock" aria-live="polite"></div>
+
       {{! Stop and Resume of the run, where free mode has them: at the bottom of the column, on the composer's side,
           with the same classes. The composer is away during the generation, so they take its place. }}
       <div class="tpl-run-bar" id="tplRunBar" hidden>

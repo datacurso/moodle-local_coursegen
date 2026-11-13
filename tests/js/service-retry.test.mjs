@@ -15,7 +15,7 @@ beforeEach(async() => {
     status = await import('../../amd/src/local/courseai/template/generation_status.js');
 });
 
-const cards = () => doc.elements.cgLog.children.filter((node) => node.id === 'cgServiceRetryCard');
+const cards = () => doc.elements.cgNoticeDock.children.filter((node) => node.id === 'cgServiceRetryCard');
 
 test('a retry of the service shows the card with which retry it is and no buttons', async() => {
     await status.showNotice({code: 'retrying', attempt: 3, of: 10, seconds: 40, status: 503});

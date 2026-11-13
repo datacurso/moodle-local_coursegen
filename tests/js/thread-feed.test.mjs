@@ -22,3 +22,10 @@ test('a page with no feed under the list keeps using the one above', () => {
     };
     assert.equal(currentFeed().id, 'cgLog');
 });
+
+test('the messages about the run go to the slot at the bottom when the page has it', async() => {
+    globalThis.document = makeDocument();
+    const {noticeFeed} = await import('../../amd/src/local/courseai/template/thread_feed.js');
+
+    assert.equal(noticeFeed(), document.getElementById('cgNoticeDock'));
+});

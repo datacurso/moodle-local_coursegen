@@ -74,7 +74,8 @@ test('a failure that is not about the connection goes straight to the person', a
 
     assert.equal(retryCalls().length, 0, 'nothing was retried');
     assert.equal(RelaySource.instances.length, 1);
-    assert.ok(doc.elements.cgLog.children.length > 0 || doc.body.children.length > 0, 'the offer to decide is in the thread');
+    assert.ok(doc.elements.cgNoticeDock.children.length > 0, 'the offer to decide is at the bottom, not in the middle of the thread');
+    assert.equal(doc.elements.cgLog.children.length, 0, 'and nothing was added to the middle of the thread');
     // the run waits for the person: nothing more to do in this test, the next one resets it
     run.catch(() => undefined);
 });

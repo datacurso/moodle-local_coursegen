@@ -304,3 +304,25 @@ body.cg-generation-paused .tpl-left-panel .cg-working-slot {
 .tpl-left-panel .cg-retry-status {
   font-variant-numeric: tabular-nums;
 }
+
+/* The slot of the messages about the run, above the buttons of the run: nothing takes room while it is empty. */
+.tpl-left-panel .cg-notice-dock {
+  flex: 0 0 auto;
+  margin: 0 14px 8px;
+}
+
+.tpl-left-panel .cg-notice-dock:empty {
+  display: none;
+}
+
+/* While a message about the run is in the slot (a retry, a failure), the line that says it is working is not shown: a run
+   that is retrying has a problem, and one that is working has none, so only one of the two is ever on the screen. */
+.tpl-left-panel:has(#cgNoticeDock > *) #cgWorkingSlot {
+  display: none;
+}
+
+/* While a message about the run is shown, nothing on the page keeps turning: a spinner that goes on over a failure says
+   that it is advancing and stuck. The card says that it retries, with the time left, and that is what moves. */
+body:has(#cgNoticeDock > *) * {
+  animation-play-state: paused !important;
+}
