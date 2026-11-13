@@ -95,6 +95,7 @@ if (has_capability('local/coursegen:createsysteminstructions', $context)) {
 $table = new html_table();
 $table->head = [
     get_string('systeminstructionname', 'local_coursegen'),
+    get_string('systeminstructionunits', 'local_coursegen'),
     get_string('systeminstructioncreated', 'local_coursegen'),
     get_string('systeminstructionmodified', 'local_coursegen'),
     get_string('actions', 'local_coursegen'),
@@ -129,6 +130,7 @@ if (empty($instructions)) {
 
         $table->data[] = [
             format_string($instruction->get('name')),
+            $instruction->get('units') ?? '',
             userdate($instruction->get('timecreated')),
             userdate($instruction->get('timemodified')),
             $actions,

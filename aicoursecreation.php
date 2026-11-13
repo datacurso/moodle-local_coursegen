@@ -125,16 +125,7 @@ $hasbothmodes = $canfree && $cantemplate;
 $startchooser = $hasbothmodes && !$resumesessionid && $modeparam === null;
 
 // Load system instructions (directrices institucionales).
-$systeminstructions = [];
-$records = $DB->get_records('local_coursegen_system_instruction', ['deleted' => 0], 'name ASC');
-foreach ($records as $record) {
-    $systeminstructions[] = [
-        'id' => 'si_' . $record->id,
-        'name' => $record->name,
-        'category' => 'General', // The table doesn't have a category field, using default.
-        'description' => $record->content ?? '',
-    ];
-}
+$systeminstructions = \local_coursegen\local\service\system_instruction_service::page_items();
 
 // Load available course templates.
 $coursetemplates = [];

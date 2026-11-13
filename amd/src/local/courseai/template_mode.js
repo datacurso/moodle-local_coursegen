@@ -147,7 +147,6 @@ export const wireTemplateMode = (state, host) => {
     // Input-bar defaults: no images, page default language, no syllabus yet.
     const tplState = createTemplateState({lang: state.defaultLang || ''});
 
-    wireInputBar(tplState, state);
     wireUnitsField(tplState);
 
     // Sequence guard: reselecting the template autocomplete before a previous
@@ -167,6 +166,14 @@ export const wireTemplateMode = (state, host) => {
         updateStats(tplState, statsTemplate);
         refreshGenerateState(tplState, genBtn);
     };
+
+    // A guideline with units prefills the units field (and the counts that follow it); removing it restores them.
+    wireInputBar(tplState, state, async() => {
+        refreshUnitsField(tplState);
+        if (tplState.loaded) {
+            updateStats(tplState, await getStatsTemplate());
+        }
+    });
 
     wireStructureEvents(container, {
         onToggleSection: async(sectionIndex) => {
@@ -339,6 +346,7 @@ const clearStructure = (tplState, container, state) => {
         syllabusdraftitemid: tplState.syllabusdraftitemid,
         syllabusfilename: tplState.syllabusfilename,
         guidelineid: tplState.guidelineid,
+        guidelineunits: tplState.guidelineunits,
     }));
     state.templateStructureLoaded = false;
 };

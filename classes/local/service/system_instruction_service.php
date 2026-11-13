@@ -31,9 +31,10 @@ class system_instruction_service {
      *
      * @param string $name Instruction name
      * @param string $content Instruction content
+     * @param int|null $units Optional number of units for a template run, null for the template's own
      * @return system_instruction
      */
-    public static function create(string $name, string $content): system_instruction {
+    public static function create(string $name, string $content, ?int $units = null): system_instruction {
         global $USER;
 
         if (!self::validate_unique_name($name)) {
@@ -45,6 +46,7 @@ class system_instruction_service {
         $record = (object) [
             'name' => trim($name),
             'content' => $content,
+            'units' => $units,
             'deleted' => 0,
             'timecreated' => $now,
             'timemodified' => $now,
@@ -63,9 +65,10 @@ class system_instruction_service {
      * @param int $id Instruction ID
      * @param string $name Instruction name
      * @param string $content Instruction content
+     * @param int|null $units Optional number of units for a template run, null for the template's own
      * @return system_instruction
      */
-    public static function update(int $id, string $name, string $content): system_instruction {
+    public static function update(int $id, string $name, string $content, ?int $units = null): system_instruction {
         global $USER;
 
         $instruction = self::get_by_id($id);
@@ -81,6 +84,7 @@ class system_instruction_service {
 
         $instruction->set('name', trim($name));
         $instruction->set('content', $content);
+        $instruction->set('units', $units);
         $instruction->set('timemodified', $now);
         $instruction->set('usermodified', $USER->id);
 
@@ -148,6 +152,43 @@ class system_instruction_service {
         }
 
         return (string)$content;
+    }
+
+    /**
+     * The number of units a guideline asks a template run for.
+     *
+     * @param int $id Instruction ID
+     * @return int|null Null when it has none, or when it does not exist or is deleted.
+     */
+    public static function get_units(int $id): ?int {
+        $instruction = self::get_by_id($id);
+        if (!$instruction) {
+            return null;
+        }
+        $units = $instruction->get('units');
+        return $units === null ? null : (int) $units;
+    }
+
+    /**
+     * The active guidelines as the creation page lists them, ordered by name.
+     *
+     * @return array[] Items with id ('si_<id>'), name, category, description and units (int or null).
+     */
+    public static function page_items(): array {
+        $items = [];
+        $records = system_instruction::get_records(['deleted' => 0], 'name', 'ASC');
+        foreach ($records as $record) {
+            $units = $record->get('units');
+            $items[] = [
+                'id' => 'si_' . $record->get('id'),
+                'name' => $record->get('name'),
+                // The table has no category field, so every guideline is listed under the default.
+                'category' => 'General',
+                'description' => $record->get('content') ?? '',
+                'units' => $units === null ? null : (int) $units,
+            ];
+        }
+        return $items;
     }
 
     /**

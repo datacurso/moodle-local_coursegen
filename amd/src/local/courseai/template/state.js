@@ -42,6 +42,7 @@
  * @param {number} [inputbar.syllabusdraftitemid] - Draft area of the attached syllabus.
  * @param {string} [inputbar.syllabusfilename] - Attached syllabus filename.
  * @param {number} [inputbar.guidelineid] - Institutional guideline (system instruction) id, 0 for none.
+ * @param {number} [inputbar.guidelineunits] - Number of units the chosen guideline carries, 0 for none.
  * @returns {Object}
  */
 export const createTemplateState = (inputbar = {}) => ({
@@ -54,6 +55,8 @@ export const createTemplateState = (inputbar = {}) => ({
     unitcount: 0,
     maxunits: 0,
     units: 0,
+    // True once the professor has typed a number: a guideline then never overwrites it.
+    unitsedited: false,
     // Input-bar values, ready for the future generation payload.
     prompt: inputbar.prompt || '',
     generateimages: inputbar.generateimages || 0,
@@ -61,7 +64,32 @@ export const createTemplateState = (inputbar = {}) => ({
     syllabusdraftitemid: inputbar.syllabusdraftitemid || 0,
     syllabusfilename: inputbar.syllabusfilename || '',
     guidelineid: inputbar.guidelineid || 0,
+    guidelineunits: inputbar.guidelineunits || 0,
 });
+
+/**
+ * The number of units of a guideline list item.
+ *
+ * @param {Object|undefined} guideline Item of the list the page carries.
+ * @returns {number} 0 when it has none.
+ */
+export const guidelineUnitsOf = (guideline) => {
+    const value = parseInt(guideline?.units, 10);
+    return value > 0 ? value : 0;
+};
+
+/**
+ * The number the units field holds while the professor has not typed one: the guideline's, else the template's.
+ *
+ * @param {Object} state
+ * @returns {number}
+ */
+const defaultUnits = (state) => {
+    if (state.guidelineunits > 0 && state.maxunits > 0) {
+        return Math.min(state.maxunits, state.guidelineunits);
+    }
+    return state.unitcount;
+};
 
 /**
  * The numeric id of a guideline, from the id the page lists it under ('si_12') or a number.
@@ -77,11 +105,19 @@ export const guidelineIdOf = (value) => {
 /**
  * Choose the guideline of the run, replacing any previous one; null clears it.
  *
+ * Its number of units prefills the units field while the professor has not typed one; removing the guideline
+ * puts the template's own count back, and a number typed by hand is never touched.
+ *
  * @param {Object} state
  * @param {string|number|null} value
+ * @param {number} [units] Number of units of the guideline, 0 for none.
  */
-export const setGuideline = (state, value) => {
+export const setGuideline = (state, value, units = 0) => {
     state.guidelineid = guidelineIdOf(value);
+    state.guidelineunits = state.guidelineid > 0 && units > 0 ? units : 0;
+    if (!state.unitsedited) {
+        state.units = defaultUnits(state);
+    }
 };
 
 /**
@@ -96,7 +132,8 @@ export const applyStructureResponse = (state, data) => {
     state.remainingSections = data.remainingsections || 0;
     state.unitcount = data.unitcount || 0;
     state.maxunits = data.maxunits || 0;
-    state.units = state.unitcount;
+    state.unitsedited = false;
+    state.units = defaultUnits(state);
     state.sections = (data.sections || []).map((section) => ({
         id: section.id,
         name: section.name,
@@ -133,7 +170,7 @@ export const applyStructureResponse = (state, data) => {
 /**
  * Set the number of units the professor wants, kept between 1 and the maximum.
  *
- * A value that is not a number goes back to the template's own count.
+ * A value that is not a number goes back to the guideline's units, or the template's own count.
  *
  * @param {Object} state
  * @param {string|number} raw What the field holds.
@@ -141,9 +178,11 @@ export const applyStructureResponse = (state, data) => {
 export const setUnits = (state, raw) => {
     const value = parseInt(raw, 10);
     if (Number.isNaN(value)) {
-        state.units = state.unitcount;
+        state.unitsedited = false;
+        state.units = defaultUnits(state);
         return;
     }
+    state.unitsedited = true;
     state.units = Math.min(state.maxunits, Math.max(1, value));
 };
 
@@ -154,8 +193,12 @@ export const setUnits = (state, raw) => {
  * @returns {number|null}
  */
 export const requestedUnits = (state) => {
-    if (!state.unitcount || state.units === state.unitcount) {
+    if (!state.unitcount) {
         return null;
+    }
+    if (state.units === state.unitcount) {
+        // Typed on purpose against a guideline with other units: said out loud, or the server would use theirs.
+        return state.unitsedited && state.guidelineunits > 0 ? state.units : null;
     }
     return state.units;
 };

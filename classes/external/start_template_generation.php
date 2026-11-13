@@ -229,9 +229,28 @@ class start_template_generation extends external_api {
             $prompt,
             $lang,
             $withimages,
-            template_units::requested($modinfo, $units),
+            template_units::requested($modinfo, self::resolve_units($units, (int) $systeminstructionid)),
             self::guideline_text((int) $systeminstructionid)
         );
+    }
+
+    /**
+     * The units the run asks for: an explicit number wins, then the units of the chosen guideline, else none.
+     *
+     * Null leaves the template's own count; whether the template has units at all is decided afterwards.
+     *
+     * @param int|null $units What the professor asked for; only a number above zero counts.
+     * @param int $systeminstructionid Institutional guideline id, 0 for none.
+     * @return int|null
+     */
+    private static function resolve_units(?int $units, int $systeminstructionid): ?int {
+        if ($units !== null && $units > 0) {
+            return $units;
+        }
+        if ($systeminstructionid <= 0) {
+            return null;
+        }
+        return system_instruction_service::get_units($systeminstructionid);
     }
 
     /**

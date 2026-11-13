@@ -19,6 +19,7 @@ namespace local_coursegen;
 use local_coursegen\external\get_template_structure;
 use local_coursegen\external\start_template_generation;
 use local_coursegen\local\models\template;
+use local_coursegen\local\service\system_instruction_service;
 use local_coursegen\local\service\template_unit_resizer;
 use local_coursegen\local\service\template_units;
 
@@ -217,7 +218,7 @@ final class template_units_test extends \advanced_testcase {
         $huge = start_template_generation::payload_for($templateid, '', '', false, 100000);
         $max = start_template_generation::payload_for($templateid, '', '', false, template_unit_resizer::MAX_UNITS);
         $this->assertSame(count($max['sections_info']), count($huge['sections_info']));
-        $one = start_template_generation::payload_for($templateid, '', '', false, -3);
+        $one = start_template_generation::payload_for($templateid, '', '', false, 1);
         $this->assertLessThan(count($huge['sections_info']), count($one['sections_info']));
     }
 
@@ -255,5 +256,96 @@ final class template_units_test extends \advanced_testcase {
         $result = \core_external\external_api::clean_returnvalue(get_template_structure::execute_returns(), $result);
         $this->assertArrayNotHasKey('unitcount', $result);
         $this->assertArrayNotHasKey('maxunits', $result);
+    }
+
+    /**
+     * Number of sections_info entries of the run prepared with these inputs.
+     *
+     * @param int $templateid
+     * @param int|null $units
+     * @param int|null $guidelineid
+     * @return int
+     */
+    private function prepared_sections(int $templateid, ?int $units, ?int $guidelineid): int {
+        [$payload] = start_template_generation::prepare($templateid, '', '', false, $units, $guidelineid);
+        return count($payload['sections_info']);
+    }
+
+    /**
+     * The sections of a flexsections template resized to a number of units, ignoring any guideline.
+     *
+     * @param int $templateid
+     * @param int $units
+     * @return int
+     */
+    private function sections_for_units(int $templateid, int $units): int {
+        return count(start_template_generation::payload_for($templateid, '', '', false, $units)['sections_info']);
+    }
+
+    /**
+     * With no explicit number the units of the guideline resize the template.
+     */
+    public function test_guideline_units_drive_the_run_when_nothing_is_asked(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        $templateid = $this->flexsections_template();
+        $guideline = system_instruction_service::create('Five units', 'Text.', 5);
+        $id = (int) $guideline->get('id');
+        $this->assertSame($this->sections_for_units($templateid, 5), $this->prepared_sections($templateid, null, $id));
+        $this->assertNotSame($this->sections_for_units($templateid, 2), $this->prepared_sections($templateid, null, $id));
+        // A zero from the client is not an explicit number.
+        $this->assertSame($this->sections_for_units($templateid, 5), $this->prepared_sections($templateid, 0, $id));
+    }
+
+    /**
+     * An explicit number wins over the units of the guideline.
+     */
+    public function test_explicit_units_win_over_the_guideline(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        $templateid = $this->flexsections_template();
+        $id = (int) system_instruction_service::create('Five units', 'Text.', 5)->get('id');
+        $this->assertSame($this->sections_for_units($templateid, 3), $this->prepared_sections($templateid, 3, $id));
+        // The template's own count asked on purpose also beats the guideline.
+        $this->assertSame($this->sections_for_units($templateid, 2), $this->prepared_sections($templateid, 2, $id));
+    }
+
+    /**
+     * A guideline without units, or one that does not resolve, leaves the template's own count.
+     */
+    public function test_guideline_without_units_leaves_the_template_count(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        $templateid = $this->flexsections_template();
+        $own = $this->prepared_sections($templateid, null, null);
+        $plain = (int) system_instruction_service::create('No units', 'Text.')->get('id');
+        $deleted = (int) system_instruction_service::create('Gone', 'Text.', 6)->get('id');
+        system_instruction_service::delete($deleted);
+        foreach ([$plain, $deleted, 99999, 0] as $id) {
+            $this->assertSame($own, $this->prepared_sections($templateid, null, $id), 'id ' . $id);
+        }
+    }
+
+    /**
+     * A template without units (any other format) ignores the units of the guideline.
+     */
+    public function test_guideline_units_are_ignored_by_a_template_without_units(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        $templateid = $this->plain_template('topics');
+        $id = (int) system_instruction_service::create('Nine units', 'Text.', 9)->get('id');
+        $this->assertSame($this->prepared_sections($templateid, null, null), $this->prepared_sections($templateid, null, $id));
+    }
+
+    /**
+     * The guideline is still recorded on the session data when its units drive the run.
+     */
+    public function test_coursedata_keeps_the_guideline_when_its_units_apply(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        $templateid = $this->flexsections_template();
+        $id = (int) system_instruction_service::create('Five units', 'Some text.', 5)->get('id');
+        [, $coursedata] = start_template_generation::prepare($templateid, '', '', false, null, $id);
+        $this->assertSame($id, $coursedata['local_coursegen_select_system_instruction']);
     }
 }
