@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10-wp] - 2026111127
+
+### Fixed
+- **The hover of the card of the teacher's file keeps its colour**  
+  Hovering the card turned it to the grey of the other rows and showed the browser's tooltip. It now keeps its coral (or neutral) tint one step stronger, and says what it does to screen readers instead of in a tooltip.
+
 ## [2.0.10-wp] - 2026111126
 
 ### Changed
