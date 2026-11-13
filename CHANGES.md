@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10-wp] - 2026111125
+
+### Changed
+- **The row of the file the teacher uploads stands out as a card**  
+  It has a soft coral frame while the required file is missing and a soft neutral one once it is there, so it is seen at once among the other rows.
+
 ## [2.0.10-wp] - 2026111124
 
 ### Changed
