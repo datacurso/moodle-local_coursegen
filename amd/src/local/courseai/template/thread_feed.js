@@ -46,3 +46,13 @@ export const currentFeed = () => {
     }
     return document.getElementById('cgLog');
 };
+
+/**
+ * Where the messages about the run itself go: the retries and the failure that asks the person to decide.
+ *
+ * At the bottom of the column, above the buttons of the run, and not in the middle of the thread: they are what the
+ * person has to look at now, and they leave when it is over.
+ *
+ * @returns {HTMLElement|null}
+ */
+export const noticeFeed = () => document.getElementById('cgNoticeDock') || currentFeed();

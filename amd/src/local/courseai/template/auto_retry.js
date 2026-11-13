@@ -23,9 +23,8 @@
  */
 
 import {getStrings} from 'core/str';
-import {currentFeed} from 'local_coursegen/local/courseai/template/thread_feed';
+import {noticeFeed} from 'local_coursegen/local/courseai/template/thread_feed';
 import {ATTEMPTS, countdown} from 'local_coursegen/local/courseai/template/retry_schedule';
-import {showWorkingIndicator} from 'local_coursegen/local/courseai/ui/feedback-progress';
 
 const CARD_ID = 'cgAutoRetryCard';
 const SERVICE_CARD_ID = 'cgServiceRetryCard';
@@ -114,26 +113,19 @@ export const waitBeforeRetry = async({attempt, total, seconds, aiFailed = false}
     // The same words as the retry of the service, so the person reads one story while the AI is the one that fails.
     const view = buildCard(aiFailed ? aiReason : connectionReason);
     view.card.id = CARD_ID;
-    const feed = currentFeed() || document.getElementById('courseaiChatScroll') || document.body;
+    const feed = noticeFeed() || document.getElementById('courseaiChatScroll') || document.body;
     feed.append(view.card);
     view.card.scrollIntoView({block: 'nearest'});
 
-    const stage = document.getElementById('tplGenStage');
+    // The card is the one place that says it: nothing of it is repeated in the title or in the line at the bottom.
     await countdown(seconds, (left) => {
-        const line = status
+        view.status.textContent = status
             .replace('{$a->attempt}', shownAttempt)
             .replace('{$a->total}', shownTotal)
             .replace('{$a->seconds}', left);
-        view.status.textContent = line;
-        if (stage) {
-            stage.textContent = line;
-        }
     });
 
     view.status.textContent = running.replace('{$a->attempt}', shownAttempt).replace('{$a->total}', shownTotal);
-    if (stage) {
-        stage.textContent = view.status.textContent;
-    }
     return 'retry';
 };
 
@@ -192,7 +184,7 @@ export const showServiceRetry = async(data) => {
     const view = buildCard(reasonText);
     view.card.id = SERVICE_CARD_ID;
     serviceCard = view.card;
-    const feed = currentFeed() || document.getElementById('courseaiChatScroll') || document.body;
+    const feed = noticeFeed() || document.getElementById('courseaiChatScroll') || document.body;
     feed.append(view.card);
     view.card.scrollIntoView({block: 'nearest'});
 
@@ -200,14 +192,9 @@ export const showServiceRetry = async(data) => {
     const attempt = data.attempt || 0;
     serviceUsed = Math.max(serviceUsed, attempt);
     const total = data.of || ATTEMPTS;
-    const stage = document.getElementById('tplGenStage');
-    // The line under the title, the one in the status bar of the thread and the card say the same, every second.
+    // The card is the one place that says it: nothing of it is repeated in the title or in the line at the bottom.
     const say = (line) => {
         view.status.textContent = line;
-        if (stage) {
-            stage.textContent = line;
-        }
-        showWorkingIndicator({}, line);
     };
     const fill = (text, left) => text
         .replace('{$a->attempt}', attempt)

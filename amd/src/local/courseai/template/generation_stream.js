@@ -488,7 +488,6 @@ const runPasses = async(streamUrl, buildCourse, sessionId, control) => {
             hideWorkingIndicator();
             // Nothing is running any more, so nothing turns: the page reads as stopped while it waits.
             document.body.classList.add(PAUSED_CLASS);
-            await paintStage('paused');
             if (run.moved) {
                 run.failures = 0;
                 run.moved = false;
@@ -503,7 +502,9 @@ const runPasses = async(streamUrl, buildCourse, sessionId, control) => {
                 continue;
             }
             retriesOver();
-            // The retries ran out, or the failure is not one that waiting mends: the person decides.
+            // The retries ran out, or the failure is not one that waiting mends: only now it reads as stopped, and the
+            // person decides. While it retries by itself the title does not say it is stopped, the card says it retries.
+            await paintStage('paused');
             if (!await askToRetry(error.code)) {
                 closeView(error.message);
                 throw new GenerationStopped(error.message);
