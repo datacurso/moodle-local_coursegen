@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10-wp] - 2026111124
+
+### Changed
+- **The row of the file the teacher uploads says where it stands**  
+  While the required file is missing, its icon has a coral mark with an arrow up and the row reads "Upload the file to be able to generate the course"; once the file is there, the icon has the check of a row that is done and the row shows the name of the file.
+
 ## [2.0.10-wp] - 2026111123
 
 ### Changed

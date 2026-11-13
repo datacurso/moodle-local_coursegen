@@ -265,6 +265,45 @@
     cursor: pointer;
 }
 
+/* The row tells where it stands with a mark on its icon, the same marks as the rows being generated: while the
+   required file is missing, a coral ring with an arrow up (it waits for the teacher) and a line in coral under the
+   description; once the file is there, the sober check of a row that is done. */
+#tplModeStructure .cg-space-row .activity-icon {
+    position: relative;
+}
+
+#tplModeStructure .cg-space-row--empty .activity-icon::after,
+#tplModeStructure .cg-space-row--done .activity-icon::after {
+    content: '';
+    position: absolute;
+    right: -6px;
+    bottom: -6px;
+    width: 18px;
+    height: 18px;
+    box-sizing: border-box;
+    border-radius: 50%;
+    background-color: #fff;
+    box-shadow: 0 0 0 2px #fff;
+    background-size: 10px 10px;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+#tplModeStructure .cg-space-row--empty .activity-icon::after {
+    border: 1.5px solid var(--primary);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ed6b53' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='12' y1='19' x2='12' y2='5'/%3E%3Cpolyline points='5 12 12 5 19 12'/%3E%3C/svg%3E");
+}
+
+#tplModeStructure .cg-space-row--done .activity-icon::after {
+    border: 1.5px solid var(--muted-fg);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2365758b' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");
+}
+
+#tplModeStructure .cg-space-row .cg-space-missing {
+    color: var(--primary);
+    font-weight: 600;
+}
+
 @media (max-width: 575.98px) {
     .cg-space-card {
         padding: 0.625rem 0.75rem;

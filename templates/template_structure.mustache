@@ -130,7 +130,7 @@
             {{#isspace}}
             {{! A file the teacher uploads: one more row of the list, with the same icon, name and badge as the others; what
                 the administrator asked for is its description, and the upload is one of the buttons of the row. }}
-            <div class="activity-item focus-control cg-space-row{{#hasspacefile}} cg-space-card--done{{/hasspacefile}}{{#spacemissing}} cg-space-card--empty{{/spacemissing}}"
+            <div class="activity-item focus-control cg-space-row{{#hasspacefile}} cg-space-row--done{{/hasspacefile}}{{#spacemissing}} cg-space-row--empty{{/spacemissing}}"
                  data-region="local_coursegen/template/space-card">
               <div class="activity-grid">
                 <div class="activity-icon activityiconcontainer smaller {{purpose}} courseicon align-self-start me-2">
@@ -151,6 +151,9 @@
                   {{^hasspaceinstruction}}
                   <p class="cg-activity-desc mb-0">{{#str}}courseai_template_space_hint, local_coursegen{{/str}}</p>
                   {{/hasspaceinstruction}}
+                  {{#spacemissing}}
+                  <p class="cg-activity-desc cg-space-missing mb-0">{{#str}}courseai_template_space_missing, local_coursegen{{/str}}</p>
+                  {{/spacemissing}}
                   {{#hasspacefile}}
                   <p class="cg-activity-desc cg-space-file mb-0">{{#pix}} e/insert_file, core {{/pix}}{{spacefilename}}</p>
                   {{/hasspacefile}}
