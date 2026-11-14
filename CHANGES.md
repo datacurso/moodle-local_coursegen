@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026110945
+
+### Changed
+- **The card that asks for the files shows one at a time, with no scroll**  
+  Instead of the whole list in a box that scrolls, it shows the next file missing under the count ("9 of 10 files are missing…"), and the next one after each upload, so it never grows. The card of a file in the structure no longer draws Boost's blue ring when it gets the focus back after an upload.
+
 ## [2.0.10] - 2026110944
 
 ### Changed
