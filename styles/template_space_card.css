@@ -366,14 +366,12 @@
     }
 }
 
-/* The card that asks for the files when Generate is pressed: one line per file, the text on the left and the button on
-   the right, in a list that never grows past part of the column (it scrolls instead). Pressing the text shows the card
-   of the file in the structure, which is marked for a moment. */
+/* The card that asks for the files when Generate is pressed: the next file missing, the text on the left and the button
+   on the right; it shows one file at a time, so it never grows nor scrolls. Pressing the text shows the card of the file
+   in the structure, which is marked for a moment. */
 .cg-space-gate .cg-space-gate-list {
-    max-height: 40vh;
     margin: 0;
     padding: 0;
-    overflow-y: auto;
     list-style: none;
 }
 
@@ -427,4 +425,15 @@
    mark that shows where a file goes is the answer to the teacher's own click, so it plays. */
 body #tplModeStructure .cg-space-row--flash {
     animation-play-state: running !important;
+}
+
+/* After a file is uploaded the card gets the focus back (for the keyboard): with the mouse no ring is drawn, and with
+   the keyboard the ring is the coral one above, not the blue of Boost's focus-control. */
+#tplModeStructure .cg-space-row.focus-control:focus:not(:focus-visible) {
+    outline: none;
+    box-shadow: none;
+}
+
+#tplModeStructure .cg-space-row.focus-control:focus-visible {
+    box-shadow: none;
 }
