@@ -223,6 +223,7 @@ class template_row_options {
             'promptopen' => $generated,
             'instanceid' => (int) $instance->get('id'),
             'name' => $name,
+            'ainame' => (int) $instance->get('ainame'),
             'typelabel' => $typelabel,
             'prompt' => (string) $instance->get('prompt'),
             'sourcecmid' => (int) $instance->get('sourcecmid'),

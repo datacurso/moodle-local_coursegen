@@ -93,6 +93,7 @@ class save_template extends external_api {
                             'sourcecmid' => new external_value(PARAM_INT, 'cmid of the action=template activity this instance was created from'),
                             'sourcename' => new external_value(PARAM_TEXT, 'Snapshot of the source template\'s display name'),
                             'name'       => new external_value(PARAM_TEXT, 'This instance\'s own display name'),
+                            'ainame'     => new external_value(PARAM_INT, '1 when the AI writes the real name', VALUE_DEFAULT, 0),
                             'typelabel'  => new external_value(PARAM_TEXT, 'Snapshot of the source template\'s module type label'),
                             'modname'    => new external_value(PARAM_PLUGIN, 'Snapshot of the source template\'s module type', VALUE_DEFAULT, ''),
                             'prompt'     => new external_value(PARAM_RAW, 'Instance prompt', VALUE_DEFAULT, ''),

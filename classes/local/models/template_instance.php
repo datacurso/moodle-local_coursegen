@@ -102,6 +102,11 @@ class template_instance extends persistent {
                 'null' => NULL_ALLOWED,
                 'default' => null,
             ],
+            // 1 when the admin left the name empty: the name is a generic one and the AI writes the real title.
+            'ainame' => [
+                'type' => PARAM_INT,
+                'default' => 0,
+            ],
             // The real cmid this instance renders immediately after within
             // its section; 0 means "the start of the section".
             'aftercmid' => [

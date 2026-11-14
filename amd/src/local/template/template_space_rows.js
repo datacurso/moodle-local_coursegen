@@ -150,6 +150,27 @@ const applyChoiceToRow = async(row, choice) => {
 };
 
 /**
+ * The generic name of a new activity of a type whose name the AI writes: the type and the next number among the ones
+ * of the same type already named so in the template ("Book 1", "Book 2"...).
+ *
+ * @param {Object} picked {modname, name} of the picked type.
+ * @returns {string}
+ */
+export const genericName = (picked) => {
+    const escaped = picked.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const pattern = new RegExp(`^${escaped} (\\d+)$`);
+    let highest = 0;
+    document.querySelectorAll(`${Selectors.rows.instance}[data-modname="${picked.modname}"]`).forEach((row) => {
+        const value = row.querySelector(Selectors.regions.instanceNameEditable)?.dataset.value || '';
+        const number = pattern.exec(value.trim());
+        if (number) {
+            highest = Math.max(highest, parseInt(number[1], 10));
+        }
+    });
+    return `${picked.name} ${highest + 1}`;
+};
+
+/**
  * Insert the space the admin just configured for a freshly picked type.
  *
  * @param {HTMLElement} tbody The section's table body.
@@ -160,11 +181,13 @@ const applyChoiceToRow = async(row, choice) => {
  */
 const saveNewSpace = async(tbody, beforeEl, picked, markDirty, choice) => {
     if (choice.mode === 'ai') {
-        // The AI always creates it from this instruction: an activity of its own, with no template behind it.
+        // The AI always creates it from this instruction: an activity of its own, with no template behind it. With no
+        // name, it is "Book 1", "Book 2"... in the template, and the AI writes its real title when it is generated.
         const iconurl = (/src="([^"]+)"/.exec(picked.icon || '') || [])[1] || '';
         await insertGeneratedRow(tbody, beforeEl, {
             modname: picked.modname,
-            name: choice.name || picked.name,
+            name: choice.name || genericName(picked),
+            ainame: !choice.name,
             typelabel: picked.name,
             iconurl,
             prompt: choice.instruction,
@@ -199,9 +222,8 @@ export const addSpace = async(item, state, markDirty) => {
         return;
     }
     const onSave = saveNewSpace.bind(null, tbody, beforeEl, picked, markDirty);
-    // For now what the teacher brings is a file, marked in the row of the template's file: an activity added here is
-    // one the AI makes.
-    openSpaceModal({subject: picked.name, required: true, instruction: '', onSave, mode: 'ai', teacherDisabled: true});
+    // What is added here is an activity the AI creates: its name (optional) and the instructions for the AI.
+    openSpaceModal({subject: picked.name, required: true, instruction: '', onSave, mode: 'ai', aiOnly: true});
 };
 
 /**

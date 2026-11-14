@@ -201,6 +201,7 @@ class template_persistence_service {
         $instance->set('sourcecmid', $instdata['sourcecmid']);
         $instance->set('sourcename', $instdata['sourcename']);
         $instance->set('name', $instdata['name']);
+        $instance->set('ainame', empty($instdata['ainame']) ? 0 : 1);
         $instance->set('typelabel', $instdata['typelabel']);
         $instance->set('modname', $modname);
         $instance->set('prompt', $instdata['prompt']);

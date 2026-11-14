@@ -93,6 +93,7 @@ export const STRING = {
     SCOPE_UNAVAILABLE: 'template_instance_scope_unavailable',
     ADD_SPACE: 'template_add_space',
     SPACE_MODAL_TITLE: 'template_space_modal_title',
+    SPACE_MODAL_TITLE_AI: 'template_space_modal_title_ai',
     SPACE_REQUIRED: 'template_space_required',
     SPACE_OPTIONAL: 'template_space_optional',
     SPACE_BADGE: 'template_space_badge',
