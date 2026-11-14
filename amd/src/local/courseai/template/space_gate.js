@@ -101,7 +101,7 @@ const itemOf = (entry, upload, actions) => {
 };
 
 /**
- * Show the card for the files that are missing (it replaces the one shown before): how many are left, and the next one.
+ * Show the card for the files that are missing (it replaces the one shown before): how many are left, and each one.
  *
  * @param {Object[]} missing What {@see missingSpaces} returned.
  * @param {number} total How many required files the template asks for.
@@ -130,15 +130,16 @@ export const showSpaceGate = async(missing, total, actions) => {
     const heading = document.createElement('strong');
     heading.className = 'd-block mb-2';
     heading.textContent = title;
-    // One file at a time, the next one missing: the card never grows with the number of files, and after each upload
-    // it shows the next one (the title says how many are left).
     const list = document.createElement('ul');
     list.className = 'cg-space-gate-list';
-    list.append(itemOf(missing[0], upload, actions));
+    list.append(...missing.map((entry) => itemOf(entry, upload, actions)));
     message.append(heading, list);
     body.append(message);
     card.append(bar, body);
-    const host = document.getElementById('cgNoticeDock') || document.body;
+    // At the end of the thread of the column, inside its scroll: however many files there are, the card is part of the
+    // content of the column and moves with its one scroll, it never takes a fixed slot nor a scroll of its own.
+    const host = document.querySelector('.tpl-left-scroll #cgLogAfter') || document.getElementById('cgNoticeDock')
+        || document.body;
     host.append(card);
-    card.scrollIntoView({block: 'nearest'});
+    card.scrollIntoView({block: 'end', behavior: 'smooth'});
 };
