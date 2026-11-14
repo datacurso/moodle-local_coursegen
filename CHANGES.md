@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10-wp] - 2026111130
+
+### Changed
+- **The card that asks for the files lists all of them in the scroll of the column**  
+  Every missing file is listed again, one per line, and the card sits at the end of the thread of the column: it moves with the one scroll of the column, with no box of its own that scrolls.
+
 ## [2.0.10-wp] - 2026111129
 
 ### Changed
