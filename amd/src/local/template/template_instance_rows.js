@@ -81,6 +81,7 @@ const buildInstanceRowFragment = (data, instanceid) => renderRowFragment('local_
     promptopen: data.sourcecmid === 0,
     instanceid,
     name: data.name === undefined ? data.sourcename : data.name,
+    ainame: !!data.ainame,
     sourcename: data.sourcename,
     sourcecmid: data.sourcecmid,
     modname: data.modname,
@@ -147,7 +148,7 @@ export const insertInstanceRow = async(tbody, beforeEl, picked) => {
  *
  * @param {HTMLElement} tbody The section's table body.
  * @param {HTMLElement} beforeEl The row-gap or add-row the trigger belongs to.
- * @param {Object} generated {modname, name, typelabel, iconurl, prompt}
+ * @param {Object} generated {modname, name, typelabel, iconurl, prompt, ainame}
  * @returns {Promise<HTMLElement>} The new instance row.
  */
 export const insertGeneratedRow = async(tbody, beforeEl, generated) => {
@@ -165,6 +166,7 @@ export const insertGeneratedRow = async(tbody, beforeEl, generated) => {
         iconurl: generated.iconurl,
         typelabel: generated.typelabel,
         prompt: generated.prompt,
+        ainame: generated.ainame,
     }, instanceid);
     const row = fragment.querySelector(Selectors.rows.instance);
     tbody.insertBefore(fragment, beforeEl);
@@ -228,7 +230,7 @@ const spaceEntryOf = (row, aftercmid, sortorder) => {
  * @param {HTMLElement} row The instance row (data-for="instancerow").
  * @param {number} aftercmid The real cmid the row sits immediately after.
  * @param {number} sortorder The row's position among the virtual rows.
- * @returns {Object} {sourcecmid, sourcename, modname, name, typelabel,
+ * @returns {Object} {sourcecmid, sourcename, modname, name, ainame, typelabel,
  *     prompt, aftercmid, sortorder}
  */
 const instanceEntryOf = (sectionEl, row, aftercmid, sortorder) => {
@@ -249,6 +251,7 @@ const instanceEntryOf = (sectionEl, row, aftercmid, sortorder) => {
         sourcename: row.dataset.sourceName,
         modname: row.dataset.modname || '',
         name,
+        ainame: row.dataset.ainame === '1' ? 1 : 0,
         typelabel,
         prompt: promptValue,
         aftercmid,

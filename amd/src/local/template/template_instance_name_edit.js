@@ -74,6 +74,11 @@ const commitNameEdit = (wrapper) => {
         return;
     }
     const value = inputOf(wrapper).value;
+    const row = wrapper.closest('[data-for="instancerow"]');
+    if (row && value !== wrapper.dataset.value) {
+        // A name the admin writes is the name: the AI no longer writes one.
+        row.dataset.ainame = '0';
+    }
     wrapper.dataset.value = value;
     wrapper.querySelector('[data-region="instance-name-display"]').textContent = value;
     wrapper.classList.remove('inplaceeditingon');

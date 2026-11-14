@@ -262,6 +262,7 @@ class template_export_service {
 
         $prompt = $instance->get('prompt');
         $prompt = (string) $prompt;
+        $ainame = (int) $instance->get('ainame') === 1;
 
         $sourcecmid = $instance->get('sourcecmid');
         $sourcecmid = (int) $sourcecmid;
@@ -279,6 +280,7 @@ class template_export_service {
                 'useasreference' => true,
                 'prompt' => $prompt,
                 'template_source_cmid' => $sourcecmid,
+                'name_from_ai' => $ainame,
             ],
         ];
     }

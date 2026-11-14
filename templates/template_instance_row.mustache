@@ -67,7 +67,8 @@
     }
 }}
 <tr class="tpl-row-instance" data-for="instancerow" data-instance-id="{{instanceid}}"
-    data-source-cmid="{{sourcecmid}}" data-source-name="{{sourcename}}" data-modname="{{modname}}"{{#generated}} data-generated="1"{{/generated}}>
+    data-source-cmid="{{sourcecmid}}" data-source-name="{{sourcename}}" data-modname="{{modname}}"{{#generated}} data-generated="1"{{/generated}}
+    data-ainame="{{#ainame}}1{{/ainame}}{{^ainame}}0{{/ainame}}">
     <td class="align-middle tpl-select-col">
         <input type="checkbox" data-region="instance-select" data-id="{{instanceid}}"
                aria-label="{{name}}">

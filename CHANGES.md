@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10-wp] - 2026111131
+
+### Changed
+- **Adding an activity the AI creates asks only for its name and its instructions**  
+  The form no longer asks who makes the activity: it is the AI. The name is optional: when it is left empty the activity is "Book 1", "Book 2"... in the template (a number per type) and the AI writes its real title when the course is generated. A name the admin writes later is kept.
+
 ## [2.0.10-wp] - 2026111130
 
 ### Changed

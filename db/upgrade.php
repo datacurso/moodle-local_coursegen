@@ -649,5 +649,15 @@ function xmldb_local_coursegen_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026111119, 'local', 'coursegen');
     }
 
+    if ($oldversion < 2026111131) {
+        // An activity the AI creates can leave its name to the AI: the template keeps a generic one meanwhile.
+        $table = new xmldb_table('local_coursegen_tpl_instance');
+        $field = new xmldb_field('ainame', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '0', 'name');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+        upgrade_plugin_savepoint(true, 2026111131, 'local', 'coursegen');
+    }
+
     return true;
 }
