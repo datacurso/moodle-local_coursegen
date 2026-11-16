@@ -54,9 +54,8 @@ const refreshSyllabusChip = (tplState) => {
  *
  * @param {Object} tplState
  * @param {Object} state - Page state (createInitialState) carrying languages/defaultLang.
- * @param {Function} [onGuidelineChange] Called after the chosen guideline changes.
  */
-export const wireInputBar = (tplState, state, onGuidelineChange = () => {}) => {
+export const wireInputBar = (tplState, state) => {
     // Adaptation prompt — composer textarea, value tracked in tplState.
     const promptInput = document.getElementById('tplPromptInput');
     if (promptInput) {
@@ -118,7 +117,7 @@ export const wireInputBar = (tplState, state, onGuidelineChange = () => {}) => {
     }
 
     // Institutional guidelines — same popover/chip behaviour as free mode, one per course.
-    wireGuidelinePicker(tplState, state, onGuidelineChange);
+    wireGuidelinePicker(tplState, state);
 
     const removeBtn = document.getElementById('tplChipSyllabusRemove');
     if (removeBtn) {

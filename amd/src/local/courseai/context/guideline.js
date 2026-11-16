@@ -22,7 +22,6 @@
  */
 
 import {escapeHtml} from 'local_coursegen/local/courseai/utils';
-import {guidelineUnitsOf} from 'local_coursegen/local/courseai/template/state';
 
 /**
  * Create guideline interaction handlers.
@@ -101,7 +100,7 @@ export const createGuidelineHandlers = (
         guidelineList.innerHTML = filtered.map((g) => {
             const isSelected = state.selectedGuidelineId === g.id;
             return `
-                <li class="pop-item${isSelected ? ' selected' : ''}" data-id="${g.id}" data-units="${guidelineUnitsOf(g) || ''}">
+                <li class="pop-item${isSelected ? ' selected' : ''}" data-id="${g.id}">
                     <button class="pop-select-btn" data-select="${g.id}" type="button">
                         <div class="pop-radio"><div class="pop-dot"></div></div>
                         <div class="pop-item-text">

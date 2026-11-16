@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.11] - 2026111403
+
+### Removed
+- **The optional "Number of units" of an institutional guideline is gone**  
+  The guideline form no longer has the field, the list of guidelines no longer shows it, and a template run no longer takes its number of units from the guideline: the number is the one the person typed when creating the course, else the template's own. The `units` column of `local_coursegen_system_instruction` is dropped on upgrade, together with its strings in all the language packs. The number of units typed at course creation is not affected.
+
 ## [2.0.10] - 2026111402
 
 ### Added

@@ -167,13 +167,7 @@ export const wireTemplateMode = (state, host) => {
         refreshGenerateState(tplState, genBtn);
     };
 
-    // A guideline with units prefills the units field (and the counts that follow it); removing it restores them.
-    wireInputBar(tplState, state, async() => {
-        refreshUnitsField(tplState);
-        if (tplState.loaded) {
-            updateStats(tplState, await getStatsTemplate());
-        }
-    });
+    wireInputBar(tplState, state);
 
     wireStructureEvents(container, {
         onToggleSection: async(sectionIndex) => {
@@ -346,7 +340,6 @@ const clearStructure = (tplState, container, state) => {
         syllabusdraftitemid: tplState.syllabusdraftitemid,
         syllabusfilename: tplState.syllabusfilename,
         guidelineid: tplState.guidelineid,
-        guidelineunits: tplState.guidelineunits,
     }));
     state.templateStructureLoaded = false;
 };

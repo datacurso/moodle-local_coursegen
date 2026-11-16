@@ -29,7 +29,7 @@
 import {createGuidelineHandlers} from '../context/guideline';
 import {loadCourseaiStrings} from '../i18n';
 import {refreshChipsRow} from './chips_row';
-import {guidelineUnitsOf, setGuideline} from './state';
+import {setGuideline} from './state';
 
 /**
  * The page id ('si_12') of the chosen guideline, null for none.
@@ -63,9 +63,8 @@ const refreshChip = (tplState, guidelines) => {
  *
  * @param {Object} tplState
  * @param {Object} state - Page state carrying the guidelines the page lists.
- * @param {Function} [onChange] Called after the chosen guideline changes (and with it, maybe the units field).
  */
-export const wireGuidelinePicker = (tplState, state, onChange = () => {}) => {
+export const wireGuidelinePicker = (tplState, state) => {
     const button = document.getElementById('tplBtnGuidelines');
     const popover = document.getElementById('tplGuidelinesPopover');
     const search = document.getElementById('tplGuidelineSearch');
@@ -83,7 +82,7 @@ export const wireGuidelinePicker = (tplState, state, onChange = () => {}) => {
             return pageIdOf(tplState);
         },
         set selectedGuidelineId(value) {
-            setGuideline(tplState, value, guidelineUnitsOf(guidelines.find((guideline) => guideline.id === value)));
+            setGuideline(tplState, value);
         },
         get guidelineSearchQuery() {
             return query;
@@ -98,10 +97,7 @@ export const wireGuidelinePicker = (tplState, state, onChange = () => {}) => {
                 state: adapter,
                 elements: {guidelineList: list},
                 texts,
-                refreshGuidelineChip: () => {
-                    refreshChip(tplState, guidelines);
-                    onChange();
-                },
+                refreshGuidelineChip: () => refreshChip(tplState, guidelines),
                 refreshChipsRow,
                 refreshCompactChipsRow: () => {},
             });
@@ -175,7 +171,6 @@ export const wireGuidelinePicker = (tplState, state, onChange = () => {}) => {
         removeBtn.addEventListener('click', () => {
             setGuideline(tplState, null);
             refreshChip(tplState, guidelines);
-            onChange();
             if (popover.classList.contains('open') && handlers) {
                 handlers.renderGuidelineList();
             }

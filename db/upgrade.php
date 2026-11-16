@@ -487,5 +487,15 @@ function xmldb_local_coursegen_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026111401, 'local', 'coursegen');
     }
 
+    if ($oldversion < 2026111403) {
+        // The optional number of units per institutional guideline is gone: templates keep their own count.
+        $table = new xmldb_table('local_coursegen_system_instruction');
+        $field = new xmldb_field('units');
+        if ($dbman->field_exists($table, $field)) {
+            $dbman->drop_field($table, $field);
+        }
+        upgrade_plugin_savepoint(true, 2026111403, 'local', 'coursegen');
+    }
+
     return true;
 }

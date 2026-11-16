@@ -67,7 +67,6 @@ if ($instruction && $instruction->get('id')) {
     $formdata = new stdClass();
     $formdata->id = $instruction->get('id');
     $formdata->name = $instruction->get('name');
-    $formdata->units = $instruction->get('units');
     $formdata->content_editor = [
         'text' => $instruction->get('content'),
         'format' => FORMAT_HTML,
@@ -82,12 +81,11 @@ if ($form->is_cancelled()) {
 if ($data = $form->get_data()) {
     $name = trim($data->name);
     $content = $data->content_editor['text'];
-    $units = trim((string) ($data->units ?? '')) === '' ? null : (int) $data->units;
 
     if (!empty($data->id)) {
-        system_instruction_service::update((int)$data->id, $name, $content, $units);
+        system_instruction_service::update((int)$data->id, $name, $content);
     } else {
-        system_instruction_service::create($name, $content, $units);
+        system_instruction_service::create($name, $content);
     }
 
     redirect(
