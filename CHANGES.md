@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026111402
+
+### Added
+- **A page of a template can show the real schedule of the course made from it**  
+  Writing `[[coursegen:schedule]]` (or `⟦coursegen:schedule⟧`, no instruction) in the content of a Page of the template, and saving that page with the action "keep", makes the page of the new course hold a table with the real units and activities of that course instead of the marker. The table has the columns Unit, Activity (a link to the activity), Type and Available from, one row per activity in the order of the course. The units are the top-level sections except the first (in the Flexible sections format the activities of the subsections are listed under the unit they hang from; in any other format every section is a unit), and a unit with no activity keeps its row. Labels, hidden activities, activities not shown on the course page, hidden sections and the page that holds the marker are left out. "Available from" is the date of the "from" restriction of the activity, else of its section, else of the sections it hangs from, already moved to the start date of the new course (an all-of group opens at its latest date and an any-of group at its earliest); it shows a dash when no date applies. A course with no unit gets a short note. Names are escaped, the headings follow the language of the course (the one of the user who creates it when the course has none) and the marker is never left in the course. The table is written once every activity and its settings are in the course. A kept page is copied as it is and never reaches the AI writing step as a placeholder, and the template scanner accepts the marker (it is not a placeholder; with text after it, it is reported as a malformed marker). New strings `schedule_column_unit`, `schedule_column_activity`, `schedule_column_type`, `schedule_column_from` and `schedule_empty` are available in all the language packs of the plugin.
+
 ## [2.0.10] - 2026111400
 
 ### Added
