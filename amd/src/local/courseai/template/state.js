@@ -49,6 +49,8 @@ export const createTemplateState = (inputbar = {}) => ({
     nolimit: false,
     remainingSections: 0,
     sections: [],
+    // True once the service added sections after the template's own (see added_structure.js).
+    addedSections: false,
     typeLabels: {},
     // Units of the template and the number the professor wants, only for a format that has units (0 = none).
     unitcount: 0,
@@ -92,6 +94,7 @@ export const setGuideline = (state, value) => {
  */
 export const applyStructureResponse = (state, data) => {
     state.loaded = true;
+    state.addedSections = false;
     state.nolimit = !!data.nolimit;
     state.remainingSections = data.remainingsections || 0;
     state.unitcount = data.unitcount || 0;
@@ -197,7 +200,7 @@ export const countsForUnits = (state) => {
             units.push(index);
         }
     });
-    if (!state.unitcount || !units.length || state.units === units.length) {
+    if (state.addedSections || !state.unitcount || !units.length || state.units === units.length) {
         return counts;
     }
 

@@ -35,6 +35,15 @@ use core_course_category;
  * two modes cannot drift apart.
  */
 class course_review_service {
+    /** @var string[] The string that words each warning code of the generation. */
+    private const WARNING_STRINGS = [
+        'units_count_mismatch' => 'courseai_review_warning_units_count_mismatch',
+        'guideline_structure_failed' => 'courseai_review_warning_guideline_structure_failed',
+        'guideline_units_mismatch' => 'courseai_review_warning_guideline_units_mismatch',
+        'section_names_fallback' => 'courseai_review_warning_section_names_fallback',
+        'h5p_degraded_fallback' => 'courseai_review_warning_h5p_degraded_fallback',
+    ];
+
     /**
      * The categories the teacher can place the new course in, with their full path.
      *
@@ -88,21 +97,39 @@ class course_review_service {
      *
      * A warning that is not known is not shown: the review only says what it can word.
      *
-     * @param array $warnings The result's generation_warnings, each with code, expected and actual.
+     * @param array $warnings The result's generation_warnings, each with its code and the fields of that code.
      * @return string[]
      */
     public static function warning_messages(array $warnings): array {
         $messages = [];
         foreach ($warnings as $warning) {
-            if (($warning['code'] ?? '') !== 'units_count_mismatch') {
-                continue;
+            $message = self::warning_message((array) $warning);
+            if ($message !== null) {
+                $messages[] = $message;
             }
-            $messages[] = get_string('courseai_review_warning_units_count_mismatch', 'local_coursegen', (object) [
-                'expected' => (int) ($warning['expected'] ?? 0),
-                'actual' => (int) ($warning['actual'] ?? 0),
-            ]);
         }
         return $messages;
+    }
+
+    /**
+     * The wording of one warning, or null when its code is not one the review knows.
+     *
+     * @param array $warning
+     * @return string|null
+     */
+    private static function warning_message(array $warning): ?string {
+        $code = (string) ($warning['code'] ?? '');
+        $keys = self::WARNING_STRINGS;
+        if (!isset($keys[$code])) {
+            return null;
+        }
+        $a = (object) [
+            'expected' => (int) ($warning['expected'] ?? 0),
+            'actual' => (int) ($warning['actual'] ?? 0),
+            'units' => (int) ($warning['units'] ?? 0),
+            'name' => trim((string) ($warning['activity'] ?? '')),
+        ];
+        return get_string($keys[$code], 'local_coursegen', $a);
     }
 
     /**

@@ -8,6 +8,12 @@ All notable changes to this project will be documented in this file. Each change
 - **Sections the AI service adds after the template's own now hang under their parent**  
   When the institutional guideline asks for a structure (units, subsections such as "Recursos Educativos", activities), the service appends those sections after the last section of the template. The plugin now writes their parent (flexsections) from the `parent_section` the service returned, marks them as added so they never take the look (summary, picture) of a template section with the same number, and no longer reports them as unexpected. The template's own sections are untouched.
 
+### Fixed
+- **The review step shows the sections and activities the guideline structure added**  
+  The list of activities the AI writes (left) and the structure panel (right) used to show only the template's own sections and activities. The service now sends a `template_structure` event with the sections it added (name, depth) and their activities; the page adds them to the structure grouped by section, with subsections indented under their unit, and the "N sections · M activities" counter and the completion counts include them. Added activities are labelled like the other AI-written ones. A template without added sections renders exactly as before.
+- **More warnings of the generation are worded in the review step**  
+  `guideline_structure_failed`, `guideline_units_mismatch`, `section_names_fallback` and `h5p_degraded_fallback` now show a message next to `units_count_mismatch` (new `courseai_review_warning_*` strings in all the language packs). The `units_count_mismatch` message no longer tells the teacher to adjust the removed units field of the guideline.
+
 ### Removed
 - **The optional "Number of units" of an institutional guideline is gone**  
   The guideline form no longer has the field, the list of guidelines no longer shows it, and a template run no longer takes its number of units from the guideline: the number is the one the person typed when creating the course, else the template's own. The `units` column of `local_coursegen_system_instruction` is dropped on upgrade, together with its strings in all the language packs. The number of units typed at course creation is not affected.

@@ -32,6 +32,8 @@ import {getTemplateStructure} from './template/repository';
 import {runGeneration} from './template/run_generation';
 import {wireInputBar} from './template/input_bar';
 import {refreshPreviewLinks} from './template/preview';
+import {mergeAddedStructure, setStructureListener} from './template/added_structure';
+import {ALL_STATUS_CLASSES, STATUS_CLASS} from './template/generation_events';
 import {initTopBar} from './template/top_bar';
 import {
     createTemplateState,
@@ -82,6 +84,18 @@ const updateStats = (tplState, statsTemplate) => {
     // The counts follow the number of units asked, not only the template's own sections.
     const counts = countsForUnits(tplState);
     statsEl.textContent = formatTemplate(statsTemplate, counts);
+};
+
+/**
+ * Mark the rows drawn after the run began as waiting, the way the rows of the template already are.
+ */
+const markRowsPending = () => {
+    document.querySelectorAll('[data-generation-uid]').forEach((row) => {
+        const started = ALL_STATUS_CLASSES.some((name) => row.classList.contains(name));
+        if (!started) {
+            row.classList.add(STATUS_CLASS.pending);
+        }
+    });
 };
 
 /**
@@ -147,6 +161,7 @@ export const wireTemplateMode = (state, host) => {
     // Input-bar defaults: no images, page default language, no syllabus yet.
     const tplState = createTemplateState({lang: state.defaultLang || ''});
 
+    wireInputBar(tplState, state);
     wireUnitsField(tplState);
 
     // Sequence guard: reselecting the template autocomplete before a previous
@@ -167,7 +182,12 @@ export const wireTemplateMode = (state, host) => {
         refreshGenerateState(tplState, genBtn);
     };
 
-    wireInputBar(tplState, state);
+    // The sections and activities the guideline adds join the structure and its counters while the run is on.
+    setStructureListener(async(data) => {
+        mergeAddedStructure(tplState, data);
+        await rerenderStructure();
+        markRowsPending();
+    });
 
     wireStructureEvents(container, {
         onToggleSection: async(sectionIndex) => {
