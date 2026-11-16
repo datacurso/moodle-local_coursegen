@@ -42,24 +42,62 @@ class template_section_look {
 
         foreach ($sectionsinfo as $info) {
             $number = (int) $info['section'];
-            // A resized flexsections course says which section of the template each one comes from.
-            $sourcenumber = (int) ($info['source_section'] ?? $number);
             if (!isset($sections[$number])) {
                 debugging('The new course has no section ' . $number . '; its look is skipped.', DEBUG_DEVELOPER);
                 continue;
             }
-            if (!isset($sourcesections[$sourcenumber])) {
-                // The template changed after the payload was built: the section of the same number is the best guess.
-                debugging('The template has no section ' . $sourcenumber . ' (the source of section ' . $number .
-                    ').', DEBUG_DEVELOPER);
-                if (!isset($sourcesections[$number])) {
-                    continue;
-                }
-                $sourcenumber = $number;
+            $sourcesection = self::source_section_of($info, $sourcesections);
+            if ($sourcesection === null) {
+                // A section the AI service added has no template look; it still hangs under its parent.
+                self::apply_format_options($course, $sections[$number], $info);
+                continue;
             }
-            self::apply_to_section($course, $sourcecourse, $sections[$number], $sourcesections[$sourcenumber], $info);
+            self::apply_to_section($course, $sourcecourse, $sections[$number], $sourcesection, $info);
         }
         rebuild_course_cache($course->id, true);
+    }
+
+    /**
+     * The section of the template a section of the new course takes its look from.
+     *
+     * @param array $info The section's entry of the payload.
+     * @param \stdClass[] $sourcesections The template's sections, by number.
+     * @return \stdClass|null Null for a section that was added by the service or has no counterpart.
+     */
+    private static function source_section_of(array $info, array $sourcesections): ?\stdClass {
+        if (!empty($info['added'])) {
+            return null;
+        }
+        $number = (int) $info['section'];
+        // A resized flexsections course says which section of the template each one comes from.
+        $sourcenumber = (int) ($info['source_section'] ?? $number);
+        if (isset($sourcesections[$sourcenumber])) {
+            return $sourcesections[$sourcenumber];
+        }
+        // The template changed after the payload was built: the section of the same number is the best guess.
+        debugging('The template has no section ' . $sourcenumber . ' (the source of section ' . $number .
+            ').', DEBUG_DEVELOPER);
+        return $sourcesections[$number] ?? null;
+    }
+
+    /**
+     * The options the format keeps for a section, with the parent the payload gives it.
+     *
+     * @param \stdClass $course
+     * @param \stdClass $section The new section.
+     * @param array $info The section's entry of the payload.
+     */
+    private static function apply_format_options(\stdClass $course, \stdClass $section, array $info): void {
+        $options = $info['format_options'] ?? [];
+        if (empty($options)) {
+            return;
+        }
+        if (isset($info['parent_section']) && array_key_exists('parent', $options)) {
+            // The template's own parent number is only right while the numbering is the template's.
+            $options['parent'] = (int) $info['parent_section'];
+        }
+        $options['id'] = $section->id;
+        course_get_format($course)->update_section_format_options($options);
     }
 
     /**
@@ -80,15 +118,7 @@ class template_section_look {
     ): void {
         self::apply_summary($course, $sourcecourse, $section, $sourcesection, $info);
 
-        $options = $info['format_options'] ?? [];
-        if (!empty($options)) {
-            if (isset($info['parent_section']) && array_key_exists('parent', $options)) {
-                // The template's own parent number is only right while the numbering is the template's.
-                $options['parent'] = (int) $info['parent_section'];
-            }
-            $options['id'] = $section->id;
-            course_get_format($course)->update_section_format_options($options);
-        }
+        self::apply_format_options($course, $section, $info);
 
         if ($course->format === 'grid') {
             template_grid_section_image::copy($course, $sourcecourse, $section, $sourcesection);

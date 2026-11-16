@@ -328,19 +328,62 @@ final class template_unit_resizer_test extends \advanced_testcase {
         $this->assertCount(3, $result);
     }
 
-    public function test_an_answered_section_the_plugin_never_sent_is_reported_and_left_alone(): void {
+    public function test_an_answered_section_inside_the_sent_range_that_was_never_sent_is_reported_and_left_alone(): void {
+        $sent = array_values(array_filter(
+            template_unit_resizer::resize($this->entries(), 2),
+            static fn(array $entry): bool => $entry['section'] !== 1
+        ));
+        $answered = [];
+        foreach ($sent as $entry) {
+            $answered[] = ['section' => $entry['section'], 'name' => 'N'];
+        }
+        $answered[] = ['section' => 1, 'name' => 'Gap'];
+
+        $result = template_unit_resizer::with_structure_of($answered, $sent);
+
+        $this->assertDebuggingCalled();
+        $this->assertSame(['section' => 1, 'name' => 'Gap'], end($result));
+        $this->assertSame(0, $result[0]['parent_section']);
+    }
+
+    public function test_sections_appended_after_the_last_sent_one_keep_the_service_structure_and_are_marked_added(): void {
         $sent = template_unit_resizer::resize($this->entries(), 2);
         $answered = [];
         foreach ($sent as $entry) {
             $answered[] = ['section' => $entry['section'], 'name' => 'N'];
         }
-        $answered[1]['section'] = 99;
+        $last = count($sent);
+        $answered[] = ['section' => $last, 'name' => 'Unidad 1', 'parent_section' => 0, 'depth' => 0,
+            'format_options' => ['parent' => 0]];
+        $answered[] = ['section' => $last + 1, 'name' => 'Recursos', 'parent_section' => $last, 'depth' => 1,
+            'format_options' => ['parent' => 99]];
+        $answered[] = ['section' => $last + 2, 'name' => 'No options', 'parent_section' => $last];
 
         $result = template_unit_resizer::with_structure_of($answered, $sent);
 
-        $this->assertDebuggingCalled();
-        $this->assertSame(['section' => 99, 'name' => 'N'], $result[1]);
+        $this->assertDebuggingNotCalled();
+        $this->assertCount($last + 3, $result);
+        $this->assertTrue($result[$last]['added']);
+        $this->assertSame(0, $result[$last]['parent_section']);
+        $this->assertSame($last, $result[$last + 1]['parent_section']);
+        $this->assertSame(1, $result[$last + 1]['depth']);
+        $this->assertSame($last, $result[$last + 1]['format_options']['parent']);
+        $this->assertSame(['parent' => $last], $result[$last + 2]['format_options']);
+        $this->assertArrayNotHasKey('added', $result[0]);
         $this->assertSame(0, $result[0]['parent_section']);
+    }
+
+    public function test_an_added_section_without_a_parent_is_only_marked(): void {
+        $sent = template_unit_resizer::resize($this->entries(), 2);
+        $answered = [];
+        foreach ($sent as $entry) {
+            $answered[] = ['section' => $entry['section'], 'name' => 'N'];
+        }
+        $answered[] = ['section' => count($sent), 'name' => 'Extra'];
+
+        $result = template_unit_resizer::with_structure_of($answered, $sent);
+
+        $this->assertSame(['section' => count($sent), 'name' => 'Extra', 'added' => true], end($result));
     }
 
     public function test_a_matching_answer_reports_nothing(): void {

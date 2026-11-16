@@ -20,8 +20,8 @@ namespace local_coursegen\local\service;
 /**
  * Makes the units of a flexsections template as many as the professor asked for.
  *
- * The AI service keeps the structure it is given: it never adds or removes a
- * section. So the plugin resizes the list before it is sent. A unit is a top
+ * The AI service keeps the template's own sections as they are given (it may only append sections after
+ * them, see with_structure_of()), so the plugin resizes the list before it is sent. A unit is a top
  * section with children. When more units are wanted, the model unit (the LAST
  * unit of the template, which is the most regular one: the first usually
  * follows an introduction) is cloned, with its whole subtree, right after the
@@ -60,10 +60,12 @@ final class template_unit_resizer {
     /**
      * The structure the plugin sent, put back on what the service answered.
      *
-     * The service keeps the sections it was given but answers its own entry
-     * for each one, which need not carry what only the plugin knows: the
-     * parent, how deep the section is, and which template section it comes
-     * from. The payload the plugin stored is the authority for all of it.
+     * The service answers its own entry for each section it was given, which need not carry what only the
+     * plugin knows: the parent, how deep the section is, and which template section it comes from. The payload
+     * the plugin stored is the authority for all of it. A section the service appended after the last one that
+     * was sent (the structure an institutional guideline asks for) is not in the stored payload: it keeps the
+     * parent and depth the service gave it, its format options are made to agree with that parent, and it is
+     * marked `added` so it is never given the look of a template section.
      *
      * @param array $answered The sections_info of the service's result.
      * @param array $sent The sections_info of the stored payload.
@@ -74,12 +76,17 @@ final class template_unit_resizer {
         foreach ($sent as $entry) {
             $sentbynumber[(int) $entry['section']] = $entry;
         }
-        if ($sent && count($answered) !== count($sent)) {
+        $lastsent = $sentbynumber ? max(array_keys($sentbynumber)) : -1;
+        if ($sent && count($answered) < count($sent)) {
             debugging('The service answered ' . count($answered) . ' sections for the ' . count($sent) .
                 ' that were sent; the stored structure is kept by section number.', DEBUG_DEVELOPER);
         }
         foreach ($answered as $index => $entry) {
             $original = $sentbynumber[(int) $entry['section']] ?? null;
+            if ($original === null && $sent && (int) $entry['section'] > $lastsent) {
+                $answered[$index] = self::as_added_section($entry);
+                continue;
+            }
             if ($original === null && $sent) {
                 debugging('The service answered section ' . (int) $entry['section'] .
                     ', which was not sent; it keeps the structure it came with.', DEBUG_DEVELOPER);
@@ -101,6 +108,27 @@ final class template_unit_resizer {
             $answered[$index] = $entry;
         }
         return $answered;
+    }
+
+    /**
+     * A section the service appended: marked as added, with its format options agreeing with its parent.
+     *
+     * @param array $entry The service's entry.
+     * @return array
+     */
+    private static function as_added_section(array $entry): array {
+        $entry['added'] = true;
+        if (!isset($entry['parent_section'])) {
+            return $entry;
+        }
+        $entry['parent_section'] = (int) $entry['parent_section'];
+        $options = [];
+        if (isset($entry['format_options']) && is_array($entry['format_options'])) {
+            $options = $entry['format_options'];
+        }
+        $options['parent'] = $entry['parent_section'];
+        $entry['format_options'] = $options;
+        return $entry;
     }
 
     /**

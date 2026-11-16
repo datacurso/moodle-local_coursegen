@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file. Each change
 
 ## [2.0.11] - 2026111403
 
+### Added
+- **Sections the AI service adds after the template's own now hang under their parent**  
+  When the institutional guideline asks for a structure (units, subsections such as "Recursos Educativos", activities), the service appends those sections after the last section of the template. The plugin now writes their parent (flexsections) from the `parent_section` the service returned, marks them as added so they never take the look (summary, picture) of a template section with the same number, and no longer reports them as unexpected. The template's own sections are untouched.
+
 ### Removed
 - **The optional "Number of units" of an institutional guideline is gone**  
   The guideline form no longer has the field, the list of guidelines no longer shows it, and a template run no longer takes its number of units from the guideline: the number is the one the person typed when creating the course, else the template's own. The `units` column of `local_coursegen_system_instruction` is dropped on upgrade, together with its strings in all the language packs. The number of units typed at course creation is not affected.
