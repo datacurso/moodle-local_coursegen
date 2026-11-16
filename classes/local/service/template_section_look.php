@@ -50,6 +50,7 @@ class template_section_look {
             if ($sourcesection === null) {
                 // A section the AI service added has no template look; it still hangs under its parent.
                 self::apply_format_options($course, $sections[$number], $info);
+                self::apply_added_summary($sections[$number], $info);
                 continue;
             }
             self::apply_to_section($course, $sourcecourse, $sections[$number], $sourcesection, $info);
@@ -78,6 +79,30 @@ class template_section_look {
         debugging('The template has no section ' . $sourcenumber . ' (the source of section ' . $number .
             ').', DEBUG_DEVELOPER);
         return $sourcesections[$number] ?? null;
+    }
+
+    /**
+     * The summary the service wrote for a section it added (plain text or HTML, no template files involved).
+     *
+     * @param \stdClass $section The new section.
+     * @param array $info The section's entry of the payload.
+     */
+    private static function apply_added_summary(\stdClass $section, array $info): void {
+        global $DB;
+
+        if (empty($info['added'])) {
+            return;
+        }
+        $summary = trim((string) ($info['summary'] ?? ''));
+        if ($summary === '') {
+            return;
+        }
+        $DB->update_record('course_sections', (object) [
+            'id' => $section->id,
+            'summary' => clean_param($summary, PARAM_CLEANHTML),
+            'summaryformat' => (int) ($info['summaryformat'] ?? FORMAT_HTML),
+            'timemodified' => time(),
+        ]);
     }
 
     /**

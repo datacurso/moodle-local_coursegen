@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.12] - 2026111403
+
+### Fixed
+- **Sections the AI service adds now keep their summary**  
+  The summary the service writes for a unit it adds (a short description taken from the syllabus) was dropped: only template sections took a summary. It is now stored in the section, with its format, for sections marked as added.
+
 ## [2.0.11] - 2026111403
 
 ### Added

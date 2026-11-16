@@ -169,7 +169,7 @@ final class template_added_sections_test extends \advanced_testcase {
         [$result, $source] = $this->create_with_added_sections();
         $course = get_course($result['courseid']);
         $info = [
-            'section' => 2, 'name' => 'Added', 'summary' => 'Fresh', 'added' => true,
+            'section' => 2, 'name' => 'Added', 'summary' => '', 'added' => true,
             'format_options' => ['parent' => 1], 'parent_section' => 1,
         ];
 
@@ -194,5 +194,37 @@ final class template_added_sections_test extends \advanced_testcase {
         $format = course_get_format($course);
         $this->assertSame(6, (int) $format->get_format_options($format->get_section(4))['parent']);
         $this->assertDebuggingCalled();
+    }
+
+    public function test_the_summary_the_service_wrote_for_an_added_section_is_stored(): void {
+        global $DB;
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        [$result, $source] = $this->create_with_added_sections();
+        $course = get_course($result['courseid']);
+        $info = [
+            'section' => 3, 'name' => 'Unidad 1', 'summary' => '<p>Materials for engineering.</p>',
+            'summaryformat' => FORMAT_HTML, 'added' => true,
+            'format_options' => ['parent' => 0], 'parent_section' => 0,
+        ];
+
+        template_section_look::apply($course, [$info], (int) $source->id);
+
+        $row = $DB->get_record('course_sections', ['course' => $course->id, 'section' => 3]);
+        $this->assertSame('<p>Materials for engineering.</p>', $row->summary);
+        $this->assertSame((int) FORMAT_HTML, (int) $row->summaryformat);
+    }
+
+    public function test_an_added_section_with_an_empty_summary_stays_empty(): void {
+        global $DB;
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        [$result, $source] = $this->create_with_added_sections();
+        $course = get_course($result['courseid']);
+        $info = ['section' => 3, 'summary' => '  ', 'added' => true, 'format_options' => ['parent' => 0], 'parent_section' => 0];
+
+        template_section_look::apply($course, [$info], (int) $source->id);
+
+        $this->assertSame('', (string) $DB->get_field('course_sections', 'summary', ['course' => $course->id, 'section' => 3]));
     }
 }
