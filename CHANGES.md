@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.13] - 2026111403
+
+### Added
+- **Hidden activities, completion tracking and unit locks the guideline asks for**  
+  The activities the AI service adds can now carry `parameters.visible` (false leaves the activity hidden) and `parameters.completion_rule` (`none`, `view`, `grade`, `submit` or `post`), and the unit sections can carry `unlock_requires_uids`. After the course is created, `guideline_activity_settings` hides the activities (`set_coursemodule_visible`) and writes the completion rule (view: automatic completion with completionview; grade: automatic completion requiring a grade, or the view when the module has no grade item; submit: the module's own completionsubmit for assignments and feedback; post: completionposts for forums), turning on course completion when a rule is applied. Then `guideline_unit_locks` restricts each locked unit with a completion availability on the previous unit's activities (the section stays visible, with its restriction shown). Activities that were not created or do not track completion are left out of the condition, and a rule a module cannot honour is skipped with a debugging message. Courses without these keys behave as before.
+
 ## [2.0.12] - 2026111403
 
 ### Fixed

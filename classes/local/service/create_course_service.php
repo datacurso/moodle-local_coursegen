@@ -138,6 +138,11 @@ class create_course_service {
             // their parent section.
             self::materialize_remaining_subsections($course->id, $subsections, $activityerrors);
 
+            // Hidden activities, completion rules and unit locks the guideline asked for.
+            $generatedactivities = $resultdata['generated_activities'] ?? [];
+            guideline_activity_settings::apply((int) $course->id, $generatedactivities, $generatedcms);
+            guideline_unit_locks::apply((int) $course->id, $resultdata['sections_info'] ?? [], $generatedactivities, $generatedcms);
+
             // Ensure section sequences only contain valid course module ids.
             $removedreferences = self::repair_course_section_sequences($course->id);
             self::stabilize_course_structure_cache($course->id);
