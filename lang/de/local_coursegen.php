@@ -240,6 +240,7 @@ $string['courseai_review_startdate_label'] = 'Startdatum (optional)';
 $string['courseai_review_startdate_note'] = 'Wenn leer, behält der Kurs das Standard-Startdatum. Zugriffsbeschränkungen nach Datum verschieben sich mit ihm.';
 $string['courseai_review_warning_guideline_structure_failed'] = 'Die von der Richtlinie verlangte Struktur konnte nicht hinzugefügt werden, daher behält der Kurs nur die Abschnitte und Aktivitäten der Vorlage. Sie können den Kurs neu generieren.';
 $string['courseai_review_warning_guideline_units_mismatch'] = 'Die Struktur der Richtlinie hat {$a->actual} Einheiten, der Lehrplan definiert aber {$a->expected}. Prüfen Sie die Einheiten des Kurses.';
+$string['courseai_review_warning_guideline_lock_skipped'] = 'Die Sperre von Einheit {$a->unit} wurde übersprungen, weil die vorherige Einheit keine Bewertungsaktivität zum Abschließen hat. Prüfen Sie die Einheitensperren des Kurses.';
 $string['courseai_review_warning_h5p_degraded_fallback'] = 'Das interaktive Buch "{$a->name}" konnte nicht vollständig erzeugt werden und wurde in vereinfachter Form geliefert. Prüfen Sie es vor der Verwendung.';
 $string['courseai_review_warning_section_names_fallback'] = 'Die Namen der Einheiten konnten nicht vorgeschlagen werden, daher wurden {$a->units} Einheiten nach ihrem Thema benannt. Prüfen Sie die Abschnittsnamen.';
 $string['courseai_review_warning_units_count_mismatch'] = 'Der Lehrplan definiert {$a->expected} Einheiten, der Kurs hat aber {$a->actual}. Prüfen Sie die Einheiten und generieren Sie bei Bedarf neu.';

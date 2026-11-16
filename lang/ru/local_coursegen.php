@@ -240,6 +240,7 @@ $string['courseai_review_startdate_label'] = 'Дата начала (необя�
 $string['courseai_review_startdate_note'] = 'Если поле пусто, курс сохраняет дату начала по умолчанию. Ограничения доступа по датам сдвигаются вместе с ней.';
 $string['courseai_review_warning_guideline_structure_failed'] = 'Структуру, которой требует руководство, добавить не удалось, поэтому в курсе остались только разделы и деятельность шаблона. Вы можете создать курс заново.';
 $string['courseai_review_warning_guideline_units_mismatch'] = 'В структуре руководства {$a->actual} модулей, а программа предусматривает {$a->expected}. Проверьте модули курса.';
+$string['courseai_review_warning_guideline_lock_skipped'] = 'Блокировка модуля {$a->unit} пропущена, так как в предыдущем модуле нет оценочного задания для завершения. Проверьте блокировки модулей курса.';
 $string['courseai_review_warning_h5p_degraded_fallback'] = 'Интерактивную книгу "{$a->name}" не удалось создать полностью, она передана в упрощённом виде. Проверьте её перед использованием.';
 $string['courseai_review_warning_section_names_fallback'] = 'Названия модулей предложить не удалось, поэтому {$a->units} модулей названы по их теме. Проверьте названия разделов.';
 $string['courseai_review_warning_units_count_mismatch'] = 'Программа предусматривает {$a->expected} модулей, а в курсе их {$a->actual}. При необходимости проверьте модули и создайте курс заново.';

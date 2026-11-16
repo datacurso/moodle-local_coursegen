@@ -363,6 +363,7 @@ $string['courseai_review_subtitle'] = 'Previsualiza y ajusta el nombre, nombre c
 $string['courseai_review_title'] = 'Revisar datos del curso';
 $string['courseai_review_warning_guideline_structure_failed'] = 'No se pudo añadir la estructura que pide la guía, así que el curso conserva solo las secciones y actividades de la plantilla. Puedes volver a generar el curso.';
 $string['courseai_review_warning_guideline_units_mismatch'] = 'La estructura de la guía tiene {$a->actual} unidades pero el programa define {$a->expected}. Revisa las unidades del curso.';
+$string['courseai_review_warning_guideline_lock_skipped'] = 'Se omitió el bloqueo de la unidad {$a->unit} porque la unidad anterior no tiene ninguna actividad de evaluación que completar. Revisa los bloqueos de las unidades del curso.';
 $string['courseai_review_warning_h5p_degraded_fallback'] = 'El libro interactivo "{$a->name}" no se pudo generar por completo y se entregó en una versión simplificada. Revísalo antes de usarlo.';
 $string['courseai_review_warning_section_names_fallback'] = 'No se pudieron proponer los nombres de las unidades, así que {$a->units} unidades se nombraron según su tema. Revisa los nombres de las secciones.';
 $string['courseai_review_warning_units_count_mismatch'] = 'El programa define {$a->expected} unidades pero el curso tiene {$a->actual}. Revisa las unidades y vuelve a generar si es necesario.';

@@ -389,6 +389,7 @@ $string['courseai_review_subtitle'] = 'Preview and adjust the course name, short
 $string['courseai_review_title'] = 'Review course details';
 $string['courseai_review_warning_guideline_structure_failed'] = 'The structure asked for by the guideline could not be added, so the course keeps only the template\'s own sections and activities. You can regenerate the course.';
 $string['courseai_review_warning_guideline_units_mismatch'] = 'The guideline structure has {$a->actual} units but the syllabus defines {$a->expected}. Review the units of the course.';
+$string['courseai_review_warning_guideline_lock_skipped'] = 'The unit lock of unit {$a->unit} was skipped because the previous unit has no evaluation activity to complete. Review the unit locks of the course.';
 $string['courseai_review_warning_h5p_degraded_fallback'] = 'The interactive book "{$a->name}" could not be fully generated and was delivered in a simplified version. Review it before using it.';
 $string['courseai_review_warning_section_names_fallback'] = 'The unit names could not be proposed, so {$a->units} units were named after their topic. Review the section names.';
 $string['courseai_review_warning_units_count_mismatch'] = 'The syllabus defines {$a->expected} units but the course has {$a->actual}. Review the units and regenerate if needed.';

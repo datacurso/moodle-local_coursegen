@@ -240,6 +240,7 @@ $string['courseai_review_startdate_label'] = 'Tanggal mulai (opsional)';
 $string['courseai_review_startdate_note'] = 'Jika dikosongkan, kursus memakai tanggal mulai bawaan. Pembatasan akses berdasarkan tanggal ikut bergeser.';
 $string['courseai_review_warning_guideline_structure_failed'] = 'Struktur yang diminta panduan tidak dapat ditambahkan, sehingga kursus hanya memiliki bagian dan aktivitas templat. Anda dapat membuat ulang kursus.';
 $string['courseai_review_warning_guideline_units_mismatch'] = 'Struktur panduan memiliki {$a->actual} unit, tetapi silabus menetapkan {$a->expected}. Periksa unit kursus.';
+$string['courseai_review_warning_guideline_lock_skipped'] = 'Penguncian unit {$a->unit} dilewati karena unit sebelumnya tidak memiliki aktivitas evaluasi untuk diselesaikan. Periksa penguncian unit pada kursus.';
 $string['courseai_review_warning_h5p_degraded_fallback'] = 'Buku interaktif "{$a->name}" tidak dapat dibuat sepenuhnya dan disajikan dalam versi sederhana. Periksa sebelum digunakan.';
 $string['courseai_review_warning_section_names_fallback'] = 'Nama unit tidak dapat diusulkan, sehingga {$a->units} unit diberi nama sesuai topiknya. Periksa nama bagian.';
 $string['courseai_review_warning_units_count_mismatch'] = 'Silabus menetapkan {$a->expected} unit, tetapi kursus memiliki {$a->actual}. Periksa unit dan buat ulang jika perlu.';

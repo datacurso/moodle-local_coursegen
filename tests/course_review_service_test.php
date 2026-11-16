@@ -137,6 +137,17 @@ final class course_review_service_test extends \advanced_testcase {
     }
 
     /**
+     * The skipped unit lock is worded with its unit number.
+     */
+    public function test_warning_messages_word_the_unit_lock_skipped_code(): void {
+        $messages = course_review_service::warning_messages([['code' => 'guideline_lock_skipped', 'unit' => 3]]);
+
+        $this->assertCount(1, $messages);
+        $this->assertStringContainsString('3', $messages[0]);
+        $this->assertStringNotContainsString('{$a', $messages[0]);
+    }
+
+    /**
      * Every warning code the service can send for a guideline structure is worded, in order.
      */
     public function test_warning_messages_word_the_guideline_structure_codes(): void {

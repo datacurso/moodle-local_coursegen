@@ -40,6 +40,7 @@ class course_review_service {
         'units_count_mismatch' => 'courseai_review_warning_units_count_mismatch',
         'guideline_structure_failed' => 'courseai_review_warning_guideline_structure_failed',
         'guideline_units_mismatch' => 'courseai_review_warning_guideline_units_mismatch',
+        'guideline_lock_skipped' => 'courseai_review_warning_guideline_lock_skipped',
         'section_names_fallback' => 'courseai_review_warning_section_names_fallback',
         'h5p_degraded_fallback' => 'courseai_review_warning_h5p_degraded_fallback',
     ];
@@ -127,6 +128,7 @@ class course_review_service {
             'expected' => (int) ($warning['expected'] ?? 0),
             'actual' => (int) ($warning['actual'] ?? 0),
             'units' => (int) ($warning['units'] ?? 0),
+            'unit' => (int) ($warning['unit'] ?? 0),
             'name' => trim((string) ($warning['activity'] ?? '')),
         ];
         return get_string($keys[$code], 'local_coursegen', $a);

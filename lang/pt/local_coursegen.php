@@ -240,6 +240,7 @@ $string['courseai_review_startdate_label'] = 'Data de início (opcional)';
 $string['courseai_review_startdate_note'] = 'Se ficar vazio, o curso mantém a data de início predefinida. As restrições de acesso por data acompanham-na.';
 $string['courseai_review_warning_guideline_structure_failed'] = 'A estrutura pedida pela diretriz não pôde ser adicionada, então o curso mantém apenas as seções e atividades do modelo. Você pode gerar o curso novamente.';
 $string['courseai_review_warning_guideline_units_mismatch'] = 'A estrutura da diretriz tem {$a->actual} unidades, mas o programa define {$a->expected}. Revise as unidades do curso.';
+$string['courseai_review_warning_guideline_lock_skipped'] = 'O bloqueio da unidade {$a->unit} foi ignorado porque a unidade anterior não tem nenhuma atividade de avaliação para concluir. Revise os bloqueios das unidades do curso.';
 $string['courseai_review_warning_h5p_degraded_fallback'] = 'O livro interativo "{$a->name}" não pôde ser gerado por completo e foi entregue em uma versão simplificada. Revise-o antes de usar.';
 $string['courseai_review_warning_section_names_fallback'] = 'Os nomes das unidades não puderam ser propostos, então {$a->units} unidades receberam o nome do seu tema. Revise os nomes das seções.';
 $string['courseai_review_warning_units_count_mismatch'] = 'O programa define {$a->expected} unidades, mas o curso tem {$a->actual}. Revise as unidades e gere novamente, se necessário.';
