@@ -14,8 +14,12 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * The part of "Add space for an activity" under the activity chooser: each selected activity with its instruction,
- * and what applies to them (the name of one, who provides a File, whether the space is required).
+ * The state of the list of "Add space for an activity": which rows are selected, what opens under each one, the
+ * summary in the footer and what the modal saves.
+ *
+ * One selected activity is created by the AI and needs its instruction (with an optional name); a File can instead be
+ * one the teacher uploads, and then the footer asks whether it is required. Several activities make a space where the
+ * teacher chooses one, each instruction optional.
  *
  * @module     local_coursegen/local/template/template_space_picker_form
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -26,7 +30,7 @@
 const UPLOADABLE = 'resource';
 
 /**
- * The selector of a part of the form.
+ * The selector of a part of the modal.
  *
  * @param {string} name
  * @returns {string}
@@ -34,92 +38,87 @@ const UPLOADABLE = 'resource';
 export const region = (name) => `[data-region="local_coursegen/template/space-picker-${name}"]`;
 
 /**
- * The selected activities, in the order of the list.
+ * The selected rows, in the order of the list.
  *
  * @param {HTMLElement} root The modal.
  * @returns {HTMLElement[]}
  */
-export const tickedOptions = (root) => [...root.querySelectorAll(region('option'))].filter((option) => !option.hidden);
+export const selectedRows = (root) => [...root.querySelectorAll(region('option'))]
+    .filter((row) => row.querySelector(region('toggle')).getAttribute('aria-checked') === 'true');
 
 /**
- * Show or hide the card of one activity. Call {@see refresh} after it.
+ * Select or unselect a row: its box is checked and its panel opens or closes right under it.
  *
- * @param {HTMLElement} root The modal.
- * @param {string} modname
+ * @param {HTMLElement} row
  * @param {boolean} selected
  */
-export const showCard = (root, modname, selected) => {
-    const card = root.querySelector(`${region('option')}[data-modname="${modname}"]`);
-    if (card) {
-        card.hidden = !selected;
-    }
+export const setSelected = (row, selected) => {
+    row.querySelector(region('toggle')).setAttribute('aria-checked', String(selected));
+    row.classList.toggle('is-selected', selected);
+    row.querySelector(region('panel')).hidden = !selected;
 };
 
 /**
- * Put the cursor in the instruction of an activity just selected, once its card is shown.
+ * Whether the one selected row is a File the teacher uploads.
  *
- * @param {HTMLElement} root The modal.
- * @param {string} modname
- */
-export const focusInstruction = (root, modname) => {
-    const field = root.querySelector(`${region('option')}[data-modname="${modname}"] ${region('instruction')}`);
-    field?.focus({preventScroll: true});
-};
-
-/**
- * Whether the admin chose that the teacher uploads the one File ticked.
- *
- * @param {HTMLElement} root The modal.
+ * @param {HTMLElement[]} rows The selected rows.
  * @returns {boolean}
  */
-const teacherUploads = (root) => {
-    const ticked = tickedOptions(root);
-    return ticked.length === 1 && ticked[0].dataset.modname === UPLOADABLE
-        && root.querySelector(`${region('mode')}:checked`)?.value === 'teacher';
+const teacherUploads = (rows) => rows.length === 1 && rows[0].dataset.modname === UPLOADABLE
+    && rows[0].querySelector(`${region('mode')}[aria-pressed="true"]`)?.dataset.mode === 'teacher';
+
+/**
+ * Show in each selected row what applies to the selection: the label and placeholder of its instruction, the name
+ * of one activity, who provides one File.
+ *
+ * @param {HTMLElement[]} rows The selected rows.
+ * @param {Object} text The texts of the labels and placeholders.
+ */
+const shapePanels = (rows, text) => {
+    const one = rows.length === 1;
+    const uploads = teacherUploads(rows);
+    rows.forEach((row) => {
+        const label = row.querySelector(region('label'));
+        const field = row.querySelector(region('instruction'));
+        let kind = 'several';
+        if (uploads) {
+            kind = 'teacher';
+        } else if (one) {
+            kind = 'single';
+        }
+        label.textContent = text[kind].label;
+        field.placeholder = text[kind].placeholder;
+        field.required = kind === 'single';
+        row.querySelector(region('name-group')).hidden = !one || uploads;
+        const mode = row.querySelector(region('mode-group'));
+        if (mode) {
+            mode.hidden = !one;
+            row.querySelector(region('teacher-hint')).hidden = !uploads;
+        }
+    });
 };
 
 /**
- * Show what belongs to what is ticked: the name for one activity, who provides it for one File, the requirement for a
- * File the teacher uploads or for several activities, and the help for several.
+ * Bring the modal up to date with the selection: the panels, the summary, the requirement and Save.
  *
  * @param {HTMLElement} root The modal.
- * @param {Object} placeholders {several, single, teacher}: see {@see placeholderOf}.
+ * @param {Object} text {single, several, teacher: {label, placeholder}, summary: {none, ai, teacher, several}}.
  */
-export const refresh = (root, placeholders) => {
-    const ticked = tickedOptions(root);
-    const one = ticked.length === 1;
-    const uploads = teacherUploads(root);
-    root.querySelector(region('help')).hidden = ticked.length < 2;
-    root.querySelector(region('name-group')).hidden = !one || uploads;
-    root.querySelector(region('mode-group')).hidden = !(one && ticked[0].dataset.modname === UPLOADABLE);
-    root.querySelector(region('required-group')).hidden = !(ticked.length > 1 || uploads);
-    // One activity the AI creates needs its instruction: it is all the AI has to know what to create.
-    const aiAlone = one && !uploads;
-    root.querySelector(region('selected')).hidden = ticked.length === 0;
-    root.querySelector(region('empty')).hidden = ticked.length > 0;
-    root.querySelectorAll(region('option')).forEach((option) => {
-        const field = option.querySelector(region('instruction'));
-        field.required = aiAlone && option === ticked[0];
-        field.placeholder = placeholderOf(placeholders, option === ticked[0] && one, uploads);
-    });
-    const save = root.querySelector('[data-action="save"]');
-    save.disabled = ticked.length === 0 || (aiAlone && ticked[0].querySelector(region('instruction')).value.trim() === '');
-};
-
-/**
- * The placeholder of the instruction of an activity: what the teacher must upload, how the one activity the AI
- * creates must be, or the optional instruction of one of several.
- *
- * @param {Object} placeholders {several, single, teacher}.
- * @param {boolean} alone It is the one activity ticked.
- * @param {boolean} uploads The teacher uploads it.
- * @returns {string}
- */
-const placeholderOf = (placeholders, alone, uploads) => {
-    if (!alone) {
-        return placeholders.several;
+export const refresh = (root, text) => {
+    const rows = selectedRows(root);
+    const uploads = teacherUploads(rows);
+    shapePanels(rows, text);
+    let summary = text.summary.none;
+    if (rows.length > 1) {
+        summary = text.summary.several.replace('{$a}', String(rows.length));
+    } else if (rows.length === 1) {
+        summary = uploads ? text.summary.teacher : text.summary.ai;
     }
-    return uploads ? placeholders.teacher : placeholders.single;
+    root.querySelector(region('summary')).textContent = summary;
+    root.querySelector(region('required-group')).hidden = !(rows.length > 1 || uploads);
+    const aiAlone = rows.length === 1 && !uploads;
+    const missing = aiAlone && rows[0].querySelector(region('instruction')).value.trim() === '';
+    root.querySelector('[data-action="save"]').disabled = rows.length === 0 || missing;
 };
 
 /**
@@ -130,11 +129,11 @@ const placeholderOf = (placeholders, alone, uploads) => {
  * @returns {Object} {kind: 'single', picked, choice} or {kind: 'several', options, titles, required}.
  */
 export const readPicker = (root, items) => {
-    const ticked = tickedOptions(root);
-    const required = root.querySelector(`${region('required')}:checked`)?.value === '1';
-    const options = ticked.map((option) => ({
-        modname: option.dataset.modname,
-        instruction: option.querySelector(region('instruction')).value.trim(),
+    const rows = selectedRows(root);
+    const required = root.querySelector(`${region('required')}[aria-pressed="true"]`)?.dataset.value === '1';
+    const options = rows.map((row) => ({
+        modname: row.dataset.modname,
+        instruction: row.querySelector(region('instruction')).value.trim(),
     }));
     const itemOf = (modname) => items.find((item) => item.name === modname) || {title: modname, icon: ''};
     if (options.length > 1) {
@@ -142,10 +141,43 @@ export const readPicker = (root, items) => {
     }
     const item = itemOf(options[0].modname);
     const picked = {modname: options[0].modname, name: item.title, icon: item.icon};
-    if (teacherUploads(root)) {
+    if (teacherUploads(rows)) {
         // The row of the space shows the type ("File"): no name of its own that would hide it.
         return {kind: 'single', picked, choice: {mode: 'teacher', required, instruction: options[0].instruction}};
     }
-    const name = root.querySelector(region('name')).value.trim();
+    const name = rows[0].querySelector(region('name')).value.trim();
     return {kind: 'single', picked, choice: {mode: 'ai', name, required: true, instruction: options[0].instruction}};
+};
+
+/**
+ * Press one button of a group of two (who provides a File, required or optional).
+ *
+ * @param {HTMLElement} button
+ */
+export const press = (button) => {
+    button.parentElement.querySelectorAll('button').forEach((other) => {
+        const on = other === button;
+        other.classList.toggle('active', on);
+        other.setAttribute('aria-pressed', String(on));
+    });
+};
+
+/**
+ * Show the rows of the tab and the search, and say so when none is left.
+ *
+ * @param {HTMLElement} root The modal.
+ * @param {string} tab all, activity or resource.
+ * @param {string} query What the search says.
+ */
+export const filterRows = (root, tab, query) => {
+    const needle = query.trim().toLocaleLowerCase();
+    let shown = 0;
+    root.querySelectorAll(region('option')).forEach((row) => {
+        const inTab = tab === 'all' || row.dataset.kind === tab;
+        const found = !needle || row.dataset.title.toLocaleLowerCase().includes(needle)
+            || row.querySelector('.tpl-sp-desc').textContent.toLocaleLowerCase().includes(needle);
+        row.hidden = !(inTab && found);
+        shown += row.hidden ? 0 : 1;
+    });
+    root.querySelector(region('empty')).hidden = shown > 0;
 };
