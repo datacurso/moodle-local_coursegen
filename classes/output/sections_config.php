@@ -351,6 +351,7 @@ class sections_config {
                 $context = ['isreal' => false, 'isinstance' => true]
                     + template_row_options::instance_row_context($entry['record']);
             }
+            $context['isfirst'] = ($index === 0);
             $context['islast'] = ($index === $lastindex);
             $rows[] = $context;
         }

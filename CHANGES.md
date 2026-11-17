@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10-wp] - 2026111144
+
+### Added
+- **A "+" before the first activity of each section**  
+  An activity, a space or an activity from a template can now be added at the start of a section: what is added there goes first and stays first after saving. Inserting or removing never leaves two "+" in a row.
+
 ## [2.0.10-wp] - 2026111143
 
 ### Changed

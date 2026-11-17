@@ -91,14 +91,19 @@ const buildInstanceRowFragment = (data, instanceid) => renderRowFragment('local_
 });
 
 /**
- * Remove the gap directly in front of the section's persistent add-row, if
- * one is currently there — see this module's own docblock for why one
- * must never sit there. Call after any insert/remove instead of tracking
- * this at each call site.
+ * Keep the gaps of a section in order after any insert or remove: never two gaps in a row, and none directly in
+ * front of the section's persistent add-row (see this module's own docblock). The gap before the first row, which
+ * the server draws and every insert keeps, stays: it is where an activity is added at the start of the section.
  *
  * @param {HTMLElement} tbody The section's table body.
  */
 export const dropGapBeforeAddRow = (tbody) => {
+    [...tbody.children].forEach((row) => {
+        const previous = row.previousElementSibling;
+        if (row.matches(Selectors.regions.rowGap) && previous && previous.matches(Selectors.regions.rowGap)) {
+            row.remove();
+        }
+    });
     const addRow = tbody.querySelector(Selectors.regions.addInstance);
     const priorRow = addRow?.previousElementSibling;
     if (priorRow && priorRow.matches(Selectors.regions.rowGap)) {
