@@ -52,7 +52,7 @@ final class template_settings_copier {
      * @param int $templateid The template.
      * @param int $courseid The new course.
      * @param array $payloadactivities Every activity entry of the result, kept ones included.
-     * @param array $generatedcms Payload cmid => created cmid, for the generated activities.
+     * @param array $generatedcms Activity key (generated_activity_key) => created cmid, for the generated activities.
      * @param array $keptcms Base course cmid => created cmid, for the copied kept activities.
      * @param template_section_map|null $sectionmap Where each section of the template went in the new course;
      *     null when the sections are the template's own.
@@ -178,7 +178,7 @@ final class template_settings_copier {
         foreach ($payloadactivities as $entry) {
             $behavior = $entry['template_behavior'] ?? [];
             $sourcecmid = (int) ($behavior['template_source_cmid'] ?? 0);
-            $cmid = (int) ($generatedcms[(int) ($entry['cmid'] ?? 0)] ?? 0);
+            $cmid = (int) ($generatedcms[generated_activity_key::of($entry)] ?? 0);
             if (($behavior['action'] ?? '') === 'instance' && $sourcecmid > 0 && $cmid > 0) {
                 $created[$sourcecmid][] = $cmid;
             }

@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.13] - 2026111710
+
+### Changed
+- **The activities the AI writes are matched by their uid when the course is built**  
+  An activity the AI writes has no course module in the template, so the course module created for it is now kept under its uid, and every step that follows it (order, settings copied from the template, links, unit locks) reads it that way. The units cloned for a resized template no longer get an invented course module id. An entry of an older payload with no uid is still matched by the id it travelled with.
+
 ## [2.0.13] - 2026111709
 
 ### Changed

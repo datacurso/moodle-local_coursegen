@@ -137,7 +137,8 @@ final class template_unit_resizer {
      * An activity follows its section to the new number; the activities of a
      * dropped section go with it. A clone of a unit also holds what the AI is
      * to write in the unit it copies (the "instance" activities, which belong
-     * to no real activity), each with a uid and a cmid of its own. What the
+     * to no real activity), each known only by a uid of its own: it has no
+     * course module in the template, so it carries no cmid. What the
      * template keeps as it is stays only in its own section: a kept activity is
      * copied from one place, once.
      *
@@ -163,7 +164,6 @@ final class template_unit_resizer {
             $moved[] = $activity;
         }
 
-        $nextcmid = min(array_merge([0], array_column($activities, 'cmid'))) - 1;
         foreach ($sections as $section) {
             if (empty($section['cloned'])) {
                 continue;
@@ -175,7 +175,7 @@ final class template_unit_resizer {
                     continue;
                 }
                 $activity['uid'] = template_export_uids::random_uid();
-                $activity['cmid'] = $nextcmid--;
+                unset($activity['cmid']);
                 $activity['parameters']['section'] = (int) $section['section'];
                 $moved[] = $activity;
             }

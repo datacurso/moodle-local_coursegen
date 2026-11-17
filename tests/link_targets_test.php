@@ -37,7 +37,7 @@ final class link_targets_test extends \basic_testcase {
             ['uid' => 'uid-kept', 'cmid' => 31],
         ];
 
-        $map = link_targets::build($payload, [-4 => 901], [31 => 902]);
+        $map = link_targets::build($payload, ['uid-generated' => 901], [31 => 902]);
 
         $this->assertSame(['uid-generated' => 901, 'uid-kept' => 902], $map);
     }
@@ -55,7 +55,16 @@ final class link_targets_test extends \basic_testcase {
     }
 
     /**
-     * An entry without a uid, or without a cmid, cannot be a target.
+     * An activity the AI wrote is found by its uid, with no course module id at all.
+     */
+    public function test_generated_activity_without_a_cmid_is_found_by_its_uid(): void {
+        $payload = [['uid' => 'uid-copy']];
+
+        $this->assertSame(['uid-copy' => 903], link_targets::build($payload, ['uid-copy' => 903], []));
+    }
+
+    /**
+     * An entry without a uid, or a uid that nothing was created for, cannot be a target.
      */
     public function test_entries_without_uid_or_cmid_are_left_out(): void {
         $payload = [
@@ -78,6 +87,6 @@ final class link_targets_test extends \basic_testcase {
 
         $this->expectException(\moodle_exception::class);
 
-        link_targets::build($payload, [-1 => 901], [31 => 902]);
+        link_targets::build($payload, ['dup' => 901], [31 => 902]);
     }
 }

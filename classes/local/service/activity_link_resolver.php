@@ -42,8 +42,8 @@ final class activity_link_resolver {
      *
      * @param int $courseid The new course.
      * @param array $payloadactivities Every activity entry of the result, kept ones included.
-     * @param array $generatedcms Payload cmid => created cmid, for the generated activities.
-     * @param array $keptcms Payload cmid => created cmid, for the copied kept activities.
+     * @param array $generatedcms Activity key (generated_activity_key) => created cmid, for the generated activities.
+     * @param array $keptcms Template cmid => created cmid, for the copied kept activities.
      * @throws \moodle_exception When a token names no activity of the course.
      */
     public static function resolve_for_course(

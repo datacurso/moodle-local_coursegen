@@ -83,7 +83,7 @@ final class activity_link_resolver_test extends \advanced_testcase {
         activity_link_resolver::resolve_for_course(
             $course->id,
             $this->payload(['uid-forum' => -3]),
-            [-3 => (int) $target->cmid, -4 => (int) $page->cmid],
+            ['uid-forum' => (int) $target->cmid, 'other-4' => (int) $page->cmid],
             []
         );
 
@@ -109,7 +109,7 @@ final class activity_link_resolver_test extends \advanced_testcase {
         activity_link_resolver::resolve_for_course(
             $course->id,
             $this->payload(['uid-page' => -1]),
-            [-1 => (int) $target->cmid, -2 => (int) $label->cmid],
+            ['uid-page' => (int) $target->cmid, 'other-2' => (int) $label->cmid],
             []
         );
 
@@ -134,7 +134,7 @@ final class activity_link_resolver_test extends \advanced_testcase {
         activity_link_resolver::resolve_for_course(
             $course->id,
             $this->payload(['uid-page' => -1]),
-            [-1 => (int) $target->cmid, -2 => (int) $lesson->cmid],
+            ['uid-page' => (int) $target->cmid, 'other-2' => (int) $lesson->cmid],
             []
         );
 
@@ -161,7 +161,7 @@ final class activity_link_resolver_test extends \advanced_testcase {
         activity_link_resolver::resolve_for_course(
             $course->id,
             $this->payload(['uid-generated' => -2, 'uid-kept' => 31]),
-            [-2 => (int) $generated->cmid, -9 => (int) $page->cmid],
+            ['uid-generated' => (int) $generated->cmid, 'other-9' => (int) $page->cmid],
             [31 => (int) $kept->cmid]
         );
 
@@ -183,7 +183,7 @@ final class activity_link_resolver_test extends \advanced_testcase {
         ]);
 
         try {
-            activity_link_resolver::resolve_for_course($course->id, [], [-1 => (int) $page->cmid], []);
+            activity_link_resolver::resolve_for_course($course->id, [], ['other-1' => (int) $page->cmid], []);
             $this->fail('An unknown uid must throw.');
         } catch (\moodle_exception $exception) {
             $this->assertStringContainsString('Welcome page', $exception->getMessage());
@@ -212,7 +212,7 @@ final class activity_link_resolver_test extends \advanced_testcase {
             activity_link_resolver::resolve_for_course(
                 $course->id,
                 $this->payload(['uid-forum' => -3]),
-                [-3 => (int) $target->cmid, -4 => (int) $good->cmid, -5 => (int) $bad->cmid],
+                ['uid-forum' => (int) $target->cmid, 'other-4' => (int) $good->cmid, 'other-5' => (int) $bad->cmid],
                 []
             );
             $this->fail('An unknown uid must throw.');
@@ -238,7 +238,7 @@ final class activity_link_resolver_test extends \advanced_testcase {
         activity_link_resolver::resolve_for_course(
             $course->id,
             $this->payload(['uid-label' => -5]),
-            [-5 => (int) $label->cmid, -6 => (int) $page->cmid],
+            ['uid-label' => (int) $label->cmid, 'other-6' => (int) $page->cmid],
             []
         );
     }
@@ -253,7 +253,7 @@ final class activity_link_resolver_test extends \advanced_testcase {
         $content = '<p>$@COURSEGENIMG*uid-1@$ and $@anything@$ and price $@5@$</p>';
         $page = $this->getDataGenerator()->create_module('page', ['course' => $course->id, 'content' => $content]);
 
-        activity_link_resolver::resolve_for_course($course->id, [], [-1 => (int) $page->cmid], []);
+        activity_link_resolver::resolve_for_course($course->id, [], ['other-1' => (int) $page->cmid], []);
 
         $this->assertSame($content, $DB->get_field('page', 'content', ['id' => $page->id]));
     }
@@ -272,7 +272,7 @@ final class activity_link_resolver_test extends \advanced_testcase {
         activity_link_resolver::resolve_for_course(
             $course->id,
             $this->payload(['uid-forum' => -3]),
-            [-3 => (int) $target->cmid],
+            ['uid-forum' => (int) $target->cmid],
             []
         );
 
@@ -292,7 +292,7 @@ final class activity_link_resolver_test extends \advanced_testcase {
         activity_link_resolver::resolve_for_course(
             $course->id,
             $this->payload(['uid-forum' => -1]),
-            [-1 => (int) $forum->cmid],
+            ['uid-forum' => (int) $forum->cmid],
             []
         );
 

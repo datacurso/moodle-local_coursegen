@@ -77,7 +77,7 @@ final class template_settings_copier_dates_test extends \advanced_testcase {
             'template_behavior' => ['action' => 'instance', 'template_source_cmid' => (int) $page->cmid],
         ]];
 
-        template_settings_copier::copy_into($templateid, (int) $new->id, $payload, [-1 => (int) $newpage->cmid], []);
+        template_settings_copier::copy_into($templateid, (int) $new->id, $payload, ['cmid:-1' => (int) $newpage->cmid], []);
 
         $section = $DB->get_field('course_sections', 'availability', ['course' => $new->id, 'section' => 1]);
         $module = $DB->get_field('course_modules', 'availability', ['id' => $newpage->cmid]);

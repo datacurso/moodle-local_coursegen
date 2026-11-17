@@ -47,7 +47,7 @@ final class guideline_unit_locks_test extends \advanced_testcase {
             ]);
             $cm = get_coursemodule_from_instance('quiz', $quiz->id);
             $activities[] = ['uid' => "quiz$unit", 'cmid' => -$unit, 'resource_type' => 'quiz'];
-            $map[-$unit] = (int) $cm->id;
+            $map["quiz$unit"] = (int) $cm->id;
             $sections[] = ['uid' => "unit$unit", 'section' => $unit, 'name' => "Unit $unit"];
         }
         return [$course, $sections, $activities, $map];
@@ -85,10 +85,10 @@ final class guideline_unit_locks_test extends \advanced_testcase {
         $this->assertEquals('&', $second->op);
         $this->assertEquals([true], $second->showc);
         $this->assertEquals('completion', $second->c[0]->type);
-        $this->assertEquals($map[-1], $second->c[0]->cm);
+        $this->assertEquals($map['quiz1'], $second->c[0]->cm);
         $this->assertEquals(COMPLETION_COMPLETE, $second->c[0]->e);
         $third = $this->availability($course->id, 3);
-        $this->assertEquals($map[-2], $third->c[0]->cm);
+        $this->assertEquals($map['quiz2'], $third->c[0]->cm);
         $modinfo = get_fast_modinfo($course->id);
         $this->assertNotEmpty($modinfo->get_section_info(2)->availability);
         $this->assertEquals(1, $modinfo->get_section_info(2)->visible);
@@ -131,7 +131,7 @@ final class guideline_unit_locks_test extends \advanced_testcase {
         $this->resetAfterTest();
         $this->setAdminUser();
         [$course, $sections, $activities, $map] = $this->three_units();
-        $DB->set_field('course_modules', 'completion', COMPLETION_TRACKING_NONE, ['id' => $map[-2]]);
+        $DB->set_field('course_modules', 'completion', COMPLETION_TRACKING_NONE, ['id' => $map['quiz2']]);
         $sections[1]['unlock_requires_uids'] = ['ghost', 'quiz1'];
         $sections[2]['unlock_requires_uids'] = ['quiz2'];
         guideline_unit_locks::apply((int) $course->id, $sections, $activities, $map);
@@ -139,7 +139,7 @@ final class guideline_unit_locks_test extends \advanced_testcase {
 
         $second = $this->availability($course->id, 2);
         $this->assertCount(1, $second->c);
-        $this->assertEquals($map[-1], $second->c[0]->cm);
+        $this->assertEquals($map['quiz1'], $second->c[0]->cm);
         $this->assertNull($this->availability($course->id, 3));
     }
 }

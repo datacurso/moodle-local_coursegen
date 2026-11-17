@@ -54,7 +54,7 @@ class template_run_history {
      *
      * @param int $sessionid
      * @param int $courseid The course built.
-     * @param array $generatedcms Payload cmid => created cmid, for the activities the AI wrote.
+     * @param array $generatedcms Activity key (generated_activity_key) => created cmid, for the activities the AI wrote.
      */
     public static function record_completed(int $sessionid, int $courseid, array $generatedcms): void {
         $session = new course_session($sessionid);

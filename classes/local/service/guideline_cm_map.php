@@ -31,18 +31,18 @@ final class guideline_cm_map {
      * The created course module of every activity that has one.
      *
      * @param array $activities The result's generated activities.
-     * @param array $generatedcms Placeholder cmid => created cmid.
+     * @param array $generatedcms Activity key (generated_activity_key) => created cmid.
      * @return int[] Activity uid => created course module id.
      */
     public static function by_uid(array $activities, array $generatedcms): array {
         $map = [];
         foreach ($activities as $activity) {
             $uid = (string) ($activity['uid'] ?? '');
-            $payloadcmid = (int) ($activity['cmid'] ?? 0);
-            if ($uid === '' || !isset($generatedcms[$payloadcmid])) {
+            $key = generated_activity_key::of($activity);
+            if ($uid === '' || !isset($generatedcms[$key])) {
                 continue;
             }
-            $map[$uid] = (int) $generatedcms[$payloadcmid];
+            $map[$uid] = (int) $generatedcms[$key];
         }
         return $map;
     }
