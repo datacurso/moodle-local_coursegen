@@ -42,6 +42,11 @@ const paintName = (sessionId, fullname, shortname) => {
     const items = document.querySelectorAll(`[data-sessionid="${sessionId}"]`);
     items.forEach((item) => {
         item.dataset.title = fullname;
+        if (item.dataset.toggle === 'tooltip') {
+            // The tooltip shows the whole name; Bootstrap keeps the text it already showed in data-original-title.
+            item.setAttribute('title', fullname);
+            item.setAttribute('data-original-title', fullname);
+        }
         const title = item.querySelector('.courseai-sidebar-course-title, .courseai-session-row-name a');
         if (title) {
             title.textContent = fullname;
@@ -99,6 +104,10 @@ export const announceSession = async(sessionId) => {
         }
         item.dataset.sessionid = String(sessionId);
         item.querySelector('.courseai-sidebar-course-title').textContent = untitled;
+        item.dataset.toggle = 'tooltip';
+        item.dataset.placement = 'right';
+        item.setAttribute('title', untitled);
+        item.removeAttribute('data-original-title');
         const shortname = item.querySelector('.courseai-sidebar-course-shortname');
         shortname.textContent = '';
         shortname.hidden = true;
