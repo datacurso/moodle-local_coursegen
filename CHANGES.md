@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10-wp] - 2026111150
+
+### Fixed
+- **A File of the course marked as a space for the teacher asks for no mode**  
+  Choosing "Space for the teacher" on a File of the base course opens "Space for the teacher" with only whether it is required and the instruction for the teacher: the teacher uploads their own file in its place, with no choice between the AI and the teacher.
+
 ## [2.0.10-wp] - 2026111149
 
 ### Fixed
