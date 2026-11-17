@@ -305,34 +305,3 @@ export const chooseActivityType = async({courseId, supportedTypes}) => {
     }
     return selection.promise;
 };
-
-/**
- * Open the activity chooser of the course page, with the types a space can be made for, and nothing bound to a click
- * on a type: the caller decides what a click does.
- *
- * @param {Object} options
- * @param {number} options.courseId The base course.
- * @param {string[]} options.supportedTypes Module names a space can be made for.
- * @returns {Promise<{modal: Object, items: Object[]}>} Once its body is drawn.
- */
-export const openActivityChooser = async({courseId, supportedTypes}) => {
-    const body = createDeferred();
-    const modalPromise = createChooserModal(body.promise);
-    try {
-        const items = await fetchSupportedItems(courseId, supportedTypes);
-        ChooserDialogue.displayChooser(modalPromise, items, keepFavouritesUnchanged, {footer: false});
-        body.resolve(await Templates.render('core_course/activitychooser', templateData(items)));
-        const modal = await modalPromise;
-        await new Promise((resolve) => {
-            if (modal.getBody()[0].querySelector('[data-region="chooser-option-container"]')) {
-                resolve();
-                return;
-            }
-            modal.getRoot().one(ModalEvents.bodyRendered, resolve);
-        });
-        return {modal, items};
-    } catch (error) {
-        (await modalPromise).destroy();
-        throw error;
-    }
-};

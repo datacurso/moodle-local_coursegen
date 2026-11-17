@@ -1,0 +1,47 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+{{!
+    @template local_coursegen/template_space_picker_footer
+
+    The footer of the modal of "Add space for an activity": what the selection makes, whether the space is required
+    (with several activities or a File the teacher uploads), Cancel and Save.
+
+    Data attributes required for JS:
+    * data-region="local_coursegen/template/space-picker-summary" on what the selection makes.
+    * data-region="local_coursegen/template/space-picker-required-group" and "space-picker-required" (data-value).
+    * data-action="cancel" and data-action="save" on the two buttons.
+
+    Context variables required for this template:
+    * none
+
+    Example context (json):
+    {}
+}}
+<div class="tpl-sp-foot">
+    <div class="tpl-sp-summary" data-region="local_coursegen/template/space-picker-summary" aria-live="polite"></div>
+    <div class="btn-group" role="group" aria-label="{{#str}} template_space_requirement_label, local_coursegen {{/str}}"
+         data-region="local_coursegen/template/space-picker-required-group" hidden>
+        <button type="button" class="btn btn-outline-primary active" aria-pressed="true" data-value="1"
+                data-region="local_coursegen/template/space-picker-required">{{#str}} template_space_required, local_coursegen {{/str}}</button>
+        <button type="button" class="btn btn-outline-primary" aria-pressed="false" data-value="0"
+                data-region="local_coursegen/template/space-picker-required">{{#str}} template_space_optional, local_coursegen {{/str}}</button>
+    </div>
+    <div class="tpl-sp-actions">
+        <button type="button" class="btn btn-secondary" data-action="cancel">{{#str}} cancel, core {{/str}}</button>
+        <button type="button" class="btn btn-primary" data-action="save" disabled>{{#str}} savechanges, core {{/str}}</button>
+    </div>
+</div>

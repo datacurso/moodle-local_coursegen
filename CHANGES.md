@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10-wp] - 2026111143
+
+### Changed
+- **"Add space for an activity" lists one activity per row, and the instruction opens under the selected one**  
+  Each activity takes the whole width of the modal, with its icon, its name, a short description and its help, under a search and the tabs All, Activities and Resources. Selecting an activity opens its instruction right under its own row, with the cursor in it; with one activity, the same row asks for its optional name and, for a File, who provides it. The footer, which stays at the bottom, says what the selection makes and, with several activities or a File the teacher uploads, whether the space is required.
+
+### Fixed
+- **"Add space for an activity" never stops answering**  
+  Closing the modal in any way after a save that could not go through no longer leaves the option blocked until the page is reloaded, and a row selected near the bottom brings its instruction into view above the footer.
+
 ## [2.0.10-wp] - 2026111142
 
 ### Changed

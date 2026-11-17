@@ -61,83 +61,160 @@
     white-space: nowrap;
 }
 
-/* "Add space for an activity": the activity chooser of the course page, where a click selects a type; the
-   selected ones carry a mark, and under the chooser each is a card with its own instruction. */
-.modchooser .option.tpl-chooser-selected {
-    position: relative;
-    box-shadow: 0 0 0 2px #0f6cbf;
+/* "Add space for an activity": one activity per row at full width; a selected row opens its instruction right under
+   it. The row keeps its own border when selected: only its box is checked. */
+.tpl-sp-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 0;
+    padding: 10px 0 0;
+    list-style: none;
 }
 
-.modchooser .option.tpl-chooser-selected::after {
-    content: "";
-    position: absolute;
-    top: 6px;
-    right: 6px;
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    background: #0f6cbf url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%23fff' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round' d='M4 8.5l2.5 2.5L12 5.5'/%3E%3C/svg%3E") center / 12px no-repeat;
-}
-
-.tpl-space-picker-form .tpl-space-picker-selected:first-of-type,
-.tpl-space-picker-form > .tpl-space-picker > .tpl-space-picker-selected {
-    margin-top: 0;
-    padding-top: 0;
-    border-top: 0;
-}
-
-.tpl-space-picker-selected,
-.tpl-space-picker-setting {
-    margin-top: 1.25rem;
-    padding-top: 1rem;
-    border-top: 1px solid #dee2e6;
-}
-
-.tpl-space-picker-item {
-    padding: 10px 12px 12px;
-    margin-bottom: 8px;
+.tpl-sp-item {
     border: 1px solid #dee2e6;
     border-radius: 0.5rem;
     background: #fff;
 }
 
-.tpl-space-picker-item-head {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 6px;
+.tpl-sp-item:hover {
+    border-color: #b8bfc6;
 }
 
-.tpl-space-picker-item-icon .icon,
-.tpl-space-picker-item-icon img {
+.tpl-sp-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding-right: 10px;
+}
+
+.tpl-sp-toggle {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    gap: 14px;
+    min-width: 0;
+    padding: 10px 14px;
+    border: 0;
+    border-radius: 0.5rem;
+    background: none;
+    color: inherit;
+    text-align: left;
+}
+
+.tpl-sp-toggle:focus-visible {
+    outline: 0;
+    box-shadow: 0 0 0 0.2rem rgba(15, 108, 191, 0.35);
+}
+
+.tpl-sp-check {
+    flex: none;
     width: 20px;
     height: 20px;
+    border: 2px solid #8f959e;
+    border-radius: 4px;
+    background: #fff center / 12px no-repeat;
+}
+
+.tpl-sp-item.is-selected .tpl-sp-check {
+    border-color: #0f6cbf;
+    background-color: #0f6cbf;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%23fff' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round' d='M3.5 8.5l3 3 6-6.5'/%3E%3C/svg%3E");
+}
+
+.tpl-sp-icon.activityiconcontainer {
+    flex: none;
     margin: 0;
 }
 
-.tpl-space-picker-item-title {
+.tpl-sp-text {
+    display: flex;
     flex: 1;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.tpl-sp-name {
     font-weight: 600;
 }
 
-.tpl-space-picker-remove {
-    padding: 0 4px;
-    color: #6c757d;
+.tpl-sp-desc {
+    overflow: hidden;
+    color: #6a737b;
+    font-size: 0.87rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-.tpl-space-picker-remove .icon {
-    margin: 0;
+.tpl-sp-info {
+    flex: none;
+    color: #6a737b;
 }
 
-.tpl-space-picker-setting > legend {
-    margin-bottom: 0.5rem;
+.tpl-sp-help {
+    padding: 0 14px 12px 102px;
+    color: #495057;
+    font-size: 0.9rem;
 }
 
-/* The chooser of "Add space for an activity" offers no favourites: the star stays in the markup and is not shown. */
-.tpl-space-chooser [data-action="manage-module-favourite"] {
-    display: none;
+.tpl-sp-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 0 14px 14px 102px;
 }
 
-.tpl-space-picker-form {
-    padding: 1rem;
+.tpl-sp-label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.tpl-sp-foot {
+    display: flex;
+    flex: 1;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+}
+
+.tpl-sp-summary {
+    color: #6a737b;
+}
+
+.tpl-sp-actions {
+    display: flex;
+    gap: 8px;
+    margin-left: auto;
+}
+
+.tpl-space-picker-modal .modal-footer {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    background: #fff;
+    border-bottom-left-radius: inherit;
+    border-bottom-right-radius: inherit;
+}
+
+@media (max-width: 575.98px) {
+    .tpl-sp-panel,
+    .tpl-sp-help {
+        padding-left: 14px;
+    }
+
+    .tpl-sp-desc {
+        display: none;
+    }
+}
+
+/* A row selected near the bottom brings its instruction into view above the footer that stays at the bottom. */
+.tpl-sp-item {
+    scroll-margin-bottom: 96px;
+}
+
+.tpl-sp-panel textarea {
+    scroll-margin-bottom: 96px;
 }
