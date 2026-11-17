@@ -42,8 +42,30 @@ const region = (name) => `[data-region="local_coursegen/template/space-picker-${
  * @param {HTMLElement} root The modal.
  * @returns {HTMLElement[]}
  */
-const tickedOptions = (root) => [...root.querySelectorAll(region('option'))]
-    .filter((option) => option.querySelector(region('check')).checked);
+const tickedOptions = (root) => [...root.querySelectorAll(region('option'))].filter((option) => !option.hidden);
+
+/**
+ * Select or unselect one activity: its tile is marked and its card, with the instruction, shows under the tiles.
+ * Call {@see refresh} after it, so the section of the selected activities is shown too.
+ *
+ * @param {HTMLElement} root The modal.
+ * @param {string} modname
+ * @param {boolean} selected
+ */
+const setSelected = (root, modname, selected) => {
+    root.querySelector(`${region('tile')}[data-modname="${modname}"]`).setAttribute('aria-pressed', String(selected));
+    root.querySelector(`${region('option')}[data-modname="${modname}"]`).hidden = !selected;
+};
+
+/**
+ * Put the cursor in the instruction of an activity just selected, once its card is shown.
+ *
+ * @param {HTMLElement} root The modal.
+ * @param {string} modname
+ */
+const focusInstruction = (root, modname) => {
+    root.querySelector(`${region('option')}[data-modname="${modname}"] ${region('instruction')}`).focus({preventScroll: true});
+};
 
 /**
  * Whether the admin chose that the teacher uploads the one File ticked.
@@ -74,9 +96,9 @@ const refresh = (root, placeholders) => {
     root.querySelector(region('required-group')).hidden = !(ticked.length > 1 || uploads);
     // One activity the AI creates needs its instruction: it is all the AI has to know what to create.
     const aiAlone = one && !uploads;
+    root.querySelector(region('selected')).hidden = ticked.length === 0;
     root.querySelectorAll(region('option')).forEach((option) => {
         const field = option.querySelector(region('instruction'));
-        field.classList.toggle('d-none', !option.querySelector(region('check')).checked);
         field.required = aiAlone && option === ticked[0];
         field.placeholder = placeholderOf(placeholders, option === ticked[0] && one, uploads);
     });
@@ -147,9 +169,12 @@ export const pickSpace = async({courseId, supportedTypes}) => {
         getString('template_space_instruction_placeholder', COMPONENT),
     ]);
     const options = items.map((item) => ({modname: item.name, title: item.title, icon: item.icon}));
+    // Large, and with no scroll of its own: however many activities are selected, the modal grows with the page.
     const modal = await ModalSaveCancel.create({
         title,
         body: Templates.render('local_coursegen/template_space_picker_body', {options}),
+        large: true,
+        scrollable: false,
         removeOnClose: true,
     });
     const rootList = modal.getRoot();
@@ -158,7 +183,25 @@ export const pickSpace = async({courseId, supportedTypes}) => {
     return new Promise((resolve) => {
         let saved = false;
         rootList.on(ModalEvents.bodyRendered, () => {
-            root.querySelectorAll(`${region('check')}, ${region('mode')}`).forEach((input) => {
+            root.querySelectorAll(region('tile')).forEach((tile) => {
+                tile.addEventListener('click', () => {
+                    const selected = tile.getAttribute('aria-pressed') !== 'true';
+                    setSelected(root, tile.dataset.modname, selected);
+                    refresh(root, placeholders);
+                    if (selected) {
+                        focusInstruction(root, tile.dataset.modname);
+                    }
+                });
+            });
+            root.querySelectorAll(region('remove')).forEach((button) => {
+                button.addEventListener('click', () => {
+                    const modname = button.closest(region('option')).dataset.modname;
+                    setSelected(root, modname, false);
+                    refresh(root, placeholders);
+                    root.querySelector(`${region('tile')}[data-modname="${modname}"]`).focus();
+                });
+            });
+            root.querySelectorAll(region('mode')).forEach((input) => {
                 input.addEventListener('change', () => refresh(root, placeholders));
             });
             root.querySelectorAll(region('instruction')).forEach((field) => {

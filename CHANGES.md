@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026110957
+
+### Changed
+- **"Add space for an activity" with tiles and a card for each selected activity**  
+  The activities are tiles like the activity chooser of the course page, selected and unselected with one click or with the keyboard, with a mark on the selected ones. Under them, each selected activity is a card with its icon, its name, its instruction at full width and a button to remove it; the cursor goes to the instruction of the activity just selected. Who provides a File comes before the name, which only applies when the AI creates it. The modal is large and has no scroll of its own.
+
 ## [2.0.10] - 2026110956
 
 ### Fixed
