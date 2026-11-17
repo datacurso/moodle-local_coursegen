@@ -51,3 +51,12 @@
         grid-template-columns: minmax(0, 1fr);
     }
 }
+
+/* The menu of "Add activity or space" is as wide as its longest item: no text runs over its edge. */
+.dropdown-menu:has(> .tpl-add-menu-item) {
+    min-width: max-content;
+}
+
+.tpl-add-menu-item {
+    white-space: nowrap;
+}

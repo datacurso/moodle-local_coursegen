@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026110949
+
+### Fixed
+- **A cordial and professional tone in the texts of the templates**  
+  The texts of the spaces, of "Modify with AI", of the activity the AI creates and of the warning about molds with no instructions no longer address the person informally nor read as orders; they are written in an impersonal, courteous tone.
+- **The menu of "Add activity or space" fits its texts**  
+  The menu is as wide as its longest item, so no text runs over its edge.
+
 ## [2.0.10] - 2026110948
 
 ### Added
