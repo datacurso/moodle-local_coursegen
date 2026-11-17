@@ -79,13 +79,13 @@
            value="{{name}}" placeholder="{{#aionly}}{{#str}} template_space_name_placeholder_ai, local_coursegen {{/str}}{{/aionly}}{{^aionly}}{{subject}}{{/aionly}}">
 </div>
 <fieldset class="mb-3" data-region="local_coursegen/template/space-required-group"{{#aichecked}} hidden{{/aichecked}}>
-    <legend class="h6">{{#str}} template_space_requirement_label, local_coursegen {{/str}}</legend>
+    <legend class="h6">{{#str}} template_space_file_required_label, local_coursegen {{/str}}</legend>
     <div class="form-check mb-2">
         <input class="form-check-input" type="radio" name="template-space-required-choice" data-region="local_coursegen/template/space-required-choice"
                id="{{uniqid}}-required-yes" value="1"{{#requiredchecked}} checked{{/requiredchecked}}>
         <label class="form-check-label" for="{{uniqid}}-required-yes">
             <strong>{{#str}} template_space_required, local_coursegen {{/str}}</strong>
-            <span class="d-block text-muted small">{{#str}} template_space_required_desc, local_coursegen {{/str}}</span>
+            <span class="d-block text-muted small">{{#str}} template_space_file_required_desc, local_coursegen {{/str}}</span>
         </label>
     </div>
     <div class="form-check">
@@ -93,7 +93,7 @@
                id="{{uniqid}}-required-no" value="0"{{#optionalchecked}} checked{{/optionalchecked}}>
         <label class="form-check-label" for="{{uniqid}}-required-no">
             <strong>{{#str}} template_space_optional, local_coursegen {{/str}}</strong>
-            <span class="d-block text-muted small">{{#str}} template_space_optional_desc, local_coursegen {{/str}}</span>
+            <span class="d-block text-muted small">{{#str}} template_space_file_optional_desc, local_coursegen {{/str}}</span>
         </label>
     </div>
 </fieldset>

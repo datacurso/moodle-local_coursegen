@@ -128,6 +128,14 @@ export const refresh = (root, text) => {
     badge.hidden = rows.length === 0;
     badge.textContent = rows.length === 1 ? text.badge.one : text.badge.many.replace('{$a}', String(rows.length));
     root.querySelector(region('required-group')).hidden = !(rows.length > 1 || uploads);
+    // The question says what the teacher does: choose one of the activities, or upload the file.
+    const which = rows.length > 1 ? 'choice' : 'file';
+    ['required-label', 'required-desc', 'optional-desc'].forEach((name) => {
+        const element = root.querySelector(region(name));
+        // Among several, a File the teacher uploads is the one the AI does not create: the line says so.
+        const upload = which === 'choice' && rows.some(rowUploads) && element.dataset.choiceupload;
+        element.textContent = upload || element.dataset[which];
+    });
     const aiAlone = rows.length === 1 && !uploads;
     const missing = aiAlone && rows[0].querySelector(region('instruction')).value.trim() === '';
     root.querySelector('[data-action="save"]').disabled = rows.length === 0 || missing;
