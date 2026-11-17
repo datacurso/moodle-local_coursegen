@@ -87,7 +87,7 @@
             <span class="editinstructions" data-region="instance-name-instructions">
                 {{#str}} edittitleinstructions, core {{/str}}
             </span>
-            <input type="text" class="ignoredirty form-control" data-region="instance-name-input"
+            <input type="text" class="ignoredirty form-control" data-region="instance-name-input" maxlength="255"
                    aria-label="{{#str}} template_instance_name, local_coursegen {{/str}}">
         </span>
         {{#generated}}<span class="tpl-badge tpl-badge-generated ml-2">{{#str}} template_generated_badge, local_coursegen {{/str}}</span>{{/generated}}

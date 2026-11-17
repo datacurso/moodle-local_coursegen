@@ -62,7 +62,7 @@ const teacherUploads = (root) => {
  * File the teacher uploads or for several activities, and the help for several.
  *
  * @param {HTMLElement} root The modal.
- * @param {Object} placeholders {ai, teacher}: the placeholder of the instruction for each mode.
+ * @param {Object} placeholders {several, single, teacher}: see {@see placeholderOf}.
  */
 const refresh = (root, placeholders) => {
     const ticked = tickedOptions(root);
@@ -72,15 +72,34 @@ const refresh = (root, placeholders) => {
     root.querySelector(region('name-group')).hidden = !one || uploads;
     root.querySelector(region('mode-group')).hidden = !(one && ticked[0].dataset.modname === UPLOADABLE);
     root.querySelector(region('required-group')).hidden = !(ticked.length > 1 || uploads);
+    // One activity the AI creates needs its instruction: it is all the AI has to know what to create.
+    const aiAlone = one && !uploads;
     root.querySelectorAll(region('option')).forEach((option) => {
         const field = option.querySelector(region('instruction'));
         field.classList.toggle('d-none', !option.querySelector(region('check')).checked);
-        field.placeholder = uploads && option === ticked[0] ? placeholders.teacher : placeholders.ai;
+        field.required = aiAlone && option === ticked[0];
+        field.placeholder = placeholderOf(placeholders, option === ticked[0] && one, uploads);
     });
     const save = root.querySelector('[data-action="save"]');
     if (save) {
-        save.disabled = ticked.length === 0;
+        save.disabled = ticked.length === 0 || (aiAlone && ticked[0].querySelector(region('instruction')).value.trim() === '');
     }
+};
+
+/**
+ * The placeholder of the instruction of an activity: what the teacher must upload, how the one activity the AI
+ * creates must be, or the optional instruction of one of several.
+ *
+ * @param {Object} placeholders {several, single, teacher}.
+ * @param {boolean} alone It is the one activity ticked.
+ * @param {boolean} uploads The teacher uploads it.
+ * @returns {string}
+ */
+const placeholderOf = (placeholders, alone, uploads) => {
+    if (!alone) {
+        return placeholders.several;
+    }
+    return uploads ? placeholders.teacher : placeholders.single;
 };
 
 /**
@@ -121,9 +140,10 @@ const readPicker = (root, items) => {
  */
 export const pickSpace = async({courseId, supportedTypes}) => {
     const items = await fetchSupportedItems(courseId, supportedTypes);
-    const [title, ai, teacher] = await Promise.all([
+    const [title, several, single, teacher] = await Promise.all([
         getString('template_add_space', COMPONENT),
         getString('template_teacher_space_instruction', COMPONENT),
+        getString('template_space_instruction_placeholder_ai', COMPONENT),
         getString('template_space_instruction_placeholder', COMPONENT),
     ]);
     const options = items.map((item) => ({modname: item.name, title: item.title, icon: item.icon}));
@@ -134,17 +154,20 @@ export const pickSpace = async({courseId, supportedTypes}) => {
     });
     const rootList = modal.getRoot();
     const root = rootList[0];
-    const placeholders = {ai, teacher};
+    const placeholders = {several, single, teacher};
     return new Promise((resolve) => {
         let saved = false;
         rootList.on(ModalEvents.bodyRendered, () => {
             root.querySelectorAll(`${region('check')}, ${region('mode')}`).forEach((input) => {
                 input.addEventListener('change', () => refresh(root, placeholders));
             });
+            root.querySelectorAll(region('instruction')).forEach((field) => {
+                field.addEventListener('input', () => refresh(root, placeholders));
+            });
             refresh(root, placeholders);
         });
         rootList.on(ModalEvents.save, (event) => {
-            if (!tickedOptions(root).length) {
+            if (root.querySelector('[data-action="save"]')?.disabled || !tickedOptions(root).length) {
                 event.preventDefault();
                 return;
             }

@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10-wp] - 2026111140
+
+### Fixed
+- **A name with a tag or longer than its column no longer makes the whole template fail to save**  
+  The names of the template and of its activities are kept as plain text: tags are dropped and a name is cut at 255 characters on the server, so saving never fails with "invalid parameter" or a database error. The field that renames an activity no longer takes more than 255 characters, and a long name with no spaces breaks inside its cell instead of pushing the row wider than the table.
+- **An activity the AI creates needs its instruction**  
+  With one activity ticked in "Add space for an activity", Save stays off until its instruction is written, since it is all the AI has to know what to create; among several activities each instruction stays optional.
+- **A double click on "Add space for an activity" opens one modal**  
+  A second click while the modal is opening or open does nothing.
+
 ## [2.0.10-wp] - 2026111139
 
 ### Changed

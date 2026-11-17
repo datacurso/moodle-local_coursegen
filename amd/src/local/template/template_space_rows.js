@@ -200,16 +200,37 @@ const saveNewSpace = async(tbody, beforeEl, picked, markDirty, choice) => {
     markDirty();
 };
 
+/** @type {boolean} The modal of a new space is being opened or is open: a second click opens no second modal. */
+let picking = false;
+
 /**
- * Add a space for an activity at the position the menu opened from: pick the
- * activity type in the chooser, then say whether it is required and what the
- * professor has to provide, then insert the row.
+ * Add a space for an activity at the position the menu opened from: the admin ticks one activity or several, each
+ * with its instruction, and the row is inserted. A second click while the modal is open does nothing.
  *
  * @param {HTMLElement} item The clicked "add a space" menu item.
  * @param {Object} state The live wizard state from init.js.
  * @param {Function} markDirty Marks the wizard as having unsaved changes.
  */
 export const addSpace = async(item, state, markDirty) => {
+    if (picking) {
+        return;
+    }
+    picking = true;
+    try {
+        await addSpaceAt(item, state, markDirty);
+    } finally {
+        picking = false;
+    }
+};
+
+/**
+ * Add a space at the place the menu item opened from (see {@see addSpace}).
+ *
+ * @param {HTMLElement} item The clicked "add a space" menu item.
+ * @param {Object} state The live wizard state from init.js.
+ * @param {Function} markDirty Marks the wizard as having unsaved changes.
+ */
+const addSpaceAt = async(item, state, markDirty) => {
     const beforeEl = item.closest(Selectors.regions.gapOrAddInstance);
     const table = beforeEl.closest(TAG.TABLE);
     const tbody = table.querySelector(TAG.TABLE_BODY);
