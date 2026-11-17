@@ -296,6 +296,80 @@ const editSpaceRow = (row, markDirty) => {
     openSpaceModal({subject, required: row.dataset.required === REQUIRED_VALUE, instruction, onSave, lockMode: true});
 };
 
+/** @type {Object} The course and the types of the template, for the modal opened from a row. */
+const editContext = {courseId: 0, supportedTypes: []};
+
+/**
+ * Remember the course and the types of the template, for the modal opened from a row of an activity of the AI.
+ *
+ * @param {Object} state The live wizard state.
+ */
+export const setGeneratedEditContext = (state) => {
+    editContext.courseId = state.selectedCourseId;
+    editContext.supportedTypes = state.supportedTypes;
+};
+
+/**
+ * Edit an activity the AI creates in the modal of "Add space for an activity", with its type, name and instruction.
+ * Kept as one activity of the AI, the row is updated in place; turned into anything else (several activities, the
+ * File the teacher uploads, another type) the row is replaced by it, in the same place.
+ *
+ * @param {HTMLElement} row The instance row.
+ * @param {Function} markDirty Marks the wizard as having unsaved changes.
+ * @returns {Promise<void>}
+ */
+const editGeneratedRow = async(row, markDirty) => {
+    const nameEl = row.querySelector(Selectors.regions.instanceNameEditable);
+    const promptRow = row.nextElementSibling;
+    const promptEl = promptRow?.querySelector(Selectors.regions.instancePrompt);
+    const modname = row.dataset.modname;
+    const preset = {
+        options: [{
+            modname,
+            instruction: promptEl?.value || '',
+            name: row.dataset.ainame === '1' ? '' : (nameEl?.dataset.value || ''),
+            mode: 'ai',
+        }],
+        required: true,
+    };
+    const result = await pickSpace({courseId: editContext.courseId, supportedTypes: editContext.supportedTypes, preset});
+    if (result === null) {
+        return;
+    }
+    const same = result.kind === 'single' && result.choice.mode === 'ai' && result.picked.modname === modname;
+    if (!same) {
+        const tbody = row.closest(TAG.TABLE_BODY);
+        if (result.kind === 'several') {
+            await insertSpaceRow(tbody, row, {
+                name: await getString('template_teacher_space_name', COMPONENT, result.titles.join(', ')),
+                modname: result.options[0].modname,
+                icon: '',
+                required: result.required,
+                instruction: '',
+                options: result.options,
+            });
+            markDirty();
+        } else {
+            await saveNewSpace(tbody, row, result.picked, markDirty, result.choice);
+        }
+        removeInstanceRow(row);
+        return;
+    }
+    const name = result.choice.name || genericName(result.picked);
+    row.dataset.ainame = result.choice.name ? '0' : '1';
+    if (nameEl) {
+        nameEl.dataset.value = name;
+        nameEl.querySelector('[data-region="instance-name-display"]').textContent = name;
+    }
+    if (promptEl) {
+        promptEl.value = result.choice.instruction;
+    }
+    const shown = row.querySelector('[data-region="local_coursegen/template/generated-instruction"]');
+    shown.textContent = result.choice.instruction;
+    shown.classList.toggle(CLASS.HIDDEN, result.choice.instruction === '');
+    markDirty();
+};
+
 /**
  * Handle a click on a space row: the badge and the edit icon reopen the
  * shared modal for that row; the remove icon removes it.
@@ -304,6 +378,11 @@ const editSpaceRow = (row, markDirty) => {
  * @param {MouseEvent} e The click.
  */
 const handleSpaceRowClick = (markDirty, e) => {
+    const generated = e.target.closest('[data-action="local_coursegen/template/generated-edit"]');
+    if (generated) {
+        editGeneratedRow(generated.closest(Selectors.rows.instance), markDirty);
+        return;
+    }
     const row = e.target.closest(Selectors.regions.spaceRow);
     if (!row) {
         return;

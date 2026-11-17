@@ -282,3 +282,21 @@
     font-size: inherit;
     padding: 0.375rem 0.75rem;
 }
+
+/* An activity the AI creates looks like a space: no pencil of its own on the name (the pencil of the row opens the
+   modal of "Add space for an activity"), and the frame of a space instead of the green one. */
+.tpl-row-generated-space [data-region="instance-name-edit-trigger"] {
+    display: none;
+}
+
+.tpl-row-instance.tpl-row-generated-space[data-generated="1"] {
+    background: #fffaf2;
+    box-shadow: inset 3px 0 0 #e08a1e;
+}
+
+/* The instructions of an activity the AI creates and of an activity modified with AI are not shown in the table (long
+   texts make it hard to read): they stay in the row for the save and show in the modal of its pencil. */
+[data-region="local_coursegen/template/generated-instruction"],
+[data-region="local_coursegen/template/aimodify-instruction"] {
+    display: none !important;
+}

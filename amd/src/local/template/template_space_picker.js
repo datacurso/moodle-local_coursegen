@@ -160,7 +160,16 @@ export const pickSpace = async({courseId, supportedTypes, preset = null}) => {
     bindList(root, text);
     return new Promise((resolve) => {
         let settled = false;
-        rootList.on(ModalEvents.shown, () => root.querySelector(region('search')).focus());
+        // Editing, the cursor goes to the instruction of the first activity selected; a new space starts at the search.
+        rootList.on(ModalEvents.shown, () => {
+            const first = preset ? selectedRows(root)[0] : null;
+            if (!first) {
+                root.querySelector(region('search')).focus();
+                return;
+            }
+            first.scrollIntoView({block: 'center'});
+            first.querySelector(region('instruction')).focus({preventScroll: true});
+        });
         rootList.on('click', '[data-action="cancel"]', () => modal.hide());
         rootList.on('click', '[data-action="save"]', (event) => {
             // Nothing selected, or one activity of the AI with no instruction: Save does nothing, whatever enabled it.

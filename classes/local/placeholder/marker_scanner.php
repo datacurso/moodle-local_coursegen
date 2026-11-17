@@ -21,9 +21,8 @@ namespace local_coursegen\local\placeholder;
  *
  * A marker is a body between `[[ ]]` or between the angle brackets of the second dialect. The bodies that count are
  * `coursegen:aiprompt: <instruction>` (a slot), `coursegen:repeat: <instruction>` with its `/coursegen:repeat` closer
- * (a block) and `coursegen:reference: <instruction>`. The body `coursegen:schedule` is known too, but it is no
- * placeholder (the schedule table is written once the course is made) and takes no instruction. Any other text
- * between brackets, such as a wiki page link, is not a marker. A `coursegen:` body that is not one of these, a marker without an instruction, a repeat block that
+ * (a block) and `coursegen:reference: <instruction>`. Any other text between brackets, such as a wiki page link, is
+ * not a marker. A `coursegen:` body that is not one of the three, a marker without an instruction, a repeat block that
  * does not balance and an opener that never closes are reported as problems and never counted as placeholders.
  *
  * @package    local_coursegen
@@ -48,9 +47,6 @@ final class marker_scanner {
 
     /** @var string The body of a reference. */
     private const REFERENCE = '/^coursegen:reference\s*(?::(?<text>.*))?\z/s';
-
-    /** @var string The body of the schedule marker: it takes no instruction and is not a placeholder. */
-    private const SCHEDULE = '/^coursegen:schedule\z/';
 
     /** @var string Regions whose markers nobody sees: comments, scripts and styles. */
     private const HIDDEN_REGIONS = '/<!--.*?-->|<script\b.*?<\/script>|<style\b.*?<\/style>/is';
@@ -136,16 +132,13 @@ final class marker_scanner {
      * What one marker body is.
      *
      * @param string $body The text between the brackets, e.g. 'coursegen:aiprompt: course title'.
-     * @return array {kind, problem}; kind is closer, opener, slot, reference, schedule, other or bad.
+     * @return array {kind, problem}; kind is closer, opener, slot, reference, other or bad.
      */
     private static function classify(string $body): array {
         $stripped = trim($body);
         $closer = preg_match(self::REPEAT_CLOSER, $stripped);
         if ($closer) {
             return ['kind' => 'closer', 'problem' => null];
-        }
-        if (preg_match(self::SCHEDULE, $stripped)) {
-            return ['kind' => 'schedule', 'problem' => null];
         }
         $known = [
             'opener' => self::REPEAT_OPENER,

@@ -78,7 +78,7 @@ export const buildGapRow = () => renderRowFragment('local_coursegen/template_row
  */
 const buildInstanceRowFragment = (data, instanceid) => renderRowFragment('local_coursegen/template_instance_row', {
     generated: data.sourcecmid === 0,
-    promptopen: data.sourcecmid === 0,
+    promptopen: false,
     instanceid,
     name: data.name === undefined ? data.sourcename : data.name,
     ainame: !!data.ainame,
