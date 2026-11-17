@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.13] - 2026111708
+
+### Changed
+- **The list of recent courses names a run that has no name yet "New course", and shows the whole name on hover**  
+  A run whose name the AI has not returned yet is listed as "New course" instead of "Untitled course"; the name and short name replace it as soon as the AI returns them. Hovering an entry shows its whole name in a tooltip, since a long name is cut in the list.
+
 ## [2.0.13] - 2026111707
 
 ### Fixed

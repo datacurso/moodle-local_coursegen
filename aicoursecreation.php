@@ -194,6 +194,8 @@ $buildsessiondata = function ($session, $maxtitle = 50) {
     return [
         'id' => $session->get('id'),
         'title' => $title,
+        // The whole name, for the tooltip of an entry whose title is cut.
+        'fulltitle' => $rawtitle !== '' ? $rawtitle : $title,
         'shortname' => $session->get('shortname') ?: ($coursedata['shortname'] ?? ''),
         'statuslabel' => $statuslabels[$session->get('status')] ?? '',
         'status' => $session->get('status'),
