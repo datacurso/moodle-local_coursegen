@@ -111,7 +111,9 @@ export const openSpaceModalForNewSelection = (row, select, cmid, prioraction, st
     }
     const onSave = saveSpaceForNewSelection.bind(null, row, cmid, state, onResolved);
     const onCancel = cancelSpaceForNewSelection.bind(null, row, select, cmid, prioraction, state, onResolved);
-    openSpaceModal({subject, required: current.required, instruction: current.instruction, onSave, onCancel});
+    // A file of the course the teacher replaces with their own: no choice of who provides it, only whether it is
+    // required and the instruction for the teacher.
+    openSpaceModal({subject, required: current.required, instruction: current.instruction, onSave, onCancel, lockMode: true});
 };
 
 /**
@@ -149,7 +151,9 @@ const handleSpaceTagClick = (ctx, e) => {
     }
     const current = ctx.state.activitySpace[cmid] || {required: true, instruction: ''};
     const onSave = saveSpaceFromTag.bind(null, row, cmid, ctx.state, ctx.markDirty);
-    openSpaceModal({subject: tag.dataset.name, required: current.required, instruction: current.instruction, onSave});
+    openSpaceModal({
+        subject: tag.dataset.name, required: current.required, instruction: current.instruction, onSave, lockMode: true,
+    });
 };
 
 /**
