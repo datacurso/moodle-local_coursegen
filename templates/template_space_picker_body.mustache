@@ -30,7 +30,7 @@
     * data-region="local_coursegen/template/space-picker-panel" on what opens under a selected row.
     * data-region="local_coursegen/template/space-picker-label" and "space-picker-instruction": its instruction.
     * data-region="local_coursegen/template/space-picker-name-group" and "space-picker-name": the name of one.
-    * data-region="local_coursegen/template/space-picker-mode-group", "space-picker-mode" (data-mode) and
+    * data-region="local_coursegen/template/space-picker-mode-group", "space-picker-mode" (radios) and
       "space-picker-teacher-hint": who provides a File.
     * data-region="local_coursegen/template/space-picker-empty" on what shows when a search finds nothing.
     * data-region="local_coursegen/template/space-picker-required-group" and "space-picker-required" (radios): whether
@@ -87,11 +87,17 @@
                 {{#uploadable}}
                 <div class="tpl-sp-field" data-region="local_coursegen/template/space-picker-mode-group" hidden>
                     <span class="tpl-sp-label" id="{{uniqid}}-{{modname}}-mode">{{#str}} template_space_mode_label, local_coursegen {{/str}}</span>
-                    <div class="btn-group" role="group" aria-labelledby="{{uniqid}}-{{modname}}-mode">
-                        <button type="button" class="btn btn-outline-primary active" aria-pressed="true" data-mode="ai"
-                                data-region="local_coursegen/template/space-picker-mode">{{#str}} template_space_mode_ai, local_coursegen {{/str}}</button>
-                        <button type="button" class="btn btn-outline-primary" aria-pressed="false" data-mode="teacher"
-                                data-region="local_coursegen/template/space-picker-mode">{{#str}} template_space_mode_teacher, local_coursegen {{/str}}</button>
+                    <div role="radiogroup" aria-labelledby="{{uniqid}}-{{modname}}-mode">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="{{uniqid}}-{{modname}}-mode" id="{{uniqid}}-{{modname}}-mode-ai"
+                                   value="ai" checked data-region="local_coursegen/template/space-picker-mode">
+                            <label class="form-check-label" for="{{uniqid}}-{{modname}}-mode-ai">{{#str}} template_space_mode_ai, local_coursegen {{/str}}</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="{{uniqid}}-{{modname}}-mode" id="{{uniqid}}-{{modname}}-mode-teacher"
+                                   value="teacher" data-region="local_coursegen/template/space-picker-mode">
+                            <label class="form-check-label" for="{{uniqid}}-{{modname}}-mode-teacher">{{#str}} template_space_mode_teacher, local_coursegen {{/str}}</label>
+                        </div>
                     </div>
                     <div class="form-text text-muted small mt-1" data-region="local_coursegen/template/space-picker-teacher-hint" hidden>{{#str}} template_space_mode_teacher_desc, local_coursegen {{/str}}</div>
                 </div>

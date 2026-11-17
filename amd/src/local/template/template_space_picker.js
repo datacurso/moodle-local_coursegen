@@ -29,7 +29,7 @@ import Templates from 'core/templates';
 import {get_strings as getStrings} from 'core/str';
 import {fetchSupportedItems} from 'local_coursegen/local/template/template_space_chooser';
 import {
-    filterRows, press, readPicker, refresh, region, selectedRows, setSelected,
+    filterRows, readPicker, refresh, region, selectedRows, setSelected,
 } from 'local_coursegen/local/template/template_space_picker_form';
 import {COMPONENT} from 'local_coursegen/local/template/constants';
 
@@ -99,10 +99,7 @@ const bindList = (root, text) => {
         help.hidden = !help.hidden;
         info.setAttribute('aria-expanded', String(!help.hidden));
     }));
-    root.querySelectorAll(region('mode')).forEach((button) => button.addEventListener('click', () => {
-        press(button);
-        update();
-    }));
+    root.querySelectorAll(region('mode')).forEach((radio) => radio.addEventListener('change', update));
     root.querySelectorAll(region('instruction')).forEach((field) => field.addEventListener('input', update));
     root.querySelectorAll(region('tab')).forEach((tab) => tab.addEventListener('click', () => {
         root.querySelectorAll(region('tab')).forEach((other) => {

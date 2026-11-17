@@ -65,7 +65,7 @@ export const setSelected = (row, selected) => {
  * @returns {boolean}
  */
 const teacherUploads = (rows) => rows.length === 1 && rows[0].dataset.modname === UPLOADABLE
-    && rows[0].querySelector(`${region('mode')}[aria-pressed="true"]`)?.dataset.mode === 'teacher';
+    && rows[0].querySelector(`${region('mode')}:checked`)?.value === 'teacher';
 
 /**
  * Show in each selected row what applies to the selection: the label and placeholder of its instruction, the name
@@ -151,19 +151,6 @@ export const readPicker = (root, items) => {
     }
     const name = rows[0].querySelector(region('name')).value.trim();
     return {kind: 'single', picked, choice: {mode: 'ai', name, required: true, instruction: options[0].instruction}};
-};
-
-/**
- * Press one button of a group of two (who provides a File).
- *
- * @param {HTMLElement} button
- */
-export const press = (button) => {
-    button.parentElement.querySelectorAll('button').forEach((other) => {
-        const on = other === button;
-        other.classList.toggle('active', on);
-        other.setAttribute('aria-pressed', String(on));
-    });
 };
 
 /**
