@@ -17,9 +17,9 @@
  * The state of the list of "Add space for an activity": which rows are selected, what opens under each one, the
  * summary in the footer and what the modal saves.
  *
- * One selected activity is created by the AI and needs its instruction (with an optional name); a File can instead be
- * one the teacher uploads, and then the footer asks whether it is required. Several activities make a space where the
- * teacher chooses one, each instruction optional.
+ * Each selected activity keeps its own fields however many are selected: its instruction and its optional name, and,
+ * for a File, who provides it (the AI, or the teacher who uploads it: the only type with both). One activity of the AI
+ * needs its instruction; among several, each instruction is optional and the teacher chooses one of them.
  *
  * @module     local_coursegen/local/template/template_space_picker_form
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -59,25 +59,33 @@ export const setSelected = (row, selected) => {
 };
 
 /**
+ * Whether a row is a File the teacher uploads.
+ *
+ * @param {HTMLElement} row
+ * @returns {boolean}
+ */
+const rowUploads = (row) => row.dataset.modname === UPLOADABLE
+    && row.querySelector(`${region('mode')}:checked`)?.value === 'teacher';
+
+/**
  * Whether the one selected row is a File the teacher uploads.
  *
  * @param {HTMLElement[]} rows The selected rows.
  * @returns {boolean}
  */
-const teacherUploads = (rows) => rows.length === 1 && rows[0].dataset.modname === UPLOADABLE
-    && rows[0].querySelector(`${region('mode')}:checked`)?.value === 'teacher';
+const teacherUploads = (rows) => rows.length === 1 && rowUploads(rows[0]);
 
 /**
- * Show in each selected row what applies to the selection: the label and placeholder of its instruction, the name
- * of one activity, who provides one File.
+ * Show in each selected row its own fields: the label and placeholder of its instruction, its name unless the teacher
+ * uploads it, and who provides it for a File. Nothing is hidden because another row is selected.
  *
  * @param {HTMLElement[]} rows The selected rows.
  * @param {Object} text The texts of the labels and placeholders.
  */
 const shapePanels = (rows, text) => {
     const one = rows.length === 1;
-    const uploads = teacherUploads(rows);
     rows.forEach((row) => {
+        const uploads = rowUploads(row);
         const label = row.querySelector(region('label'));
         const field = row.querySelector(region('instruction'));
         let kind = 'several';
@@ -89,10 +97,10 @@ const shapePanels = (rows, text) => {
         label.textContent = text[kind].label;
         field.placeholder = text[kind].placeholder;
         field.required = kind === 'single';
-        row.querySelector(region('name-group')).hidden = !one || uploads;
+        row.querySelector(region('name-group')).hidden = uploads;
         const mode = row.querySelector(region('mode-group'));
         if (mode) {
-            mode.hidden = !one;
+            mode.hidden = false;
             row.querySelector(region('teacher-hint')).hidden = !uploads;
         }
     });
@@ -130,7 +138,8 @@ export const refresh = (root, text) => {
  *
  * @param {HTMLElement} root The modal.
  * @param {Object[]} items The chooser items.
- * @returns {Object} {kind: 'single', picked, choice} or {kind: 'several', options, titles, required}.
+ * @returns {Object} {kind: 'single', picked, choice} or {kind: 'several', options, titles, required}; each option
+ *     is {modname, instruction, name, mode}.
  */
 export const readPicker = (root, items) => {
     const rows = selectedRows(root);
@@ -138,6 +147,8 @@ export const readPicker = (root, items) => {
     const options = rows.map((row) => ({
         modname: row.dataset.modname,
         instruction: row.querySelector(region('instruction')).value.trim(),
+        name: rowUploads(row) ? '' : row.querySelector(region('name')).value.trim(),
+        mode: rowUploads(row) ? 'teacher' : 'ai',
     }));
     const itemOf = (modname) => items.find((item) => item.name === modname) || {title: modname, icon: ''};
     if (options.length > 1) {
@@ -149,8 +160,8 @@ export const readPicker = (root, items) => {
         // The row of the space shows the type ("File"): no name of its own that would hide it.
         return {kind: 'single', picked, choice: {mode: 'teacher', required, instruction: options[0].instruction}};
     }
-    const name = rows[0].querySelector(region('name')).value.trim();
-    return {kind: 'single', picked, choice: {mode: 'ai', name, required: true, instruction: options[0].instruction}};
+    const {name, instruction} = options[0];
+    return {kind: 'single', picked, choice: {mode: 'ai', name, required: true, instruction}};
 };
 
 /**
@@ -171,4 +182,31 @@ export const filterRows = (root, tab, query) => {
         shown += row.hidden ? 0 : 1;
     });
     root.querySelector(region('empty')).hidden = shown > 0;
+};
+
+/**
+ * Put back what a space saved, to edit it: its activities selected, each with its instruction, name and mode, and
+ * whether it is required.
+ *
+ * @param {HTMLElement} root The modal.
+ * @param {Object} preset {options: [{modname, instruction, name, mode}], required}.
+ */
+export const applyPreset = (root, preset) => {
+    (preset.options || []).forEach((option) => {
+        const row = root.querySelector(`${region('option')}[data-modname="${option.modname}"]`);
+        if (!row) {
+            return;
+        }
+        setSelected(row, true);
+        row.querySelector(region('instruction')).value = option.instruction || '';
+        row.querySelector(region('name')).value = option.name || '';
+        const mode = row.querySelector(`${region('mode')}[value="${option.mode === 'teacher' ? 'teacher' : 'ai'}"]`);
+        if (mode) {
+            mode.checked = true;
+        }
+    });
+    const required = root.querySelector(`${region('required')}[value="${preset.required === false ? '0' : '1'}"]`);
+    if (required) {
+        required.checked = true;
+    }
 };

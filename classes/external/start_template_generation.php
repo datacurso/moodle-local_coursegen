@@ -143,6 +143,7 @@ class start_template_generation extends external_api {
         }
         // The activities the teacher adds in the spaces: each one allowed there, none of the required ones missing.
         $spacechoices = teacher_space_choices::validated($params['templateid'], $params['spacechoices']);
+        $spaces = self::files_of_choices($spaces, $spacechoices);
         $payload = template_export_service::build_init_payload(
             $params['templateid'],
             $params['prompt'],
@@ -224,5 +225,26 @@ class start_template_generation extends external_api {
             'sessionid' => new external_value(PARAM_INT, 'Local session id'),
             'streamurl' => new external_value(PARAM_URL, 'SSE URL whose consumption runs the generation'),
         ]);
+    }
+
+    /**
+     * The files of a request, checked against the choices of the teacher: the File the teacher picked to upload in a
+     * space must come with its file, and a file of a space where the teacher picked an activity of the AI is dropped.
+     *
+     * @param array<int,int> $drafts The draft of each filled space, by cmid.
+     * @param array[] $spacechoices What teacher_space_choices::validated() returned.
+     * @return array<int,int>
+     * @throws \moodle_exception When the File the teacher picked to upload has no file.
+     */
+    private static function files_of_choices(array $drafts, array $spacechoices): array {
+        foreach ($spacechoices as $choice) {
+            $cmid = teacher_space_choices::cmid_of($choice['space']);
+            if ($choice['mode'] !== \local_coursegen\local\service\teacher_space_options::MODE_TEACHER) {
+                unset($drafts[$cmid]);
+            } else if (!isset($drafts[$cmid])) {
+                throw new \moodle_exception('courseai_template_choice_space_missing_error', 'local_coursegen');
+            }
+        }
+        return $drafts;
     }
 }

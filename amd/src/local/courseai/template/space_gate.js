@@ -94,7 +94,8 @@ const itemOf = (entry, upload, actions) => {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'btn btn-sm btn-outline-secondary';
-    button.textContent = activity.spacekind === 'choice' ? actions.chooseText : upload;
+    const choosing = activity.spacekind === 'choice' && activity.spacechoice?.mode !== 'teacher';
+    button.textContent = choosing ? actions.chooseText : upload;
     button.addEventListener('click', () => actions.onBring(entry.sectionIndex, entry.activityIndex));
     item.append(what, button);
     return item;

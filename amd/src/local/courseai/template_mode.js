@@ -170,7 +170,7 @@ export const wireTemplateMode = (state, host) => {
     };
     const bringSpace = (sectionIndex, activityIndex) => {
         const row = tplState.sections[sectionIndex]?.activities[activityIndex];
-        if (row?.spacekind === 'choice') {
+        if (row?.spacekind === 'choice' && row.spacechoice?.mode !== 'teacher') {
             pickSpaceChoice(tplState, sectionIndex, activityIndex, afterBrought);
             return;
         }

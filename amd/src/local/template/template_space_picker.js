@@ -29,7 +29,7 @@ import Templates from 'core/templates';
 import {get_strings as getStrings} from 'core/str';
 import {fetchSupportedItems} from 'local_coursegen/local/template/template_space_chooser';
 import {
-    filterRows, readPicker, refresh, region, selectedRows, setSelected,
+    applyPreset, filterRows, readPicker, refresh, region, selectedRows, setSelected,
 } from 'local_coursegen/local/template/template_space_picker_form';
 import {COMPONENT} from 'local_coursegen/local/template/constants';
 
@@ -122,9 +122,10 @@ const bindList = (root, text) => {
  * @param {Object} params
  * @param {number} params.courseId The base course.
  * @param {string[]} params.supportedTypes Module names a space can be made for.
+ * @param {Object} [params.preset] What a space saved, to edit it: {options, required}.
  * @returns {Promise<Object|null>} What readPicker returns.
  */
-export const pickSpace = async({courseId, supportedTypes}) => {
+export const pickSpace = async({courseId, supportedTypes, preset = null}) => {
     const [items, text] = await Promise.all([fetchSupportedItems(courseId, supportedTypes), loadTexts()]);
     const options = items.map((item) => ({
         modname: item.name,
@@ -153,6 +154,9 @@ export const pickSpace = async({courseId, supportedTypes}) => {
     });
     const rootList = modal.getRoot();
     const root = rootList[0];
+    if (preset) {
+        applyPreset(root, preset);
+    }
     bindList(root, text);
     return new Promise((resolve) => {
         let settled = false;

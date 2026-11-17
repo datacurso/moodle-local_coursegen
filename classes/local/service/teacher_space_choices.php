@@ -35,7 +35,7 @@ final class teacher_space_choices {
      *
      * @param int $templateid
      * @param array $picked Each {uid, modname, instruction}, as the creation screen sent them.
-     * @return array[] Space uid => {space: template_space, modname, instruction, admininstruction}.
+     * @return array[] Space uid => {space: template_space, modname, instruction, admininstruction, name, mode}.
      * @throws \moodle_exception When a choice is not allowed in its space or a required space has none.
      */
     public static function validated(int $templateid, array $picked): array {
@@ -54,6 +54,8 @@ final class teacher_space_choices {
                 'modname' => $modname,
                 'instruction' => trim((string) ($entry['instruction'] ?? '')),
                 'admininstruction' => $option['instruction'],
+                'name' => $option['name'],
+                'mode' => $option['mode'],
             ];
         }
         foreach ($spaces as $uid => $space) {
@@ -65,8 +67,8 @@ final class teacher_space_choices {
     }
 
     /**
-     * The activities of the spaces, as activities of the generation: written freely by the AI, named by it, in the
-     * place of their space.
+     * The activities of the spaces, as activities of the generation: written freely by the AI, named by the admin or by
+     * the AI, in the place of their space. A File the teacher uploads is not one of them.
      *
      * @param array[] $chosen What {@see self::validated()} returned.
      * @param array $sectionnums Section id => section number of the template course.
@@ -76,16 +78,24 @@ final class teacher_space_choices {
         $entries = [];
         $counts = [];
         foreach ($chosen as $uid => $choice) {
+            if ($choice['mode'] === teacher_space_options::MODE_TEACHER) {
+                // The teacher uploads this one: no AI, its File is created from the file (upload_spaces).
+                continue;
+            }
             $space = $choice['space'];
             $modname = $choice['modname'];
             $counts[$modname] = ($counts[$modname] ?? 0) + 1;
+            $name = $choice['name'];
+            if ($name === '') {
+                $name = get_string('modulename', 'mod_' . $modname) . ' ' . $counts[$modname];
+            }
             $prompt = trim($choice['admininstruction'] . "\n\n" . $choice['instruction']);
             $entries[] = [
                 'resource_type' => $modname,
                 'uid' => (string) $uid,
                 'cmid' => self::cmid_of($space),
                 'parameters' => [
-                    'name' => get_string('modulename', 'mod_' . $modname) . ' ' . $counts[$modname],
+                    'name' => $name,
                     'section' => $sectionnums[(int) $space->get('sectionid')] ?? 0,
                 ],
                 'template_behavior' => [
@@ -93,7 +103,7 @@ final class teacher_space_choices {
                     'useasreference' => true,
                     'prompt' => $prompt,
                     'template_source_cmid' => 0,
-                    'name_from_ai' => true,
+                    'name_from_ai' => $choice['name'] === '',
                 ],
             ];
         }
@@ -131,7 +141,7 @@ final class teacher_space_choices {
      *
      * @param template_space $space
      * @param string $modname
-     * @return array|null {modname, instruction}
+     * @return array|null {modname, instruction, name, mode}
      */
     private static function option_of(template_space $space, string $modname): ?array {
         foreach (teacher_space_options::decode($space->get('options')) as $option) {

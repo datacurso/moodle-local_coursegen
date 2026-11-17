@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026110964
+
+### Changed
+- **Each activity of a space keeps its own fields, however many are selected**  
+  In "Add space for an activity" the instruction and the name of each selected activity, and who provides a File, no longer disappear when another activity is selected. A File is the only activity with both modes: the AI creates it, or the teacher uploads it; every other activity is created by the AI. Each option of a space with several activities keeps its name and its mode, and the pencil of the row opens the same modal with all of it.
+- **The teacher can pick, among the options of a space, the File they upload**  
+  In the creation screen the options show the name the admin gave them. Picking the File the admin left to the teacher asks for no topic and opens the file picker; the space counts as done once the file is there, and the new course has a File resource with it in the place of the space, with nothing generated there. An option the admin named keeps that name in the new course.
+
 ## [2.0.10] - 2026110963
 
 ### Changed

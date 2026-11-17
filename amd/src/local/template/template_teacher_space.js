@@ -29,6 +29,7 @@ import Templates from 'core/templates';
 import {get_string as getString} from 'core/str';
 import {closeInstanceMenu} from 'local_coursegen/local/template/template_instance_menu';
 import {fetchSupportedItems} from 'local_coursegen/local/template/template_space_chooser';
+import {pickSpace} from 'local_coursegen/local/template/template_space_picker';
 import Selectors from 'local_coursegen/local/template/selectors';
 import {COMPONENT, STRING, TAG} from 'local_coursegen/local/template/constants';
 
@@ -54,7 +55,7 @@ export const setTeacherSpaceContext = (state) => {
  * The options saved in a row.
  *
  * @param {HTMLElement|null} row
- * @returns {Object[]} Each {modname, instruction}.
+ * @returns {Object[]} Each {modname, instruction, name, mode}.
  */
 const optionsOf = (row) => {
     try {
@@ -184,26 +185,38 @@ export const openNewTeacherSpace = async(state, tbody, beforeEl, markDirty, inse
 const spaceName = (titles) => getString('template_teacher_space_name', COMPONENT, titles.join(', '));
 
 /**
- * Edit an existing space for the teacher.
+ * Edit an existing space with several activities, in the modal of "Add space for an activity" with what it saved.
  *
  * @param {HTMLElement} row The space row.
  * @param {Function} markDirty Marks the template as changed.
+ * @param {Function} onSingle Called with what the modal saved when only one activity is left.
  * @returns {Promise<void>}
  */
-export const editTeacherSpace = async(row, markDirty) => {
-    await openModal(optionsOf(row), row.dataset.required === '1', async(read) => {
-        row.dataset.options = JSON.stringify(read.options);
-        row.dataset.modname = read.options[0].modname;
-        row.dataset.required = read.required ? '1' : '0';
-        const name = row.querySelector(Selectors.regions.typeLabel);
-        if (name) {
-            name.textContent = await spaceName(read.titles);
-        }
-        const badge = row.querySelector(Selectors.regions.spaceBadge);
-        if (badge) {
-            const requirement = await getString(read.required ? STRING.SPACE_REQUIRED : STRING.SPACE_OPTIONAL, COMPONENT);
-            badge.textContent = await getString(STRING.SPACE_BADGE, COMPONENT, requirement);
-        }
-        markDirty();
+export const editTeacherSpace = async(row, markDirty, onSingle) => {
+    const result = await pickSpace({
+        courseId: context.courseId,
+        supportedTypes: context.supportedTypes,
+        preset: {options: optionsOf(row), required: row.dataset.required === '1'},
     });
+    if (result === null) {
+        return;
+    }
+    if (result.kind === 'single') {
+        // One activity left: the row becomes what one activity is (one of the AI, or the teacher's File).
+        await onSingle(result);
+        return;
+    }
+    row.dataset.options = JSON.stringify(result.options);
+    row.dataset.modname = result.options[0].modname;
+    row.dataset.required = result.required ? '1' : '0';
+    const name = row.querySelector(Selectors.regions.typeLabel);
+    if (name) {
+        name.textContent = await spaceName(result.titles);
+    }
+    const badge = row.querySelector(Selectors.regions.spaceBadge);
+    if (badge) {
+        const requirement = await getString(result.required ? STRING.SPACE_REQUIRED : STRING.SPACE_OPTIONAL, COMPONENT);
+        badge.textContent = await getString(STRING.SPACE_BADGE, COMPONENT, requirement);
+    }
+    markDirty();
 };
