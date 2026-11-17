@@ -103,6 +103,13 @@ export const announceSession = async(sessionId) => {
                 + '<span class="courseai-sidebar-course-status"></span></div>';
         }
         item.dataset.sessionid = String(sessionId);
+        // The run that has just started is the course open on the page.
+        list.querySelectorAll('.courseai-sidebar-course-item.is-selected').forEach((other) => {
+            other.classList.remove('is-selected');
+            other.removeAttribute('aria-current');
+        });
+        item.classList.add('is-selected');
+        item.setAttribute('aria-current', 'true');
         item.querySelector('.courseai-sidebar-course-title').textContent = untitled;
         item.dataset.toggle = 'tooltip';
         item.dataset.placement = 'right';

@@ -292,19 +292,23 @@ export const abortGenerationView = (message) => {
  *
  * @param {number} sessionId
  * @param {Object} control The stop and resume of the run, from createRunControl.
+ * @param {boolean} alreadyStill Whether nothing of the run can be going: a run reopened by the page, whose stream was
+ *     never opened. The service is then not asked to stop it.
  * @returns {Promise<void>} Resolves when the person resumed and the page is ready to open the stream again.
  */
-const settleStop = async(sessionId, control) => {
+const settleStop = async(sessionId, control, alreadyStill = false) => {
     hideWorkingIndicator();
     document.body.classList.add(PAUSED_CLASS);
     await paintStage('paused');
     milestone('courseai_template_log_stopped');
-    let confirmed = false;
-    try {
-        const answer = await stopTemplateGeneration(sessionId);
-        confirmed = answer?.stopped !== false;
-    } catch (error) {
-        confirmed = false;
+    let confirmed = alreadyStill;
+    if (!alreadyStill) {
+        try {
+            const answer = await stopTemplateGeneration(sessionId);
+            confirmed = answer?.stopped !== false;
+        } catch (error) {
+            confirmed = false;
+        }
     }
     if (!confirmed) {
         turn('ai', 'danger', (await getLabels()).unconfirmed);
@@ -379,7 +383,7 @@ export const runGenerationStream = async(streamUrl, buildCourse, sessionId, cont
         control.requestStop();
     }
     try {
-        return await runPasses(streamUrl, buildCourse, sessionId, control);
+        return await runPasses(streamUrl, buildCourse, sessionId, control, startPaused);
     } finally {
         releaseControl();
     }
@@ -440,9 +444,10 @@ const retryByItself = async(error, sessionId, next, count) => {
  * @param {Function} buildCourse
  * @param {number} sessionId
  * @param {Object} control The stop and resume of the run, from createRunControl.
+ * @param {boolean} reopened Whether the run was reopened by the page and starts stopped.
  * @returns {Promise<Object>} The built course.
  */
-const runPasses = async(streamUrl, buildCourse, sessionId, control) => {
+const runPasses = async(streamUrl, buildCourse, sessionId, control, reopened = false) => {
     const progress = {total: 0, done: 0};
     // Reading the material is over once the first activity starts: the thread moves on to the
     // writing, so the step that was spinning becomes a past one.
@@ -456,6 +461,8 @@ const runPasses = async(streamUrl, buildCourse, sessionId, control) => {
     };
     // Retries made by itself since the last time the run moved: a run that goes on resets the count.
     const run = {failures: 0, moved: false};
+    // A reopened run starts stopped: its stream has not opened yet, so nothing of it can be going.
+    let neverOpened = reopened;
     // The activities already told as written: a pass that starts again tells them once more, and that is not moving.
     const written = new Set();
     for (;;) {
@@ -543,7 +550,9 @@ const runPasses = async(streamUrl, buildCourse, sessionId, control) => {
 
         if (outcome === 'stopped') {
             // eslint-disable-next-line no-await-in-loop
-            await settleStop(sessionId, control);
+            // Only the first stop of a reopened run happens before its stream ever opened.
+            await settleStop(sessionId, control, neverOpened);
+            neverOpened = false;
             continue;
         }
         control.end();
