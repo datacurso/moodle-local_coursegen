@@ -19,13 +19,17 @@
 
     One row of the "Course sections" review table — a real activity, a
     virtual template instance or a virtual space — plus the hover-reveal insertion gap that
-    follows it. Included once per entry of a section's "rows" array by
+    follows it, and, for the first row of a section (isfirst), the one before it. Included once per entry of a section's "rows" array by
     template_course_sections.mustache (split out to keep that file under
     the project's 250-line cap); never rendered on its own.
 
     Context variables: see template_course_sections.mustache's own
     docblock for the full shape of one "rows" entry.
 }}
+{{! The gap before the first row: where an activity or a space is added at the start of the section. }}
+{{#isfirst}}
+{{> local_coursegen/template_row_gap}}
+{{/isfirst}}
 {{#isreal}}
 <tr class="{{#istemplate}}tpl-row-template{{/istemplate}}{{#isspace}} tpl-row-space{{/isspace}}" data-for="cmitem" data-id="{{cmid}}" data-modname="{{modname}}" data-typelabel="{{typelabel}}" data-hasmarkers="{{#hasmarkers}}1{{/hasmarkers}}{{^hasmarkers}}0{{/hasmarkers}}">
     <td class="align-middle tpl-select-col">
