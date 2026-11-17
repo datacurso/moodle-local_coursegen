@@ -107,3 +107,44 @@ export const runGeneration = async(tplState, tplSelect, genBtn, state, host) => 
         }
     }
 };
+
+/**
+ * Reopen a run that did not finish, where it was: paused, with Resume offered.
+ *
+ * Resuming opens the stream of the run again; the service tells the activities already written once more, so the
+ * structure shows them done, and goes on from there.
+ *
+ * @param {Object} tplState The structure of the run's template, already loaded.
+ * @param {HTMLElement} genBtn
+ * @param {Object} state
+ * @param {Object} host
+ * @param {Object} session {id, streamurl, context}: what the page was given for the run.
+ * @returns {Promise<void>}
+ */
+export const reopenGeneration = async(tplState, genBtn, state, host, session) => {
+    if (genBtn) {
+        genBtn.disabled = true;
+    }
+    const context = session.context || {};
+    tplState.generateimages = Boolean(context.images);
+    try {
+        await beginGenerationView(context);
+        usePreviewSession(session.id);
+        await runGenerationStream(
+            session.streamurl,
+            () => reviewAndCreate(host, state, tplState, session.id),
+            session.id,
+            context,
+            true,
+            true
+        );
+    } catch (e) {
+        if (genBtn) {
+            genBtn.disabled = false;
+        }
+        if (!(e instanceof GenerationStopped)) {
+            abortGenerationView('');
+            Notification.exception(e);
+        }
+    }
+};

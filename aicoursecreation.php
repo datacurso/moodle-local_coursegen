@@ -111,6 +111,12 @@ if ($resumesessionid > 0) {
             $templaterunsummary = \local_coursegen\local\service\template_run_summary::from_coursedata(
                 (array) json_decode((string) $opened->coursedata, true)
             );
+        } else {
+            // A run that did not finish opens where it was, paused, for the person to resume it.
+            $templatesession = \local_coursegen\local\service\template_resume::for_page(
+                $openedrecord,
+                (array) json_decode((string) $opened->coursedata, true)
+            ) ?? $templatesession;
         }
     }
 }
