@@ -83,6 +83,7 @@ export const pickSpaceChoice = async(tplState, sectionIndex, activityIndex, onCh
         const uploads = picked?.dataset.uploads === '1';
         root[0].querySelector(OWN_GROUP).hidden = uploads;
         root[0].querySelector(UPLOAD).hidden = !uploads;
+        // What the admin asked to upload, above the button that uploads it.
         const instruction = uploads ? String(picked.dataset.instruction || '').trim() : '';
         const note = root[0].querySelector(FILE_INSTRUCTION);
         note.textContent = instruction;

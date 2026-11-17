@@ -196,7 +196,6 @@ $string['courseai_chip_remove_syllabus'] = 'Remove syllabus';
 $string['courseai_chip_view_guideline'] = 'View guideline';
 $string['courseai_close_view'] = 'Close and return to My courses';
 $string['courseai_template_choice_space_add'] = 'Add the activity';
-$string['courseai_template_choice_space_file_label'] = 'File that is added in this place';
 $string['courseai_template_choice_space_file_none'] = 'No file has been uploaded yet.';
 $string['courseai_template_choice_space_file_replace'] = 'Replace file';
 $string['courseai_template_choice_space_upload_option'] = 'You upload your own file.';
