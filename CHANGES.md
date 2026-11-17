@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10-wp] - 2026111155
+
+### Fixed
+- **The instruction for the File the teacher uploads stands out where the file is uploaded**  
+  Picking the File in the modal of a space shows the admin's instruction as a highlighted note right above the button that uploads the file, not only as a small line under the option.
+
 ## [2.0.10-wp] - 2026111154
 
 ### Fixed
