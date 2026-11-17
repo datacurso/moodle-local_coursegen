@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10-wp] - 2026111708
+
+### Changed
+- **The list of recent courses marks the course open on the page**  
+  The entry of the course open on the page has a grey background and its name in bold, so it is clear which one of the list is selected. A run that has just started is marked as soon as it joins the list.
+- **The list of the sidebar is called "Courses"**  
+  It was "Recent courses"; a run that has just started joins it at once, so it is the list of the courses, not of the recent ones.
+
+### Fixed
+- **Reopening an unfinished run no longer says the stop could not be confirmed**  
+  A run reopened by the page was never running, so the service is no longer asked to stop it, and the red notice that the stop could not be confirmed no longer appears.
+
 ## [2.0.10-wp] - 2026111707
 
 ### Changed
