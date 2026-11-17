@@ -23,20 +23,24 @@
     Data attributes required for JS:
     * data-region="local_coursegen/template/space-choice-option" on each radio (value: the module name).
     * data-region="local_coursegen/template/space-choice-instruction" on the teacher's instruction.
-    * data-region="local_coursegen/template/space-choice-own-group" around it, and "space-choice-upload-note" on what
-      shows instead when the option is a File the teacher uploads.
+    * data-region="local_coursegen/template/space-choice-own-group" around it, and "space-choice-upload" (with its
+      "space-choice-upload-button" and "space-choice-filename") on what shows instead when the option is a File the
+      teacher uploads: the upload of the file, right in the modal.
 
     Context variables required for this template:
     * uniqid string - Unique id of this render.
     * options array - Each: modname string, title string, name string (the admin's, may be empty), uploads bool (a File
       the teacher uploads), iconhtml string (core markup), instruction string (the admin's), checked bool.
     * instruction string - What the teacher wrote before; may be empty.
+    * hasfile bool, filename string - The file the teacher uploaded before, when there is one.
 
     Example context (json):
     {
         "options": [{"modname": "quiz", "title": "Quiz", "name": "", "uploads": false, "iconhtml": "",
             "instruction": "Ten questions", "checked": true}],
-        "instruction": ""
+        "instruction": "",
+        "hasfile": false,
+        "filename": ""
     }
 }}
 <fieldset class="mb-3">
@@ -55,7 +59,16 @@
     </div>
     {{/options}}
 </fieldset>
-<p class="text-muted mb-0" data-region="local_coursegen/template/space-choice-upload-note" hidden>{{#str}} courseai_template_choice_space_upload_note, local_coursegen {{/str}}</p>
+<div class="form-group mb-0" data-region="local_coursegen/template/space-choice-upload" hidden>
+    <span class="d-block mb-1">{{#str}} courseai_template_choice_space_file_label, local_coursegen {{/str}}</span>
+    <div class="d-flex flex-wrap align-items-center">
+        <button type="button" class="btn btn-outline-secondary mr-3" data-region="local_coursegen/template/space-choice-upload-button"
+                data-label-upload="{{#str}} courseai_template_space_upload, local_coursegen {{/str}}"
+                data-label-replace="{{#str}} courseai_template_choice_space_file_replace, local_coursegen {{/str}}">{{#hasfile}}{{#str}} courseai_template_choice_space_file_replace, local_coursegen {{/str}}{{/hasfile}}{{^hasfile}}{{#str}} courseai_template_space_upload, local_coursegen {{/str}}{{/hasfile}}</button>
+        <span class="text-muted" data-region="local_coursegen/template/space-choice-filename"
+              data-empty="{{#str}} courseai_template_choice_space_file_none, local_coursegen {{/str}}">{{#hasfile}}{{filename}}{{/hasfile}}{{^hasfile}}{{#str}} courseai_template_choice_space_file_none, local_coursegen {{/str}}{{/hasfile}}</span>
+    </div>
+</div>
 <div class="form-group mb-0" data-region="local_coursegen/template/space-choice-own-group">
     <label for="{{uniqid}}-own">{{#str}} courseai_template_choice_space_own, local_coursegen {{/str}}</label>
     <textarea class="form-control" id="{{uniqid}}-own" rows="3" data-region="local_coursegen/template/space-choice-instruction"

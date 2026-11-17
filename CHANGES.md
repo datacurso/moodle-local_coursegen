@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026110967
+
+### Changed
+- **The teacher uploads their File right in the modal of the space, and modifies it from its card**  
+  Picking the File the admin left to the teacher shows, right under the options, the field to upload it or replace it, and "Add the activity" waits until the file is there. Once added, the card shows the activity and its file with an edit icon: pressing it opens the same modal with what was chosen, to replace the file or to switch to another activity, which drops the file. Cancelling after uploading keeps nothing.
+
 ## [2.0.10] - 2026110966
 
 ### Fixed
