@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026110974
+
+### Fixed
+- **The instruction of the File the teacher uploads is shown once, above the button that uploads it**  
+  In the modal of a space, the File option says that the teacher uploads their own file, and the admin's instruction (which file to upload) is shown once, as plain text, right above the button that uploads it.
+
 ## [2.0.10] - 2026110972
 
 ### Fixed

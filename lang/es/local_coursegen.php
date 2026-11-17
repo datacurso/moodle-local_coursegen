@@ -187,7 +187,6 @@ $string['courseai_chip_remove_syllabus'] = 'Eliminar programa de estudios';
 $string['courseai_chip_view_guideline'] = 'Ver directriz';
 $string['courseai_close_view'] = 'Cerrar y volver a Mis cursos';
 $string['courseai_template_choice_space_add'] = 'Agregar la actividad';
-$string['courseai_template_choice_space_file_label'] = 'Archivo que se agregará en este lugar';
 $string['courseai_template_choice_space_file_none'] = 'Aún no se ha subido ningún archivo.';
 $string['courseai_template_choice_space_file_replace'] = 'Reemplazar archivo';
 $string['courseai_template_choice_space_upload_option'] = 'Usted sube su propio archivo.';
