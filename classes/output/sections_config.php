@@ -92,6 +92,10 @@ class sections_config {
             if ($tree !== null) {
                 $context += self::hierarchy_context($tree, (int) $sectioninfo->section);
             }
+            // Only a top section is repeated per unit: a subsection goes with it and has no instruction of its own.
+            if (!empty($context['isnested'])) {
+                $context['istemplatesection'] = false;
+            }
             $sections[] = $context;
         }
 
@@ -261,6 +265,8 @@ class sections_config {
             'hasactivities' => !empty($rows),
             'rows' => $rows,
             'actions' => $actions,
+            // A template section shows the editor of its instruction above its activities.
+            'istemplatesection' => $behavior === template_section::BEHAVIOR_TEMPLATE,
         ];
     }
 

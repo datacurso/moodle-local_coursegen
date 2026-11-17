@@ -38,8 +38,14 @@ class template_section extends persistent {
     /** Behavior: the section is left out of the new course. */
     const BEHAVIOR_EXCLUDE = 'exclude';
 
+    /** Behavior: the section is repeated once per unit of the syllabus, with an instruction of its own. */
+    const BEHAVIOR_TEMPLATE = 'template';
+
     /** Every behavior a section can have, in the order the editor offers them. */
-    const BEHAVIORS = [self::BEHAVIOR_AI_MODIFY, self::BEHAVIOR_KEEP, self::BEHAVIOR_EXCLUDE];
+    const BEHAVIORS = [self::BEHAVIOR_AI_MODIFY, self::BEHAVIOR_KEEP, self::BEHAVIOR_EXCLUDE, self::BEHAVIOR_TEMPLATE];
+
+    /** File area of the pictures and files of a template section's instruction (item: the record's id). */
+    const INSTRUCTION_FILEAREA = 'sectioninstruction';
 
     /**
      * Return the definition of the properties of this model.
@@ -65,6 +71,33 @@ class template_section extends persistent {
                 'null' => NULL_NOT_ALLOWED,
                 'default' => self::BEHAVIOR_AI_MODIFY,
             ],
+            'instruction' => [
+                'type' => PARAM_RAW,
+                'null' => NULL_ALLOWED,
+                'default' => null,
+            ],
+            'instructionformat' => [
+                'type' => PARAM_INT,
+                'null' => NULL_NOT_ALLOWED,
+                'default' => FORMAT_HTML,
+            ],
         ];
+    }
+
+    /**
+     * Take the files of the instruction along when the record goes.
+     *
+     * @param bool $result Whether the record was deleted.
+     */
+    protected function after_delete($result) {
+        if (!$result) {
+            return;
+        }
+        get_file_storage()->delete_area_files(
+            \context_system::instance()->id,
+            'local_coursegen',
+            self::INSTRUCTION_FILEAREA,
+            (int) $this->raw_get('id')
+        );
     }
 }

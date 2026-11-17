@@ -29,6 +29,30 @@
 /** @type {Function|null} Redraws the page for a structure event, set by the template mode. */
 let listener = null;
 
+/** Called with each template_unit_copies event; set by template_mode.js. */
+let copiesListener = null;
+
+/**
+ * Set what draws the copies of a template section.
+ *
+ * @param {Function|null} callback
+ */
+export const setCopiesListener = (callback) => {
+    copiesListener = callback;
+};
+
+/**
+ * Hand a template_unit_copies event to whoever draws it.
+ *
+ * @param {Object} data
+ * @returns {Promise<void>}
+ */
+export const notifyCopies = async(data) => {
+    if (copiesListener) {
+        await copiesListener(data);
+    }
+};
+
 /**
  * Choose what draws an added structure.
  *
@@ -125,4 +149,42 @@ export const mergeAddedStructure = (state, data) => {
     }));
     state.sections = [...own, ...added];
     state.addedSections = added.length > 0;
+};
+
+/**
+ * Put the copies of a template section right after the section they repeat, and after the copies before them.
+ *
+ * The section a copy repeats is found by its number in the template; a copy that repeats a section the page
+ * does not show is left out.
+ *
+ * @param {Object} state The structure state.
+ * @param {Object} data A template_unit_copies event: {sections: [{section, name, copy_of, depth}], activities}.
+ */
+export const mergeUnitCopies = (state, data) => {
+    const sections = Array.isArray(data?.sections) ? data.sections : [];
+    const items = Array.isArray(data?.activities) ? data.activities : [];
+    for (const copy of sections) {
+        const source = Number(copy.copy_of);
+        let last = -1;
+        state.sections.forEach((section, index) => {
+            if (section.num === source || section.copyOf === source) {
+                last = index;
+            }
+        });
+        if (last < 0) {
+            continue;
+        }
+        state.sections.splice(last + 1, 0, {
+            id: `copy-${copy.section}`,
+            num: null,
+            copyOf: source,
+            name: copy.name || '',
+            behavior: 'aimodify',
+            locked: false,
+            depth: Number(copy.depth) || 0,
+            collapsed: false,
+            copied: true,
+            activities: activitiesOf(state, items, copy.section),
+        });
+    }
 };

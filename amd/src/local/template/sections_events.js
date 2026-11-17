@@ -50,6 +50,7 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+import {bindSectionInstructions, showInstructionFor} from 'local_coursegen/local/template/section_instruction';
 import {typeSupportsModify} from 'local_coursegen/local/template/type_action_sync';
 import {bindSelectionAndBulk} from 'local_coursegen/local/template/selection_bulk';
 import {cascadeBehavior} from 'local_coursegen/local/template/section_cascade';
@@ -304,6 +305,8 @@ const handleSectionBehaviorChange = (ctx) => {
     ctx.state.sectionBehavior[ctx.sid] = ctx.select.value;
     // The subsections of a unit follow it (flexsections); a section with none is left alone.
     cascadeBehavior(ctx.select.closest(Selectors.rows.section), ctx.select.value, ctx.state);
+    // A template section shows the editor of its instruction; any other behavior hides it.
+    showInstructionFor(document, ctx.sid, ctx.select.value, ctx.state.templateId || 0);
     markDirty();
 };
 
@@ -357,4 +360,5 @@ export const bindServerRenderedControls = (container, state) => {
     // bulk action bar — see selection_bulk.js.
     bindSelectionAndBulk(container, state, {applicableAction, applyTemplateVisual: applyRowVisual, markDirty});
     bindSectionBehaviorSelects(container, state);
+    bindSectionInstructions(container, state.templateId || 0);
 };

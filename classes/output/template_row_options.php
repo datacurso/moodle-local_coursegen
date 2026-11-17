@@ -61,7 +61,7 @@ class template_row_options {
         // preselects) when an existing template already saved it, so
         // edit-mode hydration never lies about the stored state. The backend
         // keeps accepting and processing it untouched.
-        $keys = [template_section::BEHAVIOR_AI_MODIFY, template_section::BEHAVIOR_KEEP];
+        $keys = [template_section::BEHAVIOR_AI_MODIFY, template_section::BEHAVIOR_KEEP, template_section::BEHAVIOR_TEMPLATE];
         if ($behavior === template_section::BEHAVIOR_EXCLUDE) {
             $keys = $valid;
         }

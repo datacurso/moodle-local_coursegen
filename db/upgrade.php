@@ -565,5 +565,19 @@ function xmldb_local_coursegen_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026111404, 'local', 'coursegen');
     }
 
+    if ($oldversion < 2026111711) {
+        // A template section carries an instruction of its own, for every unit it is repeated for.
+        $table = new xmldb_table('local_coursegen_tpl_section');
+        $field = new xmldb_field('instruction', XMLDB_TYPE_TEXT, null, null, null, null, null, 'behavior');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+        $field = new xmldb_field('instructionformat', XMLDB_TYPE_INTEGER, '2', null, XMLDB_NOTNULL, null, '1', 'instruction');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+        upgrade_plugin_savepoint(true, 2026111711, 'local', 'coursegen');
+    }
+
     return true;
 }

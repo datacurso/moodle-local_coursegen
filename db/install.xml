@@ -114,7 +114,9 @@
                 <FIELD NAME="templateid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
                 <FIELD NAME="sectionid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
                 <FIELD NAME="sectionnum" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
-                <FIELD NAME="behavior" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="aimodify" SEQUENCE="false" COMMENT="aimodify, keep, or exclude" />
+                <FIELD NAME="behavior" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="aimodify" SEQUENCE="false" COMMENT="aimodify, keep, exclude or template" />
+                <FIELD NAME="instruction" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="Instruction of a template section, for every unit it is repeated for" />
+                <FIELD NAME="instructionformat" TYPE="int" LENGTH="2" NOTNULL="true" DEFAULT="1" SEQUENCE="false" COMMENT="Format of the instruction" />
                 <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
                 <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
             </FIELDS>

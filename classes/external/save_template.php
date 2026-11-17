@@ -63,6 +63,14 @@ class save_template extends external_api {
                     'sectionid'  => new external_value(PARAM_INT,   'Section ID'),
                     'sectionnum' => new external_value(PARAM_INT,   'Section number'),
                     'behavior'   => new external_value(PARAM_ALPHA, 'Section behavior'),
+                    'instruction' => new external_value(PARAM_RAW, 'Instruction of a template section', VALUE_DEFAULT, ''),
+                    'instructionformat' => new external_value(PARAM_INT, 'Format of the instruction', VALUE_DEFAULT, FORMAT_HTML),
+                    'instructiondraftid' => new external_value(
+                        PARAM_INT,
+                        'Draft area of the instruction\'s files',
+                        VALUE_DEFAULT,
+                        0
+                    ),
                     'activities' => new external_multiple_structure(
                         new external_single_structure([
                             'cmid'           => new external_value(PARAM_INT,  'Course module ID'),

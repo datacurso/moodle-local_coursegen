@@ -160,4 +160,30 @@ final class template_export_sections_test extends \advanced_testcase {
             $this->assertArrayNotHasKey('depth', $section);
         }
     }
+
+    /**
+     * A template section brings its instruction; any other section does not, even when one was given for it.
+     */
+    public function test_a_template_section_brings_its_instruction(): void {
+        $this->resetAfterTest(true);
+        $this->setAdminUser();
+
+        $course = $this->getDataGenerator()->create_course(['numsections' => 2]);
+        $modinfo = get_fast_modinfo($course);
+        $first = $modinfo->get_section_info(1);
+        $second = $modinfo->get_section_info(2);
+
+        $sections = template_export_sections::sections_info(
+            $course,
+            $modinfo,
+            [(int) $first->id => 'template', (int) $second->id => 'aimodify'],
+            [(int) $first->id => '<p>Una lección por tema.</p>', (int) $second->id => '<p>Nunca.</p>']
+        );
+
+        $this->assertSame(
+            ['behavior' => 'template', 'instruction' => '<p>Una lección por tema.</p>'],
+            $sections[1]['template_behavior']
+        );
+        $this->assertSame(['behavior' => 'aimodify'], $sections[2]['template_behavior']);
+    }
 }

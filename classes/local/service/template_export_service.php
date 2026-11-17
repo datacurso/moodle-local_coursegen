@@ -75,6 +75,7 @@ class template_export_service {
 
         $actions = self::saved_activity_actions($templateid);
         $behaviors = self::saved_section_behaviors($templateid);
+        $instructions = self::saved_section_instructions($templateid);
 
         $langauto = ($lang === '');
         if ($langauto) {
@@ -88,7 +89,7 @@ class template_export_service {
         $numsections = count($sectioninfoall) - 1;
 
         $formatoptions = template_export_sections::format_settings($course);
-        $sectionsinfo = template_export_sections::sections_info($course, $modinfo, $behaviors);
+        $sectionsinfo = template_export_sections::sections_info($course, $modinfo, $behaviors, $instructions);
 
         $realactivities = self::real_activities($modinfo, $actions);
         $instanceactivities = self::instance_activities($templateid, $modinfo);
@@ -179,6 +180,32 @@ class template_export_service {
             $behaviors[$sectionid] = $behavior;
         }
         return $behaviors;
+    }
+
+    /**
+     * sectionid => instruction of each template section, its pictures and files as addresses.
+     *
+     * @param int $templateid
+     * @return array
+     */
+    private static function saved_section_instructions(int $templateid): array {
+        $records = template_section::get_records([
+            'templateid' => $templateid,
+            'behavior' => template_section::BEHAVIOR_TEMPLATE,
+        ]);
+        $contextid = \context_system::instance()->id;
+        $instructions = [];
+        foreach ($records as $section) {
+            $instructions[(int) $section->get('sectionid')] = file_rewrite_pluginfile_urls(
+                (string) $section->get('instruction'),
+                'pluginfile.php',
+                $contextid,
+                'local_coursegen',
+                template_section::INSTRUCTION_FILEAREA,
+                (int) $section->get('id')
+            );
+        }
+        return $instructions;
     }
 
     /**

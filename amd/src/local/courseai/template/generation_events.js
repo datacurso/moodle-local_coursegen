@@ -32,6 +32,7 @@ import {
     failActivity,
     openChecklist,
     showAddedStructure,
+    showUnitCopies,
     showRepeatProgress,
 } from 'local_coursegen/local/courseai/template/generation_checklist';
 import {showWorkingIndicator} from 'local_coursegen/local/courseai/ui/feedback-progress';
@@ -139,6 +140,11 @@ const EVENT_HANDLERS = {
     // What the guideline added after the template's own sections joins the structure on the right, and so the list.
     template_structure: (data) => {
         showAddedStructure(data);
+        return '';
+    },
+    // The copies of the template section, one per unit of the syllabus, are drawn after the section they repeat.
+    template_unit_copies: (data) => {
+        showUnitCopies(data);
         return '';
     },
     review_needed: () => 'review',

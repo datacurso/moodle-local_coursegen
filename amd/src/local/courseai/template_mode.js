@@ -32,7 +32,7 @@ import {getTemplateStructure} from './template/repository';
 import {reopenGeneration, runGeneration} from './template/run_generation';
 import {wireInputBar} from './template/input_bar';
 import {refreshPreviewLinks} from './template/preview';
-import {mergeAddedStructure, setStructureListener} from './template/added_structure';
+import {mergeAddedStructure, mergeUnitCopies, setCopiesListener, setStructureListener} from './template/added_structure';
 import {ALL_STATUS_CLASSES, STATUS_CLASS} from './template/generation_events';
 import {initTopBar} from './template/top_bar';
 import {
@@ -182,6 +182,12 @@ export const wireTemplateMode = (state, host, reopened = null) => {
     // The sections and activities the guideline adds join the structure and its counters while the run is on.
     setStructureListener(async(data) => {
         mergeAddedStructure(tplState, data);
+        await rerenderStructure();
+        markRowsPending();
+    });
+    // The copies of a template section, one per unit of the syllabus, join it while the run is on.
+    setCopiesListener(async(data) => {
+        mergeUnitCopies(tplState, data);
         await rerenderStructure();
         markRowsPending();
     });

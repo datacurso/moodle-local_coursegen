@@ -220,6 +220,9 @@ $string['template_reference_marker_example'] = '[[coursegen:reference: lo que ap
 $string['template_reference_marker_help'] = 'Escribe `[[coursegen:reference: lo que aporta el docente]]` como texto simple justo encima del elemento de una actividad que contiene un archivo, como el visor de un PDF, una imagen, un video o un enlace a un documento. El marcador se aplica al elemento siguiente, sea cual sea, y ese elemento debe contener exactamente un archivo de esta actividad.
 
 Cuando se crea un curso a partir de la plantilla, el docente ve un apartado con el nombre que escribiste y puede aportar su propio archivo antes de generar el curso. Sin archivo, se genera una imagen nueva a partir de la referencia cuando el elemento es una imagen, y cualquier otro elemento se omite del curso. El marcador se lee en las actividades guardadas con la acción "plantilla", y nunca aparece en el curso.';
+$string['template_section_instruction'] = 'Instrucción de la sección';
+$string['template_section_template'] = 'Sección plantilla';
+$string['template_section_template_tip'] = 'La sección se repite una vez por cada unidad del sílabo; sus actividades y su instrucción dicen lo que lleva cada unidad';
 $string['template_transfer_course'] = 'Curso';
 $string['template_transfer_course_id'] = 'curso {$a}';
 $string['template_transfer_course_search'] = 'Buscar un curso';

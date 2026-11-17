@@ -47,6 +47,7 @@ use local_coursegen\local\service\template_run_history;
 use local_coursegen\local\service\template_section_map;
 use local_coursegen\local\service\template_settings_copier;
 use local_coursegen\local\service\template_syllabus_linker;
+use local_coursegen\local\service\template_unit_copies;
 use local_coursegen\local\space\activity_spaces;
 use local_coursegen\local\space\file_spaces;
 use local_coursegen\local\space\space_file_storage;
@@ -184,6 +185,7 @@ class finish_template_generation extends external_api {
         $report('result');
         $api = new template_ai_api_service();
         $result = $api->get_result($session->get('session_id'));
+        template_unit_copies::adopt($session, (array) ($result['sections_info'] ?? []));
         $templateid = self::template_id_of($session);
 
         // Only the AI-generated activities are built from the payload. The

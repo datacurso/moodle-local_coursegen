@@ -102,6 +102,8 @@ export const applyStructureResponse = (state, data) => {
     state.units = state.unitcount;
     state.sections = (data.sections || []).map((section) => ({
         id: section.id,
+        // The section's number in the template: the copies of a template section are put after it.
+        num: section.num,
         name: section.name,
         behavior: section.behavior || 'aimodify',
         locked: !!section.locked,

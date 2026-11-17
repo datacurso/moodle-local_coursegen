@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.13] - 2026111711
+
+### Added
+- **Template section**  
+  A section of a template can be set to "Template section". It shows the site's editor for its instruction above its activities, with pictures, links and files, and keeps the instruction with the template. When a course is generated with a syllabus, the AI service repeats that section once per unit of the syllabus, named after each unit; its activities and its instruction say what every unit has. The copies appear in the structure while the run is on, and the course is built with every copy, every section after them in its place, and the look of each copy taken from the section it repeats.
+
 ## [2.0.13] - 2026111710
 
 ### Changed
