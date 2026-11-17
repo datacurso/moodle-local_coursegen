@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026110953
+
+### Changed
+- **The add menu says "Add space for an activity"**  
+  The option of the menu is named so that it is understood by itself, with no line of description under it; the chooser of the type has the same title.
+
 ## [2.0.10] - 2026110952
 
 ### Changed

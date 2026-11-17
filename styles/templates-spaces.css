@@ -60,9 +60,3 @@
 .tpl-add-menu-item {
     white-space: nowrap;
 }
-
-/* The line under "Add a space" that says who provides it; it keeps the width of the menu's items. */
-.tpl-add-menu-desc {
-    white-space: normal;
-    max-width: 22rem;
-}
