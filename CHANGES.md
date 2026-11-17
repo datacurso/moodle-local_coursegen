@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10-wp] - 2026111139
+
+### Changed
+- **"Add space for an activity" opens the selection of activities at once**  
+  No chooser and no extra button: the modal lists the activities, and the admin ticks one or several, each with its own instruction. One activity is created by the AI, with an optional name; a single File can instead be uploaded by the teacher, and then the modal asks whether it is required. Several activities make a space where the teacher chooses one when the course is created.
+
 ## [2.0.10-wp] - 2026111138
 
 ### Added

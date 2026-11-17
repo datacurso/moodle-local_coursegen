@@ -33,11 +33,11 @@ import {
     insertGeneratedRow,
 } from 'local_coursegen/local/template/template_instance_rows';
 import {openSpaceModal} from 'local_coursegen/local/template/template_space_modal';
-import {chooseActivityType} from 'local_coursegen/local/template/template_space_chooser';
+import {pickSpace} from 'local_coursegen/local/template/template_space_picker';
 import {closeInstanceMenu} from 'local_coursegen/local/template/template_instance_menu';
 import {get_string as getString} from 'core/str';
 import {prefetchStrings} from 'core/prefetch';
-import {editTeacherSpace, openNewTeacherSpace} from 'local_coursegen/local/template/template_teacher_space';
+import {editTeacherSpace} from 'local_coursegen/local/template/template_teacher_space';
 import Selectors from 'local_coursegen/local/template/selectors';
 import {CLASS, COMPONENT, EVENT, NEW_ROW_PREFIX, REQUIRED_VALUE, STRING, TAG} from 'local_coursegen/local/template/constants';
 
@@ -216,22 +216,25 @@ export const addSpace = async(item, state, markDirty) => {
     const triggerEl = beforeEl.querySelector(Selectors.actions.instanceTrigger);
     closeInstanceMenu(triggerEl);
 
-    const picked = await chooseActivityType({
-        courseId: state.selectedCourseId,
-        supportedTypes: state.supportedTypes,
-    });
-    if (picked === null) {
+    // One activity or several, each with its instruction: one is created by the AI (a File can instead be one the
+    // teacher uploads); among several, the teacher chooses one when creating the course.
+    const result = await pickSpace({courseId: state.selectedCourseId, supportedTypes: state.supportedTypes});
+    if (result === null) {
         return;
     }
-    if (picked.multiple) {
-        // Several activities: the teacher chooses one of them when creating the course, each with its instruction.
-        await openNewTeacherSpace(state, tbody, beforeEl, markDirty, insertSpaceRow);
+    if (result.kind === 'several') {
+        await insertSpaceRow(tbody, beforeEl, {
+            name: await getString('template_teacher_space_name', COMPONENT, result.titles.join(', ')),
+            modname: result.options[0].modname,
+            icon: '',
+            required: result.required,
+            instruction: '',
+            options: result.options,
+        });
+        markDirty();
         return;
     }
-    const onSave = saveNewSpace.bind(null, tbody, beforeEl, picked, markDirty);
-    // The AI creates what is added here; a File can instead be one the teacher uploads in this place.
-    const canupload = picked.modname === 'resource';
-    openSpaceModal({subject: picked.name, required: true, instruction: '', onSave, mode: 'ai', aiOnly: !canupload});
+    await saveNewSpace(tbody, beforeEl, result.picked, markDirty, result.choice);
 };
 
 /**
