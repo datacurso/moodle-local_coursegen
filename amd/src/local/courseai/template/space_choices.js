@@ -39,6 +39,7 @@ const OWN_GROUP = '[data-region="local_coursegen/template/space-choice-own-group
 const UPLOAD = '[data-region="local_coursegen/template/space-choice-upload"]';
 const UPLOAD_BUTTON = '[data-region="local_coursegen/template/space-choice-upload-button"]';
 const FILENAME = '[data-region="local_coursegen/template/space-choice-filename"]';
+const FILE_INSTRUCTION = '[data-region="local_coursegen/template/space-choice-file-instruction"]';
 
 /**
  * Open the modal of a space and keep the activity the teacher adds.
@@ -82,6 +83,10 @@ export const pickSpaceChoice = async(tplState, sectionIndex, activityIndex, onCh
         const uploads = picked?.dataset.uploads === '1';
         root[0].querySelector(OWN_GROUP).hidden = uploads;
         root[0].querySelector(UPLOAD).hidden = !uploads;
+        const instruction = uploads ? String(picked.dataset.instruction || '').trim() : '';
+        const note = root[0].querySelector(FILE_INSTRUCTION);
+        note.textContent = instruction;
+        note.hidden = instruction === '';
         const save = root[0].querySelector('[data-action="save"]');
         if (save) {
             save.disabled = !picked || (uploads && !file);
