@@ -102,7 +102,8 @@ const shapePanels = (rows, text) => {
  * Bring the modal up to date with the selection: the panels, the summary, the requirement and Save.
  *
  * @param {HTMLElement} root The modal.
- * @param {Object} text {single, several, teacher: {label, placeholder}, summary: {none, ai, teacher, several}}.
+ * @param {Object} text {single, several, teacher: {label, placeholder}, summary: {none, ai, teacher, several},
+ *     badge: {one, many}}.
  */
 export const refresh = (root, text) => {
     const rows = selectedRows(root);
@@ -110,11 +111,14 @@ export const refresh = (root, text) => {
     shapePanels(rows, text);
     let summary = text.summary.none;
     if (rows.length > 1) {
-        summary = text.summary.several.replace('{$a}', String(rows.length));
+        summary = text.summary.several;
     } else if (rows.length === 1) {
         summary = uploads ? text.summary.teacher : text.summary.ai;
     }
     root.querySelector(region('summary')).textContent = summary;
+    const badge = root.querySelector(region('badge'));
+    badge.hidden = rows.length === 0;
+    badge.textContent = rows.length === 1 ? text.badge.one : text.badge.many.replace('{$a}', String(rows.length));
     root.querySelector(region('required-group')).hidden = !(rows.length > 1 || uploads);
     const aiAlone = rows.length === 1 && !uploads;
     const missing = aiAlone && rows[0].querySelector(region('instruction')).value.trim() === '';
@@ -130,7 +134,7 @@ export const refresh = (root, text) => {
  */
 export const readPicker = (root, items) => {
     const rows = selectedRows(root);
-    const required = root.querySelector(`${region('required')}[aria-pressed="true"]`)?.dataset.value === '1';
+    const required = root.querySelector(`${region('required')}:checked`)?.value === '1';
     const options = rows.map((row) => ({
         modname: row.dataset.modname,
         instruction: row.querySelector(region('instruction')).value.trim(),
@@ -150,7 +154,7 @@ export const readPicker = (root, items) => {
 };
 
 /**
- * Press one button of a group of two (who provides a File, required or optional).
+ * Press one button of a group of two (who provides a File).
  *
  * @param {HTMLElement} button
  */

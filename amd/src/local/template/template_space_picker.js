@@ -61,7 +61,7 @@ const loadTexts = async() => {
         'template_space_picker_label_ai_optional', 'template_space_picker_placeholder_several',
         'template_space_picker_label_teacher', 'template_space_picker_placeholder_teacher',
         'template_space_picker_types', 'template_space_picker_one_ai', 'template_space_picker_one_teacher',
-        'template_space_picker_several',
+        'template_space_picker_several', 'template_space_picker_badge_one', 'template_space_picker_badge_many',
     ];
     const s = await getStrings(keys.map((key) => ({key, component: COMPONENT})));
     return {
@@ -70,6 +70,7 @@ const loadTexts = async() => {
         several: {label: s[3], placeholder: s[4]},
         teacher: {label: s[5], placeholder: s[6]},
         summary: {none: s[7], ai: s[8], teacher: s[9], several: s[10]},
+        badge: {one: s[11], many: s[12]},
     };
 };
 
@@ -98,7 +99,7 @@ const bindList = (root, text) => {
         help.hidden = !help.hidden;
         info.setAttribute('aria-expanded', String(!help.hidden));
     }));
-    root.querySelectorAll(`${region('mode')}, ${region('required')}`).forEach((button) => button.addEventListener('click', () => {
+    root.querySelectorAll(region('mode')).forEach((button) => button.addEventListener('click', () => {
         press(button);
         update();
     }));

@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10-wp] - 2026111146
+
+### Changed
+- **Whether a space is required is a section with radio buttons, and the footer shows a badge**  
+  With several activities or a File the teacher uploads, "Does the teacher have to provide it?" is a section under the list with two radio buttons, each saying what it means. The footer shows how many activities are selected as a badge, next to a plain sentence about what happens when the course is created.
+
 ## [2.0.10-wp] - 2026111145
 
 ### Changed

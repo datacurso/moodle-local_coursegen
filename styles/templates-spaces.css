@@ -257,3 +257,43 @@
 .tpl-sp-panel textarea {
     scroll-margin-bottom: 96px;
 }
+
+/* Whether the space is required: a section under the list, with radio buttons. */
+.tpl-sp-required {
+    margin: 16px 0 0;
+    padding: 16px;
+    border: 1px solid #dee2e6;
+    border-radius: 0.5rem;
+}
+
+.tpl-sp-required-title {
+    float: left;
+    width: 100%;
+    margin-bottom: 10px;
+    padding: 0;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.tpl-sp-required .form-check {
+    clear: both;
+}
+
+/* How many activities are selected, as a badge, next to what the selection makes. */
+.tpl-sp-summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+.tpl-sp-badge {
+    padding: 4px 12px;
+    border-radius: 999px;
+    background: #eef5fc;
+    color: #0f6cbf;
+    font-size: 0.88rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
