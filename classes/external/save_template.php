@@ -114,6 +114,9 @@ class save_template extends external_api {
                             'modname'     => new external_value(PARAM_PLUGIN, 'Module type the professor provides'),
                             'required'    => new external_value(PARAM_BOOL, 'Whether the professor must provide it', VALUE_DEFAULT, true),
                             'instruction' => new external_value(PARAM_RAW, 'What the professor has to provide', VALUE_DEFAULT, ''),
+                            'options'     => new external_value(
+                                PARAM_RAW, 'JSON list of the activities the teacher can add here: {modname, instruction}', VALUE_DEFAULT, ''
+                            ),
                             'aftercmid' => new external_value(
                                 PARAM_INT,
                                 'Real cmid this space renders after within its section; 0 = section start',

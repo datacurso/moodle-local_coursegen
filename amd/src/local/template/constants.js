@@ -38,6 +38,7 @@ export const ACTION = {
     EXCLUDE: 'exclude',
     TEMPLATE: 'template',
     SPACE: 'space',
+    AIMODIFY: 'aimodify',
 };
 
 /** @type {Object} What the generator does with a section. */

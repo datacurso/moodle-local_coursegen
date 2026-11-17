@@ -32,6 +32,7 @@ use external_single_structure;
 use external_value;
 use local_coursegen\local\models\course_session;
 use local_coursegen\local\service\course_session_service;
+use local_coursegen\local\service\teacher_space_choices;
 use local_coursegen\local\service\template_ai_api_service;
 use local_coursegen\local\service\template_course_image_slots;
 use local_coursegen\local\service\template_export_service;
@@ -82,6 +83,16 @@ class start_template_generation extends external_api {
                 VALUE_DEFAULT,
                 []
             ),
+            'spacechoices' => new external_multiple_structure(
+                new external_single_structure([
+                    'uid' => new external_value(PARAM_ALPHANUMEXT, 'Uid of the space of the template'),
+                    'modname' => new external_value(PARAM_PLUGIN, 'The activity the teacher adds in that space'),
+                    'instruction' => new external_value(PARAM_RAW, 'What the teacher asks for it', VALUE_DEFAULT, ''),
+                ]),
+                'The activities the teacher adds in the spaces of the template, which the AI writes',
+                VALUE_DEFAULT,
+                []
+            ),
         ]);
     }
 
@@ -95,10 +106,11 @@ class start_template_generation extends external_api {
      * @param bool $withimages
      * @param array $spacefiles Each: cmid, draftitemid.
      * @param array $spaceactivities Each: uid (of the space), cmid (of the activity).
+     * @param array $spacechoices Each: uid (of the space), modname and instruction of the activity the teacher adds.
      * @return array
      */
     public static function execute($templateid, $prompt = '', $draftitemid = 0, $lang = '', $withimages = false, $spacefiles = [],
-            $spaceactivities = []) {
+            $spaceactivities = [], $spacechoices = []) {
         global $USER;
 
         $params = self::validate_parameters(self::execute_parameters(), [
@@ -109,6 +121,7 @@ class start_template_generation extends external_api {
             'withimages' => $withimages,
             'spacefiles' => $spacefiles,
             'spaceactivities' => $spaceactivities,
+            'spacechoices' => $spacechoices,
         ]);
 
         $context = context_system::instance();
@@ -128,11 +141,14 @@ class start_template_generation extends external_api {
         if ($params['withimages']) {
             require_capability('local/coursegen:generatecourseimages', $context);
         }
+        // The activities the teacher adds in the spaces: each one allowed there, none of the required ones missing.
+        $spacechoices = teacher_space_choices::validated($params['templateid'], $params['spacechoices']);
         $payload = template_export_service::build_init_payload(
             $params['templateid'],
             $params['prompt'],
             $params['lang'],
-            (bool) $params['withimages']
+            (bool) $params['withimages'],
+            $spacechoices
         );
 
         // Read first: a reference marker with no usable target is refused before a session exists.

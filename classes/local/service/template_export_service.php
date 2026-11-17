@@ -47,13 +47,15 @@ class template_export_service {
      * @param string $lang The language the professor picked for the generated course. Empty leaves it to the AI
      *                     service to detect it (the template course's language travels only as the fallback).
      * @param bool $withimages Whether the professor asked for the images to be generated.
+     * @param array $spacechoices The activities the teacher adds in the spaces (teacher_space_choices::validated()).
      * @return array
      */
     public static function build_init_payload(
         int $templateid,
         string $generalinstruction = '',
         string $lang = '',
-        bool $withimages = false
+        bool $withimages = false,
+        array $spacechoices = []
     ): array {
         global $CFG;
 
@@ -85,7 +87,12 @@ class template_export_service {
 
         $realactivities = self::real_activities($modinfo, $actions);
         $instanceactivities = self::instance_activities($templateid, $modinfo);
-        $activities = array_merge($realactivities, $instanceactivities);
+        $sectionnums = [];
+        foreach ($sectioninfoall as $sectioninfo) {
+            $sectionnums[(int) $sectioninfo->id] = (int) $sectioninfo->section;
+        }
+        $spaceactivities = teacher_space_choices::payload_entries($spacechoices, $sectionnums);
+        $activities = array_merge($realactivities, $instanceactivities, $spaceactivities);
 
         $courseconfiguration = [
             'fullname' => $course->fullname,
@@ -176,6 +183,10 @@ class template_export_service {
             $action = $actions[$cm->id] ?? template_activity::ACTION_KEEP;
             if ($action === template_activity::ACTION_EXCLUDE || $action === template_activity::ACTION_SPACE) {
                 continue;
+            }
+            if ($action === template_activity::ACTION_AIMODIFY) {
+                // What the AI reads to change it: its mold when it has markers, its reference otherwise.
+                $action = ai_modified_activity::export_action($cm);
             }
             $activities[] = self::real_activity_entry($cm, $action);
         }

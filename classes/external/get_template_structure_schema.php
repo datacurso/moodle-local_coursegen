@@ -74,6 +74,9 @@ trait get_template_structure_schema {
                                 'What the space asks the teacher for; empty when none or not a space'),
                             'spacerequired' => new external_value(PARAM_BOOL,
                                 'Whether the teacher must bring the file; false when not a space'),
+                            'spaceoptions' => new external_value(PARAM_RAW,
+                                'JSON list of the activities the teacher can add in a space: modname, title, instruction, iconhtml',
+                                VALUE_DEFAULT, ''),
                         ])
                     ),
                 ])

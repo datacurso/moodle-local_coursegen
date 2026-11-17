@@ -218,6 +218,7 @@ const spaceEntryOf = (row, aftercmid, sortorder) => {
         modname: row.dataset.modname,
         required: row.dataset.required === REQUIRED_VALUE,
         instruction,
+        options: row.dataset.options || '',
         aftercmid,
         sortorder,
     };

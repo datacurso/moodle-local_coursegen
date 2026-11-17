@@ -59,8 +59,10 @@
           event and its own preview answer to), sectionindex int, index int,
           typelabel string (optional), isspace bool, spaceinstruction string,
           hasspaceinstruction bool, spacerequired bool, spacemissing bool
-          (required and still without its file), hasspacefile bool (the space has
-          its file), spacefilename string (the name of the file)
+          (required and still without its file or activity), hasspacefile bool (the
+          space has its file or activity), spacefilename string (the name of the file,
+          or the activity the teacher added), ischoicespace bool (a place where the
+          teacher adds one of the activities the admin allowed)
 
     Example context (json):
     {
@@ -133,7 +135,7 @@
             {{! The whole card is the button that opens the file picker; only "remove" inside it does something else. }}
             <div class="activity-item focus-control cg-space-row{{#hasspacefile}} cg-space-row--done{{/hasspacefile}}{{#spacemissing}} cg-space-row--empty{{/spacemissing}}"
                  data-region="local_coursegen/template/space-card" role="button" tabindex="0"
-                 data-action="local_coursegen/template/pick-space-file"
+                 data-action="local_coursegen/template/{{#ischoicespace}}pick-space-choice{{/ischoicespace}}{{^ischoicespace}}pick-space-file{{/ischoicespace}}"
                  data-label-busy="{{#str}}courseai_template_space_uploading, local_coursegen{{/str}}"
                  data-section-index="{{sectionindex}}" data-activity-index="{{index}}"
                  aria-label="{{name}}: {{#hasspacefile}}{{#str}}courseai_template_space_change, local_coursegen{{/str}}{{/hasspacefile}}{{^hasspacefile}}{{#str}}courseai_template_space_upload, local_coursegen{{/str}}{{/hasspacefile}}">
@@ -157,20 +159,20 @@
                   <p class="cg-activity-desc mb-0">{{#str}}courseai_template_space_hint, local_coursegen{{/str}}</p>
                   {{/hasspaceinstruction}}
                   {{#spacemissing}}
-                  <p class="cg-activity-desc cg-space-missing mb-0">{{#str}}courseai_template_space_missing, local_coursegen{{/str}}</p>
+                  <p class="cg-activity-desc cg-space-missing mb-0">{{#ischoicespace}}{{#str}}courseai_template_choice_space_missing, local_coursegen{{/str}}{{/ischoicespace}}{{^ischoicespace}}{{#str}}courseai_template_space_missing, local_coursegen{{/str}}{{/ischoicespace}}</p>
                   {{/spacemissing}}
                   {{#hasspacefile}}
-                  <p class="cg-activity-desc cg-space-file mb-0">{{#pix}} e/insert_file, core {{/pix}}{{spacefilename}}</p>
+                  <p class="cg-activity-desc cg-space-file mb-0">{{^ischoicespace}}{{#pix}} e/insert_file, core {{/pix}}{{/ischoicespace}}{{spacefilename}}</p>
                   {{/hasspacefile}}
                 </div>
                 <div class="activity-actions cg-item-actions align-self-start ms-sm-2">
                   <span class="dp-action-btn cg-space-action">
-                    {{#pix}} i/upload, core {{/pix}}
+                    {{#ischoicespace}}{{#pix}} t/add, core {{/pix}}{{/ischoicespace}}{{^ischoicespace}}{{#pix}} i/upload, core {{/pix}}{{/ischoicespace}}
                     <span class="sr-only" data-region="local_coursegen/template/space-button-label">{{#hasspacefile}}{{#str}}courseai_template_space_change, local_coursegen{{/str}}{{/hasspacefile}}{{^hasspacefile}}{{#str}}courseai_template_space_upload, local_coursegen{{/str}}{{/hasspacefile}}</span>
                   </span>
                   {{#hasspacefile}}
                   <span class="dp-action-btn cg-space-action" role="button" tabindex="0"
-                        data-action="local_coursegen/template/remove-space-file"
+                        data-action="local_coursegen/template/{{#ischoicespace}}remove-space-choice{{/ischoicespace}}{{^ischoicespace}}remove-space-file{{/ischoicespace}}"
                         data-section-index="{{sectionindex}}" data-activity-index="{{index}}"
                         aria-label="{{#str}}courseai_template_space_remove, local_coursegen{{/str}}">
                     {{#pix}} t/delete, core {{/pix}}

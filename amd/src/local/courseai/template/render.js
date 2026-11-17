@@ -68,6 +68,10 @@ const ensureTypeLabels = async(state) => {
  * @returns {string}
  */
 const spaceLabel = (activity) => {
+    if (activity.spacechoice) {
+        const own = String(activity.spacechoice.instruction || '').trim();
+        return own ? `${activity.spacechoice.title} · ${own}` : activity.spacechoice.title;
+    }
     if (activity.spaceactivity) {
         return `${activity.spaceactivity.name} · ${activity.spaceactivity.coursename}`;
     }
@@ -87,7 +91,6 @@ const buildActivityContext = (activity, state, sectionindex, index) => ({
     name: activity.name,
     modname: activity.modname,
     purpose: activity.purpose,
-    iconhtml: activity.iconhtml,
     locked: activity.locked,
     isinstance: !!activity.isinstance,
     aigenerated: !!activity.aigenerated,
@@ -103,6 +106,11 @@ const buildActivityContext = (activity, state, sectionindex, index) => ({
     hasspaceinstruction: !!activity.spaceinstruction,
     spacerequired: !!activity.spacerequired,
     isactivityspace: activity.spacekind === 'activity',
+    ischoicespace: activity.spacekind === 'choice',
+    // The icon of the activity the teacher added, in place of the "+" of the empty space.
+    iconhtml: activity.spacechoice
+        ? (activity.spaceoptions.find((option) => option.modname === activity.spacechoice.modname)?.iconhtml || activity.iconhtml)
+        : activity.iconhtml,
     spacemissing: !!activity.isspace && !!activity.spacerequired && !isSpaceFilled(activity),
     hasspacefile: isSpaceFilled(activity),
     spacefilename: spaceLabel(activity),
@@ -186,6 +194,21 @@ export const wireStructureEvents = (container, handlers) => {
         }
 
         // "Remove" sits inside the card, which as a whole opens the file picker: it is looked for first.
+        const dropChoiceEl = event.target.closest(Selectors.actions.removeSpaceChoice);
+        if (dropChoiceEl) {
+            event.preventDefault();
+            event.stopPropagation();
+            handlers.onRemoveSpaceChoice(...positionOf(dropChoiceEl));
+            return;
+        }
+
+        const choiceEl = event.target.closest(Selectors.actions.pickSpaceChoice);
+        if (choiceEl) {
+            event.preventDefault();
+            handlers.onPickSpaceChoice(...positionOf(choiceEl));
+            return;
+        }
+
         const removeEl = event.target.closest(Selectors.actions.removeSpaceFile);
         if (removeEl) {
             event.preventDefault();

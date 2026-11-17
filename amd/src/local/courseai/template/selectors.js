@@ -31,6 +31,8 @@ export default {
         toggleSection: '[data-action="local_coursegen/template/toggle-section"]',
         pickSpaceFile: '[data-action="local_coursegen/template/pick-space-file"]',
         removeSpaceFile: '[data-action="local_coursegen/template/remove-space-file"]',
+        pickSpaceChoice: '[data-action="local_coursegen/template/pick-space-choice"]',
+        removeSpaceChoice: '[data-action="local_coursegen/template/remove-space-choice"]',
         pickSpaceActivity: '[data-action="local_coursegen/template/pick-space-activity"]',
         removeSpaceActivity: '[data-action="local_coursegen/template/remove-space-activity"]',
     },

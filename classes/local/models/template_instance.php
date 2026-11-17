@@ -107,6 +107,11 @@ class template_instance extends persistent {
                 'type' => PARAM_INT,
                 'default' => 0,
             ],
+            // The cmid of the activity "modified with AI" this instance stands for; 0 for one the admin added.
+            'ownercmid' => [
+                'type' => PARAM_INT,
+                'default' => 0,
+            ],
             // The real cmid this instance renders immediately after within
             // its section; 0 means "the start of the section".
             'aftercmid' => [

@@ -37,6 +37,7 @@ use local_coursegen\local\service\course_session_service;
 use local_coursegen\local\service\create_course_service;
 use local_coursegen\local\service\generated_activities_filter;
 use local_coursegen\local\service\kept_link_rewriter;
+use local_coursegen\local\service\teacher_space_choices;
 use local_coursegen\local\service\template_ai_api_service;
 use local_coursegen\local\service\template_course_image_applier;
 use local_coursegen\local\service\template_course_order;
@@ -203,6 +204,13 @@ class finish_template_generation extends external_api {
         self::place_space_files($session, $selection, $keptcms);
         $spacecms = self::place_space_activities($session, $templateid, $courseid);
         $generatedcms = $created['generatedcms'] ?? [];
+        // The activities the teacher added in the spaces were generated: they go in the place of their space.
+        foreach (teacher_space_choices::spaces_of((int) $templateid) as $uid => $space) {
+            $payloadcmid = teacher_space_choices::cmid_of($space);
+            if (isset($generatedcms[$payloadcmid])) {
+                $spacecms[$uid] = (int) $generatedcms[$payloadcmid];
+            }
+        }
         $report('arrange');
         self::arrange_course($templateid, $courseid, $generatedactivities, $generatedcms, $keptcms, $spacecms);
         self::resolve_activity_links($session, $courseid, $generatedactivities, $generatedcms, $keptcms);

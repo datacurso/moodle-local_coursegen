@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10-wp] - 2026111132
+
+### Added
+- **"Modify with AI" for an activity of the template course**  
+  An activity can be set to "Modify with AI" with an instruction of how the AI has to change it: the new course has it changed by the AI, in its place, with no mold and no instance to set up. With markers in the activity the instruction is optional; without them it is required. The editor shows the badge and the instruction under the name, and asks for the instruction when the action is chosen.
+- **Spaces for the teacher**  
+  "Space for the teacher" in "Add activity or space" places a space where the teacher adds one of the activities the admin allows there (quiz, forum, book...), each with an optional instruction, and says whether it is required. In the creation screen the space is a card: the teacher chooses the activity and writes what they want it to cover, and the AI writes it in that place, naming it. A required space is asked for when Generate is pressed, like a file; an optional one the teacher leaves empty creates nothing.
+
 ## [2.0.10-wp] - 2026111131
 
 ### Changed

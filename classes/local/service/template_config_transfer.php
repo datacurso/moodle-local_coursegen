@@ -85,6 +85,10 @@ final class template_config_transfer {
             ];
         }
         foreach ($DB->get_records('local_coursegen_tpl_instance', $params, 'sectionid, sortorder, id') as $row) {
+            if (!empty($row->ownercmid)) {
+                // The instance of an activity modified with AI is made again when the template is saved.
+                continue;
+            }
             $data['instances'][] = [
                 'section' => $sectionnums[(int) $row->sectionid] ?? null,
                 'source' => $key((int) $row->sourcecmid),
@@ -105,6 +109,7 @@ final class template_config_transfer {
                 'modname' => $row->modname,
                 'required' => (int) $row->required,
                 'instruction' => $row->instruction,
+                'options' => (string) ($row->options ?? ''),
                 'sortorder' => (int) $row->sortorder,
             ];
         }
@@ -282,6 +287,7 @@ final class template_config_transfer {
                 'modname' => $row['modname'],
                 'required' => $row['required'],
                 'instruction' => (string) $row['instruction'],
+                'options' => (string) ($row['options'] ?? ''),
                 'aftercmid' => $cmid($row['after']),
                 'sortorder' => $row['sortorder'],
             ];

@@ -175,6 +175,7 @@
                 <FIELD NAME="sourcename" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false" />
                 <FIELD NAME="name" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false" />
                 <FIELD NAME="ainame" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="1 when the admin left the name empty: the name is a generic one (Book 1) and the AI writes the real title" />
+                <FIELD NAME="ownercmid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="cmid of the activity modified with AI this instance stands for; 0 for an instance the admin added" />
                 <FIELD NAME="typelabel" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false" />
                 <FIELD NAME="modname" TYPE="char" LENGTH="100" NOTNULL="false" SEQUENCE="false" COMMENT="Snapshot of the source template's module type (e.g. lesson), so the Name column's icon can be resolved the same way a real activity's is" />
                 <FIELD NAME="prompt" TYPE="text" NOTNULL="false" SEQUENCE="false" />
@@ -199,6 +200,7 @@
                 <FIELD NAME="modname" TYPE="char" LENGTH="100" NOTNULL="true" SEQUENCE="false" COMMENT="Module type of the activity the professor provides (e.g. resource)" />
                 <FIELD NAME="required" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="1" SEQUENCE="false" COMMENT="1 when the professor must provide it, 0 when it is optional" />
                 <FIELD NAME="instruction" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="What the professor has to provide in this space" />
+                <FIELD NAME="options" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="JSON list of the activities the teacher can add here: {modname, instruction} each" />
                 <FIELD NAME="aftercmid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="cmid this space renders after within its section; 0 = section start" />
                 <FIELD NAME="sortorder" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" />
                 <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />

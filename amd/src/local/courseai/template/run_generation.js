@@ -24,7 +24,7 @@
 import {announceSession} from 'local_coursegen/local/courseai/template/session_name';
 import Notification from 'core/notification';
 import {startTemplateGeneration} from './repository';
-import {pickedSpaceActivities, pickedSpaceFiles} from './state';
+import {pickedSpaceActivities, pickedSpaceChoices, pickedSpaceFiles} from './state';
 import {GenerationStopped, abortGenerationView, beginGenerationView, runGenerationStream} from './generation_stream';
 import {usePreviewSession} from './preview';
 import {reviewAndCreate} from './finish';
@@ -82,7 +82,8 @@ export const runGeneration = async(tplState, tplSelect, genBtn, state, host) => 
             tplState.lang || '',
             Boolean(tplState.generateimages),
             pickedSpaceFiles(tplState),
-            pickedSpaceActivities(tplState)
+            pickedSpaceActivities(tplState),
+            pickedSpaceChoices(tplState)
         );
         usePreviewSession(started.sessionid);
         announceSession(started.sessionid);

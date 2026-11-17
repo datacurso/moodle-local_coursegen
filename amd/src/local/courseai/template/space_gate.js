@@ -94,7 +94,7 @@ const itemOf = (entry, upload, actions) => {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'btn btn-sm btn-outline-secondary';
-    button.textContent = upload;
+    button.textContent = activity.spacekind === 'choice' ? actions.chooseText : upload;
     button.addEventListener('click', () => actions.onBring(entry.sectionIndex, entry.activityIndex));
     item.append(what, button);
     return item;
@@ -110,9 +110,10 @@ const itemOf = (entry, upload, actions) => {
  */
 export const showSpaceGate = async(missing, total, actions) => {
     const titleKey = total > 1 ? 'courseai_template_space_gate_title_many' : 'courseai_template_space_gate_title';
-    const [title, upload] = await getStrings([
+    const [title, upload, chooseText] = await getStrings([
         {key: titleKey, component: 'local_coursegen', param: {missing: missing.length, total}},
         {key: 'courseai_template_space_gate_upload', component: 'local_coursegen'},
+        {key: 'courseai_template_choice_space_add', component: 'local_coursegen'},
     ]);
     clearSpaceGate();
     const card = document.createElement('div');
@@ -132,7 +133,7 @@ export const showSpaceGate = async(missing, total, actions) => {
     heading.textContent = title;
     const list = document.createElement('ul');
     list.className = 'cg-space-gate-list';
-    list.append(...missing.map((entry) => itemOf(entry, upload, actions)));
+    list.append(...missing.map((entry) => itemOf(entry, upload, {...actions, chooseText})));
     message.append(heading, list);
     body.append(message);
     card.append(bar, body);
