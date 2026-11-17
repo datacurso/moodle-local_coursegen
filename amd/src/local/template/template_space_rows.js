@@ -278,8 +278,13 @@ const saveEditedSpace = async(row, markDirty, choice) => {
  */
 const editSpaceRow = (row, markDirty) => {
     if (row.dataset.options) {
-        // A space for the teacher: the activities they can add, each with its instruction.
-        editTeacherSpace(row, markDirty);
+        // A space with several activities: the same modal as a new one, with what it saved. When one activity is left,
+        // the row is replaced by what one activity is, in the same place.
+        editTeacherSpace(row, markDirty, async(result) => {
+            const tbody = row.closest(TAG.TABLE_BODY);
+            await saveNewSpace(tbody, row, result.picked, markDirty, result.choice);
+            removeInstanceRow(row);
+        });
         return;
     }
     const nameCell = row.querySelector(Selectors.regions.typeLabel);

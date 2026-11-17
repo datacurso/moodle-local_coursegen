@@ -69,6 +69,10 @@ const ensureTypeLabels = async(state) => {
  */
 const spaceLabel = (activity) => {
     if (activity.spacechoice) {
+        if (activity.spacechoice.mode === 'teacher') {
+            const file = activity.spacefile?.filename;
+            return file ? `${activity.spacechoice.title} · ${file}` : activity.spacechoice.title;
+        }
         const own = String(activity.spacechoice.instruction || '').trim();
         return own ? `${activity.spacechoice.title} · ${own}` : activity.spacechoice.title;
     }

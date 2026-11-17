@@ -15,7 +15,8 @@
 
 /**
  * The spaces where the teacher adds one of the activities the admin allowed: the modal to choose it (and say what they
- * want of it) and to take it out. The AI writes the activity when the course is generated.
+ * want of it) and to take it out. The AI writes the activity when the course is generated; a File the admin left to the
+ * teacher is uploaded instead, right after it is chosen.
  *
  * @module     local_coursegen/local/courseai/template/space_choices
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -26,10 +27,13 @@ import ModalSaveCancel from 'core/modal_save_cancel';
 import ModalEvents from 'core/modal_events';
 import Templates from 'core/templates';
 import {get_string as getString} from 'core/str';
-import {setSpaceChoice} from 'local_coursegen/local/courseai/template/state';
+import {clearSpaceFile, setSpaceChoice} from 'local_coursegen/local/courseai/template/state';
+import {pickSpaceFile} from 'local_coursegen/local/courseai/template/space_files';
 
 const OPTION = '[data-region="local_coursegen/template/space-choice-option"]';
 const OWN = '[data-region="local_coursegen/template/space-choice-instruction"]';
+const OWN_GROUP = '[data-region="local_coursegen/template/space-choice-own-group"]';
+const UPLOAD_NOTE = '[data-region="local_coursegen/template/space-choice-upload-note"]';
 
 /**
  * Open the modal of a space and keep the activity the teacher adds.
@@ -52,7 +56,11 @@ export const pickSpaceChoice = async(tplState, sectionIndex, activityIndex, onCh
     const modal = await ModalSaveCancel.create({
         title: getString('courseai_template_choice_space_title', 'local_coursegen'),
         body: Templates.render('local_coursegen/courseai_space_choice_modal_body', {
-            options: row.spaceoptions.map((option) => ({...option, checked: option.modname === chosen})),
+            options: row.spaceoptions.map((option) => ({
+                ...option,
+                uploads: option.mode === 'teacher',
+                checked: option.modname === chosen,
+            })),
             instruction: row.spacechoice?.instruction || '',
         }),
         buttons: {save: getString('courseai_template_choice_space_add', 'local_coursegen')},
@@ -60,10 +68,15 @@ export const pickSpaceChoice = async(tplState, sectionIndex, activityIndex, onCh
     });
     const root = modal.getRoot();
     const refresh = () => {
+        const picked = root[0].querySelector(`${OPTION}:checked`);
         const save = root[0].querySelector('[data-action="save"]');
         if (save) {
-            save.disabled = !root[0].querySelector(`${OPTION}:checked`);
+            save.disabled = !picked;
         }
+        // A File the teacher uploads asks for no topic: its file is asked for once it is added.
+        const uploads = picked?.dataset.uploads === '1';
+        root[0].querySelector(OWN_GROUP).hidden = uploads;
+        root[0].querySelector(UPLOAD_NOTE).hidden = !uploads;
     };
     root.on(ModalEvents.bodyRendered, () => {
         root[0].querySelectorAll(OPTION).forEach((radio) => radio.addEventListener('change', refresh));
@@ -76,10 +89,20 @@ export const pickSpaceChoice = async(tplState, sectionIndex, activityIndex, onCh
             return;
         }
         const option = row.spaceoptions.find((entry) => entry.modname === picked.value);
-        const instruction = root[0].querySelector(OWN)?.value.trim() || '';
-        if (setSpaceChoice(tplState, sectionIndex, activityIndex, {modname: option.modname, title: option.title, instruction})) {
-            await onChange();
+        const mode = option.mode === 'teacher' ? 'teacher' : 'ai';
+        const instruction = mode === 'teacher' ? '' : root[0].querySelector(OWN)?.value.trim() || '';
+        if (mode !== 'teacher') {
+            clearSpaceFile(tplState, sectionIndex, activityIndex);
         }
+        const choice = {modname: option.modname, title: option.title, instruction, mode};
+        if (!setSpaceChoice(tplState, sectionIndex, activityIndex, choice)) {
+            return;
+        }
+        if (mode === 'teacher' && !row.spacefile) {
+            await pickSpaceFile(tplState, sectionIndex, activityIndex, onChange);
+            return;
+        }
+        await onChange();
     });
     modal.show();
 };
@@ -94,6 +117,7 @@ export const pickSpaceChoice = async(tplState, sectionIndex, activityIndex, onCh
  * @returns {Promise<void>}
  */
 export const removeSpaceChoice = async(tplState, sectionIndex, activityIndex, onChange) => {
+    clearSpaceFile(tplState, sectionIndex, activityIndex);
     if (setSpaceChoice(tplState, sectionIndex, activityIndex, null)) {
         await onChange();
     }
