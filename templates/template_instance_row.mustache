@@ -50,7 +50,9 @@
     * typelabel string
     * prompt string      - The saved/typed extra instruction, if any.
     * generated bool     - The instance has no template activity behind it: the AI always creates it from its instruction.
-    * promptopen bool    - Show the instruction row open (always for a generated instance).
+                           It looks like a space (its badge, its instruction under its name) and its pencil opens the
+                           modal of "Add space for an activity"; its name and instruction stay in the row for the save.
+    * promptopen bool    - Show the instruction row open (never for a generated instance: its text is under its name).
 
     Example context (json):
     {
@@ -66,7 +68,7 @@
         "promptopen": false
     }
 }}
-<tr class="tpl-row-instance" data-for="instancerow" data-instance-id="{{instanceid}}"
+<tr class="tpl-row-instance{{#generated}} tpl-row-space tpl-row-generated-space{{/generated}}" data-for="instancerow" data-instance-id="{{instanceid}}"
     data-source-cmid="{{sourcecmid}}" data-source-name="{{sourcename}}" data-modname="{{modname}}"{{#generated}} data-generated="1"{{/generated}}
     data-ainame="{{#ainame}}1{{/ainame}}{{^ainame}}0{{/ainame}}">
     <td class="align-middle tpl-select-col">
@@ -90,16 +92,23 @@
             <input type="text" class="ignoredirty form-control" data-region="instance-name-input" maxlength="255"
                    aria-label="{{#str}} template_instance_name, local_coursegen {{/str}}">
         </span>
-        {{#generated}}<span class="tpl-badge tpl-badge-generated ml-2">{{#str}} template_generated_badge, local_coursegen {{/str}}</span>{{/generated}}
+        {{! An activity the AI creates looks like a space: the badge of a space, and its instruction under its name. }}
+        {{#generated}}<button type="button" class="tpl-badge tpl-badge-space ml-2" data-action="local_coursegen/template/generated-edit"
+                title="{{#str}} template_space_edit, local_coursegen {{/str}}">{{#str}} template_generated_badge, local_coursegen {{/str}}</button>
+        <div class="tpl-space-instruction text-muted small{{^prompt}} d-none{{/prompt}}" data-region="local_coursegen/template/generated-instruction">{{prompt}}</div>{{/generated}}
         {{^generated}}<span class="tpl-badge tpl-badge-instance ml-2">{{#str}} template_instance_badge, local_coursegen, {{sourcename}} {{/str}}</span>{{/generated}}
     </td>
     <td class="align-middle text-muted" data-region="local_coursegen/template/type-label">{{typelabel}}</td>
     <td class="align-middle text-right">
         <div class="tpl-instance-actions">
-            <button type="button" class="tpl-instance-icon-btn" data-region="instance-prompt-toggle" data-id="{{instanceid}}"
+            {{#generated}}<button type="button" class="tpl-instance-icon-btn" data-action="local_coursegen/template/generated-edit"
+                    title="{{#str}} template_space_edit, local_coursegen {{/str}}">
+                {{#pix}} t/edit, core {{/pix}}
+            </button>{{/generated}}
+            {{^generated}}<button type="button" class="tpl-instance-icon-btn" data-region="instance-prompt-toggle" data-id="{{instanceid}}"
                     title="{{#str}} template_instance_prompt_edit, local_coursegen {{/str}}">
                 {{#pix}} t/edit, core {{/pix}}
-            </button>
+            </button>{{/generated}}
             <button type="button" class="tpl-instance-icon-btn tpl-instance-icon-danger" data-region="instance-remove" data-id="{{instanceid}}"
                     title="{{#str}} template_instance_remove, local_coursegen {{/str}}">
                 {{#pix}} t/delete, core {{/pix}}

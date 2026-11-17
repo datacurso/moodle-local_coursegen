@@ -67,6 +67,7 @@ import {
 import {bindInstanceInserts} from 'local_coursegen/local/template/template_instance_events';
 import {bindNameEditing} from 'local_coursegen/local/template/template_instance_name_edit';
 import {setTeacherSpaceContext} from 'local_coursegen/local/template/template_teacher_space';
+import {setGeneratedEditContext} from 'local_coursegen/local/template/template_space_rows';
 import Selectors from 'local_coursegen/local/template/selectors';
 import {ACTION, EVENT} from 'local_coursegen/local/template/constants';
 import {applyAimodifyVisual, bindAimodifyTags, openAimodifyModal} from 'local_coursegen/local/template/template_row_aimodify';
@@ -350,6 +351,7 @@ export const bindServerRenderedControls = (container, state) => {
     bindInstanceInserts(container, state, markDirty);
     bindAimodifyTags(container, state, markDirty);
     setTeacherSpaceContext(state);
+    setGeneratedEditContext(state);
     bindNameEditing(container, markDirty);
     // Row selection checkboxes (three synced tiers) and the single global
     // bulk action bar — see selection_bulk.js.
