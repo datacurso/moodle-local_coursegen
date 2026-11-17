@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026110961
+
+### Changed
+- **The list of "Add space for an activity" looks like its design**  
+  Each icon sits in a soft square, the help button is a small filled circle with a small focus ring, and the fields that open under a selected activity are aligned with its icon.
+
 ## [2.0.10] - 2026110960
 
 ### Added
