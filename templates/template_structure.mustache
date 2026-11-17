@@ -167,7 +167,7 @@
                 </div>
                 <div class="activity-actions cg-item-actions align-self-start ms-sm-2">
                   <span class="dp-action-btn cg-space-action">
-                    {{#ischoicespace}}{{#pix}} t/add, core {{/pix}}{{/ischoicespace}}{{^ischoicespace}}{{#pix}} i/upload, core {{/pix}}{{/ischoicespace}}
+                    {{#ischoicespace}}{{#hasspacefile}}{{#pix}} t/edit, core {{/pix}}{{/hasspacefile}}{{^hasspacefile}}{{#pix}} t/add, core {{/pix}}{{/hasspacefile}}{{/ischoicespace}}{{^ischoicespace}}{{#pix}} i/upload, core {{/pix}}{{/ischoicespace}}
                     <span class="sr-only" data-region="local_coursegen/template/space-button-label">{{#hasspacefile}}{{#str}}courseai_template_space_change, local_coursegen{{/str}}{{/hasspacefile}}{{^hasspacefile}}{{#str}}courseai_template_space_upload, local_coursegen{{/str}}{{/hasspacefile}}</span>
                   </span>
                   {{#hasspacefile}}
