@@ -158,7 +158,8 @@ export const mergeAddedStructure = (state, data) => {
  * does not show is left out.
  *
  * @param {Object} state The structure state.
- * @param {Object} data A template_unit_copies event: {renamed, sections: [{section, name, copy_of, depth}], activities}.
+ * @param {Object} data A template_unit_copies event:
+ *     {renamed, renamed_activities, sections: [{section, name, copy_of, depth}], activities}.
  */
 export const mergeUnitCopies = (state, data) => {
     const sections = Array.isArray(data?.sections) ? data.sections : [];
@@ -170,6 +171,15 @@ export const mergeUnitCopies = (state, data) => {
             first.name = renamed.name;
         }
     }
+    // Its activities keep their uids; their names lose the markers of the template.
+    const names = new Map((Array.isArray(data?.renamed_activities) ? data.renamed_activities : [])
+        .map((item) => [String(item.uid), item.name]));
+    state.sections.forEach((section) => section.activities.forEach((activity) => {
+        const name = names.get(String(activity.generationuid || activity.id));
+        if (name) {
+            activity.name = name;
+        }
+    }));
     for (const copy of sections) {
         const source = Number(copy.copy_of);
         let last = -1;

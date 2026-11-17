@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.13] - 2026111713
+
+### Added
+- **The activities of the first copy of a template section are renamed while the run is on**  
+  The names of a template section's activities can use `{N}`, `{name}` and `{#}`, which the AI service replaces for every copy. The structure shown while the run is on takes the new names of the first copy's activities too, so it matches the course.
+
 ## [2.0.13] - 2026111712
 
 ### Changed
