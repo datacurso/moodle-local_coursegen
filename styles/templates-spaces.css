@@ -297,3 +297,12 @@
     font-weight: 600;
     white-space: nowrap;
 }
+
+/* The icon of a space row matches the icons of the other rows: small and in the muted colour of the line icons. */
+.tpl-space-row-icon .icon {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    color: #6a737b;
+    font-size: 14px;
+}

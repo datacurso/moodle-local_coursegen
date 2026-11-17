@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026110970
+
+### Fixed
+- **Every space row of the template editor shows an icon**  
+  A saved space row showed no icon, because the row only drew the icon the chooser gives when the row is added: it now draws the icon of its type, and a space with several activities shows the icon of activities of Moodle, in the muted colour of the other icons.
+- **The creation screen speaks to the person who creates the course**  
+  The warning before generating says "One item is left to complete" or "2 of 2 items are left to complete", the cards say "To complete · Required" and a space with several activities is "Activity to choose", instead of naming the teacher in the third person.
+
 ## [2.0.10] - 2026110968
 
 ### Changed
