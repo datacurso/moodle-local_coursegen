@@ -21,6 +21,7 @@ use local_coursegen\local\models\template_instance;
 use local_coursegen\local\models\template_section;
 use local_coursegen\local\models\template_space;
 use local_coursegen\local\space\space_rules;
+use local_coursegen\local\text\plain_name;
 
 /**
  * Replaces a template's saved section/activity/instance configuration.
@@ -202,10 +203,11 @@ class template_persistence_service {
         $instance->set('templateid', $templateid);
         $instance->set('sectionid', $sectionid);
         $instance->set('sourcecmid', $instdata['sourcecmid']);
-        $instance->set('sourcename', $instdata['sourcename']);
-        $instance->set('name', $instdata['name']);
+        $typelabel = plain_name::of($instdata['typelabel'], (string) $modname);
+        $instance->set('sourcename', plain_name::of($instdata['sourcename']));
+        $instance->set('name', plain_name::of($instdata['name'], $typelabel));
         $instance->set('ainame', empty($instdata['ainame']) ? 0 : 1);
-        $instance->set('typelabel', $instdata['typelabel']);
+        $instance->set('typelabel', $typelabel);
         $instance->set('modname', $modname);
         $instance->set('prompt', $instdata['prompt']);
         $instance->set('aftercmid', $instdata['aftercmid']);

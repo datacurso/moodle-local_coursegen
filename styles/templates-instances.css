@@ -104,6 +104,9 @@
    "Save"). See template_instance_name_edit.js for the class toggle. */
 .tpl-instance-name-editable {
     margin-right: 0.5rem;
+    /* A long name with no spaces breaks inside the cell instead of pushing the row wider than the table. */
+    overflow-wrap: anywhere;
+    min-width: 0;
 }
 
 .tpl-instance-name-editable .editinstructions,
