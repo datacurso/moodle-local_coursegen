@@ -17,13 +17,12 @@
 {{!
     @template local_coursegen/template_space_picker_body
 
-    The body of the modal of "Add space for an activity": the activities as tiles, like the activity chooser of the
-    course page, that are selected and unselected with one click; under them, each selected activity with its own
-    instruction. With one, it is an activity the AI creates (with an optional name), and a File can instead be one the
+    Under the activity chooser of the course page, in "Add space for an activity": each activity selected in the
+    chooser (one click selects it, another unselects it) with its own instruction. With one, it is an activity the AI creates (with an optional name), and a File can instead be one the
     teacher uploads; with several, the teacher chooses one of them when the course is created.
 
     Data attributes required for JS:
-    * data-region="local_coursegen/template/space-picker-tile" on each tile (data-modname, aria-pressed).
+    * data-region="local_coursegen/template/space-picker-empty" on the hint shown while nothing is selected.
     * data-region="local_coursegen/template/space-picker-selected" around the selected activities.
     * data-region="local_coursegen/template/space-picker-option" on each selected activity (data-modname).
     * data-region="local_coursegen/template/space-picker-remove" on the button that unselects it.
@@ -43,18 +42,7 @@
     }
 }}
 <div class="tpl-space-picker">
-    <h6 class="mb-2" id="{{uniqid}}-types">{{#str}} template_space_picker_types, local_coursegen {{/str}}</h6>
-    <div class="tpl-space-picker-grid" role="group" aria-labelledby="{{uniqid}}-types">
-        {{#options}}
-        <button type="button" class="tpl-space-picker-tile" aria-pressed="false"
-                data-region="local_coursegen/template/space-picker-tile" data-modname="{{modname}}">
-            <span class="tpl-space-picker-mark" aria-hidden="true">{{#pix}} e/tick, core {{/pix}}</span>
-            {{! The icon is markup built by Moodle core for the chooser, which core itself prints with triple braces. }}
-            <span class="tpl-space-picker-icon" aria-hidden="true">{{{icon}}}</span>
-            <span class="tpl-space-picker-title">{{title}}</span>
-        </button>
-        {{/options}}
-    </div>
+    <p class="text-muted mb-0" data-region="local_coursegen/template/space-picker-empty">{{#str}} template_space_picker_types, local_coursegen {{/str}}</p>
 
     <div class="tpl-space-picker-selected" data-region="local_coursegen/template/space-picker-selected" hidden>
         <h6 class="mb-1">{{#str}} template_space_picker_selected, local_coursegen {{/str}}</h6>
@@ -64,7 +52,7 @@
             <div class="tpl-space-picker-item-head">
                 <span class="tpl-space-picker-item-icon" aria-hidden="true">{{{icon}}}</span>
                 <label class="tpl-space-picker-item-title mb-0" for="{{uniqid}}-{{modname}}-instruction">{{title}}</label>
-                <button type="button" class="btn btn-link btn-sm tpl-space-picker-remove"
+                <button type="button" class="btn btn-icon btn-sm tpl-space-picker-remove"
                         data-region="local_coursegen/template/space-picker-remove"
                         aria-label="{{#str}} template_space_picker_remove, local_coursegen, {{title}} {{/str}}">
                     {{#pix}} e/cancel, core {{/pix}}
