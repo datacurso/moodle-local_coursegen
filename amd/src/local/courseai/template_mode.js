@@ -56,7 +56,10 @@ import {formatTemplate} from './utils';
 let statsTemplatePromise = null;
 const getStatsTemplate = () => {
     if (!statsTemplatePromise) {
-        statsTemplatePromise = getString('courseai_plan_sections_counter', 'local_coursegen');
+        statsTemplatePromise = Promise.all([
+            getString('courseai_plan_sections_counter', 'local_coursegen'),
+            getString('courseai_plan_sections_counter_copied', 'local_coursegen'),
+        ]).then(([plain, copied]) => ({plain, copied}));
     }
     return statsTemplatePromise;
 };
@@ -65,7 +68,7 @@ const getStatsTemplate = () => {
  * Update the "N sections · M activities" summary line in the toolbar.
  *
  * @param {Object} tplState
- * @param {string} statsTemplate
+ * @param {{plain: string, copied: string}} statsTemplate The line without and with copied activities.
  */
 const updateStats = (tplState, statsTemplate) => {
     const statsEl = document.getElementById('tplModeStats');
@@ -74,7 +77,9 @@ const updateStats = (tplState, statsTemplate) => {
     }
     // The counts follow the number of units asked, not only the template's own sections.
     const counts = countsForUnits(tplState);
-    statsEl.textContent = formatTemplate(statsTemplate, counts);
+    // The activities copied as they are get named, so the total does not read as what the AI writes.
+    const template = counts.copied > 0 ? statsTemplate.copied : statsTemplate.plain;
+    statsEl.textContent = formatTemplate(template, counts);
 };
 
 /**
