@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.13] - 2026111707
+
+### Fixed
+- **A generation from a template that did not finish opens where it was**  
+  Reloading the page, or coming back to a run that was stopped or failed, used to show the empty template picker and the run looked lost. The page now opens the run with its template, its structure and the summary of what it was generated with, paused, and offers Resume; resuming goes on from where the run was, with the activities already written shown as done.
+
 ## [2.0.13] - 2026111706
 
 ### Changed
