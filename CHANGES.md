@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10-wp] - 2026111135
+
+### Changed
+- **The instructions of an activity the AI creates speak of how it is, not of its topic**  
+  In the template the instructions say how the AI has to build the activity (purpose, structure, length or style); the help text says that the topic and the specific content are given by the teacher in the course creator.
+
 ## [2.0.10-wp] - 2026111134
 
 ### Changed
