@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026111700
+
+### Fixed
+- **The File the teacher uploads has no line under it in the modal of a space**  
+  Its instruction is shown only above the button that uploads the file. The build number follows the date of the day from now on.
+
 ## [2.0.10] - 2026110974
 
 ### Fixed

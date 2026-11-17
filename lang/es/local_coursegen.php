@@ -189,7 +189,6 @@ $string['courseai_close_view'] = 'Cerrar y volver a Mis cursos';
 $string['courseai_template_choice_space_add'] = 'Agregar la actividad';
 $string['courseai_template_choice_space_file_none'] = 'Aún no se ha subido ningún archivo.';
 $string['courseai_template_choice_space_file_replace'] = 'Reemplazar archivo';
-$string['courseai_template_choice_space_upload_option'] = 'Usted sube su propio archivo.';
 $string['courseai_template_choice_space_hint'] = 'Actividades disponibles en este espacio: {$a}';
 $string['courseai_template_choice_space_invalid'] = 'Una actividad de un espacio de la plantilla no es de las que ese espacio permite.';
 $string['courseai_template_choice_space_missing'] = 'Falta elegir la actividad para generar el curso.';

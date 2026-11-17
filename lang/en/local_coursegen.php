@@ -196,7 +196,6 @@ $string['courseai_close_view'] = 'Close and return to My courses';
 $string['courseai_template_choice_space_add'] = 'Add the activity';
 $string['courseai_template_choice_space_file_none'] = 'No file has been uploaded yet.';
 $string['courseai_template_choice_space_file_replace'] = 'Replace file';
-$string['courseai_template_choice_space_upload_option'] = 'You upload your own file.';
 $string['courseai_template_choice_space_hint'] = 'Activities available in this space: {$a}';
 $string['courseai_template_choice_space_invalid'] = 'An activity of a space of the template is not one the space allows.';
 $string['courseai_template_choice_space_missing'] = 'The activity has to be chosen to generate the course.';
