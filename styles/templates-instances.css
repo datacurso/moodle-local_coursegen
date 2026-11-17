@@ -294,21 +294,9 @@
     box-shadow: inset 3px 0 0 #e08a1e;
 }
 
-/* The name and the badge on one line, and the instruction under them across the cell, cut at three lines (the pencil
-   opens it whole). */
-.tpl-row-generated-space .tpl-instance-name-cell {
-    flex-wrap: wrap;
-}
-
-.tpl-row-generated-space [data-region="local_coursegen/template/generated-instruction"] {
-    flex: 0 0 100%;
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    white-space: normal;
-}
-
-.tpl-row-generated-space [data-region="local_coursegen/template/generated-instruction"].d-none {
-    display: none;
+/* The instructions of an activity the AI creates and of an activity modified with AI are not shown in the table (long
+   texts make it hard to read): they stay in the row for the save and show in the modal of its pencil. */
+[data-region="local_coursegen/template/generated-instruction"],
+[data-region="local_coursegen/template/aimodify-instruction"] {
+    display: none !important;
 }

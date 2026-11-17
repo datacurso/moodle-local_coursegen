@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10-wp] - 2026111704
+
+### Changed
+- **The table of the template editor shows no long instructions, and the pencil of a space puts the cursor in its instruction**  
+  The instructions of the activities the AI creates and of the activities modified with AI are no longer shown under their names, so the table reads easily; they stay saved and show in the modal of the pencil. Editing a space opens the modal with the cursor in the instruction of its first activity.
+
 ## [2.0.10-wp] - 2026111703
 
 ### Changed
