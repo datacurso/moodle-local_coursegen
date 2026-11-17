@@ -211,4 +211,14 @@ final class template_row_options_test extends \advanced_testcase {
         }
         return $active;
     }
+
+    /**
+     * A section can be made a template section, and a saved one comes back selected.
+     */
+    public function test_section_actions_offer_the_template_section(): void {
+        $items = template_row_options::section_actions(7, 'template');
+
+        $this->assertSame(['aimodify', 'keep', 'template'], array_column($items, 'value'));
+        $this->assertSame('template', template_row_options::active_action($items));
+    }
 }

@@ -28,6 +28,7 @@
 
 namespace local_coursegen\output;
 
+use local_coursegen\form\template_config_form;
 use local_coursegen\local\ai_activity_types;
 use local_coursegen\local\models\template_activity;
 use local_coursegen\local\models\template_instance;
@@ -61,7 +62,7 @@ class template_row_options {
         // preselects) when an existing template already saved it, so
         // edit-mode hydration never lies about the stored state. The backend
         // keeps accepting and processing it untouched.
-        $keys = [template_section::BEHAVIOR_AI_MODIFY, template_section::BEHAVIOR_KEEP];
+        $keys = [template_section::BEHAVIOR_AI_MODIFY, template_section::BEHAVIOR_KEEP, template_section::BEHAVIOR_TEMPLATE];
         if ($behavior === template_section::BEHAVIOR_EXCLUDE) {
             $keys = $valid;
         }
@@ -160,6 +161,40 @@ class template_row_options {
             }
         }
         return template_activity::ACTION_KEEP;
+    }
+
+    /**
+     * The naming fields of a template section: the pattern select, its custom text and the first number.
+     *
+     * A saved pattern that is one of the options selects it; any other one goes through the custom option with
+     * the pattern in its text field. A section with no pattern starts with the first preset.
+     *
+     * @param array $saved [pattern, first number] as the section keeps them.
+     * @return array
+     */
+    public static function naming_context(array $saved): array {
+        [$pattern, $start] = $saved + ['', 1];
+        $options = template_config_form::naming_options();
+        $custom = '';
+        $selected = $pattern === '' ? template_config_form::default_naming_pattern() : $pattern;
+        if (!array_key_exists($selected, $options)) {
+            $custom = $selected;
+            $selected = template_config_form::NAMING_CUSTOM;
+        }
+        $items = [];
+        foreach ($options as $value => $label) {
+            $items[] = ['value' => $value, 'label' => $label, 'selected' => $value === $selected];
+        }
+        return [
+            'options' => $items,
+            'customvalue' => template_config_form::NAMING_CUSTOM,
+            'custom' => $custom,
+            'customhidden' => $selected !== template_config_form::NAMING_CUSTOM,
+            'starts' => [
+                ['value' => 1, 'selected' => (int) $start !== 0],
+                ['value' => 0, 'selected' => (int) $start === 0],
+            ],
+        ];
     }
 
     /**

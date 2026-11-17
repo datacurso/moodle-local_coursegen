@@ -177,6 +177,30 @@
             </select>
         </div>
         <div class="collapse show" id="local-coursegen-tpl-section-{{courseid}}-{{id}}">
+            {{#cannaming}}
+            <div class="tpl-section-naming px-3 py-2 border-bottom"
+                 data-region="section-naming" data-sid="{{id}}" data-custom="{{naming.customvalue}}"
+                 {{^istemplatesection}}hidden{{/istemplatesection}}>
+                <div class="d-flex flex-wrap align-items-center">
+                <label class="mb-0 mr-2" for="tpl-naming-{{id}}">{{#str}} template_naming_pattern, local_coursegen {{/str}}</label>
+                <select class="custom-select custom-select-sm w-auto mr-2" id="tpl-naming-{{id}}" data-region="section-naming-pattern">
+                    {{#naming.options}}
+                    <option value="{{value}}"{{#selected}} selected{{/selected}}>{{label}}</option>
+                    {{/naming.options}}
+                </select>
+                <input type="text" class="form-control form-control-sm w-auto mr-3" data-region="section-naming-custom"
+                       value="{{naming.custom}}" placeholder="{{#str}} template_naming_custom_placeholder, local_coursegen {{/str}}"
+                       aria-label="{{#str}} template_naming_custom, local_coursegen {{/str}}"
+                       {{#naming.customhidden}}hidden{{/naming.customhidden}}>
+                <label class="mb-0 mr-2" for="tpl-naming-start-{{id}}">{{#str}} template_naming_start, local_coursegen {{/str}}</label>
+                <select class="custom-select custom-select-sm w-auto" id="tpl-naming-start-{{id}}" data-region="section-naming-start">
+                    {{#naming.starts}}
+                    <option value="{{value}}"{{#selected}} selected{{/selected}}>{{value}}</option>
+                    {{/naming.starts}}
+                </select>
+                </div>
+            </div>
+            {{/cannaming}}
             <table class="table generaltable table-hover mb-0 tpl-activity-table">
                 <thead>
                     <tr>

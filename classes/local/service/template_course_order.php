@@ -43,7 +43,7 @@ final class template_course_order {
      * @param int $templateid
      * @param int $courseid The new course.
      * @param array $payloadactivities Every activity entry of the result, kept ones included.
-     * @param array $generatedcms Payload cmid => created cmid, for the generated activities.
+     * @param array $generatedcms Activity key (generated_activity_key) => created cmid, for the generated activities.
      * @param array $keptcms Base course cmid => created cmid, for the copied kept activities.
      * @param array $spacecms Space uid => created cmid, for the activities the teacher brought to the spaces.
      * @param template_section_map|null $sectionmap Where each section of the template went in the new course;

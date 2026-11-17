@@ -47,7 +47,7 @@ final class guideline_activity_settings {
      *
      * @param int $courseid The new course.
      * @param array $activities The result's generated activities.
-     * @param array $generatedcms Placeholder cmid => created cmid.
+     * @param array $generatedcms Activity key (generated_activity_key) => created cmid.
      * @return void
      */
     public static function apply(int $courseid, array $activities, array $generatedcms): void {

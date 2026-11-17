@@ -50,7 +50,7 @@ const state = {
     // server-side.
     savedSections: {}, savedActivities: {},
     maxSections: 0, noLimit: false, supportedTypes: [], activitySpace: {},
-    namingPattern: '', namingContract: null, namingStart: 1, categories: [],
+    categories: [],
 };
 /** @type {HTMLElement} Root element. */
 let root = null;
@@ -129,7 +129,7 @@ const renderConfigRegion = async() => {
     const structurePanel = region.querySelector(Selectors.regions.structure);
     await renderStepSections(structurePanel, state, isFreshFromPageLoad);
 
-    // Limits and the naming pattern all live inside the
+    // The limits live inside the
     // config form's own container now (see template_config_form.php) —
     // scope directly to it instead of the whole region.
     await renderStepLimits(configForm.container, state);
@@ -226,8 +226,6 @@ export const init = (config) => {
     state.savedSections = config.savedsections || {};
     state.savedActivities = config.savedactivities || {};
     state.supportedTypes = config.supportedtypes || [];
-    state.namingPattern = config.defaultnamingpattern || '';
-    state.namingContract = config.namingcontract;
 
     const initialCourseId = config.initialcourseid || 0;
     const initialCourseName = config.initialcoursename || '';

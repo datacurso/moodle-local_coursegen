@@ -68,7 +68,7 @@ class create_course_service {
      * @param array $overrides Optional user overrides for course fields.
      *     Supported keys: fullname (string), shortname (string), category (int), startdate (int timestamp).
      * @return array Result of the course content application. On success it also
-     *     carries 'generatedcms' (payload cmid, negative for a virtual instance => created cmid), which is internal
+     *     carries 'generatedcms' (activity key, see generated_activity_key, => created cmid), which is internal
      *     and must not be returned through a web service.
      */
     public static function create_course(course_session $session, array $resultdata, array $overrides = []): array {
@@ -670,9 +670,8 @@ class create_course_service {
      * @param int $courseid Course ID.
      * @param array $activities Generated activities from API.
      * @param array $subsections Declared subsections index, mutated as they materialize.
-     * @param array $generatedcms Filled with payload cmid => created cmid for every activity
-     *     that carries a cmid and was created. A virtual template instance travels under
-     *     a negative cmid, which is tracked like any other.
+     * @param array $generatedcms Filled with activity key => created cmid for every activity that was
+     *     created; an activity the AI wrote is known by its uid (see generated_activity_key).
      * @param int|null $sourcecourseid Course whose files the payload may reference (template base course).
      * @return array Activity creation errors.
      */
@@ -729,9 +728,9 @@ class create_course_service {
 
             try {
                 $newcm = create_mod_service::create_from_ai_result($activity, $course, $sectionnum, null, $sourcecourseid);
-                $payloadcmid = (int) ($activity['cmid'] ?? 0);
-                if ($payloadcmid !== 0) {
-                    $generatedcms[$payloadcmid] = (int) $newcm->coursemodule;
+                $key = generated_activity_key::of($activity);
+                if ($key !== '') {
+                    $generatedcms[$key] = (int) $newcm->coursemodule;
                 }
             } catch (\Throwable $e) {
                 $resource = (string)($activity['resource_type'] ?? 'unknown');

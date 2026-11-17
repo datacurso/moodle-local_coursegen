@@ -38,8 +38,11 @@ class template_section extends persistent {
     /** Behavior: the section is left out of the new course. */
     const BEHAVIOR_EXCLUDE = 'exclude';
 
+    /** Behavior: the section is repeated once per unit of the syllabus. */
+    const BEHAVIOR_TEMPLATE = 'template';
+
     /** Every behavior a section can have, in the order the editor offers them. */
-    const BEHAVIORS = [self::BEHAVIOR_AI_MODIFY, self::BEHAVIOR_KEEP, self::BEHAVIOR_EXCLUDE];
+    const BEHAVIORS = [self::BEHAVIOR_AI_MODIFY, self::BEHAVIOR_KEEP, self::BEHAVIOR_EXCLUDE, self::BEHAVIOR_TEMPLATE];
 
     /**
      * Return the definition of the properties of this model.
@@ -64,6 +67,16 @@ class template_section extends persistent {
                 'type' => PARAM_ALPHA,
                 'null' => NULL_NOT_ALLOWED,
                 'default' => self::BEHAVIOR_AI_MODIFY,
+            ],
+            'namingpattern' => [
+                'type' => PARAM_RAW,
+                'null' => NULL_ALLOWED,
+                'default' => null,
+            ],
+            'namingstart' => [
+                'type' => PARAM_INT,
+                'null' => NULL_NOT_ALLOWED,
+                'default' => 1,
             ],
         ];
     }

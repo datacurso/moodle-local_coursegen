@@ -55,24 +55,14 @@ class template_config_form extends dynamic_form {
     /** Token of a naming pattern that stands for the section's number. */
     const NAMING_TOKEN_NUMBER = '{N}';
 
-    /** Token of a naming pattern that stands for the original section's name. */
+    /** Token of a naming pattern that stands for the name of the unit. */
     const NAMING_TOKEN_NAME = '{name}';
-
-    /** The data-region hook of the naming pattern select, read by the template editor script. */
-    const HOOK_NAMING_PATTERN = 'local_coursegen/template/naming-pattern';
-
-    /** The data-region hook of the custom pattern field. */
-    const HOOK_CUSTOM_PATTERN = 'local_coursegen/template/custom-pattern';
-
-    /** The data-region hook of the first section number select. */
-    const HOOK_NAMING_START = 'local_coursegen/template/naming-start';
 
     /** The data-region hook of the extra sections field. */
     const HOOK_MAX_SECTIONS = 'local_coursegen/template/max-sections';
 
     /** The data-region hook of the allow-extra-sections checkbox. */
     const HOOK_ALLOW_ADD_SECTIONS = 'local_coursegen/template/allow-add-sections';
-
 
     /**
      * Form definition.
@@ -101,7 +91,6 @@ class template_config_form extends dynamic_form {
         }
         $template = $this->saved_template();
         $this->definition_limits($template);
-        $this->definition_naming_pattern($template);
         $this->definition_markers();
     }
 
@@ -247,87 +236,6 @@ class template_config_form extends dynamic_form {
             'numbertoken' => self::NAMING_TOKEN_NUMBER,
             'nametoken' => self::NAMING_TOKEN_NAME,
         ];
-    }
-
-    /**
-     * The naming select's value and the custom field's text for a template.
-     *
-     * A saved pattern that is one of the options selects that option; any
-     * other saved pattern round-trips through the Custom option with the
-     * pattern itself restored into the text field.
-     *
-     * @param template|null $template Saved template, null for the defaults.
-     * @param string[] $patterns The options of the naming select.
-     * @return string[] {select value, custom text}
-     */
-    public static function naming_defaults(?template $template, array $patterns): array {
-        $patterndefault = self::default_naming_pattern();
-        $savedpattern = '';
-        if ($template) {
-            $savedpattern = (string) $template->get('namingpattern');
-        }
-        if ($savedpattern === '') {
-            return [$patterndefault, ''];
-        }
-        if (array_key_exists($savedpattern, $patterns)) {
-            return [$savedpattern, ''];
-        }
-        return [self::NAMING_CUSTOM, $savedpattern];
-    }
-
-    /**
-     * Section-naming-pattern fields: how each generated section's name is
-     * derived from its position, independent of any one course's structure
-     * (unlike the type-defaults/limits above, these options don't depend on
-     * $courseid at all) — kept in this same dynamic_form rather than a
-     * separate one so the whole config screen stays one coherent unit, and
-     * because its live preview (rendered client-side, see
-     * amd/src/local/template/step_limits.js::updatePreview) needs the same
-     * already-loaded course structure the type-defaults section does.
-     *
-     * @param template|null $template Saved template to prefill from (edit
-     *     mode), null for the fresh defaults.
-     */
-    private function definition_naming_pattern(?template $template): void {
-        global $OUTPUT;
-
-        $mform = $this->_form;
-
-        $headertitle = get_string('template_naming_pattern', 'local_coursegen');
-        $mform->addElement('header', 'namingpatternhdr', $headertitle);
-        $mform->setExpanded('namingpatternhdr');
-
-        $patterns = self::naming_options();
-        [$patterndefault, $customdefault] = self::naming_defaults($template, $patterns);
-
-        $patternattributes = ['data-region' => self::HOOK_NAMING_PATTERN];
-        $mform->addElement('select', 'namingpattern', $headertitle, $patterns, $patternattributes);
-        $mform->setType('namingpattern', PARAM_RAW);
-        $mform->setDefault('namingpattern', $patterndefault);
-        $mform->addHelpButton('namingpattern', 'template_naming_pattern', 'local_coursegen');
-
-        $customlabel = get_string('template_naming_custom', 'local_coursegen');
-        $placeholder = get_string('template_naming_custom_placeholder', 'local_coursegen');
-        $customattributes = ['placeholder' => $placeholder, 'data-region' => self::HOOK_CUSTOM_PATTERN];
-        $mform->addElement('text', 'custompattern', $customlabel, $customattributes);
-        $mform->setType('custompattern', PARAM_TEXT);
-        $mform->setDefault('custompattern', $customdefault);
-        $mform->hideIf('custompattern', 'namingpattern', 'neq', self::NAMING_CUSTOM);
-        $mform->addHelpButton('custompattern', 'template_naming_custom', 'local_coursegen');
-
-        $startlabel = get_string('template_naming_start', 'local_coursegen');
-        $startattributes = ['data-region' => self::HOOK_NAMING_START];
-        $mform->addElement('select', 'namingstart', $startlabel, [1 => '1', 0 => '0'], $startattributes);
-        $mform->setType('namingstart', PARAM_INT);
-        $startdefault = 1;
-        if ($template) {
-            $startdefault = (int) $template->get('namingstart');
-        }
-        $mform->setDefault('namingstart', $startdefault);
-        $mform->addHelpButton('namingstart', 'template_naming_start', 'local_coursegen');
-
-        $previewbox = $OUTPUT->render_from_template('local_coursegen/template_naming_preview_box', []);
-        $mform->addElement('static', 'namingpreviewwrap', '', $previewbox);
     }
 
     /**

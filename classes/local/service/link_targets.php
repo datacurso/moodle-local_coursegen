@@ -20,9 +20,8 @@ namespace local_coursegen\local\service;
  * Which course module each activity uid ends up as.
  *
  * Both the activities the AI wrote and the kept ones that were copied are
- * targets: a payload entry travels under its own cmid, and the created cmid
- * of that payload cmid is known for the first kind from the build of the
- * generated activities and for the second from the copy of the kept ones.
+ * targets: a generated one is found by its uid in the build of the generated
+ * activities, and a kept one by its course module in the copy of the kept ones.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -36,13 +35,12 @@ final class link_targets {
      * target: a link to it is reported as unresolved.
      *
      * @param array $payloadactivities Every activity entry of the result, kept ones included.
-     * @param array $generatedcms Payload cmid => created cmid, for the generated activities.
-     * @param array $keptcms Payload cmid => created cmid, for the copied kept activities.
+     * @param array $generatedcms Activity key (generated_activity_key) => created cmid, for the generated activities.
+     * @param array $keptcms Template cmid => created cmid, for the copied kept activities.
      * @return array<string,int> uid => created cmid.
      * @throws \moodle_exception When two entries share a uid.
      */
     public static function build(array $payloadactivities, array $generatedcms, array $keptcms): array {
-        $created = $generatedcms + $keptcms;
         $seen = [];
         $targets = [];
         foreach ($payloadactivities as $entry) {
@@ -54,9 +52,9 @@ final class link_targets {
                 throw new \moodle_exception('linkduplicateuid', 'local_coursegen', '', $uid);
             }
             $seen[$uid] = true;
-            $payloadcmid = (int) ($entry['cmid'] ?? 0);
-            if (isset($created[$payloadcmid])) {
-                $targets[$uid] = (int) $created[$payloadcmid];
+            $created = $generatedcms[generated_activity_key::of($entry)] ?? $keptcms[(int) ($entry['cmid'] ?? 0)] ?? null;
+            if ($created !== null) {
+                $targets[$uid] = (int) $created;
             }
         }
         return $targets;

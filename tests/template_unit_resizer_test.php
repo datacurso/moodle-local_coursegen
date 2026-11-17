@@ -214,7 +214,7 @@ final class template_unit_resizer_test extends \advanced_testcase {
         $this->assertSame('instance', $clones[0]['template_behavior']['action']);
         $this->assertNotSame('a9', $clones[0]['uid']);
         $this->assertCount(5 + 1, $result);
-        $this->assertCount(6, array_unique(array_column($result, 'cmid')));
+        $this->assertArrayNotHasKey('cmid', $clones[0]);
         $this->assertCount(6, array_unique(array_column($result, 'uid')));
     }
 

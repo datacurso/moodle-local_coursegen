@@ -25,6 +25,7 @@
  */
 
 import {collectVirtualRowsForSection} from 'local_coursegen/local/template/template_instance_rows';
+import {namingOf, TEMPLATE_BEHAVIOR} from 'local_coursegen/local/template/section_naming';
 import {resetSectionsDirtyState} from 'local_coursegen/local/template/sections_events';
 import * as Repository from 'local_coursegen/local/template/repository';
 import Notification from 'core/notification';
@@ -135,10 +136,14 @@ const buildActivityPayloads = (state, activities) => {
 const buildSectionPayload = (state, root, section) => {
     const virtualRows = collectSectionVirtualRows(root, section.id);
     const activities = buildActivityPayloads(state, section.activities);
+    const behavior = state.sectionBehavior[section.id];
+    // A template section brings how its copies are named.
+    const naming = behavior === TEMPLATE_BEHAVIOR ? namingOf(root, section.id) : {};
     return {
         sectionid: section.id,
         sectionnum: section.num,
-        behavior: state.sectionBehavior[section.id],
+        behavior,
+        ...naming,
         instances: virtualRows.instances,
         spaces: virtualRows.spaces,
         activities,
@@ -189,7 +194,6 @@ export const saveTemplate = async(state, root) => {
             id: state.templateId, name: nameVal,
             description: descVal, courseid: state.selectedCourseId,
             maxsections: state.maxSections, nolimit: state.noLimit,
-            namingpattern: state.namingPattern, namingstart: state.namingStart,
             sections,
         });
         // A real, successful save — the course picker, config form and name

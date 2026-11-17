@@ -75,6 +75,7 @@ class template_export_service {
 
         $actions = self::saved_activity_actions($templateid);
         $behaviors = self::saved_section_behaviors($templateid);
+        $namings = self::saved_section_namings($templateid);
 
         $langauto = ($lang === '');
         if ($langauto) {
@@ -88,7 +89,7 @@ class template_export_service {
         $numsections = count($sectioninfoall) - 1;
 
         $formatoptions = template_export_sections::format_settings($course);
-        $sectionsinfo = template_export_sections::sections_info($course, $modinfo, $behaviors);
+        $sectionsinfo = template_export_sections::sections_info($course, $modinfo, $behaviors, $namings);
 
         $realactivities = self::real_activities($modinfo, $actions);
         $instanceactivities = self::instance_activities($templateid, $modinfo);
@@ -162,6 +163,24 @@ class template_export_service {
             $actions[$cmid] = $action;
         }
         return $actions;
+    }
+
+    /**
+     * sectionid => how each template section names its copies, for this template.
+     *
+     * @param int $templateid
+     * @return array
+     */
+    private static function saved_section_namings(int $templateid): array {
+        $namings = [];
+        $records = template_section::get_records(['templateid' => $templateid, 'behavior' => template_section::BEHAVIOR_TEMPLATE]);
+        foreach ($records as $section) {
+            $namings[(int) $section->get('sectionid')] = [
+                'naming_pattern' => (string) $section->get('namingpattern'),
+                'naming_start' => (int) $section->get('namingstart'),
+            ];
+        }
+        return $namings;
     }
 
     /**

@@ -33,7 +33,7 @@
 
 import Templates from 'core/templates';
 import {getString} from 'core/str';
-import {notifyStructure} from 'local_coursegen/local/courseai/template/added_structure';
+import {notifyCopies, notifyStructure} from 'local_coursegen/local/courseai/template/added_structure';
 import {progressRatio} from 'local_coursegen/local/courseai/template/progress_ratio';
 import {closeActivitiesPanel} from 'local_coursegen/local/courseai/template/top_bar';
 import {
@@ -176,6 +176,15 @@ export const resetChecklist = () => {
  */
 export const showAddedStructure = (data) => {
     enqueue(() => notifyStructure(data));
+};
+
+/**
+ * The copies of a template section, one per unit of the syllabus, join the structure after the section.
+ *
+ * @param {Object} data A template_unit_copies event.
+ */
+export const showUnitCopies = (data) => {
+    enqueue(() => notifyCopies(data));
 };
 
 /**

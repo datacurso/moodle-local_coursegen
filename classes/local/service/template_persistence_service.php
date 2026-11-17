@@ -64,6 +64,10 @@ class template_persistence_service {
         $sec->set('sectionid', $sectiondata['sectionid']);
         $sec->set('sectionnum', $sectiondata['sectionnum']);
         $sec->set('behavior', $sectiondata['behavior']);
+        if ($sectiondata['behavior'] === template_section::BEHAVIOR_TEMPLATE) {
+            $sec->set('namingpattern', (string) ($sectiondata['namingpattern'] ?? ''));
+            $sec->set('namingstart', (int) ($sectiondata['namingstart'] ?? 1));
+        }
         $sec->create();
 
         self::save_activities($templateid, $sectiondata['sectionid'], $sectiondata['activities']);

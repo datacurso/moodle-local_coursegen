@@ -92,6 +92,8 @@ class sections_config {
             if ($tree !== null) {
                 $context += self::hierarchy_context($tree, (int) $sectioninfo->section);
             }
+            // Only a top section is repeated per unit: a subsection goes with it and has no naming of its own.
+            $context['cannaming'] = empty($context['isnested']);
             $sections[] = $context;
         }
 
@@ -153,11 +155,12 @@ class sections_config {
      * @return array {behaviors, actions, scopes, spaces, instances}
      */
     private static function saved_configuration(int $templateid): array {
-        $saved = ['behaviors' => [], 'actions' => [], 'scopes' => [], 'spaces' => [], 'instances' => []];
+        $saved = ['behaviors' => [], 'namings' => [], 'actions' => [], 'scopes' => [], 'spaces' => [], 'instances' => []];
         if ($templateid <= 0) {
             return $saved;
         }
         $saved['behaviors'] = self::saved_behaviors($templateid);
+        $saved['namings'] = self::saved_namings($templateid);
         $activitysettings = self::saved_activity_settings($templateid);
         $saved = array_merge($saved, $activitysettings);
         $saved['instances'] = self::saved_virtual_rows($templateid);
@@ -187,6 +190,23 @@ class sections_config {
      * @param int $templateid
      * @return array {actions, scopes, spaces, prompts}
      */
+    /**
+     * How each template section names its copies: section id => [pattern, first number].
+     *
+     * @param int $templateid
+     * @return array
+     */
+    private static function saved_namings(int $templateid): array {
+        $namings = [];
+        foreach (template_section::get_records(['templateid' => $templateid]) as $record) {
+            $namings[(int) $record->get('sectionid')] = [
+                (string) $record->get('namingpattern'),
+                (int) $record->get('namingstart'),
+            ];
+        }
+        return $namings;
+    }
+
     private static function saved_activity_settings(int $templateid): array {
         $records = template_activity::get_records(['templateid' => $templateid]);
         $actions = [];
@@ -261,6 +281,9 @@ class sections_config {
             'hasactivities' => !empty($rows),
             'rows' => $rows,
             'actions' => $actions,
+            // A template section shows how its copies are named.
+            'istemplatesection' => $behavior === template_section::BEHAVIOR_TEMPLATE,
+            'naming' => template_row_options::naming_context($saved['namings'][$sectionid] ?? ['', 1]),
         ];
     }
 

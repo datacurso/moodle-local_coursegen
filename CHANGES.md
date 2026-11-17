@@ -2,6 +2,30 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.13] - 2026111713
+
+### Added
+- **The activities of the first copy of a template section are renamed while the run is on**  
+  The names of a template section's activities can use `{N}`, `{name}` and `{#}`, which the AI service replaces for every copy. The structure shown while the run is on takes the new names of the first copy's activities too, so it matches the course.
+
+## [2.0.13] - 2026111712
+
+### Changed
+- **The naming pattern belongs to the template section**  
+  The section naming pattern of the template is gone from the template's settings, where it named every section and was never applied. A template section now shows its own pattern and the number of its first copy in its card, and only its copies are named with it: `{N}` is the copy's number and `{name}` the name of its unit in the syllabus. The first copy takes its name too, in the course and in the structure shown while the run is on.
+
+## [2.0.13] - 2026111711
+
+### Added
+- **Template section**  
+  A section of a template can be set to "Template section". When a course is generated with a syllabus, the AI service repeats that section once per unit of the syllabus, named after each unit, with the section's activities as the mold of every unit. The copies appear in the structure while the run is on, and the course is built with every copy, every section after them in its place, and the look of each copy taken from the section it repeats.
+
+## [2.0.13] - 2026111710
+
+### Changed
+- **The activities the AI writes are matched by their uid when the course is built**  
+  An activity the AI writes has no course module in the template, so the course module created for it is now kept under its uid, and every step that follows it (order, settings copied from the template, links, unit locks) reads it that way. The units cloned for a resized template no longer get an invented course module id. An entry of an older payload with no uid is still matched by the id it travelled with.
+
 ## [2.0.13] - 2026111709
 
 ### Changed

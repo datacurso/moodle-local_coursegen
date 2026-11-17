@@ -39,7 +39,7 @@ final class guideline_unit_locks {
      * @param int $courseid The new course.
      * @param array $sectionsinfo The result's sections_info.
      * @param array $activities The result's generated activities.
-     * @param array $generatedcms Placeholder cmid => created cmid.
+     * @param array $generatedcms Activity key (generated_activity_key) => created cmid.
      * @return void
      */
     public static function apply(int $courseid, array $sectionsinfo, array $activities, array $generatedcms): void {

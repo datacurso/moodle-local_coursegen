@@ -118,7 +118,7 @@ final class template_course_order_test extends \advanced_testcase {
             $templateid,
             $target->id,
             [$this->entry('lesson-1', -1), $this->entry('forum-1', -2)],
-            [-1 => (int) $lesson->cmid, -2 => (int) $forum->cmid],
+            ['lesson-1' => (int) $lesson->cmid, 'forum-1' => (int) $forum->cmid],
             [(int) $hub->cmid => (int) $kepthub->cmid, (int) $tail->cmid => (int) $keptfeedback->cmid]
         );
 
@@ -147,7 +147,7 @@ final class template_course_order_test extends \advanced_testcase {
             $templateid,
             $target->id,
             [$this->entry('second', -1), $this->entry('first', -2)],
-            [-1 => (int) $second->cmid, -2 => (int) $first->cmid],
+            ['second' => (int) $second->cmid, 'first' => (int) $first->cmid],
             []
         );
 
@@ -174,7 +174,7 @@ final class template_course_order_test extends \advanced_testcase {
             $templateid,
             $target->id,
             [$this->entry('inst', -1)],
-            [-1 => (int) $instance->cmid],
+            ['inst' => (int) $instance->cmid],
             []
         );
 
@@ -205,7 +205,7 @@ final class template_course_order_test extends \advanced_testcase {
             $templateid,
             $target->id,
             [$this->entry('two-b', -1), $this->entry('one', -2), $this->entry('two-a', -3)],
-            [-1 => (int) $twob->cmid, -2 => (int) $one->cmid, -3 => (int) $twoa->cmid],
+            ['two-b' => (int) $twob->cmid, 'one' => (int) $one->cmid, 'two-a' => (int) $twoa->cmid],
             []
         );
 

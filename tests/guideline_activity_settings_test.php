@@ -61,7 +61,7 @@ final class guideline_activity_settings_test extends \advanced_testcase {
         $entries = array_column($pairs, 0);
         $map = [];
         foreach ($pairs as [$entry, $cm]) {
-            $map[$entry['cmid']] = (int) $cm->id;
+            $map[$entry['uid']] = (int) $cm->id;
         }
         guideline_activity_settings::apply((int) $course->id, $entries, $map);
     }

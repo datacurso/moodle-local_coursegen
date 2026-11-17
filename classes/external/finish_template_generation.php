@@ -36,6 +36,7 @@ use local_coursegen\local\service\course_review_service;
 use local_coursegen\local\service\course_session_service;
 use local_coursegen\local\service\create_course_service;
 use local_coursegen\local\service\generated_activities_filter;
+use local_coursegen\local\service\generated_activity_key;
 use local_coursegen\local\service\kept_link_rewriter;
 use local_coursegen\local\service\teacher_space_choices;
 use local_coursegen\local\service\template_ai_api_service;
@@ -46,6 +47,7 @@ use local_coursegen\local\service\template_run_history;
 use local_coursegen\local\service\template_section_map;
 use local_coursegen\local\service\template_settings_copier;
 use local_coursegen\local\service\template_syllabus_linker;
+use local_coursegen\local\service\template_unit_copies;
 use local_coursegen\local\space\activity_spaces;
 use local_coursegen\local\space\file_spaces;
 use local_coursegen\local\space\space_file_storage;
@@ -183,6 +185,7 @@ class finish_template_generation extends external_api {
         $report('result');
         $api = new template_ai_api_service();
         $result = $api->get_result($session->get('session_id'));
+        template_unit_copies::adopt($session, (array) ($result['sections_info'] ?? []));
         $templateid = self::template_id_of($session);
 
         // Only the AI-generated activities are built from the payload. The
@@ -224,10 +227,14 @@ class finish_template_generation extends external_api {
         }
         $generatedcms = $created['generatedcms'] ?? [];
         // The activities the teacher added in the spaces were generated: they go in the place of their space.
+        $keybycmid = [];
+        foreach ($generatedactivities as $activity) {
+            $keybycmid[(int) ($activity['cmid'] ?? 0)] = generated_activity_key::of($activity);
+        }
         foreach (teacher_space_choices::spaces_of((int) $templateid) as $uid => $space) {
-            $payloadcmid = teacher_space_choices::cmid_of($space);
-            if (isset($generatedcms[$payloadcmid])) {
-                $spacecms[$uid] = (int) $generatedcms[$payloadcmid];
+            $key = $keybycmid[teacher_space_choices::cmid_of($space)] ?? '';
+            if (isset($generatedcms[$key])) {
+                $spacecms[$uid] = (int) $generatedcms[$key];
             }
         }
         $report('arrange');
@@ -322,8 +329,8 @@ class finish_template_generation extends external_api {
      * @param int|null $templateid
      * @param int $courseid
      * @param array $payloadactivities Every activity entry of the result, kept ones included.
-     * @param array $generatedcms Payload cmid => created cmid, for the generated activities.
-     * @param array $keptcms Payload cmid => created cmid, for the copied kept activities.
+     * @param array $generatedcms Activity key (generated_activity_key) => created cmid, for the generated activities.
+     * @param array $keptcms Template cmid => created cmid, for the copied kept activities.
      * @param template_section_map $sectionmap Where each section of the template went in the new course.
      * @param array $spacecms Space uid => cmid of the activity the teacher brought, in the new course.
      */
@@ -369,8 +376,8 @@ class finish_template_generation extends external_api {
      * @param course_session $session
      * @param int $courseid
      * @param array $payloadactivities Every activity entry of the result, kept ones included.
-     * @param array $generatedcms Payload cmid => created cmid, for the generated activities.
-     * @param array $keptcms Payload cmid => created cmid, for the copied kept activities.
+     * @param array $generatedcms Activity key (generated_activity_key) => created cmid, for the generated activities.
+     * @param array $keptcms Template cmid => created cmid, for the copied kept activities.
      */
     private static function resolve_activity_links(
         course_session $session,
