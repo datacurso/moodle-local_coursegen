@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026110971
+
+### Fixed
+- **The teacher sees the instruction the admin wrote for the File they upload**  
+  In the modal of a space with several activities, the File the teacher uploads shows the admin's instruction under it (which file to upload), and once an activity is chosen the card shows the admin's instruction for it instead of the list of activities available.
+
 ## [2.0.10] - 2026110970
 
 ### Fixed
