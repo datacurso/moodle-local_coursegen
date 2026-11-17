@@ -14,142 +14,106 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * The modal of "Add space for an activity": the admin ticks one activity or several, each with its own instruction.
- *
- * One activity is created by the AI (its name is optional: with none, the AI writes it), and a File can instead be
- * one the teacher uploads. Several activities make a space where the teacher chooses one when creating the course.
+ * The modal of "Add space for an activity": one activity per row at full width, with the search and the tabs of the
+ * activity chooser. Selecting a row opens its instruction right under it, with the cursor in it; the footer says what
+ * the selection makes and, when it applies, whether the space is required.
  *
  * @module     local_coursegen/local/template/template_space_picker
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import ModalSaveCancel from 'core/modal_save_cancel';
+import Modal from 'core/modal';
 import ModalEvents from 'core/modal_events';
 import Templates from 'core/templates';
-import {get_string as getString} from 'core/str';
+import {get_strings as getStrings} from 'core/str';
 import {fetchSupportedItems} from 'local_coursegen/local/template/template_space_chooser';
+import {
+    applyPreset, filterRows, readPicker, refresh, region, selectedRows, setSelected,
+} from 'local_coursegen/local/template/template_space_picker_form';
 import {COMPONENT} from 'local_coursegen/local/template/constants';
 
-/** The type a teacher can upload in place of the AI. */
-const UPLOADABLE = 'resource';
-
-const region = (name) => `[data-region="local_coursegen/template/space-picker-${name}"]`;
+/** @type {number} The archetype the web service reports for a resource. */
+const ARCHETYPE_RESOURCE = 1;
 
 /**
- * The ticked activities, in the order of the list.
+ * The first sentence of the help of a type, as plain text: the line under its name.
  *
- * @param {HTMLElement} root The modal.
- * @returns {HTMLElement[]}
- */
-const tickedOptions = (root) => [...root.querySelectorAll(region('option'))].filter((option) => !option.hidden);
-
-/**
- * Select or unselect one activity: its tile is marked and its card, with the instruction, shows under the tiles.
- * Call {@see refresh} after it, so the section of the selected activities is shown too.
- *
- * @param {HTMLElement} root The modal.
- * @param {string} modname
- * @param {boolean} selected
- */
-const setSelected = (root, modname, selected) => {
-    root.querySelector(`${region('tile')}[data-modname="${modname}"]`).setAttribute('aria-pressed', String(selected));
-    root.querySelector(`${region('option')}[data-modname="${modname}"]`).hidden = !selected;
-};
-
-/**
- * Put the cursor in the instruction of an activity just selected, once its card is shown.
- *
- * @param {HTMLElement} root The modal.
- * @param {string} modname
- */
-const focusInstruction = (root, modname) => {
-    root.querySelector(`${region('option')}[data-modname="${modname}"] ${region('instruction')}`).focus({preventScroll: true});
-};
-
-/**
- * Whether the admin chose that the teacher uploads the one File ticked.
- *
- * @param {HTMLElement} root The modal.
- * @returns {boolean}
- */
-const teacherUploads = (root) => {
-    const ticked = tickedOptions(root);
-    return ticked.length === 1 && ticked[0].dataset.modname === UPLOADABLE
-        && root.querySelector(`${region('mode')}:checked`)?.value === 'teacher';
-};
-
-/**
- * Show what belongs to what is ticked: the name for one activity, who provides it for one File, the requirement for a
- * File the teacher uploads or for several activities, and the help for several.
- *
- * @param {HTMLElement} root The modal.
- * @param {Object} placeholders {several, single, teacher}: see {@see placeholderOf}.
- */
-const refresh = (root, placeholders) => {
-    const ticked = tickedOptions(root);
-    const one = ticked.length === 1;
-    const uploads = teacherUploads(root);
-    root.querySelector(region('help')).hidden = ticked.length < 2;
-    root.querySelector(region('name-group')).hidden = !one || uploads;
-    root.querySelector(region('mode-group')).hidden = !(one && ticked[0].dataset.modname === UPLOADABLE);
-    root.querySelector(region('required-group')).hidden = !(ticked.length > 1 || uploads);
-    // One activity the AI creates needs its instruction: it is all the AI has to know what to create.
-    const aiAlone = one && !uploads;
-    root.querySelector(region('selected')).hidden = ticked.length === 0;
-    root.querySelectorAll(region('option')).forEach((option) => {
-        const field = option.querySelector(region('instruction'));
-        field.required = aiAlone && option === ticked[0];
-        field.placeholder = placeholderOf(placeholders, option === ticked[0] && one, uploads);
-    });
-    const save = root.querySelector('[data-action="save"]');
-    if (save) {
-        save.disabled = ticked.length === 0 || (aiAlone && ticked[0].querySelector(region('instruction')).value.trim() === '');
-    }
-};
-
-/**
- * The placeholder of the instruction of an activity: what the teacher must upload, how the one activity the AI
- * creates must be, or the optional instruction of one of several.
- *
- * @param {Object} placeholders {several, single, teacher}.
- * @param {boolean} alone It is the one activity ticked.
- * @param {boolean} uploads The teacher uploads it.
+ * @param {string} help The help, as HTML.
  * @returns {string}
  */
-const placeholderOf = (placeholders, alone, uploads) => {
-    if (!alone) {
-        return placeholders.several;
-    }
-    return uploads ? placeholders.teacher : placeholders.single;
+const summaryOf = (help) => {
+    const holder = document.createElement('div');
+    holder.innerHTML = help || '';
+    const text = holder.textContent.replace(/\s+/g, ' ').trim();
+    const end = text.search(/[.!?](\s|$)/);
+    return end > 0 ? text.slice(0, end + 1) : text;
 };
 
 /**
- * What the modal says, in the shape the caller inserts.
+ * The texts the modal changes as the selection changes.
+ *
+ * @returns {Promise<Object>}
+ */
+const loadTexts = async() => {
+    const keys = [
+        'template_add_space', 'template_space_picker_label_ai', 'template_space_instruction_placeholder_ai',
+        'template_space_picker_label_ai_optional', 'template_space_picker_placeholder_several',
+        'template_space_picker_label_teacher', 'template_space_picker_placeholder_teacher',
+        'template_space_picker_types', 'template_space_picker_one_ai', 'template_space_picker_one_teacher',
+        'template_space_picker_several', 'template_space_picker_badge_one', 'template_space_picker_badge_many',
+    ];
+    const s = await getStrings(keys.map((key) => ({key, component: COMPONENT})));
+    return {
+        title: s[0],
+        single: {label: s[1], placeholder: s[2]},
+        several: {label: s[3], placeholder: s[4]},
+        teacher: {label: s[5], placeholder: s[6]},
+        summary: {none: s[7], ai: s[8], teacher: s[9], several: s[10]},
+        badge: {one: s[11], many: s[12]},
+    };
+};
+
+/**
+ * Wire the rows, the tabs and the search of the modal.
  *
  * @param {HTMLElement} root The modal.
- * @param {Object[]} items The chooser items.
- * @returns {Object} {kind: 'single', picked, choice} or {kind: 'several', options, titles, required}.
+ * @param {Object} text What loadTexts returns.
  */
-const readPicker = (root, items) => {
-    const ticked = tickedOptions(root);
-    const required = root.querySelector(`${region('required')}:checked`)?.value === '1';
-    const options = ticked.map((option) => ({
-        modname: option.dataset.modname,
-        instruction: option.querySelector(region('instruction')).value.trim(),
+const bindList = (root, text) => {
+    const update = () => refresh(root, text);
+    const view = {tab: 'all', query: ''};
+    root.querySelectorAll(region('toggle')).forEach((toggle) => toggle.addEventListener('click', () => {
+        const row = toggle.closest(region('option'));
+        const selected = toggle.getAttribute('aria-checked') !== 'true';
+        setSelected(row, selected);
+        update();
+        if (selected) {
+            // The cursor in its instruction, and the whole panel in view above the footer.
+            row.querySelector(region('instruction')).focus({preventScroll: true});
+            row.scrollIntoView({block: 'nearest', behavior: 'smooth'});
+        }
     }));
-    const itemOf = (modname) => items.find((item) => item.name === modname) || {title: modname, icon: ''};
-    if (options.length > 1) {
-        return {kind: 'several', options, titles: options.map((option) => itemOf(option.modname).title), required};
-    }
-    const item = itemOf(options[0].modname);
-    const picked = {modname: options[0].modname, name: item.title, icon: item.icon};
-    if (teacherUploads(root)) {
-        // The row of the space shows the type ("File"): no name of its own that would hide it.
-        return {kind: 'single', picked, choice: {mode: 'teacher', required, instruction: options[0].instruction}};
-    }
-    const name = root.querySelector(region('name')).value.trim();
-    return {kind: 'single', picked, choice: {mode: 'ai', name, required: true, instruction: options[0].instruction}};
+    root.querySelectorAll(region('info')).forEach((info) => info.addEventListener('click', () => {
+        const help = info.closest(region('option')).querySelector(region('helptext'));
+        help.hidden = !help.hidden;
+        info.setAttribute('aria-expanded', String(!help.hidden));
+    }));
+    root.querySelectorAll(region('mode')).forEach((radio) => radio.addEventListener('change', update));
+    root.querySelectorAll(region('instruction')).forEach((field) => field.addEventListener('input', update));
+    root.querySelectorAll(region('tab')).forEach((tab) => tab.addEventListener('click', () => {
+        root.querySelectorAll(region('tab')).forEach((other) => {
+            other.classList.toggle('active', other === tab);
+            other.setAttribute('aria-selected', String(other === tab));
+        });
+        view.tab = tab.dataset.tab;
+        filterRows(root, view.tab, view.query);
+    }));
+    root.querySelector(region('search')).addEventListener('input', (event) => {
+        view.query = event.target.value;
+        filterRows(root, view.tab, view.query);
+    });
+    update();
 };
 
 /**
@@ -158,67 +122,60 @@ const readPicker = (root, items) => {
  * @param {Object} params
  * @param {number} params.courseId The base course.
  * @param {string[]} params.supportedTypes Module names a space can be made for.
- * @returns {Promise<Object|null>} What {@see readPicker} returns.
+ * @param {Object} [params.preset] What a space saved, to edit it: {options, required}.
+ * @returns {Promise<Object|null>} What readPicker returns.
  */
-export const pickSpace = async({courseId, supportedTypes}) => {
-    const items = await fetchSupportedItems(courseId, supportedTypes);
-    const [title, several, single, teacher] = await Promise.all([
-        getString('template_add_space', COMPONENT),
-        getString('template_teacher_space_instruction', COMPONENT),
-        getString('template_space_instruction_placeholder_ai', COMPONENT),
-        getString('template_space_instruction_placeholder', COMPONENT),
+export const pickSpace = async({courseId, supportedTypes, preset = null}) => {
+    const [items, text] = await Promise.all([fetchSupportedItems(courseId, supportedTypes), loadTexts()]);
+    const options = items.map((item) => ({
+        modname: item.name,
+        title: item.title,
+        summary: summaryOf(item.help),
+        help: item.help,
+        icon: item.icon,
+        purpose: item.purpose || '',
+        kind: Number(item.archetype) === ARCHETYPE_RESOURCE ? 'resource' : 'activity',
+        uploadable: item.name === 'resource',
+    }));
+    // Both drawn before the modal opens, so the list is wired once its footer is there too.
+    const [body, footer] = await Promise.all([
+        Templates.render('local_coursegen/template_space_picker_body', {options}),
+        Templates.render('local_coursegen/template_space_picker_footer', {}),
     ]);
-    const options = items.map((item) => ({modname: item.name, title: item.title, icon: item.icon}));
-    // Large, and with no scroll of its own: however many activities are selected, the modal grows with the page.
-    const modal = await ModalSaveCancel.create({
-        title,
-        body: Templates.render('local_coursegen/template_space_picker_body', {options}),
+    // Large, and with no scroll of its own: the list grows with the page and the footer stays at the bottom.
+    const modal = await Modal.create({
+        title: text.title,
+        body,
+        footer,
         large: true,
         scrollable: false,
+        templateContext: {classes: 'tpl-space-picker-modal'},
         removeOnClose: true,
     });
     const rootList = modal.getRoot();
     const root = rootList[0];
-    const placeholders = {several, single, teacher};
+    if (preset) {
+        applyPreset(root, preset);
+    }
+    bindList(root, text);
     return new Promise((resolve) => {
-        let saved = false;
-        rootList.on(ModalEvents.bodyRendered, () => {
-            root.querySelectorAll(region('tile')).forEach((tile) => {
-                tile.addEventListener('click', () => {
-                    const selected = tile.getAttribute('aria-pressed') !== 'true';
-                    setSelected(root, tile.dataset.modname, selected);
-                    refresh(root, placeholders);
-                    if (selected) {
-                        focusInstruction(root, tile.dataset.modname);
-                    }
-                });
-            });
-            root.querySelectorAll(region('remove')).forEach((button) => {
-                button.addEventListener('click', () => {
-                    const modname = button.closest(region('option')).dataset.modname;
-                    setSelected(root, modname, false);
-                    refresh(root, placeholders);
-                    root.querySelector(`${region('tile')}[data-modname="${modname}"]`).focus();
-                });
-            });
-            root.querySelectorAll(region('mode')).forEach((input) => {
-                input.addEventListener('change', () => refresh(root, placeholders));
-            });
-            root.querySelectorAll(region('instruction')).forEach((field) => {
-                field.addEventListener('input', () => refresh(root, placeholders));
-            });
-            refresh(root, placeholders);
-        });
-        rootList.on(ModalEvents.save, (event) => {
-            if (root.querySelector('[data-action="save"]')?.disabled || !tickedOptions(root).length) {
-                event.preventDefault();
+        let settled = false;
+        rootList.on(ModalEvents.shown, () => root.querySelector(region('search')).focus());
+        rootList.on('click', '[data-action="cancel"]', () => modal.hide());
+        rootList.on('click', '[data-action="save"]', (event) => {
+            // Nothing selected, or one activity of the AI with no instruction: Save does nothing, whatever enabled it.
+            refresh(root, text);
+            if (settled || event.currentTarget.disabled || !selectedRows(root).length) {
                 return;
             }
-            saved = true;
+            settled = true;
             resolve(readPicker(root, items));
+            modal.hide();
         });
+        // However the modal closes without a save, the caller is told, so "Add space" never stays blocked.
         rootList.on(ModalEvents.hidden, () => {
-            if (!saved) {
+            if (!settled) {
+                settled = true;
                 resolve(null);
             }
         });

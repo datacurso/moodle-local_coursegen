@@ -2,6 +2,119 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.13] - 2026111701
+
+### Changed
+- **The work on the spaces of the templates joins the work on units, guidelines and dates**  
+  Both lines are in this build: the spaces for an activity, the File the teacher uploads and the related fixes, together with the number of units, the institutional guidelines in template mode, the start date of the course and the other changes of 2.0.11 to 2.0.13.
+
+## [2.0.10] - 2026111700
+
+### Fixed
+- **The File the teacher uploads has no line under it in the modal of a space**  
+  Its instruction is shown only above the button that uploads the file. The build number follows the date of the day from now on.
+
+## [2.0.10] - 2026110974
+
+### Fixed
+- **The instruction of the File the teacher uploads is shown once, above the button that uploads it**  
+  In the modal of a space, the File option says that the teacher uploads their own file, and the admin's instruction (which file to upload) is shown once, as plain text, right above the button that uploads it.
+
+## [2.0.10] - 2026110972
+
+### Fixed
+- **The instruction for the File the teacher uploads stands out where the file is uploaded**  
+  Picking the File in the modal of a space shows the admin's instruction as a highlighted note right above the button that uploads the file, not only as a small line under the option.
+
+## [2.0.10] - 2026110971
+
+### Fixed
+- **The teacher sees the instruction the admin wrote for the File they upload**  
+  In the modal of a space with several activities, the File the teacher uploads shows the admin's instruction under it (which file to upload), and once an activity is chosen the card shows the admin's instruction for it instead of the list of activities available.
+
+## [2.0.10] - 2026110970
+
+### Fixed
+- **Every space row of the template editor shows an icon**  
+  A saved space row showed no icon, because the row only drew the icon the chooser gives when the row is added: it now draws the icon of its type, and a space with several activities shows the icon of activities of Moodle, in the muted colour of the other icons.
+- **The creation screen speaks to the person who creates the course**  
+  The warning before generating says "One item is left to complete" or "2 of 2 items are left to complete", the cards say "To complete · Required" and a space with several activities is "Activity to choose", instead of naming the teacher in the third person.
+
+## [2.0.10] - 2026110968
+
+### Changed
+- **The question of whether a space is required says what the teacher does**  
+  With several activities it asks "Does the teacher have to choose one of these activities?" and says that the AI creates the chosen one (and, when a File the teacher uploads is among them, that they upload that one); with a File the teacher uploads, alone or of the course, it asks "Does the teacher have to upload the file?". Each option says what happens if the teacher does not do it.
+
+## [2.0.10] - 2026110967
+
+### Changed
+- **The teacher uploads their File right in the modal of the space, and modifies it from its card**  
+  Picking the File the admin left to the teacher shows, right under the options, the field to upload it or replace it, and "Add the activity" waits until the file is there. Once added, the card shows the activity and its file with an edit icon: pressing it opens the same modal with what was chosen, to replace the file or to switch to another activity, which drops the file. Cancelling after uploading keeps nothing.
+
+## [2.0.10] - 2026110966
+
+### Fixed
+- **A File of the course marked as a space for the teacher asks for no mode**  
+  Choosing "Space for the teacher" on a File of the base course opens "Space for the teacher" with only whether it is required and the instruction for the teacher: the teacher uploads their own file in its place, with no choice between the AI and the teacher.
+
+## [2.0.10] - 2026110965
+
+### Fixed
+- **The card of a space with several activities uses the icon of an activity, and the warning before generating names what is missing**  
+  In the creation screen the card of such a space shows the line icon of the first activity it offers, like every other row, instead of a large plus sign; the icon of the activity the teacher chooses replaces it. The warning shown when Generate is pressed says that a contribution of the teacher is missing, which fits a file to upload as well as an activity to choose.
+
+## [2.0.10] - 2026110964
+
+### Changed
+- **Each activity of a space keeps its own fields, however many are selected**  
+  In "Add space for an activity" the instruction and the name of each selected activity, and who provides a File, no longer disappear when another activity is selected. A File is the only activity with both modes: the AI creates it, or the teacher uploads it; every other activity is created by the AI. Each option of a space with several activities keeps its name and its mode, and the pencil of the row opens the same modal with all of it.
+- **The teacher can pick, among the options of a space, the File they upload**  
+  In the creation screen the options show the name the admin gave them. Picking the File the admin left to the teacher asks for no topic and opens the file picker; the space counts as done once the file is there, and the new course has a File resource with it in the place of the space, with nothing generated there. An option the admin named keeps that name in the new course.
+
+## [2.0.10] - 2026110963
+
+### Changed
+- **Who provides a File is chosen with radio buttons**  
+  "The AI creates it" and "The teacher uploads it" are two radio buttons instead of a pair of buttons.
+
+## [2.0.10] - 2026110962
+
+### Changed
+- **Whether a space is required is a section with radio buttons, and the footer shows a badge**  
+  With several activities or a File the teacher uploads, "Does the teacher have to provide it?" is a section under the list with two radio buttons, each saying what it means. The footer shows how many activities are selected as a badge, next to a plain sentence about what happens when the course is created.
+
+## [2.0.10] - 2026110961
+
+### Changed
+- **The list of "Add space for an activity" looks like its design**  
+  Each icon sits in a soft square, the help button is a small filled circle with a small focus ring, and the fields that open under a selected activity are aligned with its icon.
+
+## [2.0.10] - 2026110960
+
+### Added
+- **A "+" before the first activity of each section**  
+  An activity, a space or an activity from a template can now be added at the start of a section: what is added there goes first and stays first after saving. Inserting or removing never leaves two "+" in a row.
+
+## [2.0.10] - 2026110959
+
+### Changed
+- **"Add space for an activity" lists one activity per row, and the instruction opens under the selected one**  
+  Each activity takes the whole width of the modal, with its icon, its name, a short description and its help, under a search and the tabs All, Activities and Resources. Selecting an activity opens its instruction right under its own row, with the cursor in it; with one activity, the same row asks for its optional name and, for a File, who provides it. The footer, which stays at the bottom, says what the selection makes and, with several activities or a File the teacher uploads, whether the space is required.
+
+### Fixed
+- **"Add space for an activity" never stops answering**  
+  Closing the modal in any way after a save that could not go through no longer leaves the option blocked until the page is reloaded, and a row selected near the bottom brings its instruction into view above the footer.
+
+## [2.0.10] - 2026110958
+
+### Changed
+- **"Add space for an activity" is the activity chooser of the course page, with several activities**  
+  The modal is the standard chooser, with its search, its tabs and the help of each type, where one click selects an activity and another unselects it; the selected ones carry a mark in every tab and in the results of a search. Under the chooser, each selected activity is a card with its instruction and a button to remove it, then what applies to them.
+
+### Fixed
+- **The search of the chooser of a space shows its results**  
+  The search found the types but failed before showing them, because the chooser had no favourite star in its items; the star is kept in the markup and hidden, so the search works.
 ## [2.0.13] - 2026111404
 
 ### Changed

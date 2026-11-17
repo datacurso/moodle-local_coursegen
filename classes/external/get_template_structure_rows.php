@@ -21,6 +21,7 @@ use local_coursegen\local\models\template_activity;
 use local_coursegen\local\models\template_instance;
 use local_coursegen\local\models\template_section;
 use local_coursegen\local\models\template_space;
+use local_coursegen\local\service\teacher_space_choices;
 use local_coursegen\local\service\teacher_space_options;
 use local_coursegen\local\service\template_export_uids;
 use local_coursegen\local\service\template_instance_layout;
@@ -342,7 +343,7 @@ trait get_template_structure_rows {
      * under it.
      *
      * @param template_space $space
-     * @param array[] $options Each {modname, instruction}.
+     * @param array[] $options Each {modname, instruction, name, mode}.
      * @param \renderer_base $output
      * @return array
      */
@@ -353,6 +354,8 @@ trait get_template_structure_rows {
             $choices[] = [
                 'modname' => $modname,
                 'title' => get_string('modulename', 'mod_' . $modname),
+                'name' => format_string($option['name']),
+                'mode' => $option['mode'],
                 'instruction' => format_string($option['instruction']),
                 'iconhtml' => $output->image_icon('monologo', $modname, 'mod_' . $modname, ['class' => 'icon activityicon']),
             ];
@@ -364,7 +367,8 @@ trait get_template_structure_rows {
             'modname' => $options[0]['modname'],
             'purpose' => self::get_purpose($options[0]['modname']),
             'typelabel' => $titles,
-            'iconhtml' => $output->pix_icon('t/add', ''),
+            // The icon of the first activity it offers, like every other row (the icon of the one chosen replaces it).
+            'iconhtml' => $choices[0]['iconhtml'],
             'locked' => true,
             'action' => '',
             'isinstance' => false,
@@ -375,6 +379,8 @@ trait get_template_structure_rows {
             'spaceinstruction' => get_string('courseai_template_choice_space_hint', 'local_coursegen', $titles),
             'spacerequired' => (int) $space->get('required') === 1,
             'spaceoptions' => json_encode($choices, JSON_UNESCAPED_UNICODE),
+            // Where the file goes when the teacher picks the File they upload among the options.
+            'spacecmid' => teacher_space_choices::cmid_of($space),
         ];
     }
 

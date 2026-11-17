@@ -51,21 +51,6 @@ const isSupportedItem = (supportedTypes, item) => {
 };
 
 /**
- * Flag items as legacy so no favourite star is drawn for them.
- *
- * @param {Array} items Content items.
- * @returns {Array}
- */
-const withoutFavouriteStars = (items) => {
-    const flagged = [];
-    for (const item of items) {
-        const copy = {...item, legacyitem: true};
-        flagged.push(copy);
-    }
-    return flagged;
-};
-
-/**
  * The items whose module this plugin supports.
  *
  * @param {Array} items Content items from the course chooser web service.
@@ -87,12 +72,14 @@ const supportedItemsOf = (items, supportedTypes) => {
  *
  * @param {number} courseId The base course (the chooser is permission-aware per course).
  * @param {string[]} supportedTypes Module names a space can be made for.
- * @returns {Promise<Array>} Content items, each flagged so no favourite star is drawn.
+ * @returns {Promise<Array>} Content items.
  */
 export const fetchSupportedItems = async(courseId, supportedTypes) => {
     const data = await Repository.activityModules(courseId, 0);
     const supported = supportedItemsOf(data.content_items, supportedTypes);
-    return withoutFavouriteStars(supported);
+    // The favourite star stays in the markup (the search of the chooser expects it) and is hidden by the styles of
+    // this modal: favourites are not offered here.
+    return supported;
 };
 
 /**
@@ -213,7 +200,7 @@ const createChooserModal = (bodyPromise) => {
         body: bodyPromise,
         large: true,
         scrollable: false,
-        templateContext: {classes: 'modchooser'},
+        templateContext: {classes: 'modchooser tpl-space-chooser'},
         show: true,
     });
 };

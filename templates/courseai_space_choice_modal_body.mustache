@@ -23,17 +23,25 @@
     Data attributes required for JS:
     * data-region="local_coursegen/template/space-choice-option" on each radio (value: the module name).
     * data-region="local_coursegen/template/space-choice-instruction" on the teacher's instruction.
+    * data-region="local_coursegen/template/space-choice-own-group" around it, and "space-choice-upload" (with its
+      "space-choice-upload-button", "space-choice-filename" and "space-choice-file-instruction", the admin's
+      instruction above the button) on what shows instead when the option is a File the
+      teacher uploads: the upload of the file, right in the modal.
 
     Context variables required for this template:
     * uniqid string - Unique id of this render.
-    * options array - Each: modname string, title string, iconhtml string (core markup), instruction string (the
-      admin's), checked bool.
+    * options array - Each: modname string, title string, name string (the admin's, may be empty), uploads bool (a File
+      the teacher uploads), iconhtml string (core markup), instruction string (the admin's), checked bool.
     * instruction string - What the teacher wrote before; may be empty.
+    * hasfile bool, filename string - The file the teacher uploaded before, when there is one.
 
     Example context (json):
     {
-        "options": [{"modname": "quiz", "title": "Quiz", "iconhtml": "", "instruction": "Ten questions", "checked": true}],
-        "instruction": ""
+        "options": [{"modname": "quiz", "title": "Quiz", "name": "", "uploads": false, "iconhtml": "",
+            "instruction": "Ten questions", "checked": true}],
+        "instruction": "",
+        "hasfile": false,
+        "filename": ""
     }
 }}
 <fieldset class="mb-3">
@@ -41,16 +49,29 @@
     {{#options}}
     <div class="form-check py-1">
         <input class="form-check-input" type="radio" name="{{uniqid}}-choice" id="{{uniqid}}-{{modname}}" value="{{modname}}"
+               data-uploads="{{#uploads}}1{{/uploads}}{{^uploads}}0{{/uploads}}" data-instruction="{{instruction}}"
                data-region="local_coursegen/template/space-choice-option"{{#checked}} checked{{/checked}}>
         {{! The icon is markup built by Moodle core (image_icon), printed with triple braces as core does. }}
         <label class="form-check-label" for="{{uniqid}}-{{modname}}">
-            <span class="d-flex align-items-center"><span class="mr-2">{{{iconhtml}}}</span><strong>{{title}}</strong></span>
-            {{#instruction}}<span class="d-block text-muted small">{{instruction}}</span>{{/instruction}}
+            <span class="d-flex align-items-center"><span class="mr-2">{{{iconhtml}}}</span><strong>{{title}}</strong>{{#name}}<span class="ml-1">· {{name}}</span>{{/name}}</span>
+            {{! The admin's instruction says what an activity of the AI is; the instruction of the File the teacher
+                uploads (which file to upload) is shown above the button that uploads it. }}
+            {{^uploads}}{{#instruction}}<span class="d-block text-muted small">{{instruction}}</span>{{/instruction}}{{/uploads}}
         </label>
     </div>
     {{/options}}
 </fieldset>
-<div class="form-group mb-0">
+<div class="form-group mb-0" data-region="local_coursegen/template/space-choice-upload" hidden>
+    <p class="mb-2" data-region="local_coursegen/template/space-choice-file-instruction" hidden></p>
+    <div class="d-flex flex-wrap align-items-center">
+        <button type="button" class="btn btn-outline-secondary mr-3" data-region="local_coursegen/template/space-choice-upload-button"
+                data-label-upload="{{#str}} courseai_template_space_upload, local_coursegen {{/str}}"
+                data-label-replace="{{#str}} courseai_template_choice_space_file_replace, local_coursegen {{/str}}">{{#hasfile}}{{#str}} courseai_template_choice_space_file_replace, local_coursegen {{/str}}{{/hasfile}}{{^hasfile}}{{#str}} courseai_template_space_upload, local_coursegen {{/str}}{{/hasfile}}</button>
+        <span class="text-muted" data-region="local_coursegen/template/space-choice-filename"
+              data-empty="{{#str}} courseai_template_choice_space_file_none, local_coursegen {{/str}}">{{#hasfile}}{{filename}}{{/hasfile}}{{^hasfile}}{{#str}} courseai_template_choice_space_file_none, local_coursegen {{/str}}{{/hasfile}}</span>
+    </div>
+</div>
+<div class="form-group mb-0" data-region="local_coursegen/template/space-choice-own-group">
     <label for="{{uniqid}}-own">{{#str}} courseai_template_choice_space_own, local_coursegen {{/str}}</label>
     <textarea class="form-control" id="{{uniqid}}-own" rows="3" data-region="local_coursegen/template/space-choice-instruction"
               placeholder="{{#str}} courseai_template_choice_space_own_placeholder, local_coursegen {{/str}}">{{instruction}}</textarea>

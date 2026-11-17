@@ -17,6 +17,7 @@
 namespace local_coursegen\local\space;
 
 use local_coursegen\local\models\template_space;
+use local_coursegen\local\service\teacher_space_choices;
 use local_coursegen\local\service\teacher_space_options;
 
 /**
@@ -54,6 +55,34 @@ final class upload_spaces {
                 (int) $space->get('required') === 1,
                 []
             );
+        }
+        // A File the teacher uploads among the options of a space: its file is kept under the placeholder of the space.
+        // The space itself says whether it is required, through the choice the teacher makes.
+        foreach (self::choice_records_of($templateid) as $space) {
+            $instruction = teacher_space_options::upload_option($space->get('options'))['instruction'];
+            $spaces[] = new file_space(
+                teacher_space_choices::cmid_of($space),
+                $instruction !== '' ? $instruction : get_string('modulename', 'mod_' . self::MODNAME),
+                $instruction,
+                false,
+                []
+            );
+        }
+        return $spaces;
+    }
+
+    /**
+     * The spaces of a template with several options where one is a File the teacher uploads, by uid.
+     *
+     * @param int $templateid
+     * @return array<string,template_space>
+     */
+    public static function choice_records_of(int $templateid): array {
+        $spaces = [];
+        foreach (teacher_space_choices::spaces_of($templateid) as $uid => $space) {
+            if (teacher_space_options::upload_option($space->get('options')) !== null) {
+                $spaces[$uid] = $space;
+            }
         }
         return $spaces;
     }
@@ -114,6 +143,14 @@ final class upload_spaces {
             $file = $selection->file_of($filled);
             $section = $sectionnums[(int) $space->get('sectionid')] ?? 0;
             $created[$uid] = self::create_resource($courseid, $section, $file);
+        }
+        foreach (self::choice_records_of($templateid) as $uid => $space) {
+            $filled = $bycmid[teacher_space_choices::cmid_of($space)] ?? null;
+            if ($filled === null) {
+                continue;
+            }
+            $section = $sectionnums[(int) $space->get('sectionid')] ?? 0;
+            $created[$uid] = self::create_resource($courseid, $section, $selection->file_of($filled));
         }
         return $created;
     }

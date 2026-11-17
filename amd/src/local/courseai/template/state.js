@@ -143,7 +143,8 @@ export const applyStructureResponse = (state, data) => {
             spacefile: null,
             spaceactivity: null,
             // "choice": a place where the teacher adds one of the activities the admin allowed; spaceoptions lists them
-            // ({modname, title, instruction, iconhtml}) and spacechoice is the one added: {modname, title, instruction}.
+            // ({modname, title, name, mode, instruction, iconhtml}) and spacechoice is the one added: {modname, title,
+            // instruction, mode}. A File of mode "teacher" is one the teacher uploads: its file is kept in spacefile.
             spaceoptions: parseOptions(activity.spaceoptions),
             spacechoice: null,
         })),
@@ -342,7 +343,13 @@ export const clearSpaceActivity = (state, sectionIndex, activityIndex) => {
  * @param {Object} activity
  * @returns {boolean}
  */
-export const isSpaceFilled = (activity) => !!(activity.spacefile || activity.spaceactivity || activity.spacechoice);
+export const isSpaceFilled = (activity) => {
+    if (activity.spacechoice) {
+        // The File the teacher picked to upload counts once its file is there.
+        return activity.spacechoice.mode !== 'teacher' || !!activity.spacefile;
+    }
+    return !!(activity.spacefile || activity.spaceactivity);
+};
 
 /**
  * The activities a space offers, from the JSON the structure sent.

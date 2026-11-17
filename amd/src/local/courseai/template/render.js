@@ -62,6 +62,23 @@ const ensureTypeLabels = async(state) => {
 };
 
 /**
+ * The description of a space card: what the admin asked for. For a space with several activities, once one is chosen,
+ * the admin's instruction for that one (for the File the teacher uploads, which file to upload).
+ *
+ * @param {Object} activity
+ * @returns {string}
+ */
+const spaceDescription = (activity) => {
+    if (activity.spacekind === 'choice' && activity.spacechoice) {
+        const option = (activity.spaceoptions || []).find((entry) => entry.modname === activity.spacechoice.modname);
+        if (option && String(option.instruction || '').trim() !== '') {
+            return option.instruction;
+        }
+    }
+    return activity.spaceinstruction || '';
+};
+
+/**
  * What a filled space shows: the name of its file, or its activity with the course it comes from.
  *
  * @param {Object} activity
@@ -69,6 +86,10 @@ const ensureTypeLabels = async(state) => {
  */
 const spaceLabel = (activity) => {
     if (activity.spacechoice) {
+        if (activity.spacechoice.mode === 'teacher') {
+            const file = activity.spacefile?.filename;
+            return file ? `${activity.spacechoice.title} · ${file}` : activity.spacechoice.title;
+        }
         const own = String(activity.spacechoice.instruction || '').trim();
         return own ? `${activity.spacechoice.title} · ${own}` : activity.spacechoice.title;
     }
@@ -102,8 +123,8 @@ const buildActivityContext = (activity, state, sectionindex, index) => ({
     index,
     typelabel: activity.typelabel || state.typeLabels[activity.modname] || '',
     isspace: !!activity.isspace,
-    spaceinstruction: activity.spaceinstruction || '',
-    hasspaceinstruction: !!activity.spaceinstruction,
+    spaceinstruction: spaceDescription(activity),
+    hasspaceinstruction: !!spaceDescription(activity),
     spacerequired: !!activity.spacerequired,
     isactivityspace: activity.spacekind === 'activity',
     ischoicespace: activity.spacekind === 'choice',

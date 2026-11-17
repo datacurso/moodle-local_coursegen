@@ -17,103 +17,133 @@
 {{!
     @template local_coursegen/template_space_picker_body
 
-    The body of the modal of "Add space for an activity": the activities as tiles, like the activity chooser of the
-    course page, that are selected and unselected with one click; under them, each selected activity with its own
-    instruction. With one, it is an activity the AI creates (with an optional name), and a File can instead be one the
-    teacher uploads; with several, the teacher chooses one of them when the course is created.
+    The body of the modal of "Add space for an activity": a search, the tabs of the activity chooser, and one activity
+    per row at full width. Selecting an activity opens, right under its own row, the field of its instruction (and,
+    when it is the only one, its optional name and, for a File, who provides it).
 
     Data attributes required for JS:
-    * data-region="local_coursegen/template/space-picker-tile" on each tile (data-modname, aria-pressed).
-    * data-region="local_coursegen/template/space-picker-selected" around the selected activities.
-    * data-region="local_coursegen/template/space-picker-option" on each selected activity (data-modname).
-    * data-region="local_coursegen/template/space-picker-remove" on the button that unselects it.
-    * data-region="local_coursegen/template/space-picker-instruction" on its instruction.
-    * data-region="local_coursegen/template/space-picker-help" on the help shown with several activities.
-    * data-region="local_coursegen/template/space-picker-name-group" and "space-picker-name" for the name of one.
-    * data-region="local_coursegen/template/space-picker-mode-group" and "space-picker-mode" for who provides a File.
-    * data-region="local_coursegen/template/space-picker-required-group" and "space-picker-required".
+    * data-region="local_coursegen/template/space-picker-search" on the search field.
+    * data-region="local_coursegen/template/space-picker-tab" on each tab (data-tab: all, activity, resource).
+    * data-region="local_coursegen/template/space-picker-option" on each row (data-modname, data-kind, data-title).
+    * data-region="local_coursegen/template/space-picker-toggle" on the part of the row that selects it.
+    * data-region="local_coursegen/template/space-picker-info" and "space-picker-helptext": the help of the type.
+    * data-region="local_coursegen/template/space-picker-panel" on what opens under a selected row.
+    * data-region="local_coursegen/template/space-picker-label" and "space-picker-instruction": its instruction.
+    * data-region="local_coursegen/template/space-picker-name-group" and "space-picker-name": the name of one.
+    * data-region="local_coursegen/template/space-picker-mode-group", "space-picker-mode" (radios) and
+      "space-picker-teacher-hint": who provides a File.
+    * data-region="local_coursegen/template/space-picker-empty" on what shows when a search finds nothing.
+    * data-region="local_coursegen/template/space-picker-required-group" and "space-picker-required" (radios): whether
+      the space is required, under the list, with several activities or a File the teacher uploads. Its question and
+      the line of each radio ("space-picker-required-label", "-required-desc", "-optional-desc") carry both texts
+      (data-choice: the teacher chooses one activity; data-file: the teacher uploads the file).
 
     Context variables required for this template:
     * uniqid string - Unique id of this render.
-    * options array - Each: modname string, title string, icon string (core markup).
+    * options array - Each: modname, title, summary, help (core HTML), icon (core markup), purpose, kind, uploadable.
 
     Example context (json):
     {
-        "options": [{"modname": "quiz", "title": "Quiz", "icon": ""}]
+        "options": [{"modname": "quiz", "title": "Quiz", "summary": "Questions graded automatically.", "help": "",
+            "icon": "", "purpose": "assessment", "kind": "activity", "uploadable": false}]
     }
 }}
-<div class="tpl-space-picker">
-    <h6 class="mb-2" id="{{uniqid}}-types">{{#str}} template_space_picker_types, local_coursegen {{/str}}</h6>
-    <div class="tpl-space-picker-grid" role="group" aria-labelledby="{{uniqid}}-types">
-        {{#options}}
-        <button type="button" class="tpl-space-picker-tile" aria-pressed="false"
-                data-region="local_coursegen/template/space-picker-tile" data-modname="{{modname}}">
-            <span class="tpl-space-picker-mark" aria-hidden="true">{{#pix}} e/tick, core {{/pix}}</span>
-            {{! The icon is markup built by Moodle core for the chooser, which core itself prints with triple braces. }}
-            <span class="tpl-space-picker-icon" aria-hidden="true">{{{icon}}}</span>
-            <span class="tpl-space-picker-title">{{title}}</span>
-        </button>
-        {{/options}}
+<div class="tpl-sp">
+    <input type="search" class="form-control" id="{{uniqid}}-search" autocomplete="off"
+           data-region="local_coursegen/template/space-picker-search"
+           placeholder="{{#str}} search, core {{/str}}" aria-label="{{#str}} search, core {{/str}}">
+    <div class="nav nav-tabs mt-3" role="tablist">
+        <button type="button" class="nav-link active" role="tab" aria-selected="true" data-tab="all"
+                data-region="local_coursegen/template/space-picker-tab">{{#str}} all, core {{/str}}</button>
+        <button type="button" class="nav-link" role="tab" aria-selected="false" data-tab="activity"
+                data-region="local_coursegen/template/space-picker-tab">{{#str}} activities, core {{/str}}</button>
+        <button type="button" class="nav-link" role="tab" aria-selected="false" data-tab="resource"
+                data-region="local_coursegen/template/space-picker-tab">{{#str}} resources, core {{/str}}</button>
     </div>
-
-    <div class="tpl-space-picker-selected" data-region="local_coursegen/template/space-picker-selected" hidden>
-        <h6 class="mb-1">{{#str}} template_space_picker_selected, local_coursegen {{/str}}</h6>
-        <p class="text-muted small mb-2" data-region="local_coursegen/template/space-picker-help" hidden>{{#str}} template_teacher_space_help, local_coursegen {{/str}}</p>
+    <ul class="tpl-sp-list" role="list">
         {{#options}}
-        <div class="tpl-space-picker-item" data-region="local_coursegen/template/space-picker-option" data-modname="{{modname}}" hidden>
-            <div class="tpl-space-picker-item-head">
-                <span class="tpl-space-picker-item-icon" aria-hidden="true">{{{icon}}}</span>
-                <label class="tpl-space-picker-item-title mb-0" for="{{uniqid}}-{{modname}}-instruction">{{title}}</label>
-                <button type="button" class="btn btn-link btn-sm tpl-space-picker-remove"
-                        data-region="local_coursegen/template/space-picker-remove"
-                        aria-label="{{#str}} template_space_picker_remove, local_coursegen, {{title}} {{/str}}">
-                    {{#pix}} e/cancel, core {{/pix}}
+        <li class="tpl-sp-item" data-region="local_coursegen/template/space-picker-option"
+            data-modname="{{modname}}" data-kind="{{kind}}" data-title="{{title}}">
+            <div class="tpl-sp-head">
+                <button type="button" class="tpl-sp-toggle" role="checkbox" aria-checked="false"
+                        aria-controls="{{uniqid}}-{{modname}}-panel"
+                        data-region="local_coursegen/template/space-picker-toggle">
+                    <span class="tpl-sp-check" aria-hidden="true"></span>
+                    {{! The icon is markup built by Moodle core for the chooser, which core itself prints with triple braces. }}
+                    <span class="tpl-sp-icon activityiconcontainer smaller {{purpose}}" aria-hidden="true">{{{icon}}}</span>
+                    <span class="tpl-sp-text">
+                        <span class="tpl-sp-name">{{title}}</span>
+                        <span class="tpl-sp-desc">{{summary}}</span>
+                    </span>
+                </button>
+                <button type="button" class="tpl-sp-info" aria-expanded="false"
+                        aria-controls="{{uniqid}}-{{modname}}-help" data-region="local_coursegen/template/space-picker-info"
+                        title="{{#str}} informationformodule, core_course, {{title}} {{/str}}"
+                        aria-label="{{#str}} informationformodule, core_course, {{title}} {{/str}}">
+                    <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false"><circle cx="8" cy="8" r="7" fill="currentColor"/><path d="M8 7v4M8 4.6v.1" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg>
                 </button>
             </div>
-            <textarea class="form-control" rows="2" id="{{uniqid}}-{{modname}}-instruction"
-                      data-region="local_coursegen/template/space-picker-instruction"></textarea>
-        </div>
+            {{! The help is the text Moodle core gives each type, already formatted by core. }}
+            <div class="tpl-sp-help" id="{{uniqid}}-{{modname}}-help" data-region="local_coursegen/template/space-picker-helptext" hidden>{{{help}}}</div>
+            <div class="tpl-sp-panel" id="{{uniqid}}-{{modname}}-panel" data-region="local_coursegen/template/space-picker-panel" hidden>
+                {{#uploadable}}
+                <div class="tpl-sp-field" data-region="local_coursegen/template/space-picker-mode-group" hidden>
+                    <span class="tpl-sp-label" id="{{uniqid}}-{{modname}}-mode">{{#str}} template_space_mode_label, local_coursegen {{/str}}</span>
+                    <div role="radiogroup" aria-labelledby="{{uniqid}}-{{modname}}-mode">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="{{uniqid}}-{{modname}}-mode" id="{{uniqid}}-{{modname}}-mode-ai"
+                                   value="ai" checked data-region="local_coursegen/template/space-picker-mode">
+                            <label class="form-check-label" for="{{uniqid}}-{{modname}}-mode-ai">{{#str}} template_space_mode_ai, local_coursegen {{/str}}</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="{{uniqid}}-{{modname}}-mode" id="{{uniqid}}-{{modname}}-mode-teacher"
+                                   value="teacher" data-region="local_coursegen/template/space-picker-mode">
+                            <label class="form-check-label" for="{{uniqid}}-{{modname}}-mode-teacher">{{#str}} template_space_mode_teacher, local_coursegen {{/str}}</label>
+                        </div>
+                    </div>
+                    <div class="form-text text-muted small mt-1" data-region="local_coursegen/template/space-picker-teacher-hint" hidden>{{#str}} template_space_mode_teacher_desc, local_coursegen {{/str}}</div>
+                </div>
+                {{/uploadable}}
+                <div class="tpl-sp-field">
+                    <label class="tpl-sp-label" for="{{uniqid}}-{{modname}}-instruction"
+                           data-region="local_coursegen/template/space-picker-label"></label>
+                    <textarea class="form-control" rows="3" id="{{uniqid}}-{{modname}}-instruction"
+                              data-region="local_coursegen/template/space-picker-instruction"></textarea>
+                </div>
+                <div class="tpl-sp-field" data-region="local_coursegen/template/space-picker-name-group" hidden>
+                    <label class="tpl-sp-label" for="{{uniqid}}-{{modname}}-name">{{#str}} template_space_name_label, local_coursegen {{/str}}</label>
+                    <input type="text" class="form-control" id="{{uniqid}}-{{modname}}-name" maxlength="255"
+                           data-region="local_coursegen/template/space-picker-name"
+                           placeholder="{{#str}} template_space_name_placeholder_ai, local_coursegen {{/str}}">
+                </div>
+            </div>
+        </li>
         {{/options}}
-    </div>
-
-    <fieldset class="tpl-space-picker-setting" data-region="local_coursegen/template/space-picker-mode-group" hidden>
-        <legend class="h6">{{#str}} template_space_mode_label, local_coursegen {{/str}}</legend>
-        <div class="form-check mb-2">
-            <input class="form-check-input" type="radio" name="{{uniqid}}-mode" id="{{uniqid}}-mode-ai" value="ai" checked
-                   data-region="local_coursegen/template/space-picker-mode">
-            <label class="form-check-label" for="{{uniqid}}-mode-ai"><strong>{{#str}} template_space_mode_ai, local_coursegen {{/str}}</strong></label>
-        </div>
+    </ul>
+    <p class="text-muted mt-3 mb-0" data-region="local_coursegen/template/space-picker-empty" hidden>{{#str}} noresults, core {{/str}}</p>
+    <fieldset class="tpl-sp-required" data-region="local_coursegen/template/space-picker-required-group" hidden>
+        <legend class="tpl-sp-required-title" data-region="local_coursegen/template/space-picker-required-label"
+                data-choice="{{#str}} template_space_choice_required_label, local_coursegen {{/str}}"
+                data-file="{{#str}} template_space_file_required_label, local_coursegen {{/str}}">{{#str}} template_space_choice_required_label, local_coursegen {{/str}}</legend>
         <div class="form-check">
-            <input class="form-check-input" type="radio" name="{{uniqid}}-mode" id="{{uniqid}}-mode-teacher" value="teacher"
-                   data-region="local_coursegen/template/space-picker-mode">
-            <label class="form-check-label" for="{{uniqid}}-mode-teacher">
-                <strong>{{#str}} template_space_mode_teacher, local_coursegen {{/str}}</strong>
-                <span class="d-block text-muted small">{{#str}} template_space_mode_teacher_desc, local_coursegen {{/str}}</span>
-            </label>
-        </div>
-    </fieldset>
-    <div class="tpl-space-picker-setting" data-region="local_coursegen/template/space-picker-name-group" hidden>
-        <label class="h6" for="{{uniqid}}-name">{{#str}} template_space_name_label, local_coursegen {{/str}}</label>
-        <input type="text" class="form-control" id="{{uniqid}}-name" maxlength="255"
-               data-region="local_coursegen/template/space-picker-name"
-               placeholder="{{#str}} template_space_name_placeholder_ai, local_coursegen {{/str}}">
-    </div>
-    <fieldset class="tpl-space-picker-setting" data-region="local_coursegen/template/space-picker-required-group" hidden>
-        <legend class="h6">{{#str}} template_space_requirement_label, local_coursegen {{/str}}</legend>
-        <div class="form-check mb-2">
             <input class="form-check-input" type="radio" name="{{uniqid}}-required" id="{{uniqid}}-required-yes" value="1" checked
                    data-region="local_coursegen/template/space-picker-required">
             <label class="form-check-label" for="{{uniqid}}-required-yes">
                 <strong>{{#str}} template_space_required, local_coursegen {{/str}}</strong>
-                <span class="d-block text-muted small">{{#str}} template_space_required_desc, local_coursegen {{/str}}</span>
+                <span class="d-block text-muted small" data-region="local_coursegen/template/space-picker-required-desc"
+                      data-choice="{{#str}} template_space_choice_required_desc, local_coursegen {{/str}}"
+                      data-choiceupload="{{#str}} template_space_choice_upload_required_desc, local_coursegen {{/str}}"
+                      data-file="{{#str}} template_space_file_required_desc, local_coursegen {{/str}}">{{#str}} template_space_choice_required_desc, local_coursegen {{/str}}</span>
             </label>
         </div>
-        <div class="form-check">
+        <div class="form-check mt-2">
             <input class="form-check-input" type="radio" name="{{uniqid}}-required" id="{{uniqid}}-required-no" value="0"
                    data-region="local_coursegen/template/space-picker-required">
             <label class="form-check-label" for="{{uniqid}}-required-no">
                 <strong>{{#str}} template_space_optional, local_coursegen {{/str}}</strong>
-                <span class="d-block text-muted small">{{#str}} template_space_optional_desc, local_coursegen {{/str}}</span>
+                <span class="d-block text-muted small" data-region="local_coursegen/template/space-picker-optional-desc"
+                      data-choice="{{#str}} template_space_choice_optional_desc, local_coursegen {{/str}}"
+                      data-file="{{#str}} template_space_file_optional_desc, local_coursegen {{/str}}">{{#str}} template_space_choice_optional_desc, local_coursegen {{/str}}</span>
             </label>
         </div>
     </fieldset>

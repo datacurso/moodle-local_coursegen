@@ -106,7 +106,9 @@
                          instanceid, name, typelabel, prompt, sourcecmid,
                          sourcename, badge string) — every entry also
                          carries islast bool (true only for the section's
-                         final row, which renders no trailing gap)
+                         final row, which renders no trailing gap) and isfirst
+                         bool (true only for its first row, which renders a gap
+                         before it)
 
     Example context (json):
     {
