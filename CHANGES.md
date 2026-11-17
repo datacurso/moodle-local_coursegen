@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026110952
+
+### Changed
+- **The add menu says "Add a space", with what a space is**  
+  The option of the menu reads "Add a space", with a line under it that says it is a place in the course for an activity the AI creates or for a file the teacher uploads; the chooser of the type has the same title.
+
 ## [2.0.10] - 2026110951
 
 ### Changed
