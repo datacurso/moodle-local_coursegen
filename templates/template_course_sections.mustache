@@ -178,9 +178,10 @@
         </div>
         <div class="collapse show" id="local-coursegen-tpl-section-{{courseid}}-{{id}}">
             {{#cannaming}}
-            <div class="tpl-section-naming d-flex flex-wrap align-items-center px-3 py-2 border-bottom"
+            <div class="tpl-section-naming px-3 py-2 border-bottom"
                  data-region="section-naming" data-sid="{{id}}" data-custom="{{naming.customvalue}}"
                  {{^istemplatesection}}hidden{{/istemplatesection}}>
+                <div class="d-flex flex-wrap align-items-center">
                 <label class="mb-0 mr-2" for="tpl-naming-{{id}}">{{#str}} template_naming_pattern, local_coursegen {{/str}}</label>
                 <select class="custom-select custom-select-sm w-auto mr-2" id="tpl-naming-{{id}}" data-region="section-naming-pattern">
                     {{#naming.options}}
@@ -197,6 +198,7 @@
                     <option value="{{value}}"{{#selected}} selected{{/selected}}>{{value}}</option>
                     {{/naming.starts}}
                 </select>
+                </div>
             </div>
             {{/cannaming}}
             <table class="table generaltable table-hover mb-0 tpl-activity-table">
