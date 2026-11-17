@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.13] - 2026111702
+
+### Fixed
+- **The badges that are buttons have no border**  
+  "Modify with AI" and the badge of a space look like every other badge of the template editor, with no border around them; the keyboard focus shows a soft ring.
+
 ## [2.0.13] - 2026111701
 
 ### Changed

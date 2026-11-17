@@ -24,6 +24,10 @@
     display: inline-flex; align-items: center; gap: 4px;
     padding: 2px 8px; border-radius: 100px; font-size: 0.7rem; font-weight: 500; background: #f0f0f0;
 }
+/* A badge that is a button ("Modify with AI", "Space · Required") keeps the look of the others: no border. */
+button.tpl-badge { border: 0; line-height: inherit; }
+button.tpl-badge:focus { outline: 0; }
+button.tpl-badge:focus-visible { box-shadow: 0 0 0 0.15rem rgba(15, 108, 191, 0.35); }
 .tpl-badge-present { background: #fff5f5; color: #b5351a; }
 .tpl-badge-keep { background: #e8f5e9; color: #2e7d32; }
 .tpl-badge-exclude { background: #f0f0f0; color: #6c757d; }
