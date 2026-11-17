@@ -294,6 +294,32 @@ const populateChooser = async({courseId, supportedTypes, modalPromise, body, sel
     body.resolve(rendered);
     const modal = await modalPromise;
     bindPick(modal, items, selection);
+    await addMultipleChoice(modal, selection);
+};
+
+/**
+ * Under the types, the way to let the teacher choose among several activities in this place: it settles the
+ * session with {multiple: true}, and the caller opens the modal where they are ticked.
+ *
+ * @param {Object} modal The chooser modal.
+ * @param {ChooserSelection} selection The session to settle.
+ * @returns {Promise<void>}
+ */
+const addMultipleChoice = async(modal, selection) => {
+    const label = await getString('template_space_choose_several', COMPONENT);
+    const bar = document.createElement('div');
+    bar.className = 'd-flex justify-content-end border-top px-3 py-2';
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'btn btn-outline-secondary';
+    button.dataset.action = 'local_coursegen/template/space-choose-several';
+    button.textContent = label;
+    button.addEventListener(EVENT.CLICK, () => {
+        selection.settle({multiple: true});
+        modal.hide();
+    });
+    bar.append(button);
+    modal.getBody()[0].append(bar);
 };
 
 /**
@@ -302,8 +328,8 @@ const populateChooser = async({courseId, supportedTypes, modalPromise, body, sel
  * @param {Object} options
  * @param {number} options.courseId The base course.
  * @param {string[]} options.supportedTypes Module names a space can be made for.
- * @returns {Promise<{modname: string, name: string, icon: string}|null>}
- *     Null when the modal is closed without picking anything.
+ * @returns {Promise<{modname: string, name: string, icon: string}|{multiple: true}|null>}
+ *     {multiple: true} when several activities are to be offered; null when the modal is closed without a pick.
  */
 export const chooseActivityType = async({courseId, supportedTypes}) => {
     const body = createDeferred();

@@ -144,10 +144,24 @@ const openModal = async(saved, required, onSave) => {
  * @returns {Promise<void>}
  */
 export const addTeacherSpace = async(item, state, markDirty, insertSpaceRow) => {
-    setTeacherSpaceContext(state);
     const beforeEl = item.closest(Selectors.regions.gapOrAddInstance);
     const tbody = beforeEl.closest(TAG.TABLE).querySelector(TAG.TABLE_BODY);
     closeInstanceMenu(beforeEl.querySelector(Selectors.actions.instanceTrigger));
+    await openNewTeacherSpace(state, tbody, beforeEl, markDirty, insertSpaceRow);
+};
+
+/**
+ * Open the modal of a new space with several activities, and insert its row before the given element.
+ *
+ * @param {Object} state The live wizard state.
+ * @param {HTMLElement} tbody The body of the table of the section.
+ * @param {HTMLElement} beforeEl The row the new one goes before.
+ * @param {Function} markDirty Marks the template as changed.
+ * @param {Function} insertSpaceRow Inserts a space row (template_space_rows).
+ * @returns {Promise<void>}
+ */
+export const openNewTeacherSpace = async(state, tbody, beforeEl, markDirty, insertSpaceRow) => {
+    setTeacherSpaceContext(state);
     await openModal([], true, async(read) => {
         await insertSpaceRow(tbody, beforeEl, {
             name: await spaceName(read.titles),

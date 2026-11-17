@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10-wp] - 2026111138
+
+### Added
+- **A space for an activity can offer several activities, each with its instruction**  
+  The chooser of "Add space for an activity" has "Choose several activities" under the types: the admin ticks the activities the teacher can choose from in that place and writes how each one must be. When the course is created, the teacher chooses one of them and the AI creates it in that place with the instruction given for it.
+
 ## [2.0.10-wp] - 2026111137
 
 ### Changed
