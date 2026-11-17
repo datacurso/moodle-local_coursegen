@@ -72,11 +72,11 @@
                         <span class="tpl-sp-desc">{{summary}}</span>
                     </span>
                 </button>
-                <button type="button" class="btn btn-icon tpl-sp-info" aria-expanded="false"
+                <button type="button" class="tpl-sp-info" aria-expanded="false"
                         aria-controls="{{uniqid}}-{{modname}}-help" data-region="local_coursegen/template/space-picker-info"
                         title="{{#str}} informationformodule, core_course, {{title}} {{/str}}"
                         aria-label="{{#str}} informationformodule, core_course, {{title}} {{/str}}">
-                    {{#pix}} i/info, core {{/pix}}
+                    <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false"><circle cx="8" cy="8" r="7" fill="currentColor"/><path d="M8 7v4M8 4.6v.1" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg>
                 </button>
             </div>
             {{! The help is the text Moodle core gives each type, already formatted by core. }}
