@@ -308,7 +308,7 @@ const populateChooser = async({courseId, supportedTypes, modalPromise, body, sel
 const addMultipleChoice = async(modal, selection) => {
     const label = await getString('template_space_choose_several', COMPONENT);
     const bar = document.createElement('div');
-    bar.className = 'd-flex justify-content-end border-top px-3 py-2';
+    bar.className = 'modal-footer';
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'btn btn-outline-secondary';
@@ -319,7 +319,8 @@ const addMultipleChoice = async(modal, selection) => {
         modal.hide();
     });
     bar.append(button);
-    modal.getBody()[0].append(bar);
+    // At the foot of the modal, outside its body: the body is drawn again by the chooser and would lose it.
+    modal.getRoot()[0].querySelector('.modal-content').append(bar);
 };
 
 /**
