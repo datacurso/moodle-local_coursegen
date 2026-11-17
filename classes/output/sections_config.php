@@ -33,6 +33,7 @@ use local_coursegen\local\models\template_space;
 use local_coursegen\local\placeholder\activity_scanner;
 use local_coursegen\local\space\space_rules;
 use local_coursegen\local\service\template_instance_layout;
+use local_coursegen\local\service\template_section_tree;
 
 /**
  * Build the sections review straight from modinfo.
@@ -85,8 +86,13 @@ class sections_config {
 
         $sections = [];
         $sectioninfos = $modinfo->get_section_info_all();
+        $tree = template_section_tree::from_modinfo($modinfo);
         foreach ($sectioninfos as $sectioninfo) {
-            $sections[] = self::section_context($modinfo, $course, $sectioninfo, $saved);
+            $context = self::section_context($modinfo, $course, $sectioninfo, $saved);
+            if ($tree !== null) {
+                $context += self::hierarchy_context($tree, (int) $sectioninfo->section);
+            }
+            $sections[] = $context;
         }
 
         $courseid = (int) $course->id;
@@ -114,6 +120,28 @@ class sections_config {
             // lookup.
             'spacebadgerequired' => $spacebadgerequired,
             'spacebadgeoptional' => $spacebadgeoptional,
+        ];
+    }
+
+    /**
+     * Where a section hangs in a flexsections course, for the card to show it.
+     *
+     * Only a subsection says anything: a top section is drawn as it always is.
+     *
+     * @param template_section_tree $tree
+     * @param int $number The section's number.
+     * @return array
+     */
+    private static function hierarchy_context(template_section_tree $tree, int $number): array {
+        $depth = $tree->depth_of($number);
+        if ($depth === 0) {
+            return [];
+        }
+        return [
+            'isnested' => true,
+            'parentnum' => $tree->parent_of($number),
+            'depth' => $depth,
+            'indentrem' => $depth * 1.5,
         ];
     }
 

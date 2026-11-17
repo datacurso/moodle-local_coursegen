@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.13] - 2026111701
+
+### Changed
+- **The work on the spaces of the templates joins the work on units, guidelines and dates**  
+  Both lines are in this build: the spaces for an activity, the File the teacher uploads and the related fixes, together with the number of units, the institutional guidelines in template mode, the start date of the course and the other changes of 2.0.11 to 2.0.13.
+
 ## [2.0.10] - 2026111700
 
 ### Fixed
@@ -109,6 +115,88 @@ All notable changes to this project will be documented in this file. Each change
 ### Fixed
 - **The search of the chooser of a space shows its results**  
   The search found the types but failed before showing them, because the chooser had no favourite star in its items; the star is kept in the markup and hidden, so the search works.
+## [2.0.13] - 2026111404
+
+### Changed
+- **The branches of the template work and of the teacher's spaces are merged**  
+  The step of this build checks again the fields that the builds 2026110935 to 2026110948 add (the teacher's space of a file, the name the AI writes for an activity, the activity modified with AI and the activities a space offers), so a site that already ran the template builds up to 2026111403 gets them too. A course made from a template now also keeps, when it is created, the start date the teacher chose at the review whether the creation goes through the page's stream or the web service.
+
+## [2.0.13] - 2026111403
+
+### Added
+- **Hidden activities, completion tracking and unit locks the guideline asks for**  
+  The activities the AI service adds can now carry `parameters.visible` (false leaves the activity hidden) and `parameters.completion_rule` (`none`, `view`, `grade`, `submit` or `post`), and the unit sections can carry `unlock_requires_uids`. After the course is created, `guideline_activity_settings` hides the activities (`set_coursemodule_visible`) and writes the completion rule (view: automatic completion with completionview; grade: automatic completion requiring a grade, or the view when the module has no grade item; submit: the module's own completionsubmit for assignments and feedback; post: completionposts for forums), turning on course completion when a rule is applied. Then `guideline_unit_locks` restricts each locked unit with a completion availability on the previous unit's activities (the section stays visible, with its restriction shown). Activities that were not created or do not track completion are left out of the condition, and a rule a module cannot honour is skipped with a debugging message. Courses without these keys behave as before.
+- **The review step words the skipped unit lock**  
+  The new `guideline_lock_skipped` warning (a unit could not be locked because the previous one has no evaluation activity) is worded in the review step, in all languages.
+
+## [2.0.12] - 2026111403
+
+### Fixed
+- **Sections the AI service adds now keep their summary**  
+  The summary the service writes for a unit it adds (a short description taken from the syllabus) was dropped: only template sections took a summary. It is now stored in the section, with its format, for sections marked as added.
+
+## [2.0.11] - 2026111403
+
+### Added
+- **Sections the AI service adds after the template's own now hang under their parent**  
+  When the institutional guideline asks for a structure (units, subsections such as "Recursos Educativos", activities), the service appends those sections after the last section of the template. The plugin now writes their parent (flexsections) from the `parent_section` the service returned, marks them as added so they never take the look (summary, picture) of a template section with the same number, and no longer reports them as unexpected. The template's own sections are untouched.
+
+### Fixed
+- **The review step shows the sections and activities the guideline structure added**  
+  The list of activities the AI writes (left) and the structure panel (right) used to show only the template's own sections and activities. The service now sends a `template_structure` event with the sections it added (name, depth) and their activities; the page adds them to the structure grouped by section, with subsections indented under their unit, and the "N sections · M activities" counter and the completion counts include them. Added activities are labelled like the other AI-written ones. A template without added sections renders exactly as before.
+- **More warnings of the generation are worded in the review step**  
+  `guideline_structure_failed`, `guideline_units_mismatch`, `section_names_fallback` and `h5p_degraded_fallback` now show a message next to `units_count_mismatch` (new `courseai_review_warning_*` strings in all the language packs). The `units_count_mismatch` message no longer tells the teacher to adjust the removed units field of the guideline.
+
+### Removed
+- **The optional "Number of units" of an institutional guideline is gone**  
+  The guideline form no longer has the field, the list of guidelines no longer shows it, and a template run no longer takes its number of units from the guideline: the number is the one the person typed when creating the course, else the template's own. The `units` column of `local_coursegen_system_instruction` is dropped on upgrade, together with its strings in all the language packs. The number of units typed at course creation is not affected.
+
+## [2.0.10] - 2026111402
+
+### Added
+- **A page of a template can show the real schedule of the course made from it**  
+  Writing `[[coursegen:schedule]]` (or `⟦coursegen:schedule⟧`, no instruction) in the content of a Page of the template, and saving that page with the action "keep", makes the page of the new course hold a table with the real units and activities of that course instead of the marker. The table has the columns Unit, Activity (a link to the activity), Type and Available from, one row per activity in the order of the course. The units are the top-level sections except the first (in the Flexible sections format the activities of the subsections are listed under the unit they hang from; in any other format every section is a unit), and a unit with no activity keeps its row. Labels, hidden activities, activities not shown on the course page, hidden sections and the page that holds the marker are left out. "Available from" is the date of the "from" restriction of the activity, else of its section, else of the sections it hangs from, already moved to the start date of the new course (an all-of group opens at its latest date and an any-of group at its earliest); it shows a dash when no date applies. A course with no unit gets a short note. Names are escaped, the headings follow the language of the course (the one of the user who creates it when the course has none) and the marker is never left in the course. The table is written once every activity and its settings are in the course. A kept page is copied as it is and never reaches the AI writing step as a placeholder, and the template scanner accepts the marker (it is not a placeholder; with text after it, it is reported as a malformed marker). New strings `schedule_column_unit`, `schedule_column_activity`, `schedule_column_type`, `schedule_column_from` and `schedule_empty` are available in all the language packs of the plugin.
+
+## [2.0.10] - 2026111400
+
+### Added
+- **The dates of the access restrictions follow the start date of the new course**  
+  A course made from a template used to lose every restriction that depended on a date. Now each date of a section or activity restriction (opens on, closes on, in any nested all/any/not-all/not-any group) moves by the number of whole days between the start date of the new course and the start date of the template's course, so the restriction opens at the same point of the course and the distance between two dates stays the same. The operator of each condition and whether it is shown are untouched. When both courses start on the same day, or the template has no start date, the dates stay as they are; when the new course has no start date the dates are left out, as before. The date an activity must be completed by and the date criterion of the course completion are still not copied.
+- **An optional start date can be chosen in the review step**  
+  The review step ("Revisar datos del curso"), before the course is created, has a Start date field next to the name and category. Left empty, the course gets the same start date as before; filled in, the new course starts that day, in the time zone of the person who creates it, and the restrictions on dates move with it. It works in the free mode and in the template mode (`startdate`, a `Y-m-d` day, is an optional argument of `local_coursegen_create_course` and `local_coursegen_finish_template_generation`).
+- **The review step warns when the syllabus and the course do not have the same number of units**  
+  When the generation reports that the syllabus defines a different number of units than the course has, the review step shows a notice (for example "The syllabus defines 5 units but the course has 3. Adjust the units field and regenerate if needed."). It does not block the creation. `local_coursegen_get_template_course_settings` returns the worded notices as `warnings`. The new strings are available in all the language packs of the plugin.
+
+- **An institutional guideline can set the number of units of a template run**  
+  The form of a guideline has an optional "Number of units" field (1 to 50; empty means the template's own number), also shown in the list of guidelines. When a course is made from a template with units (Flexible sections format) with that guideline, the units field of the template form is prefilled with it; choosing another guideline follows it, removing the guideline puts the template's number back, and a number typed by hand is never overwritten. The server resolves the number as: the number asked for in the request, else the units of the chosen guideline, else the template's own, and it is kept between 1 and 50 as before. Templates without units and the free mode ignore it. `local_coursegen_system_instruction` gets a nullable `units` column (upgrade step included).
+
+### Fixed
+- **The section names the AI writes are the names of the sections of the new course**  
+  In a course made from a template the name that the generation gives a section is applied to the section with the same number, after the look and the options of the template are applied, and never touches the number, the section it comes from or the unit it hangs under. A name that is empty or only spaces is ignored, and a name longer than 255 characters is cut instead of making the creation fail.
+
+## [2.0.10] - 2026111102
+
+### Added
+- **The institutional guidelines ("Directrices") can be used when a course is made from a template**  
+  The input bar of the template form has a Directrices button, next to the syllabus one, that opens the same searchable list of guidelines as the free mode. One guideline can be chosen per course (choosing another replaces it), it shows as a chip that can be previewed or removed, and the generation is given its text as institutional guidelines, exactly as in the free mode. Only the id of the guideline travels from the browser: the text is read on the server, and a guideline that no longer exists is ignored. Nothing changes when no guideline is chosen, and the id is kept with the session as in the free mode.
+
+## [2.0.10] - 2026111101
+
+### Added
+- **A template made with the Flexible sections format keeps its units and the subsections inside them**  
+  The sections and subsections of the template course show up indented in the template settings, in the list the professor reads and in the preview of the course, and changing what a unit does (keep it or let the AI modify it) changes it for the subsections inside it. The course that is created has the same units with the same subsections in the same order, each with the look, order and settings of its template section. Courses in any other format are created exactly as before.
+- **A Flexible sections template can hold more or fewer units than the template course has**  
+  When a number of units is asked for, the last unit of the template (with its subsections and the activities the AI writes in them) is copied as many times as needed, right after the last unit and before the sections that close the course, or whole units are dropped from the end. The structure is sent to the AI service already resized, since the service never adds or removes sections. The activities the template keeps as they are stay only in their own section. The professor chooses the number in a "Number of units" field above the structure, which only shows for a template with units and starts at the template's own count (a different number is sent as the optional `units` argument of `local_coursegen_start_template_generation`; the count of the template is not sent at all). The number is kept between 1 and 50 on the server too, and the activities of every unit that is dropped are dropped with it, also when no section closes the course.
+
+### Fixed
+- **The "Number of units" field no longer shows, empty, for a template without units, and the top bar counts follow the number of units**  
+  A template made with a format other than Flexible sections (topics, grid) showed the field with nothing in it, because its flex layout overrode the hidden state; it now stays hidden unless the template has units. The sections and activities in the top bar now change with the number of units asked: more units add the last unit with its subsections and the activities the AI writes in it, fewer units remove whole units with everything inside them.
+
+## [2.0.10] - 2026111100
+
+### Added
+- **An H5P template lists the pictures its package holds**  
+  When the template course has an H5P activity set as a template, the export now tells the AI service which pictures that activity's own package keeps (their path, type and size), so an interactive book can use them. The pictures themselves are not sent: the activity of the new course is built from the template's own package, which already holds them. A package that cannot be read exports as before.
 
 ## [2.0.10] - 2026110957
 

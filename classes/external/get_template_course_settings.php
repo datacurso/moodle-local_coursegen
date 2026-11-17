@@ -61,7 +61,7 @@ class get_template_course_settings extends external_api {
      * The proposed course settings of a finished generation, and the categories to choose from.
      *
      * @param int $recordid Session record ID.
-     * @return array Course settings (fullname, shortname, category, categories).
+     * @return array Course settings (fullname, shortname, category, categories, warnings).
      */
     public static function execute($recordid) {
         global $USER;
@@ -80,7 +80,9 @@ class get_template_course_settings extends external_api {
         $settings = create_course_service::get_course_settings($session, $result);
         $categories = course_review_service::available_categories();
 
-        return $settings + ['categories' => $categories];
+        $warnings = course_review_service::warning_messages((array) ($result['generation_warnings'] ?? []));
+
+        return $settings + ['categories' => $categories, 'warnings' => $warnings];
     }
 
     /**
@@ -99,6 +101,11 @@ class get_template_course_settings extends external_api {
                     'pathname' => new external_value(PARAM_RAW, 'Category path name'),
                 ]),
                 'List of available categories with full paths',
+                VALUE_OPTIONAL
+            ),
+            'warnings' => new external_multiple_structure(
+                new external_value(PARAM_TEXT, 'A worded warning of the generation'),
+                'Non-blocking warnings of the generation, to show in the review',
                 VALUE_OPTIONAL
             ),
         ]);

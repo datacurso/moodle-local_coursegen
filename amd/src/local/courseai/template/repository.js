@@ -22,6 +22,7 @@
  */
 
 import {call as fetchMany} from 'core/ajax';
+import {buildStartArgs} from 'local_coursegen/local/courseai/template/start_args';
 
 /**
  * Fetch a template's guided-form structure: its sections and activities, the
@@ -44,26 +45,22 @@ export const getTemplateStructure = (templateId) => fetchMany([{
  * @param {number} draftItemId Draft area holding the syllabus, 0 when none.
  * @param {string} lang Language the professor picked for the course, empty for the template's own.
  * @param {boolean} withImages Whether the professor asked for the images to be generated.
+ * @param {number|null} units Number of units wanted, null to keep the template's own.
+ * @param {number} guidelineId Institutional guideline id, 0 for none (only the id travels, the server reads the text).
  * @param {Object[]} spaceFiles The file of each space: {cmid, draftitemid}.
  * @param {Object[]} spaceActivities The activity the teacher brings to each space: {uid, cmid}.
  * @param {Object[]} spaceChoices The activity the teacher adds in each space, which the AI writes: {uid, modname, instruction}.
  * @returns {Promise<Object>} {threadid, sessionid, streamurl}
  */
 export const startTemplateGeneration = (
-    templateId, prompt, draftItemId, lang, withImages, spaceFiles, spaceActivities, spaceChoices
-) => fetchMany([{
-    methodname: 'local_coursegen_start_template_generation',
-    args: {
-        templateid: templateId,
-        prompt: prompt,
-        draftitemid: draftItemId,
-        lang: lang || '',
-        withimages: Boolean(withImages),
-        spacefiles: spaceFiles || [],
-        spaceactivities: spaceActivities || [],
-        spacechoices: spaceChoices || [],
-    },
-}])[0];
+    templateId, prompt, draftItemId, lang, withImages, units = null, guidelineId = 0,
+    spaceFiles = [], spaceActivities = [], spaceChoices = []
+) => {
+    const args = buildStartArgs(
+        templateId, prompt, draftItemId, lang, withImages, units, guidelineId, spaceFiles, spaceActivities, spaceChoices
+    );
+    return fetchMany([{methodname: 'local_coursegen_start_template_generation', args}])[0];
+};
 
 /**
  * Answer the review of the generated course that a paused run is waiting on.
@@ -100,7 +97,7 @@ export const getTemplateCourseSettings = (sessionId) => fetchMany([{
  * teacher has reviewed its name.
  *
  * @param {number} sessionId
- * @param {Object} overrides What the teacher chose at the review: {fullname, shortname, category}, each optional.
+ * @param {Object} overrides What the teacher chose at the review: {fullname, shortname, category, startdate}, each optional.
  * @returns {Promise<Object>} {success, courseid, fullname, shortname, message, courseurl}
  */
 export const finishTemplateGeneration = (sessionId, overrides) => fetchMany([{
@@ -110,6 +107,7 @@ export const finishTemplateGeneration = (sessionId, overrides) => fetchMany([{
         fullname: overrides.fullname || '',
         shortname: overrides.shortname || '',
         category: overrides.category || 0,
+        startdate: overrides.startdate || '',
     },
 }])[0];
 

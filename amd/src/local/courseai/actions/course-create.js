@@ -21,6 +21,7 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+import {showReviewWarnings, validStartDate} from 'local_coursegen/local/courseai/actions/review-warnings';
 import {creationPercent} from 'local_coursegen/local/courseai/template/creation_progress';
 
 /**
@@ -39,6 +40,8 @@ export const showCourseReviewPanel = async(state, elements, texts, getCourseSett
     const fullnameInput = document.getElementById('reviewFullname');
     const shortnameInput = document.getElementById('reviewShortname');
     const categorySelect = document.getElementById('reviewCategory');
+    const startdateInput = document.getElementById('reviewStartdate');
+    const warningsList = document.getElementById('reviewWarnings');
     const confirmBtn = document.getElementById('reviewConfirmBtn');
     const cancelBtn = document.getElementById('reviewCancelBtn');
 
@@ -55,6 +58,10 @@ export const showCourseReviewPanel = async(state, elements, texts, getCourseSett
 
     fullnameInput.value = settingsData?.fullname || state.courseTitle || '';
     shortnameInput.value = settingsData?.shortname || '';
+    if (startdateInput) {
+        startdateInput.value = '';
+    }
+    showReviewWarnings(warningsList, settingsData?.warnings);
 
     const defaultCategoryId = settingsData?.category || 0;
     const categories = settingsData?.categories || [];
@@ -115,6 +122,8 @@ export const showCourseReviewPanel = async(state, elements, texts, getCourseSett
             if (shortname) { overrides.shortname = shortname; }
             const category = parseInt(categorySelect.value, 10);
             if (category > 0) { overrides.category = category; }
+            const startdate = validStartDate(startdateInput ? startdateInput.value : '');
+            if (startdate) { overrides.startdate = startdate; }
             resolve(overrides);
         };
 
@@ -195,6 +204,7 @@ export const createCourseFromSession = async(
             if (overrides.fullname) { payload.fullname = overrides.fullname; }
             if (overrides.shortname) { payload.shortname = overrides.shortname; }
             if (overrides.category) { payload.category = overrides.category; }
+            if (overrides.startdate) { payload.startdate = overrides.startdate; }
         }
         // The creation may take minutes; what is not allowed is silence, so the clock starts again at each news.
         let idleTimer = null;

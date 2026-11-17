@@ -111,4 +111,53 @@ final class template_export_sections_test extends \advanced_testcase {
         $this->assertNotNull($found);
         $this->assertSame('keep', $found['template_behavior']['behavior']);
     }
+
+    /**
+     * A flexsections course whose units hold subsections.
+     *
+     * @return \stdClass
+     */
+    private function create_flexsections_course(): \stdClass {
+        $course = $this->getDataGenerator()->create_course(['format' => 'flexsections', 'numsections' => 0]);
+        $format = course_get_format($course);
+        // Section number => parent number: 1 and 2 are units, 3 and 4 are children of 2 and 5 of 4.
+        $parents = [1 => 0, 2 => 0, 3 => 2, 4 => 2, 5 => 4];
+        foreach ($parents as $number => $parent) {
+            $section = course_create_section($course, $number);
+            $format->update_section_format_options(['id' => $section->id, 'parent' => $parent]);
+        }
+        rebuild_course_cache($course->id, true);
+        return get_course($course->id);
+    }
+
+    /**
+     * A flexsections course exports the parent and the depth of every section.
+     */
+    public function test_flexsections_sections_carry_their_parent_and_depth(): void {
+        $this->resetAfterTest(true);
+        $this->setAdminUser();
+        $course = $this->create_flexsections_course();
+
+        $sections = template_export_sections::sections_info($course, get_fast_modinfo($course), []);
+
+        $this->assertSame([0, 0, 0, 2, 2, 4], array_column($sections, 'parent_section'));
+        $this->assertSame([0, 0, 0, 1, 1, 2], array_column($sections, 'depth'));
+        $this->assertSame(2, (int) $sections[3]['format_options']['parent']);
+    }
+
+    /**
+     * A course in any other format exports its sections exactly as before.
+     */
+    public function test_other_formats_do_not_export_a_parent_or_depth(): void {
+        $this->resetAfterTest(true);
+        $this->setAdminUser();
+
+        $course = $this->getDataGenerator()->create_course(['format' => 'topics', 'numsections' => 2]);
+        $sections = template_export_sections::sections_info($course, get_fast_modinfo($course), []);
+
+        foreach ($sections as $section) {
+            $this->assertArrayNotHasKey('parent_section', $section);
+            $this->assertArrayNotHasKey('depth', $section);
+        }
+    }
 }

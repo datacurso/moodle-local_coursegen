@@ -65,14 +65,16 @@ export async function getCourseSettings(recordid) {
  *     fullname?: string,
  *     shortname?: string,
  *     category?: number,
+ *     startdate?: string,
  * }} payload - The payload to create the course
  * - recordid: The planning session record ID in local_coursegen_course_sessions
  * - fullname: Optional override for course fullname
  * - shortname: Optional override for course shortname
  * - category: Optional override for course category ID
+ * - startdate: Optional course start day (Y-m-d)
  * @return {Promise<Object>} response
  */
-export async function createCourse({recordid, fullname, shortname, category}) {
+export async function createCourse({recordid, fullname, shortname, category, startdate}) {
     const args = {
         recordid: Number(recordid) || 0,
     };
@@ -84,6 +86,9 @@ export async function createCourse({recordid, fullname, shortname, category}) {
     }
     if (typeof category === 'number' && category > 0) {
         args.category = category;
+    }
+    if (typeof startdate === 'string' && startdate.trim()) {
+        args.startdate = startdate.trim();
     }
     return ajax.call([
         {

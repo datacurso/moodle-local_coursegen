@@ -2688,6 +2688,15 @@ body.cg-generation-paused .prv-spin {
   background: var(--muted);
   opacity: .9;
 }
+/* Subsections of a flexsections course sit under their unit, one step in per level. */
+#tplModeStructure .course-section.cg-section-depth-1 { margin-left: 1.5rem; }
+#tplModeStructure .course-section.cg-section-depth-2 { margin-left: 3rem; }
+#tplModeStructure .course-section.cg-section-depth-3 { margin-left: 4.5rem; }
+
+/* A subsection of the guideline structure hangs under its unit in the list of activities the AI writes. */
+.courseai-checklist-item.cg-checklist-depth-1 { margin-left: 1.25rem; }
+.courseai-checklist-item.cg-checklist-depth-2 { margin-left: 2.5rem; }
+.courseai-checklist-item.cg-checklist-depth-3 { margin-left: 3.75rem; }
 #tplModeStructure .cg-tpl-locked-badge { font-weight: 500; }
 #tplModeStructure .cg-tpl-locked-note { font-size: 11px; }
 

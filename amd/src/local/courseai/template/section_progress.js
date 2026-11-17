@@ -66,6 +66,20 @@ const getLabels = () => {
 const textOf = (node) => (node ? node.textContent.trim() : '');
 
 /**
+ * How deep a section hangs under another one, from the class the structure on the right gives it (0 for a top section).
+ *
+ * @param {Element} section
+ * @returns {number}
+ */
+const depthOf = (section) => {
+    const match = /cg-section-depth-(\d+)/.exec(section.className || '');
+    if (!match) {
+        return 0;
+    }
+    return Number(match[1]);
+};
+
+/**
  * The sections of the structure on the right with the activities that are going to be written.
  *
  * @returns {Array<Object>}
@@ -87,7 +101,13 @@ const readStructure = () => {
             });
         }
         if (activities.length > 0) {
-            found.push({name: textOf(section.querySelector('.sectionname span')), activities, item: null, detail: null});
+            found.push({
+                name: textOf(section.querySelector('.sectionname span')),
+                depth: depthOf(section),
+                activities,
+                item: null,
+                detail: null,
+            });
         }
     }
     return found;
@@ -102,6 +122,9 @@ const readStructure = () => {
 const buildItem = (section) => {
     const item = document.createElement('li');
     item.className = 'courseai-checklist-item is-loading';
+    if (section.depth > 0) {
+        item.classList.add(`cg-checklist-depth-${Math.min(section.depth, 3)}`);
+    }
     item.setAttribute('data-remaining', String(section.activities.length));
     item.innerHTML = '<div class="courseai-checklist-head">' + SPINNER
         + '<span class="courseai-checklist-name"></span></div>'

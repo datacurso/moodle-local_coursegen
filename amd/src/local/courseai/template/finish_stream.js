@@ -35,13 +35,13 @@ import {ATTEMPTS, countdown, delayFor} from 'local_coursegen/local/courseai/temp
  *
  * @param {string} root Root of the site.
  * @param {number} sessionId
- * @param {Object} overrides {fullname, shortname, category}, each optional.
+ * @param {Object} overrides {fullname, shortname, category, startdate}, each optional.
  * @returns {string}
  */
 export const streamUrl = (root, sessionId, overrides) => {
     const url = new URL(root + '/local/coursegen/finish_template.php', window.location.href);
     url.searchParams.set('sessionid', sessionId);
-    ['fullname', 'shortname', 'category'].forEach((key) => {
+    ['fullname', 'shortname', 'category', 'startdate'].forEach((key) => {
         if (overrides && overrides[key]) {
             url.searchParams.set(key, overrides[key]);
         }
@@ -115,7 +115,7 @@ const describeWait = async(attempt, seconds) => {
  *
  * @param {string} root Root of the site.
  * @param {number} sessionId
- * @param {Object} overrides {fullname, shortname, category}, each optional.
+ * @param {Object} overrides {fullname, shortname, category, startdate}, each optional.
  * @param {Function} [onProgress] Called with {step, done, total, message}.
  * @param {Object} [options] Replaced in tests.
  * @param {Function} [options.open] One opening of the stream.
