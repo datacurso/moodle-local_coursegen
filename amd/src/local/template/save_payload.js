@@ -25,7 +25,6 @@
  */
 
 import {collectVirtualRowsForSection} from 'local_coursegen/local/template/template_instance_rows';
-import {instructionOf, TEMPLATE_BEHAVIOR} from 'local_coursegen/local/template/section_instruction';
 import {resetSectionsDirtyState} from 'local_coursegen/local/template/sections_events';
 import * as Repository from 'local_coursegen/local/template/repository';
 import Notification from 'core/notification';
@@ -131,19 +130,15 @@ const buildActivityPayloads = (state, activities) => {
  * @param {Object} state The live wizard state from init.js.
  * @param {HTMLElement} root The wizard root element.
  * @param {Object} section A section of the loaded course structure.
- * @returns {Promise<Object>}
+ * @returns {Object}
  */
-const buildSectionPayload = async(state, root, section) => {
+const buildSectionPayload = (state, root, section) => {
     const virtualRows = collectSectionVirtualRows(root, section.id);
     const activities = buildActivityPayloads(state, section.activities);
-    const behavior = state.sectionBehavior[section.id];
-    // A template section brings its instruction and the draft area of its files.
-    const instruction = behavior === TEMPLATE_BEHAVIOR ? await instructionOf(root, section.id) : {};
     return {
         sectionid: section.id,
         sectionnum: section.num,
-        behavior,
-        ...instruction,
+        behavior: state.sectionBehavior[section.id],
         instances: virtualRows.instances,
         spaces: virtualRows.spaces,
         activities,
@@ -155,13 +150,12 @@ const buildSectionPayload = async(state, root, section) => {
  *
  * @param {Object} state The live wizard state from init.js.
  * @param {HTMLElement} root The wizard root element.
- * @returns {Promise<Array>}
+ * @returns {Array}
  */
-const buildSections = async(state, root) => {
+const buildSections = (state, root) => {
     const sections = [];
     for (const section of state.courseStructure) {
-        // eslint-disable-next-line no-await-in-loop
-        const payload = await buildSectionPayload(state, root, section);
+        const payload = buildSectionPayload(state, root, section);
         sections.push(payload);
     }
     return sections;
@@ -190,7 +184,7 @@ export const saveTemplate = async(state, root) => {
         const descVal = descField.value || state.templateDesc;
         state.templateName = nameVal;
         state.templateDesc = descVal;
-        const sections = await buildSections(state, root);
+        const sections = buildSections(state, root);
         await Repository.saveTemplate({
             id: state.templateId, name: nameVal,
             description: descVal, courseid: state.selectedCourseId,

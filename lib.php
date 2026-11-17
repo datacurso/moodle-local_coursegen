@@ -52,11 +52,6 @@ function local_coursegen_pluginfile(
         return \local_coursegen\local\service\generated_file_server::serve($context, $args, $forcedownload, $options);
     }
 
-    // The pictures and files of a template section's instruction, shown to whoever configures templates.
-    if ($filearea === \local_coursegen\local\models\template_section::INSTRUCTION_FILEAREA) {
-        return local_coursegen_serve_section_instruction($context, $args, $forcedownload, $options);
-    }
-
     // Check the contextlevel is as expected - if your plugin is a block, this becomes CONTEXT_BLOCK, etc.
     if ($context->contextlevel != CONTEXT_COURSE) {
         return false;
@@ -114,42 +109,4 @@ function local_coursegen_user_preferences() {
             'permissioncallback' => [\core\user::class, 'is_current_user'],
         ],
     ];
-}
-
-
-/**
- * Serve a file of a template section's instruction.
- *
- * @param context $context
- * @param array $args [itemid, path..., filename]
- * @param bool $forcedownload
- * @param array $options
- * @return bool False when the file is not there or the user may not see it.
- */
-function local_coursegen_serve_section_instruction($context, array $args, bool $forcedownload, array $options) {
-    if ($context->contextlevel != CONTEXT_SYSTEM) {
-        return false;
-    }
-    $allowed = has_any_capability(
-        ['local/coursegen:viewtemplates', 'local/coursegen:edittemplates', 'local/coursegen:createtemplates'],
-        $context
-    );
-    if (!$allowed) {
-        return false;
-    }
-    $itemid = (int) array_shift($args);
-    $filename = array_pop($args);
-    $filepath = $args ? '/' . implode('/', $args) . '/' : '/';
-    $file = get_file_storage()->get_file(
-        $context->id,
-        'local_coursegen',
-        \local_coursegen\local\models\template_section::INSTRUCTION_FILEAREA,
-        $itemid,
-        $filepath,
-        $filename
-    );
-    if (!$file) {
-        return false;
-    }
-    send_stored_file($file, 0, 0, $forcedownload, $options);
 }

@@ -65,41 +65,10 @@ class template_persistence_service {
         $sec->set('sectionnum', $sectiondata['sectionnum']);
         $sec->set('behavior', $sectiondata['behavior']);
         $sec->create();
-        if ($sectiondata['behavior'] === template_section::BEHAVIOR_TEMPLATE) {
-            self::save_instruction($sec, $sectiondata);
-        }
 
         self::save_activities($templateid, $sectiondata['sectionid'], $sectiondata['activities']);
         self::save_instances($templateid, $sectiondata['sectionid'], $sectiondata['instances']);
         self::save_spaces($templateid, $sectiondata['sectionid'], $sectiondata['spaces']);
-    }
-
-    /**
-     * Keep a template section's instruction, with the files of its draft area under the new record.
-     *
-     * The records are written again on every save, so the files are saved again too, from the draft area the
-     * editor was loaded with.
-     *
-     * @param template_section $section The record just created.
-     * @param array $sectiondata
-     */
-    private static function save_instruction(template_section $section, array $sectiondata): void {
-        $text = (string) ($sectiondata['instruction'] ?? '');
-        $draftid = (int) ($sectiondata['instructiondraftid'] ?? 0);
-        if ($draftid > 0) {
-            $text = file_save_draft_area_files(
-                $draftid,
-                \context_system::instance()->id,
-                'local_coursegen',
-                template_section::INSTRUCTION_FILEAREA,
-                (int) $section->get('id'),
-                \local_coursegen\form\section_instruction_form::editor_options(),
-                $text
-            );
-        }
-        $section->set('instruction', $text);
-        $section->set('instructionformat', (int) ($sectiondata['instructionformat'] ?? FORMAT_HTML));
-        $section->update();
     }
 
     /**
