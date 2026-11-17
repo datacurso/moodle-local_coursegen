@@ -1253,11 +1253,6 @@ $string['courseai_template_progress_short'] = '{$a->done}/{$a->total}';
 $string['courseai_topbar_activities'] = 'Activities';
 $string['courseai_topbar_activities_toggle'] = 'Show the activities the AI writes';
 $string['courseai_topbar_activities_panel'] = 'Activities the AI writes';
-$string['schedule_column_unit'] = 'Unit';
-$string['schedule_column_activity'] = 'Activity';
-$string['schedule_column_type'] = 'Type';
-$string['schedule_column_from'] = 'Available from';
-$string['schedule_empty'] = 'The schedule will list the activities of the course once it has some.';
 
 $string['courseai_course_writing'] = 'Writing the course in Moodle…';
 $string['courseai_course_writing_subtitle'] = 'Preparing the course…';

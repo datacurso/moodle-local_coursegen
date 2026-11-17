@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.13] - 2026111705
+
+### Removed
+- **The schedule marker of a template page**  
+  The marker that replaced itself with a table of the activities of the course once it was created is gone, with its texts and tests: it served a single kind of template and does not belong in the generic generator.
+
 ## [2.0.13] - 2026111704
 
 ### Changed
