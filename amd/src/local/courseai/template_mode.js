@@ -29,7 +29,7 @@
 import Notification from 'core/notification';
 import {getString, getStrings} from 'core/str';
 import {getTemplateStructure} from './template/repository';
-import {runGeneration} from './template/run_generation';
+import {reopenGeneration, runGeneration} from './template/run_generation';
 import {wireInputBar} from './template/input_bar';
 import {refreshPreviewLinks} from './template/preview';
 import {initTopBar} from './template/top_bar';
@@ -97,8 +97,9 @@ const updateStats = (tplState, statsTemplate) => {
  *
  * @param {Object} state
  * @param {Object} host Holds the page's actions once they exist.
+ * @param {Object|null} reopened A run of a template that did not finish, to open where it was.
  */
-export const wireTemplateMode = (state, host) => {
+export const wireTemplateMode = (state, host, reopened = null) => {
     // Free/Template mode switching is plain <a href> navigation
     // (aicoursecreation.php / ?mode=template), server-rendered from the
     // mode param — no JS involved.
@@ -237,6 +238,30 @@ export const wireTemplateMode = (state, host) => {
             }
         });
     }
+
+    if (reopened?.resumable && tplSelect) {
+        reopenRun(reopened, {tplState, tplSelect, container, state, requestTracker, genBtn, host});
+    }
+};
+
+/**
+ * Open a run that did not finish: its template picked, its structure shown, and the run paused where it was.
+ *
+ * @param {Object} reopened {id, templateid, streamurl, context}
+ * @param {Object} page {tplState, tplSelect, container, state, requestTracker, genBtn, host}
+ * @returns {Promise<void>}
+ */
+const reopenRun = async(reopened, page) => {
+    page.tplSelect.value = String(reopened.templateid);
+    document.getElementById('courseaiWorkspace')?.classList.add('tpl-active');
+    page.requestTracker.id += 1;
+    await loadTemplateStructure(
+        reopened.templateid, page.tplState, page.container, page.state, page.requestTracker, page.requestTracker.id
+    );
+    if (!page.state.templateStructureLoaded) {
+        return;
+    }
+    await reopenGeneration(page.tplState, page.genBtn, page.state, page.host, reopened);
 };
 
 /**

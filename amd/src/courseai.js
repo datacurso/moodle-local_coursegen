@@ -135,7 +135,7 @@ export const init = async(params) => {
         // The page's actions do not exist yet; the template's finish step
         // reads them from here once the generation is over.
         const templateHost = {actions: null};
-        wireTemplateMode(state, templateHost);
+        wireTemplateMode(state, templateHost, params?.templatesession || null);
 
         const texts = await loadCourseaiStrings();
         const elements = getCourseaiElements();

@@ -364,14 +364,20 @@ const settleQuestions = async(data, sessionId) => {
  * @param {number} sessionId Session the review answers belong to.
  * @param {Object} context What the run is generated with, for the opening message.
  * @param {boolean} viewOpened Whether beginGenerationView already put the page in its generating state.
+ * @param {boolean} startPaused Whether the run opens stopped, waiting for Resume: a run reopened after the page left it.
  * @returns {Promise<Object>} The built course, as buildCourse resolved it.
  */
-export const runGenerationStream = async(streamUrl, buildCourse, sessionId, context, viewOpened = false) => {
+export const runGenerationStream = async(streamUrl, buildCourse, sessionId, context, viewOpened = false,
+        startPaused = false) => {
     if (!viewOpened) {
         await beginGenerationView(context);
     }
 
     const control = ensureControl();
+    if (startPaused) {
+        // The order is taken before the stream opens, so the stream never opens until the person resumes.
+        control.requestStop();
+    }
     try {
         return await runPasses(streamUrl, buildCourse, sessionId, control);
     } finally {
