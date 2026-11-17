@@ -196,6 +196,17 @@ const subtreeEnd = (sections, start) => {
     return end;
 };
 
+/** The actions of a template activity that is copied into the course as it is, without the AI. */
+const COPIED_ACTIONS = ['keep', 'reference'];
+
+/**
+ * Whether a row is copied into the course as it is.
+ *
+ * @param {Object} activity
+ * @returns {boolean}
+ */
+const isCopied = (activity) => !activity.isinstance && COPIED_ACTIONS.includes(activity.action);
+
 /**
  * How many sections and activities the course will have for the number of units asked.
  *
@@ -204,13 +215,13 @@ const subtreeEnd = (sections, start) => {
  * everything inside them.
  *
  * @param {Object} state
- * @returns {{sections: number, activities: number}}
+ * @returns {{sections: number, activities: number, copied: number}} copied: the activities copied as they are.
  */
 export const countsForUnits = (state) => {
     const sections = state.sections;
     const total = (list, only) => list.reduce((sum, section) => sum + section.activities.filter(only).length, 0);
     const any = () => true;
-    const counts = {sections: sections.length, activities: total(sections, any)};
+    const counts = {sections: sections.length, activities: total(sections, any), copied: total(sections, isCopied)};
 
     const units = [];
     sections.forEach((section, index) => {
@@ -227,6 +238,7 @@ export const countsForUnits = (state) => {
             const dropped = sections.slice(start, subtreeEnd(sections, start));
             counts.sections -= dropped.length;
             counts.activities -= total(dropped, any);
+            counts.copied -= total(dropped, isCopied);
         });
         return counts;
     }
