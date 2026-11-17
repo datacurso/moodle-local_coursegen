@@ -33,6 +33,7 @@
 
 import Templates from 'core/templates';
 import {getString} from 'core/str';
+import {notifyStructure} from 'local_coursegen/local/courseai/template/added_structure';
 import {progressRatio} from 'local_coursegen/local/courseai/template/progress_ratio';
 import {closeActivitiesPanel} from 'local_coursegen/local/courseai/template/top_bar';
 import {
@@ -164,6 +165,17 @@ export const resetChecklist = () => {
             checklist.classList.add('hidden');
         }
     });
+};
+
+/**
+ * Draw the sections and activities the service added, before the list is built from the structure on the right.
+ *
+ * It goes through the same queue as the list, so the list never reads the structure before it is complete.
+ *
+ * @param {Object} data A template_structure event.
+ */
+export const showAddedStructure = (data) => {
+    enqueue(() => notifyStructure(data));
 };
 
 /**

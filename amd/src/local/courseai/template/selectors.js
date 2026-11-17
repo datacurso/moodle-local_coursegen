@@ -29,12 +29,14 @@
 export default {
     actions: {
         toggleSection: '[data-action="local_coursegen/template/toggle-section"]',
+        unitsInput: '[data-action="local_coursegen/template/units-input"]',
     },
     classes: {
         generating: 'cg-generating',
         busy: 'is-busy',
     },
     regions: {
+        unitsField: '[data-region="local_coursegen/template/units"]',
         generationNotices: '[data-region="local_coursegen/template/generation-notices"]',
     },
 };

@@ -40,12 +40,15 @@ class template_keep_copier {
      * @param int $targetcourseid
      * @param array $createdcmids Filled with base course cmid => cmid of its copy in the
      *     target course, for every activity that was copied.
+     * @param template_section_map|null $sectionmap Where each section of the template went in the new course;
+     *     null when the sections are the template's own.
      * @return array Names of the activities that could not be copied.
      */
     public static function copy_into(
         int $templateid,
         int $targetcourseid,
-        array &$createdcmids = []
+        array &$createdcmids = [],
+        ?template_section_map $sectionmap = null
     ): array {
         global $CFG;
         require_once($CFG->dirroot . '/course/lib.php');
@@ -70,7 +73,14 @@ class template_keep_copier {
         $keepcmids = self::kept_cmids($templateid, $modinfo);
         $targetsectionids = self::target_section_ids($targetcourse);
 
-        $failures = self::copy_kept_activities($keepcmids, $modinfo, $targetcourse, $targetsectionids, $createdcmids);
+        $failures = self::copy_kept_activities(
+            $keepcmids,
+            $modinfo,
+            $targetcourse,
+            $targetsectionids,
+            $createdcmids,
+            $sectionmap
+        );
 
         rebuild_course_cache($targetcourseid, true);
         return $failures;
@@ -128,6 +138,7 @@ class template_keep_copier {
      * @param \stdClass $targetcourse
      * @param array $targetsectionids Section number => section id, from target_section_ids().
      * @param array $createdcmids Filled with base course cmid => cmid of its copy.
+     * @param template_section_map|null $sectionmap Where each template section went; null for the same number.
      * @return array Names of the activities that could not be copied.
      */
     private static function copy_kept_activities(
@@ -135,7 +146,8 @@ class template_keep_copier {
         $modinfo,
         $targetcourse,
         array $targetsectionids,
-        array &$createdcmids
+        array &$createdcmids,
+        ?template_section_map $sectionmap = null
     ): array {
         $cms = $modinfo->get_cms();
 
@@ -144,6 +156,11 @@ class template_keep_copier {
             $cm = $cms[$cmid];
             $sectionnumber = $cm->sectionnum;
             $sectionnumber = (int) $sectionnumber;
+            if ($sectionmap !== null) {
+                // A section that was resized away has no place for its activities, and the clone of one has
+                // none either: a kept activity is copied once, into the section that is the template's.
+                $sectionnumber = $sectionmap->target_of_source($sectionnumber) ?? -1;
+            }
             $sectionid = $targetsectionids[$sectionnumber] ?? null;
             $createdcmid = null;
             if ($sectionid !== null) {

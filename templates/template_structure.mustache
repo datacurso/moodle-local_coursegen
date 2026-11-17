@@ -38,7 +38,7 @@
     the same way.
 
     Context variables required for this template:
-    * sections array - index int, name string, locked bool, collapsed bool, activitiescount int, activities array
+    * sections array - index int, depth int (levels under the top, only for a flexsections course), name string, locked bool, collapsed bool, activitiescount int, activities array
         * activities[].name string, modname string (may be empty),
           purpose string, iconhtml string (raw, may be empty), locked bool,
           isinstance bool, aigenerated bool (shows the "AI will generate it"
@@ -72,7 +72,7 @@
 }}
 <ul class="course-content course-section-list list-unstyled m-0" data-region="template-section-list">
 {{#sections}}
-  <li class="section course-section main clearfix{{#locked}} is-locked{{/locked}}" data-section-index="{{index}}">
+  <li class="section course-section main clearfix{{#locked}} is-locked{{/locked}}{{#depth}} cg-section-depth cg-section-depth-{{depth}}{{/depth}}" data-section-index="{{index}}">
     <div class="section-item">
       <div class="course-section-header d-flex align-items-center position-relative">
         <a role="button" href="#tplSectionCollapse{{index}}" aria-expanded="{{#collapsed}}false{{/collapsed}}{{^collapsed}}true{{/collapsed}}"

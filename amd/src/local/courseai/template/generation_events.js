@@ -30,6 +30,7 @@ import {
     addActivity,
     closeActivity,
     openChecklist,
+    showAddedStructure,
     showRepeatProgress,
 } from 'local_coursegen/local/courseai/template/generation_checklist';
 import {showWorkingIndicator} from 'local_coursegen/local/courseai/ui/feedback-progress';
@@ -121,6 +122,11 @@ const EVENT_HANDLERS = {
     },
     template_image: (data) => {
         showPicture(data).then((text) => text && showWorkingIndicator({}, text)).catch(() => undefined);
+        return '';
+    },
+    // What the guideline added after the template's own sections joins the structure on the right, and so the list.
+    template_structure: (data) => {
+        showAddedStructure(data);
         return '';
     },
     review_needed: () => 'review',
