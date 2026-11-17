@@ -224,8 +224,9 @@ export const addSpace = async(item, state, markDirty) => {
         return;
     }
     const onSave = saveNewSpace.bind(null, tbody, beforeEl, picked, markDirty);
-    // What is added here is an activity the AI creates: its name (optional) and the instructions for the AI.
-    openSpaceModal({subject: picked.name, required: true, instruction: '', onSave, mode: 'ai', aiOnly: true});
+    // The AI creates what is added here; a File can instead be one the teacher uploads in this place.
+    const canupload = picked.modname === 'resource';
+    openSpaceModal({subject: picked.name, required: true, instruction: '', onSave, mode: 'ai', aiOnly: !canupload});
 };
 
 /**

@@ -102,6 +102,9 @@ export const applyStructureResponse = (state, data) => {
             spacekind: activity.spacekind || (activity.isspace ? 'file' : ''),
             spaceinstruction: activity.spaceinstruction || '',
             spacerequired: !!activity.spacerequired,
+            // The course module id the file of the space goes under: the resource's own, or the placeholder of a place
+            // where the teacher uploads a file of their own.
+            spacecmid: parseInt(activity.spacecmid || activity.id, 10) || 0,
             spacefile: null,
             spaceactivity: null,
             // "choice": a place where the teacher adds one of the activities the admin allowed; spaceoptions lists them
@@ -283,7 +286,7 @@ export const hasMissingRequiredSpace = (state) => allActivities(state)
  */
 export const pickedSpaceFiles = (state) => allActivities(state)
     .filter((activity) => activity.isspace && activity.spacekind !== 'activity' && activity.spacefile)
-    .map((activity) => ({cmid: parseInt(activity.id, 10), draftitemid: activity.spacefile.draftitemid}));
+    .map((activity) => ({cmid: activity.spacecmid, draftitemid: activity.spacefile.draftitemid}));
 
 /**
  * The activities chosen for the spaces, as the generation start takes them.

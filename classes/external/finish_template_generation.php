@@ -51,6 +51,7 @@ use local_coursegen\local\space\space_file_storage;
 use local_coursegen\local\space\space_resource_file;
 use local_coursegen\local\space\space_scope;
 use local_coursegen\local\space\space_selection;
+use local_coursegen\local\space\upload_spaces;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -203,6 +204,10 @@ class finish_template_generation extends external_api {
         }
         self::place_space_files($session, $selection, $keptcms);
         $spacecms = self::place_space_activities($session, $templateid, $courseid);
+        // The places where the teacher uploaded a file get a File resource with it, in their place.
+        if ($templateid !== null && $templateid > 0) {
+            $spacecms += upload_spaces::create_resources((int) $templateid, $courseid, $selection);
+        }
         $generatedcms = $created['generatedcms'] ?? [];
         // The activities the teacher added in the spaces were generated: they go in the place of their space.
         foreach (teacher_space_choices::spaces_of((int) $templateid) as $uid => $space) {
@@ -403,6 +408,10 @@ class finish_template_generation extends external_api {
      */
     private static function place_space_files(course_session $session, space_selection $selection, array $keptcms): void {
         foreach ($selection->filled() as $space) {
+            if ($space->cmid < 0) {
+                // A place where the teacher uploads a file: its resource is created apart (upload_spaces).
+                continue;
+            }
             $created = $keptcms[$space->cmid] ?? null;
             if ($created === null) {
                 $sessionid = (int) $session->get('id');

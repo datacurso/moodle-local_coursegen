@@ -49,7 +49,7 @@ final class file_spaces {
         }
         $saved = self::saved_spaces($templateid);
         $modinfo = get_fast_modinfo($courseid);
-        return self::spaces_of_modinfo($modinfo, $saved);
+        return array_merge(self::spaces_of_modinfo($modinfo, $saved), upload_spaces::of_template($templateid));
     }
 
     /**
