@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.13] - 2026111712
+
+### Changed
+- **The naming pattern belongs to the template section**  
+  The section naming pattern of the template is gone from the template's settings, where it named every section and was never applied. A template section now shows its own pattern and the number of its first copy in its card, and only its copies are named with it: `{N}` is the copy's number and `{name}` the name of its unit in the syllabus. The first copy takes its name too, in the course and in the structure shown while the run is on.
+
 ## [2.0.13] - 2026111711
 
 ### Added

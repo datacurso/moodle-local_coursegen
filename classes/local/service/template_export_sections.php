@@ -34,9 +34,10 @@ class template_export_sections {
      * @param \stdClass $course
      * @param \course_modinfo $modinfo
      * @param array $behaviors
+     * @param array $namings Section id => {naming_pattern, naming_start}, for the template sections.
      * @return array
      */
-    public static function sections_info($course, $modinfo, array $behaviors): array {
+    public static function sections_info($course, $modinfo, array $behaviors, array $namings = []): array {
         $format = course_get_format($course);
         $images = self::section_images($course);
         $contextid = \context_course::instance($course->id)->id;
@@ -44,7 +45,11 @@ class template_export_sections {
         $sectioninfos = $modinfo->get_section_info_all();
         $sections = [];
         foreach ($sectioninfos as $section) {
-            $sections[] = self::section_entry($course, $format, $section, $images, $behaviors, $contextid);
+            $entry = self::section_entry($course, $format, $section, $images, $behaviors, $contextid);
+            if ($entry['template_behavior']['behavior'] === 'template' && isset($namings[(int) $section->id])) {
+                $entry['template_behavior'] += $namings[(int) $section->id];
+            }
+            $sections[] = $entry;
         }
         if ($course->format === 'flexsections') {
             $sections = self::with_hierarchy($sections);

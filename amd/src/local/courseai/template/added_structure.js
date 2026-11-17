@@ -158,11 +158,18 @@ export const mergeAddedStructure = (state, data) => {
  * does not show is left out.
  *
  * @param {Object} state The structure state.
- * @param {Object} data A template_unit_copies event: {sections: [{section, name, copy_of, depth}], activities}.
+ * @param {Object} data A template_unit_copies event: {renamed, sections: [{section, name, copy_of, depth}], activities}.
  */
 export const mergeUnitCopies = (state, data) => {
     const sections = Array.isArray(data?.sections) ? data.sections : [];
     const items = Array.isArray(data?.activities) ? data.activities : [];
+    // The first copy is the template section itself: it takes the name of its unit.
+    for (const renamed of Array.isArray(data?.renamed) ? data.renamed : []) {
+        const first = state.sections.find((section) => section.num === Number(renamed.copy_of));
+        if (first && renamed.name) {
+            first.name = renamed.name;
+        }
+    }
     for (const copy of sections) {
         const source = Number(copy.copy_of);
         let last = -1;

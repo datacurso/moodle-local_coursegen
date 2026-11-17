@@ -565,5 +565,19 @@ function xmldb_local_coursegen_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026111404, 'local', 'coursegen');
     }
 
+    if ($oldversion < 2026111712) {
+        // A template section names its copies with a pattern of its own.
+        $table = new xmldb_table('local_coursegen_tpl_section');
+        $field = new xmldb_field('namingpattern', XMLDB_TYPE_CHAR, '255', null, null, null, null, 'behavior');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+        $field = new xmldb_field('namingstart', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '1', 'namingpattern');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+        upgrade_plugin_savepoint(true, 2026111712, 'local', 'coursegen');
+    }
+
     return true;
 }

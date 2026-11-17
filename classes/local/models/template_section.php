@@ -68,6 +68,16 @@ class template_section extends persistent {
                 'null' => NULL_NOT_ALLOWED,
                 'default' => self::BEHAVIOR_AI_MODIFY,
             ],
+            'namingpattern' => [
+                'type' => PARAM_RAW,
+                'null' => NULL_ALLOWED,
+                'default' => null,
+            ],
+            'namingstart' => [
+                'type' => PARAM_INT,
+                'null' => NULL_NOT_ALLOWED,
+                'default' => 1,
+            ],
         ];
     }
 }

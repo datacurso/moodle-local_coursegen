@@ -63,6 +63,8 @@ class save_template extends external_api {
                     'sectionid'  => new external_value(PARAM_INT,   'Section ID'),
                     'sectionnum' => new external_value(PARAM_INT,   'Section number'),
                     'behavior'   => new external_value(PARAM_ALPHA, 'Section behavior'),
+                    'namingpattern' => new external_value(PARAM_TEXT, 'How the copies are named', VALUE_DEFAULT, ''),
+                    'namingstart' => new external_value(PARAM_INT, 'Number of the first copy', VALUE_DEFAULT, 1),
                     'activities' => new external_multiple_structure(
                         new external_single_structure([
                             'cmid'           => new external_value(PARAM_INT,  'Course module ID'),
