@@ -37,7 +37,7 @@ import {chooseActivityType} from 'local_coursegen/local/template/template_space_
 import {closeInstanceMenu} from 'local_coursegen/local/template/template_instance_menu';
 import {get_string as getString} from 'core/str';
 import {prefetchStrings} from 'core/prefetch';
-import {editTeacherSpace} from 'local_coursegen/local/template/template_teacher_space';
+import {editTeacherSpace, openNewTeacherSpace} from 'local_coursegen/local/template/template_teacher_space';
 import Selectors from 'local_coursegen/local/template/selectors';
 import {CLASS, COMPONENT, EVENT, NEW_ROW_PREFIX, REQUIRED_VALUE, STRING, TAG} from 'local_coursegen/local/template/constants';
 
@@ -221,6 +221,11 @@ export const addSpace = async(item, state, markDirty) => {
         supportedTypes: state.supportedTypes,
     });
     if (picked === null) {
+        return;
+    }
+    if (picked.multiple) {
+        // Several activities: the teacher chooses one of them when creating the course, each with its instruction.
+        await openNewTeacherSpace(state, tbody, beforeEl, markDirty, insertSpaceRow);
         return;
     }
     const onSave = saveNewSpace.bind(null, tbody, beforeEl, picked, markDirty);
