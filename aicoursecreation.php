@@ -71,6 +71,8 @@ use local_coursegen\local\models\course_session;
 use local_coursegen\local\service\course_session_service;
 
 $resumesessionid = optional_param('sessionid', 0, PARAM_INT);
+// The session open on the page, marked in the list of recent courses.
+$selectedsessionid = $resumesessionid;
 $templatesession = null;
 $templaterunsummary = null;
 $showsessionsview = optional_param('view', '', PARAM_ALPHA) === 'courses';
@@ -177,7 +179,7 @@ foreach ($supportedlangs as $code) {
 }
 
 // Helper to build session data array.
-$buildsessiondata = function ($session, $maxtitle = 50) {
+$buildsessiondata = function ($session, $maxtitle = 50) use ($selectedsessionid) {
     $istemplate = !empty($session->get('templateid'));
     // A run made from a template is writing the course the whole time it is pending: it is not planning it.
     $statuslabels = [
@@ -194,6 +196,7 @@ $buildsessiondata = function ($session, $maxtitle = 50) {
     return [
         'id' => $session->get('id'),
         'title' => $title,
+        'selected' => (int) $session->get('id') === $selectedsessionid,
         // The whole name, for the tooltip of an entry whose title is cut.
         'fulltitle' => $rawtitle !== '' ? $rawtitle : $title,
         'shortname' => $session->get('shortname') ?: ($coursedata['shortname'] ?? ''),

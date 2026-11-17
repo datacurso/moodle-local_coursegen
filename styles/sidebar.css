@@ -326,6 +326,10 @@
 
 .courseai-sidebar-course-item:hover { background: var(--muted); }
 
+/* The course open on the page. */
+.courseai-sidebar-course-item.is-selected { background: var(--muted); }
+.courseai-sidebar-course-item.is-selected .courseai-sidebar-course-title { font-weight: 600; }
+
 .courseai-sidebar-course-item svg {
   flex-shrink: 0;
   color: var(--primary);
