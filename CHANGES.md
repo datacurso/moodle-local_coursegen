@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026110958
+
+### Changed
+- **"Add space for an activity" is the activity chooser of the course page, with several activities**  
+  The modal is the standard chooser, with its search, its tabs and the help of each type, where one click selects an activity and another unselects it; the selected ones carry a mark in every tab and in the results of a search. Under the chooser, each selected activity is a card with its instruction and a button to remove it, then what applies to them.
+
+### Fixed
+- **The search of the chooser of a space shows its results**  
+  The search found the types but failed before showing them, because the chooser had no favourite star in its items; the star is kept in the markup and hidden, so the search works.
+
 ## [2.0.10] - 2026110957
 
 ### Changed
