@@ -359,7 +359,8 @@ trait get_template_structure_rows {
             'modname' => $options[0]['modname'],
             'purpose' => self::get_purpose($options[0]['modname']),
             'typelabel' => $titles,
-            'iconhtml' => $output->pix_icon('t/add', ''),
+            // The icon of the first activity it offers, like every other row (the icon of the one chosen replaces it).
+            'iconhtml' => $choices[0]['iconhtml'],
             'locked' => true,
             'action' => '',
             'isinstance' => false,

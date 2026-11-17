@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10-wp] - 2026111149
+
+### Fixed
+- **The card of a space with several activities uses the icon of an activity, and the warning before generating names what is missing**  
+  In the creation screen the card of such a space shows the line icon of the first activity it offers, like every other row, instead of a large plus sign; the icon of the activity the teacher chooses replaces it. The warning shown when Generate is pressed says that a contribution of the teacher is missing, which fits a file to upload as well as an activity to choose.
+
 ## [2.0.10-wp] - 2026111148
 
 ### Changed
