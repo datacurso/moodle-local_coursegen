@@ -26,6 +26,7 @@ use local_coursegen\local\service\template_export_uids;
 use local_coursegen\local\service\template_instance_layout;
 use local_coursegen\local\space\activity_spaces;
 use local_coursegen\local\space\space_rules;
+use local_coursegen\local\space\upload_spaces;
 use local_coursegen\output\template_row_options;
 
 /**
@@ -92,7 +93,8 @@ trait get_template_structure_rows {
         foreach (template_space::get_records(['templateid' => $templateid]) as $space) {
             // A space for the teacher (the activities they can add) is always offered; one of the earlier kind (one of
             // their own activities) only while those are enabled.
-            if (teacher_space_options::decode($space->get('options')) || activity_spaces::ENABLED) {
+            $isupload = (string) $space->get('modname') === upload_spaces::MODNAME;
+            if ($isupload || teacher_space_options::decode($space->get('options')) || activity_spaces::ENABLED) {
                 $records[] = $space;
             }
         }
@@ -267,6 +269,9 @@ trait get_template_structure_rows {
         if ($options) {
             return self::choice_space_row($space, $options, $output);
         }
+        if ((string) $space->get('modname') === upload_spaces::MODNAME) {
+            return self::upload_space_row($space, $output);
+        }
         $modname = (string) $space->get('modname');
         $typelabel = get_string_manager()->string_exists('modulename', 'mod_' . $modname)
             ? get_string('modulename', 'mod_' . $modname)
@@ -287,6 +292,38 @@ trait get_template_structure_rows {
             'spacekind' => 'activity',
             'spaceinstruction' => format_string((string) $space->get('instruction')),
             'spacerequired' => (int) $space->get('required') === 1,
+        ];
+    }
+
+    /**
+     * One place where the teacher uploads a file of their own: a File resource with it is created there.
+     *
+     * Its id is the space's uid; the file goes under the placeholder course module id of the space.
+     *
+     * @param template_space $space
+     * @param \renderer_base $output
+     * @return array
+     */
+    private static function upload_space_row(template_space $space, $output): array {
+        $modname = upload_spaces::MODNAME;
+        $typelabel = get_string('modulename', 'mod_' . $modname);
+        return [
+            'id' => (string) $space->get('uid'),
+            'name' => $typelabel,
+            'modname' => $modname,
+            'purpose' => self::get_purpose($modname),
+            'typelabel' => $typelabel,
+            'iconhtml' => $output->image_icon('monologo', $modname, 'mod_' . $modname, ['class' => 'icon activityicon']),
+            'locked' => true,
+            'action' => '',
+            'isinstance' => false,
+            'aigenerated' => false,
+            'generationuid' => '',
+            'isspace' => true,
+            'spacekind' => 'file',
+            'spaceinstruction' => format_string((string) $space->get('instruction')),
+            'spacerequired' => (int) $space->get('required') === 1,
+            'spacecmid' => upload_spaces::cmid_of($space),
         ];
     }
 

@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026110950
+
+### Changed
+- **One option to add an activity, and the teacher's file in the same place**  
+  The menu of the template keeps a single "Add an activity" next to the one that adds from a mold. After the type is chosen, a File offers who provides it: the AI creates it, or the teacher uploads it when the course is created. Any other type is created by the AI. A file the teacher uploads is a required space with its instruction: the creation screen asks for it before generating, and the new course has a File resource with the teacher's file in that place.
+
 ## [2.0.10] - 2026110949
 
 ### Fixed
