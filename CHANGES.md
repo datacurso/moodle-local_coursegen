@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10-wp] - 2026111147
+
+### Changed
+- **Who provides a File is chosen with radio buttons**  
+  "The AI creates it" and "The teacher uploads it" are two radio buttons instead of a pair of buttons.
+
 ## [2.0.10-wp] - 2026111146
 
 ### Changed
