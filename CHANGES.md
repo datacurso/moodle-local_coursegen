@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10-wp] - 2026111705
+
+### Changed
+- **The activity counts of a template course say what each number is**  
+  The line at the top of a template run names the activities copied from the template as they are, for example "113 activities (11 copied from the template)", and the progress while the course is saved reads "Generated with AI: 56 of 102", since it only counts what the AI writes.
+
 ## [2.0.10-wp] - 2026111704
 
 ### Changed

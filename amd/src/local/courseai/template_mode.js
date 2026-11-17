@@ -51,27 +51,45 @@ import {formatTemplate} from './utils';
 let statsTemplatePromise = null;
 const getStatsTemplate = () => {
     if (!statsTemplatePromise) {
-        statsTemplatePromise = getString('courseai_plan_sections_counter', 'local_coursegen');
+        statsTemplatePromise = Promise.all([
+            getString('courseai_plan_sections_counter', 'local_coursegen'),
+            getString('courseai_plan_sections_counter_copied', 'local_coursegen'),
+        ]).then(([plain, copied]) => ({plain, copied}));
     }
     return statsTemplatePromise;
 };
+
+/** The actions of a template activity that is copied into the course as it is, without the AI. */
+const COPIED_ACTIONS = ['keep', 'reference'];
+
+/**
+ * Whether a row is copied into the course as it is.
+ *
+ * @param {Object} activity
+ * @returns {boolean}
+ */
+const isCopied = (activity) => !activity.isinstance && COPIED_ACTIONS.includes(activity.action);
 
 /**
  * Update the "N sections · M activities" summary line in the toolbar.
  *
  * @param {Object} tplState
- * @param {string} statsTemplate
+ * @param {{plain: string, copied: string}} statsTemplate The line without and with copied activities.
  */
 const updateStats = (tplState, statsTemplate) => {
     const statsEl = document.getElementById('tplModeStats');
     if (!statsEl) {
         return;
     }
-    const totalActivities = tplState.sections.reduce((sum, section) => sum + section.activities.length, 0);
-    statsEl.textContent = formatTemplate(statsTemplate, {
+    const activities = tplState.sections.flatMap((section) => section.activities);
+    const counts = {
         sections: tplState.sections.length,
-        activities: totalActivities,
-    });
+        activities: activities.length,
+        copied: activities.filter(isCopied).length,
+    };
+    // The activities copied as they are get named, so the total does not read as what the AI writes.
+    const template = counts.copied > 0 ? statsTemplate.copied : statsTemplate.plain;
+    statsEl.textContent = formatTemplate(template, counts);
 };
 
 /**
