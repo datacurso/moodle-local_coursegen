@@ -27,7 +27,9 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import {finishTemplateGeneration, getTemplateCourseSettings} from './repository';
+import Config from 'core/config';
+import {finishTemplateGenerationStream} from './finish_stream';
+import {getTemplateCourseSettings} from './repository';
 import {askToRetry} from './generation_retry';
 import {replayRun} from './thread_replay';
 
@@ -89,9 +91,12 @@ export const reviewAndCreate = async(host, state, tplState, sessionId) => {
     if (overrides === null) {
         return null;
     }
+    const create = (payload, onProgress) => finishTemplateGenerationStream(Config.wwwroot, payload.recordid, payload, onProgress);
+    // It reports each step it makes, so the page shows the real progress of the writing of the course.
+    create.reportsProgress = true;
     return actions.createCourseFromSession(
         overrides,
-        (payload) => finishTemplateGeneration(payload.recordid, payload),
+        create,
         // Whatever stops the creation, the person is offered to try again instead of a technical error: the
         // run is already generated and the server builds the course only once.
         (error) => askToRetry(error?.errorcode || error?.code || '')

@@ -72,6 +72,12 @@ class template_space extends persistent {
                 'null' => NULL_ALLOWED,
                 'default' => null,
             ],
+            // JSON list of the activities the teacher can add in this space: {modname, instruction} each.
+            'options' => [
+                'type' => PARAM_RAW,
+                'null' => NULL_ALLOWED,
+                'default' => null,
+            ],
             // The real cmid this space renders immediately after within its
             // section; 0 means "the start of the section".
             'aftercmid' => [

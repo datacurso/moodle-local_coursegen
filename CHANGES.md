@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.13] - 2026111404
+
+### Changed
+- **The branches of the template work and of the teacher's spaces are merged**  
+  The step of this build checks again the fields that the builds 2026110935 to 2026110948 add (the teacher's space of a file, the name the AI writes for an activity, the activity modified with AI and the activities a space offers), so a site that already ran the template builds up to 2026111403 gets them too. A course made from a template now also keeps, when it is created, the start date the teacher chose at the review whether the creation goes through the page's stream or the web service.
+
 ## [2.0.13] - 2026111403
 
 ### Added
@@ -78,6 +84,384 @@ All notable changes to this project will be documented in this file. Each change
 ### Added
 - **An H5P template lists the pictures its package holds**  
   When the template course has an H5P activity set as a template, the export now tells the AI service which pictures that activity's own package keeps (their path, type and size), so an interactive book can use them. The pictures themselves are not sent: the activity of the new course is built from the template's own package, which already holds them. A package that cannot be read exports as before.
+
+## [2.0.10] - 2026110956
+
+### Fixed
+- **A name with a tag or longer than its column no longer makes the whole template fail to save**  
+  The names of the template and of its activities are kept as plain text: tags are dropped and a name is cut at 255 characters on the server, so saving never fails with "invalid parameter" or a database error. The field that renames an activity no longer takes more than 255 characters, and a long name with no spaces breaks inside its cell instead of pushing the row wider than the table.
+- **An activity the AI creates needs its instruction**  
+  With one activity ticked in "Add space for an activity", Save stays off until its instruction is written, since it is all the AI has to know what to create; among several activities each instruction stays optional.
+- **A double click on "Add space for an activity" opens one modal**  
+  A second click while the modal is opening or open does nothing.
+
+## [2.0.10] - 2026110955
+
+### Changed
+- **"Add space for an activity" opens the selection of activities at once**  
+  No chooser and no extra button: the modal lists the activities, and the admin ticks one or several, each with its own instruction. One activity is created by the AI, with an optional name; a single File can instead be uploaded by the teacher, and then the modal asks whether it is required. Several activities make a space where the teacher chooses one when the course is created.
+
+## [2.0.10] - 2026110954
+
+### Added
+- **A space for an activity can offer several activities, each with its instruction**  
+  The chooser of "Add space for an activity" has "Choose several activities" under the types: the admin ticks the activities the teacher can choose from in that place and writes how each one must be. When the course is created, the teacher chooses one of them and the AI creates it in that place with the instruction given for it.
+
+## [2.0.10] - 2026110953
+
+### Changed
+- **The add menu says "Add space for an activity"**  
+  The option of the menu is named so that it is understood by itself, with no line of description under it; the chooser of the type has the same title.
+
+## [2.0.10] - 2026110952
+
+### Changed
+- **The add menu says "Add a space", with what a space is**  
+  The option of the menu reads "Add a space", with a line under it that says it is a place in the course for an activity the AI creates or for a file the teacher uploads; the chooser of the type has the same title.
+
+## [2.0.10] - 2026110951
+
+### Changed
+- **The instructions of an activity the AI creates speak of how it is, not of its topic**  
+  In the template the instructions say how the AI has to build the activity (purpose, structure, length or style); the help text says that the topic and the specific content are given by the teacher in the course creator.
+
+## [2.0.10] - 2026110950
+
+### Changed
+- **One option to add an activity, and the teacher's file in the same place**  
+  The menu of the template keeps a single "Add an activity" next to the one that adds from a mold. After the type is chosen, a File offers who provides it: the AI creates it, or the teacher uploads it when the course is created. Any other type is created by the AI. A file the teacher uploads is a required space with its instruction: the creation screen asks for it before generating, and the new course has a File resource with the teacher's file in that place.
+
+## [2.0.10] - 2026110949
+
+### Fixed
+- **A cordial and professional tone in the texts of the templates**  
+  The texts of the spaces, of "Modify with AI", of the activity the AI creates and of the warning about molds with no instructions no longer address the person informally nor read as orders; they are written in an impersonal, courteous tone.
+- **The menu of "Add activity or space" fits its texts**  
+  The menu is as wide as its longest item, so no text runs over its edge.
+
+## [2.0.10] - 2026110948
+
+### Added
+- **"Modify with AI" for an activity of the template course**  
+  An activity can be set to "Modify with AI" with an instruction of how the AI has to change it: the new course has it changed by the AI, in its place, with no mold and no instance to set up. With markers in the activity the instruction is optional; without them it is required. The editor shows the badge and the instruction under the name, and asks for the instruction when the action is chosen.
+- **Spaces for the teacher**  
+  "Space for the teacher" in "Add activity or space" places a space where the teacher adds one of the activities the admin allows there (quiz, forum, book...), each with an optional instruction, and says whether it is required. In the creation screen the space is a card: the teacher chooses the activity and writes what they want it to cover, and the AI writes it in that place, naming it. A required space is asked for when Generate is pressed, like a file; an optional one the teacher leaves empty creates nothing.
+
+## [2.0.10] - 2026110947
+
+### Changed
+- **Adding an activity the AI creates asks only for its name and its instructions**  
+  The form no longer asks who makes the activity: it is the AI. The name is optional: when it is left empty the activity is "Book 1", "Book 2"... in the template (a number per type) and the AI writes its real title when the course is generated. A name the admin writes later is kept.
+
+## [2.0.10] - 2026110946
+
+### Changed
+- **The card that asks for the files lists all of them in the scroll of the column**  
+  Every missing file is listed again, one per line, and the card sits at the end of the thread of the column: it moves with the one scroll of the column, with no box of its own that scrolls.
+
+## [2.0.10] - 2026110945
+
+### Changed
+- **The card that asks for the files shows one at a time, with no scroll**  
+  Instead of the whole list in a box that scrolls, it shows the next file missing under the count ("9 of 10 files are missing…"), and the next one after each upload, so it never grows. The card of a file in the structure no longer draws Boost's blue ring when it gets the focus back after an upload.
+
+## [2.0.10] - 2026110944
+
+### Changed
+- **The card that asks for the files works with many of them**  
+  Its title counts them ("7 of 10 files are missing to generate the course") and goes down with each upload; each file is one line with its button on the right, in a list that scrolls instead of growing past part of the column; pressing a file shows its card in the structure (its section opened if it was closed) and marks it for a moment.
+
+## [2.0.10] - 2026110943
+
+### Fixed
+- **The hover of the card of the teacher's file keeps its colour**  
+  Hovering the card turned it to the grey of the other rows and showed the browser's tooltip. It now keeps its coral (or neutral) tint one step stronger, and says what it does to screen readers instead of in a tooltip.
+
+## [2.0.10] - 2026110942
+
+### Changed
+- **The whole card of the teacher's file opens the file picker**  
+  A click anywhere on the card, or Enter on it, opens the file picker; only "Remove file" inside it does something else.
+
+## [2.0.10] - 2026110941
+
+### Changed
+- **The row of the file the teacher uploads stands out as a card**  
+  It has a soft coral frame while the required file is missing and a soft neutral one once it is there, so it is seen at once among the other rows.
+
+## [2.0.10] - 2026110940
+
+### Changed
+- **The row of the file the teacher uploads says where it stands**  
+  While the required file is missing, its icon has a coral mark with an arrow up and the row reads "Upload the file to be able to generate the course"; once the file is there, the icon has the check of a row that is done and the row shows the name of the file.
+
+## [2.0.10] - 2026110939
+
+### Changed
+- **The file the teacher uploads is one more row of the list**  
+  In the structure of the course, the space is no longer a card of its own: it is a row like the others, with the icon and name of the file, the badge "Your contribution · Required" in the style of "AI will generate it", what the administrator asked for as its description, and the upload as a button of the row.
+
+## [2.0.10] - 2026110938
+
+### Changed
+- **Only a file is what the teacher brings: the spaces of other activities are not offered**  
+  The creation of a course no longer shows nor asks for the spaces of a quiz or another activity that some templates have; they stay saved in the template. What the teacher brings is a file, marked in the row of the template's file.
+- **The card that asks for the file looks like the questions of the AI**  
+  When Generate is pressed with a required file missing, the card has the look of the questions the AI asks in the column: the instruction of the administrator, the name of the file of the template and the button to upload it.
+
+## [2.0.10] - 2026110937
+
+### Changed
+- **A required space without its file is asked for when Generate is pressed**  
+  Generate is no longer off while a required space is empty. Pressing it stops before the AI is asked anything and shows a card with what the administrator asked for and a button to upload the file (or choose the activity) from there; once nothing is missing, the generation starts by itself.
+- **For now only a file can be what the teacher brings**  
+  In the template editor, "Add activity or space" no longer offers "The teacher provides it" for the other types: what the teacher brings is a file, marked in the row of the template's file as "Space for the teacher". The spaces of other types already saved keep working.
+
+## [2.0.10] - 2026110936
+
+### Fixed
+- **The retries by themselves run out when the run does not move**  
+  When a run started over, the activities it had already written were told again, and the page took that as the run moving: the count went back to "Retry 1 of 10" on every pass and never ended. Only an activity written for the first time counts now.
+- **A mold with nothing for the AI to fill stops the run at once and is named**  
+  When the model activity of an activity of the template has no instruction for the AI, trying again gives the same. The run now stops at once, without retrying by itself, and says which activities have to be fixed.
+
+## [2.0.10] - 2026110935
+
+### Fixed
+- **The plugin installs without a debugging message**  
+  The `uid` columns of the instances and the spaces declared an empty default, which Moodle reports while it installs the plugin (and the CI stops on it). They no longer declare one.
+- **The list of the teacher's activities opens**  
+  "Choose activity" in a space failed with an error because the service that lists the activities did not load the library of external functions. It now opens the list.
+- **A template configuration from another site imports**  
+  A file exported where the scope of the activities was empty, or without the fields of the spaces, stopped the import with an error. The empty fields now take their default, so the file imports; the export writes the fields of the spaces too.
+
+### Added
+- **The teacher fills the spaces of a template with one of their own activities**  
+  A space added to a template with "Add activity or space" (a quiz, a file, any type) now reaches the creation screen: it shows as a card where the teacher picks one of their activities of that type, from the courses where they can copy activities. Generate stays off while a required space has none, the choice is checked again when the generation starts, and the activity is copied into the new course in the place of the space. Before, these spaces were saved in the template but the creation screen never read them.
+
+### Added
+- **A file of a template can again be a space the teacher fills**  
+  The space for the teacher's file comes back as it worked before it was removed: in the editor a file resource can be marked as a space, required or optional, with instructions for the teacher; the creation screen shows it as a card where the teacher uploads the file, Generate stays off while a required one is empty, and the file is placed in the new course where the template has it.
+
+## [2.0.10] - 2026110934
+
+### Fixed
+- **A template configuration from another site imports**  
+  A file exported where the scope of the activities was empty (an older version, or another site) stopped the import with an error. The empty fields now take their default, so the file imports; the export always writes the scope.
+
+## [2.0.10] - 2026110931
+
+### Fixed
+- **An activity that failed is not shown as done**  
+  When the generation of an activity failed, the page marked it with a check, counted it as written ("5 of 5 activities") and, once all of them were counted, moved the header on to saving the course, so a run that had failed looked finished. A failed activity now has no check, it is not counted and the header does not move on; when the run is retried, the activities that are missing are written and then they are marked.
+
+## [2.0.10] - 2026110930
+
+### Fixed
+- **The messages about the run go at the bottom, above the buttons of the run, and each one is said once**  
+  The failure that asks the person to decide and the cards of the retries used to appear in the middle of the thread, over the list of the activities, and a retry was also written in the title and in the line at the bottom. They now go to a slot at the end of the column, above "Stop", with the same look; the retry is said only in its card, the title does not say "Stopped" while it retries by itself, the line that says it is working is not shown while a message about the run is, and the spinners of the page stop while it is, as a plain ring that waits and not as an arc that froze: only the card, with its time left, tells that it retries.
+- **The counter of pictures says which pictures it counts**  
+  "2 of 2 images ready" was read as all the images of the course, but it only counts the cover and the pictures of the sections. It now says so.
+
+## [2.0.10] - 2026110929
+
+### Added
+- **The writing of the course in Moodle shows its real progress**  
+  When the person accepts the generation, the card reads "Guardando el curso" and "Escribiendo el curso en Moodle…", and the bar starts at 0 % and moves with each activity written ("Actividades escritas: 35 de 102"), up to 92 %. Copying the activities that stay as they are and arranging the course like the template take it to 96 %, and it reaches 100 % when the course exists. Before, the bar kept the percentage of the generation, stopped at 98 % and did not say what was being done.
+
+## [2.0.10] - 2026110927
+
+### Fixed
+- **Neutral wording when the generation is resumed**  
+  The stage shown on a retry reads "Reanudando la generación…" in Spanish and "Resuming the generation…" in English.
+
+## [2.0.10] - 2026110926
+
+### Fixed
+- **A retry shows that the generation is resumed**  
+  When the generation is retried, by itself or by the person, the thread shows "Reanudando la generación…" ("Resuming the generation…") and keeps the count of pictures already shown.
+
+## [2.0.10] - 2026110925
+
+### Fixed
+- **No pictures are made when the person chose no images**  
+  A reference marker in the template (the cover of the course, the picture of a section) still asked the AI service for a picture even when the person had turned images off, so the thread kept saying that images were being made. With images off, no picture of the course is asked for, and the markers are still taken out of the texts.
+
+## [2.0.10] - 2026110924
+
+### Fixed
+- **The retries that the page makes by itself have no buttons and a message anyone can read**  
+  While the retries run by themselves the card shows only what happened, in plain words, and which retry it is with the time left for the next one. Nothing technical is shown (no error codes, no names of the transport). The buttons appear only when the retries have run out and the person has to decide.
+- **A failure of the connection and a failure of the AI look the same**  
+  Both are an amber step in the thread without buttons; when the AI is the one that fails, the card says there is a problem with the artificial intelligence.
+- **The ten retries are one count, whoever makes them**  
+  The retries of the service and the ones of the page no longer count twice or restart one after the other. They are one count of ten, with waits that double each time (10, 20, 40, 80 seconds, up to two minutes), and the count starts again from the first retry after something recovers. There is one retry card at a time, and it no longer flickers between two different counts.
+
+## [2.0.10] - 2026110923
+
+### Fixed
+- **The retries of the page count up to ten even when the run tells things on the way**  
+  A run that failed again and again, with the service telling about its own retries and about activities that failed, started counting from the first retry every time, and never reached the end of the ten. Only an activity that was written counts as the run moving; the rest does not.
+- **A failure that the service marks as retriable is retried by itself**  
+  The relay of Moodle spells it "retryable" and the service "retriable"; the page only knew the first, so a failure of the service went straight to the person.
+- **A failure to reach the service while the course is created is retried by itself**  
+  When Moodle cannot reach the service at the moment of creating the course (a cut connection, a 503), the page retries with the same growing waits and the same line under the title, instead of asking the person.
+- **The line of the retry of the service is kept alive in the status bar of the thread**  
+  It is the same line, counting down every second, as under the title and in the card.
+
+## [2.0.10] - 2026110922
+
+### Added
+- **The retries of the service when the AI provider fails are shown like the retries of the connection**  
+  When the AI provider answers with an error that waiting mends, the service tries again by itself and says so. The page shows the same card as for a lost connection: the reason ("The AI provider returned an error (503)"), "Retry 2 of 10 · next one in 18 s" counting down every second, and it goes away when the request is answered. The card has no buttons, because the one who retries is the service.
+
+## [2.0.10] - 2026110921
+
+### Added
+- **A failure of the connection is retried by itself, waiting longer each time**  
+  When the connection with the AI service is lost during a generation, or while the course is being created, the page no longer waits for the person to press "Try again". It retries by itself, ten times: the first retry ten seconds after the failure, the second twenty seconds after that, then forty, eighty and so on, with a ceiling of two minutes between retries. A run that goes on between two failures starts counting again.
+- **The page says which retry it is and how long is left for the next one**  
+  A card in the thread shows the reason, "Retry 3 of 10 · next one in 14 s" counting down every second, and two buttons: "Retry now" and "Stop retrying". While the course is being created the same line is shown under the title. If the ten retries are not enough, or the failure is not one that waiting mends (a missing license, for example), the person is asked as before.
+
+## [2.0.10] - 2026110920
+
+### Fixed
+- **A creation of the course that stopped is no longer waited for**  
+  A request that found the course "being created" waited for up to ten minutes even when the process that was creating it had died. The creation now marks that it is alive at each step, and a request that finds it silent for ninety seconds builds the course itself.
+- **The page says why the creation stream could not be opened**  
+  It always said that the connection was lost; it now says what the server answered.
+
+## [2.0.10] - 2026110919
+
+### Fixed
+- **Creating the course after the generation no longer depends on one long request**  
+  The course was created in a single request that stayed silent until it ended, and with a hundred activities that takes longer than the two minutes the proxies in front of a site wait: the request was cut (error 524 on a site behind Cloudflare) and the course could not be created. The creation is now followed as a stream: the server writes after each activity and the page shows "Creating the activities: 35 of 102", so the connection is never silent. If the connection is cut anyway, the page opens it again and waits for the creation that is running instead of starting another. The creation goes on even if the browser leaves.
+- **The page waits as long as the creation lasts**  
+  It gave up after three minutes whatever happened; it now gives up only after three minutes without news.
+- **The tests of the questions of the AI run again**  
+  The page they simulate shows the list of the activities as hidden, as the real one does.
+
+## [2.0.10] - 2026110918
+
+### Fixed
+- **The thread of the generation only grows downwards**  
+  Anything that happened after the list of the activities was on the page, such as the offer to try again or a question of the AI, was drawn above the list, in the middle of what was already there. It now goes under the list.
+- **The reason a course could not be created is kept in the log of the server**  
+  The person still sees a short message; the cause is written to the log so it can be found.
+
+## [2.0.10] - 2026110917
+
+### Fixed
+- **The review of the course data can be scrolled to its buttons**  
+  Once the course was generated, the review form (name, short name, category) could be taller than the screen and its Cancel and Create course buttons stayed out of sight, with no way to scroll. The column now scrolls on its own, with the same thin scrollbar as the rest of the interface.
+
+## [2.0.10] - 2026110916
+
+### Fixed
+- **The page of the course creator shows only the creator**  
+  The buttons and widgets that the site adds to every page, such as a support button or a chat or social icon, were drawn over the creator. They are left out of this page.
+
+## [2.0.10] - 2026110915
+
+### Changed
+- **The relay of the stream asks the provider for the license header again**  
+  The plugin no longer works out the key of a tenant by itself. A provider that serves several tenants builds the header with `get_license_header()`, as the other providers do, and the plugin keeps reading the site key only when the provider has no such method.
+
+## [2.0.10] - 2026110913
+
+### Fixed
+- **A generation that stopped on an error no longer looks like it is still working**  
+  The ring of the header and the marker of the last step kept turning while the offer to try again was open. Now, as when the person stops the run, nothing turns, the header says it is stopped, and the failed step keeps its own color. Stop did not stop the ring of the header either; it does now.
+- **The buttons of a card in the thread have the look of Stop and Resume**  
+  "Try again" and "Close" were flat and touching each other. They now have the size and shape of the rest of the buttons, with a space between them. The same goes for Continue when there are several questions.
+
+## [2.0.10] - 2026110912
+
+### Changed
+- **Importing a template: the courses follow the category as soon as it changes**  
+  The import page had a "Filter courses" button next to the category, and the list of courses only changed after pressing it. The button is gone: choosing a category fills the list of courses with the ones of that category right away, the list can be searched by typing, and the course chosen for the previous category is emptied.
+
+## [2.0.10] - 2026110911
+
+### Changed
+- **The questions of the AI show only what is needed**  
+  A question that is a yes or no is its question and two buttons, Yes and No, and it is answered by pressing one: no title, no explanation, no "Continue". A question that asks for a file has two buttons, one to attach it (the file is the answer as soon as it is picked) and one to go on without it. The options of a question with one choice are radio buttons, and those of a question with several are checkboxes, with the same markup as the rest of the interface. Only a card with several questions keeps its title and its Continue button.
+
+## [2.0.10] - 2026110910
+
+### Added
+- **The summary at the top of the conversation says whether pictures are made**  
+  It listed the template, the language, the syllabus and the instruction, but not the pictures. It now has an Images row, and it changes when an answer to the AI turns them on, also when the page is opened again.
+
+## [2.0.10] - 2026110909
+
+### Changed
+- **Stop and Resume sit where free mode has them**  
+  They were drawn in the header of the right column with a style of their own. They are now the same buttons as free mode, at the bottom of the left column where the composer would be, and the bar goes away when the run ends.
+
+## [2.0.10] - 2026110908
+
+### Added
+- **The AI asks before it starts, when what was asked for does not fit**  
+  When the instruction or the template asks for something the request was not given (pictures asked for and turned off, a document the instructions lean on and nobody attached, a language that contradicts what was written), the generation now stops and asks, as one more message of the conversation. A question can be a switch, one choice, several choices, a file or some text, and the person answers or goes on without answering. The questions come from the AI service, so a new kind of question needs no change here. A file is attached with the same filepicker as the syllabus.
+
+## [2.0.10] - 2026110907
+
+### Added
+- **A generation from a template can be stopped, and resumed**  
+  The header of the generation now has a Stop button from the moment Generate is pressed, and a Resume button once it is stopped. Stopping closes the stream at once and tells the AI service, which cancels every request it had under the run and answers only when nothing is going any more, so nothing keeps spending the license. What was already made is kept; Resume makes only what is missing. If the service cannot confirm the stop, the thread says so.
+
+### Fixed
+- **The relay notices that the browser left even while the service is silent**  
+  PHP only learns that the browser left when it writes to it, so a long wait for the AI left the relay connected and the service generating for nobody. The relay now writes a comment to the browser every second, which the browser ignores, and ends the transfer as soon as the browser is gone.
+
+## [2.0.10] - 2026110906
+
+### Fixed
+- **The error of a template generation shows in the conversation, not over the page**  
+  When a generation stopped, the message with "Try again" and "Close" was added at the end of the page and spread over its whole width, below both columns. It now appears as one more message of the left column, with the same look as the rest of the thread.
+
+## [2.0.10] - 2026110905
+
+### Fixed
+- **The generation of a course from a template shows from the click**  
+  The page stayed empty until the service answered, which takes close to a minute while the syllabus is sent to the AI. The generating page, with its "Starting the generation…" step, now opens as soon as the button is pressed, and it closes again with the error if the run cannot start.
+
+## [2.0.10] - 2026110904
+
+### Changed
+- **The progress of a course generated from a template reaches the browser through Moodle**  
+  The browser opened the stream of the AI service itself, so the address of the service was in the page and nobody checked who read the run. It now reads it from this plugin, like the activity and the course stream: only the user who started the run, and who may still generate from a template, can read it, and the service address stays on the server.
+
+## [2.0.10] - 2026110903
+
+### Fixed
+- **Creating an activity or a course with the AI no longer ends in "Disconnected from the server"**  
+  The stream that shows the progress asked the provider plugin for its License-Key header, and a provider that does not build it in one place has no such method, so the stream stopped before it began. The header is now built here the same way when the provider cannot.
+
+## [2.0.10] - 2026110902
+
+### Changed
+- **The language of a course made from a template is detected by the AI unless the professor picks one**  
+  The language select of the template form now starts on "Detect automatically": the AI reads the instruction, the attached syllabus and the template and writes the whole course in the language they are in. Before, it started on the language of the professor's own Moodle, so a course written in Spanish from a Spanish template came out in English when the interface was English, with the fixed texts of the template in Spanish. Picking a language still forces the whole course into it. The select is now the same styled chip and searchable list the free mode uses, and every option explains itself in a tooltip.
+
+## [2.0.10] - 2026110901
+
+### Fixed
+- **An H5P activity shown inside a lesson page grows with its content**  
+  The frame that shows the activity asked for the script that fits it to its content from a path that does not exist, so it always kept its starting height and anything taller than that was left out of sight: the exercises and the questions at the bottom of a long activity could not be reached. The script is now asked from the H5P library of Moodle, and the frame takes the height of the activity.
+
+## [2.0.10] - 2026110701
+
+### Changed
+- **A generated quiz is created in Moodle much faster**  
+  Every question used to load the quiz again, check it, clear its previews and add up the marks of all the questions before it, so a final exam of a hundred questions took seconds on its own. That work is now done once for the whole quiz: the questions, their marks, their pages and the total grade are the same.
+
+## [2.0.10] - 2026110601
+
+### Added
+- **A course made from a template offers the syllabus the professor uploaded**  
+  A template can link the syllabus from any page, lesson page or label with a link marked as such (for example, the weekly plan offering the didactic guide as a PDF). The uploaded file is kept with the generation and, once the course exists, each of those links opens a copy of it kept with its page, so the students read the same document the course was made from instead of a version written again. Without an uploaded file those links are taken out.
 
 ## [2.0.10] - 2026110301
 

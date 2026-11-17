@@ -95,4 +95,38 @@ final class sse_formatter_test extends \basic_testcase {
             ['event' => 'done', 'data' => ''],
         ], $events);
     }
+
+    /**
+     * A comment is a line that starts with a colon and a blank line.
+     */
+    public function test_comment_block_layout(): void {
+        $this->assertSame(": keepalive\n\n", sse_formatter::comment('keepalive'));
+    }
+
+    /**
+     * Line breaks cannot turn a comment into an event.
+     */
+    public function test_comment_cannot_carry_an_event(): void {
+        $block = sse_formatter::comment("x\nevent: done\ndata: ");
+
+        $this->assertSame(": xevent: donedata: \n\n", $block);
+        $this->assertSame([], (new sse_parser())->feed($block));
+    }
+
+    /**
+     * The keepalive of the relay is never read as an event by the parser.
+     */
+    public function test_a_comment_between_events_changes_nothing(): void {
+        $stream = sse_formatter::event('message', 'a')
+            . sse_formatter::comment('keepalive')
+            . sse_formatter::comment('keepalive')
+            . sse_formatter::event('done', '');
+
+        $events = (new sse_parser())->feed($stream);
+
+        $this->assertSame([
+            ['event' => 'message', 'data' => 'a'],
+            ['event' => 'done', 'data' => ''],
+        ], $events);
+    }
 }

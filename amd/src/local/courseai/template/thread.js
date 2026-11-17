@@ -30,6 +30,7 @@ import {getStrings} from 'core/str';
 import Templates from 'core/templates';
 import {createLog} from 'local_coursegen/local/courseai/ui/log';
 import {resetChecklist} from 'local_coursegen/local/courseai/template/generation_checklist';
+import {listIsShown} from 'local_coursegen/local/courseai/template/thread_feed';
 
 const STRING_KEYS = [
     'courseai_template_log_starting',
@@ -38,6 +39,8 @@ const STRING_KEYS = [
     'courseai_template_log_approved',
     'courseai_template_log_adjusting',
     'courseai_template_log_completed',
+    'courseai_template_log_stopped',
+    'courseai_template_log_resuming',
 ];
 
 let labels = null;
@@ -87,7 +90,11 @@ const getLabels = async() => {
  */
 const getLog = () => {
     if (!log) {
-        log = createLog({container: document.getElementById('cgLog')});
+        log = createLog({
+            container: document.getElementById('cgLog'),
+            actionContainer: document.getElementById('cgLogAfter'),
+            isActionPhase: listIsShown,
+        });
     }
     return log;
 };
@@ -148,9 +155,28 @@ export const announceTemplate = async(summary) => {
         language: summary.language || '',
         syllabusknown: true,
         syllabus: summary.syllabus || '',
+        images: Boolean(summary.images),
         instruction: String(summary.instruction || '').trim(),
     });
     Templates.prependNodeContents(node, html, js);
+};
+
+/**
+ * Say in the summary of the run whether the pictures are made, when an answer changed it after the run started.
+ *
+ * @param {boolean} on
+ * @returns {Promise<void>}
+ */
+export const showImagesInSummary = async(on) => {
+    const cell = document.querySelector('[data-region="run-summary-images"]');
+    if (!cell) {
+        return;
+    }
+    const [yes, no] = await getStrings([
+        {key: 'courseai_template_summary_images_on', component: 'local_coursegen'},
+        {key: 'courseai_template_summary_images_off', component: 'local_coursegen'},
+    ]);
+    cell.textContent = on ? yes : no;
 };
 
 /**

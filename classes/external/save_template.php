@@ -31,6 +31,7 @@ use external_single_structure;
 use external_value;
 use local_coursegen\local\models\template;
 use local_coursegen\local\service\template_persistence_service;
+use local_coursegen\local\text\plain_name;
 use context_system;
 
 defined('MOODLE_INTERNAL') || die();
@@ -50,7 +51,7 @@ class save_template extends external_api {
     public static function execute_parameters() {
         return new external_function_parameters([
             'id'             => new external_value(PARAM_INT,  'Template ID (0 for new)', VALUE_DEFAULT, 0),
-            'name'           => new external_value(PARAM_TEXT, 'Template name'),
+            'name'           => new external_value(PARAM_RAW, 'Template name, cleaned as plain text'),
             'description'    => new external_value(PARAM_RAW,  'Template description', VALUE_DEFAULT, ''),
             'courseid'       => new external_value(PARAM_INT,  'Base course ID'),
             'maxsections'    => new external_value(PARAM_INT,  'Max sections', VALUE_DEFAULT, 0),
@@ -74,14 +75,27 @@ class save_template extends external_api {
                                 VALUE_DEFAULT,
                                 'course'
                             ),
+                            'spacerequired'  => new external_value(
+                                PARAM_BOOL,
+                                'Whether the professor must provide this activity; only meaningful when action=space',
+                                VALUE_DEFAULT,
+                                true
+                            ),
+                            'spaceinstruction' => new external_value(
+                                PARAM_RAW,
+                                'What the professor has to provide; only meaningful when action=space',
+                                VALUE_DEFAULT,
+                                ''
+                            ),
                         ])
                     ),
                     'instances' => new external_multiple_structure(
                         new external_single_structure([
                             'sourcecmid' => new external_value(PARAM_INT, 'cmid of the action=template activity this instance was created from'),
-                            'sourcename' => new external_value(PARAM_TEXT, 'Snapshot of the source template\'s display name'),
-                            'name'       => new external_value(PARAM_TEXT, 'This instance\'s own display name'),
-                            'typelabel'  => new external_value(PARAM_TEXT, 'Snapshot of the source template\'s module type label'),
+                            'sourcename' => new external_value(PARAM_RAW, 'Snapshot of the source template\'s display name'),
+                            'name'       => new external_value(PARAM_RAW, 'This instance\'s own display name, cleaned as plain text'),
+                            'ainame'     => new external_value(PARAM_INT, '1 when the AI writes the real name', VALUE_DEFAULT, 0),
+                            'typelabel'  => new external_value(PARAM_RAW, 'Snapshot of the source template\'s module type label'),
                             'modname'    => new external_value(PARAM_PLUGIN, 'Snapshot of the source template\'s module type', VALUE_DEFAULT, ''),
                             'prompt'     => new external_value(PARAM_RAW, 'Instance prompt', VALUE_DEFAULT, ''),
                             'aftercmid' => new external_value(
@@ -101,6 +115,9 @@ class save_template extends external_api {
                             'modname'     => new external_value(PARAM_PLUGIN, 'Module type the professor provides'),
                             'required'    => new external_value(PARAM_BOOL, 'Whether the professor must provide it', VALUE_DEFAULT, true),
                             'instruction' => new external_value(PARAM_RAW, 'What the professor has to provide', VALUE_DEFAULT, ''),
+                            'options'     => new external_value(
+                                PARAM_RAW, 'JSON list of the activities the teacher can add here: {modname, instruction}', VALUE_DEFAULT, ''
+                            ),
                             'aftercmid' => new external_value(
                                 PARAM_INT,
                                 'Real cmid this space renders after within its section; 0 = section start',
@@ -164,7 +181,9 @@ class save_template extends external_api {
         }
         require_capability($capability, $context);
 
-        if (trim($params['name']) === '') {
+        // A name with a tag or longer than its column is cleaned, never a reason for the whole save to fail.
+        $params['name'] = plain_name::of($params['name']);
+        if ($params['name'] === '') {
             // The wizard's own name field only ever gets this far via a
             // direct save_template() call, never a real mform submission
             // (classes/form/template_name_form.php's "required" rule is

@@ -40,6 +40,8 @@ class template_keep_copier {
      * @param int $targetcourseid
      * @param array $createdcmids Filled with base course cmid => cmid of its copy in the
      *     target course, for every activity that was copied.
+     * @param int[] $alsocmids Base course cmids to copy as well as the kept ones: the file resources of the
+     *     spaces the teacher brought a file for.
      * @param template_section_map|null $sectionmap Where each section of the template went in the new course;
      *     null when the sections are the template's own.
      * @return array Names of the activities that could not be copied.
@@ -48,6 +50,7 @@ class template_keep_copier {
         int $templateid,
         int $targetcourseid,
         array &$createdcmids = [],
+        array $alsocmids = [],
         ?template_section_map $sectionmap = null
     ): array {
         global $CFG;
@@ -70,7 +73,7 @@ class template_keep_copier {
         $sourcecourse = get_course($sourcecourseid);
         $targetcourse = get_course($targetcourseid);
         $modinfo = get_fast_modinfo($sourcecourse);
-        $keepcmids = self::kept_cmids($templateid, $modinfo);
+        $keepcmids = self::kept_cmids($templateid, $modinfo, $alsocmids);
         $targetsectionids = self::target_section_ids($targetcourse);
 
         $failures = self::copy_kept_activities(
@@ -183,16 +186,18 @@ class template_keep_copier {
      *
      * @param int $templateid
      * @param \course_modinfo $modinfo
+     * @param int[] $alsocmids Cmids copied whatever their action.
      * @return int[]
      */
-    private static function kept_cmids(int $templateid, $modinfo): array {
+    private static function kept_cmids(int $templateid, $modinfo, array $alsocmids): array {
         $actions = self::kept_actions($templateid);
         $cms = $modinfo->get_cms();
 
         $cmids = [];
         foreach ($cms as $cm) {
             $action = $actions[$cm->id] ?? 'keep';
-            if ($action === 'keep' || $action === 'reference') {
+            $also = in_array((int) $cm->id, $alsocmids, true);
+            if ($action === 'keep' || $action === 'reference' || $also) {
                 $cmids[] = (int) $cm->id;
             }
         }
@@ -215,6 +220,29 @@ class template_keep_copier {
             $actions[$cmid] = $activity->get('action');
         }
         return $actions;
+    }
+
+    /**
+     * Copy one activity of any course into a course, in the section of a given number.
+     *
+     * Used for the activities a teacher brings to the spaces of a template.
+     *
+     * @param \cm_info $cm The activity to copy.
+     * @param int $courseid The course it is copied into.
+     * @param int $sectionnumber The section it lands in; the first one when the course has no such section.
+     * @return int|null The cmid of the copy, or null when the copy failed.
+     */
+    public static function copy_activity(\cm_info $cm, int $courseid, int $sectionnumber): ?int {
+        global $CFG;
+        require_once($CFG->dirroot . '/course/lib.php');
+
+        $targetcourse = get_course($courseid);
+        $sectionids = self::target_section_ids($targetcourse);
+        $sectionid = $sectionids[$sectionnumber] ?? ($sectionids[0] ?? 0);
+        if ($sectionid <= 0) {
+            return null;
+        }
+        return self::copy_one($cm, $targetcourse, $sectionid);
     }
 
     /**

@@ -33,3 +33,30 @@
     font-size: 0.82rem;
     color: #6c757d;
 }
+
+/* The activities of a space for the teacher, in two columns so the list fits the modal; one that is ticked takes the
+   whole width, with the field of its instruction under it. */
+.tpl-teacher-space-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 16px;
+}
+
+.tpl-teacher-space-grid .tpl-teacher-space-option:has(input:checked) {
+    grid-column: 1 / -1;
+}
+
+@media (max-width: 575.98px) {
+    .tpl-teacher-space-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+/* The menu of "Add activity or space" is as wide as its longest item: no text runs over its edge. */
+.dropdown-menu:has(> .tpl-add-menu-item) {
+    min-width: max-content;
+}
+
+.tpl-add-menu-item {
+    white-space: nowrap;
+}

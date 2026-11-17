@@ -20,9 +20,14 @@ use local_coursegen\local\models\template;
 use local_coursegen\local\models\template_activity;
 use local_coursegen\local\models\template_instance;
 use local_coursegen\local\models\template_section;
+use local_coursegen\local\models\template_space;
+use local_coursegen\local\service\teacher_space_options;
 use local_coursegen\local\service\template_export_uids;
 use local_coursegen\local\service\template_instance_layout;
 use local_coursegen\local\service\template_section_tree;
+use local_coursegen\local\space\activity_spaces;
+use local_coursegen\local\space\space_rules;
+use local_coursegen\local\space\upload_spaces;
 use local_coursegen\output\template_row_options;
 
 /**
@@ -54,7 +59,7 @@ trait get_template_structure_rows {
     }
 
     /**
-     * cmid => saved action, for this template.
+     * cmid => saved action and space settings, for this template.
      *
      * @param template $template
      * @return array
@@ -65,7 +70,11 @@ trait get_template_structure_rows {
         $records = template_activity::get_records(['templateid' => $templateid]);
         foreach ($records as $a) {
             $cmid = $a->get('cmid');
-            $activitysettings[$cmid] = ['action' => $a->get('action')];
+            $activitysettings[$cmid] = [
+                'action' => $a->get('action'),
+                'instruction' => (string) $a->get('spaceinstruction'),
+                'required' => (bool) $a->get('spacerequired'),
+            ];
         }
         return $activitysettings;
     }
@@ -79,7 +88,17 @@ trait get_template_structure_rows {
     private static function instances_by_section(template $template): array {
         $instancesbysection = [];
         $templateid = $template->get('id');
+        // The spaces the teacher fills share the anchors of the instances, so both are placed by the same rule. For now
+        // they are not offered (only a file is, in its own row): see activity_spaces::ENABLED.
         $records = template_instance::get_records(['templateid' => $templateid]);
+        foreach (template_space::get_records(['templateid' => $templateid]) as $space) {
+            // A space for the teacher (the activities they can add) is always offered; one of the earlier kind (one of
+            // their own activities) only while those are enabled.
+            $isupload = (string) $space->get('modname') === upload_spaces::MODNAME;
+            if ($isupload || teacher_space_options::decode($space->get('options')) || activity_spaces::ENABLED) {
+                $records[] = $space;
+            }
+        }
         foreach ($records as $instance) {
             $sectionid = $instance->get('sectionid');
             $instancesbysection[$sectionid][] = $instance;
@@ -188,16 +207,21 @@ trait get_template_structure_rows {
         if ($row['type'] === template_instance_layout::TYPE_INSTANCE) {
             return self::instance_row($row['record']);
         }
+        if ($row['type'] === template_instance_layout::TYPE_SPACE) {
+            return self::activity_space_row($row['record'], $output);
+        }
         $cm = $modinfo->cms[$row['cmid']];
         if (!$cm->uservisible) {
             return null;
         }
         // Mirror the admin's action mapping: keep (with unset defaulting to
-        // keep) stays visible and locked; reference, template (mold) and
-        // exclude rows never reach the professor at all.
+        // keep) stays visible and locked, and so does a file resource the
+        // teacher brings a file for; reference, template (mold) and exclude
+        // rows never reach the professor at all.
         $saved = $activitysettings[$cm->id] ?? ['action' => template_activity::ACTION_KEEP];
-        $action = $saved['action'];
-        if ($action !== template_activity::ACTION_KEEP) {
+        $action = space_rules::effective_action($saved['action'], $cm->modname);
+        $isspace = $action === template_activity::ACTION_SPACE;
+        if ($action !== template_activity::ACTION_KEEP && !$isspace) {
             return null;
         }
         $purpose = self::get_purpose($cm->modname);
@@ -215,6 +239,142 @@ trait get_template_structure_rows {
             'isinstance' => false,
             'aigenerated' => false,
             'generationuid' => '',
+        ] + self::space_fields($isspace, $saved);
+    }
+
+    /**
+     * What a row says about being a space for the teacher.
+     *
+     * @param bool $isspace
+     * @param array $saved The row's saved settings: instruction and required.
+     * @return array
+     */
+    private static function space_fields(bool $isspace, array $saved = []): array {
+        $fields = ['isspace' => false, 'spacekind' => '', 'spaceinstruction' => '', 'spacerequired' => false];
+        if (!$isspace) {
+            return $fields;
+        }
+        $instruction = $saved['instruction'] ?? '';
+        $required = $saved['required'] ?? false;
+        $fields['isspace'] = true;
+        $fields['spacekind'] = 'file';
+        $fields['spaceinstruction'] = format_string($instruction);
+        $fields['spacerequired'] = (bool) $required;
+        return $fields;
+    }
+
+    /**
+     * One space of the template the teacher fills with one of their own activities.
+     *
+     * Its id is the space's uid: the activity the teacher picks is sent back under it.
+     *
+     * @param template_space $space
+     * @param \renderer_base $output
+     * @return array
+     */
+    private static function activity_space_row(template_space $space, $output): array {
+        $options = teacher_space_options::decode($space->get('options'));
+        if ($options) {
+            return self::choice_space_row($space, $options, $output);
+        }
+        if ((string) $space->get('modname') === upload_spaces::MODNAME) {
+            return self::upload_space_row($space, $output);
+        }
+        $modname = (string) $space->get('modname');
+        $typelabel = get_string_manager()->string_exists('modulename', 'mod_' . $modname)
+            ? get_string('modulename', 'mod_' . $modname)
+            : $modname;
+        return [
+            'id' => (string) $space->get('uid'),
+            'name' => $typelabel,
+            'modname' => $modname,
+            'purpose' => self::get_purpose($modname),
+            'typelabel' => $typelabel,
+            'iconhtml' => $output->image_icon('monologo', $modname, 'mod_' . $modname, ['class' => 'icon activityicon']),
+            'locked' => true,
+            'action' => '',
+            'isinstance' => false,
+            'aigenerated' => false,
+            'generationuid' => '',
+            'isspace' => true,
+            'spacekind' => 'activity',
+            'spaceinstruction' => format_string((string) $space->get('instruction')),
+            'spacerequired' => (int) $space->get('required') === 1,
+        ];
+    }
+
+    /**
+     * One place where the teacher uploads a file of their own: a File resource with it is created there.
+     *
+     * Its id is the space's uid; the file goes under the placeholder course module id of the space.
+     *
+     * @param template_space $space
+     * @param \renderer_base $output
+     * @return array
+     */
+    private static function upload_space_row(template_space $space, $output): array {
+        $modname = upload_spaces::MODNAME;
+        $typelabel = get_string('modulename', 'mod_' . $modname);
+        return [
+            'id' => (string) $space->get('uid'),
+            'name' => $typelabel,
+            'modname' => $modname,
+            'purpose' => self::get_purpose($modname),
+            'typelabel' => $typelabel,
+            'iconhtml' => $output->image_icon('monologo', $modname, 'mod_' . $modname, ['class' => 'icon activityicon']),
+            'locked' => true,
+            'action' => '',
+            'isinstance' => false,
+            'aigenerated' => false,
+            'generationuid' => '',
+            'isspace' => true,
+            'spacekind' => 'file',
+            'spaceinstruction' => format_string((string) $space->get('instruction')),
+            'spacerequired' => (int) $space->get('required') === 1,
+            'spacecmid' => upload_spaces::cmid_of($space),
+        ];
+    }
+
+    /**
+     * One space where the teacher adds one of the activities the admin allowed, which the AI then writes.
+     *
+     * Its id, and the id its progress answers to, is the space's uid: the activity the teacher chooses is generated
+     * under it.
+     *
+     * @param template_space $space
+     * @param array[] $options Each {modname, instruction}.
+     * @param \renderer_base $output
+     * @return array
+     */
+    private static function choice_space_row(template_space $space, array $options, $output): array {
+        $choices = [];
+        foreach ($options as $option) {
+            $modname = $option['modname'];
+            $choices[] = [
+                'modname' => $modname,
+                'title' => get_string('modulename', 'mod_' . $modname),
+                'instruction' => format_string($option['instruction']),
+                'iconhtml' => $output->image_icon('monologo', $modname, 'mod_' . $modname, ['class' => 'icon activityicon']),
+            ];
+        }
+        $titles = implode(', ', array_column($choices, 'title'));
+        return [
+            'id' => (string) $space->get('uid'),
+            'name' => get_string('courseai_template_choice_space_name', 'local_coursegen'),
+            'modname' => $options[0]['modname'],
+            'purpose' => self::get_purpose($options[0]['modname']),
+            'typelabel' => $titles,
+            'iconhtml' => $output->pix_icon('t/add', ''),
+            'locked' => true,
+            'action' => '',
+            'isinstance' => false,
+            'aigenerated' => true,
+            'generationuid' => (string) $space->get('uid'),
+            'isspace' => true,
+            'spacekind' => 'choice',
+            'spaceinstruction' => get_string('courseai_template_choice_space_hint', 'local_coursegen', $titles),
+            'spacerequired' => (int) $space->get('required') === 1,
+            'spaceoptions' => json_encode($choices, JSON_UNESCAPED_UNICODE),
         ];
     }
 
@@ -275,7 +435,7 @@ trait get_template_structure_rows {
             // not what the tree calls it), even though today they happen to
             // be the same string.
             'generationuid' => $uid,
-        ];
+        ] + self::space_fields(false);
     }
 
     /**

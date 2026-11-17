@@ -49,6 +49,11 @@ class stream_authorizer {
             return;
         }
 
+        if ($streamtype === stream_type::TEMPLATE) {
+            $this->authorize_template($threadid);
+            return;
+        }
+
         throw new \moodle_exception('error_stream_unknown_type', 'local_coursegen');
     }
 
@@ -72,6 +77,21 @@ class stream_authorizer {
      *
      * @param string $threadid External job identifier.
      */
+    /**
+     * A template generation is read only by the user who started it, and who may still generate from a template.
+     *
+     * @param string $threadid External thread identifier.
+     * @throws \moodle_exception When the run is not the user's, or the user may no longer generate from a template.
+     */
+    private function authorize_template(string $threadid): void {
+        global $USER;
+
+        course_session_service::get_user_session_by_external_id($threadid, (int) $USER->id);
+
+        $context = \context_system::instance();
+        require_capability('local/coursegen:createtemplatecoursewithai', $context);
+    }
+
     private function authorize_activity(string $threadid): void {
         global $USER;
 

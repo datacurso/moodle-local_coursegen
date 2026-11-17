@@ -33,6 +33,8 @@ use local_coursegen\local\models\template_activity;
 use local_coursegen\local\models\template_instance;
 use local_coursegen\local\models\template_section;
 use local_coursegen\local\models\template_space;
+use local_coursegen\local\service\teacher_space_options;
+use local_coursegen\local\space\space_rules;
 
 /**
  * Builds the per-row select options for sections_config.
@@ -82,7 +84,11 @@ class template_row_options {
     /**
      * Build the per-activity action select options.
      *
-     * Template is the only action gated to a module type in
+     * "Space" (the professor brings a file for this activity) is offered only
+     * for a file resource, see space_rules. A space saved on any other type
+     * is read as exclude.
+     *
+     * Template is the only other action gated to a module type in
      * ai_activity_types::MODNAMES — the real AI service's full content
      * contract, never a constant scoped to whichever implementation currently
      * satisfies it. Anything NOT in that contract
@@ -102,6 +108,7 @@ class template_row_options {
     public static function activity_actions(int $cmid, string $modname, ?string $savedaction = null): array {
         $keys = [
             template_activity::ACTION_TEMPLATE,
+            template_activity::ACTION_AIMODIFY,
             template_activity::ACTION_KEEP,
             template_activity::ACTION_REFERENCE,
             template_activity::ACTION_EXCLUDE,
@@ -114,7 +121,13 @@ class template_row_options {
                 template_activity::ACTION_EXCLUDE,
             ];
         }
+        if (space_rules::allows($modname)) {
+            $keys[] = template_activity::ACTION_SPACE;
+        }
         $default = template_activity::ACTION_KEEP;
+        if ($savedaction !== null) {
+            $savedaction = space_rules::effective_action($savedaction, $modname);
+        }
         if ($savedaction !== null && in_array($savedaction, $keys, true)) {
             $default = $savedaction;
         }
@@ -212,6 +225,7 @@ class template_row_options {
             'promptopen' => $generated,
             'instanceid' => (int) $instance->get('id'),
             'name' => $name,
+            'ainame' => (int) $instance->get('ainame'),
             'typelabel' => $typelabel,
             'prompt' => (string) $instance->get('prompt'),
             'sourcecmid' => (int) $instance->get('sourcecmid'),
@@ -262,6 +276,12 @@ class template_row_options {
         $typename = self::module_type_name($modname);
         $iconurl = self::instance_icon_url($modname);
         $badge = self::space_badge_label($required);
+        $options = teacher_space_options::decode($space->get('options'));
+        if ($options) {
+            // A space for the teacher: what they can add there.
+            $titles = array_map(fn($option) => self::module_type_name($option['modname']), $options);
+            $typename = get_string('template_teacher_space_name', 'local_coursegen', implode(', ', $titles));
+        }
         return [
             'spaceid' => (int) $space->get('id'),
             'name' => $typename,
@@ -273,6 +293,7 @@ class template_row_options {
             'badge' => $badge,
             'instruction' => $instruction,
             'hasinstruction' => $instruction !== '',
+            'options' => $options ? json_encode($options, JSON_UNESCAPED_UNICODE) : '',
         ];
     }
 

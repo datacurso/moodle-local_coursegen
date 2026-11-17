@@ -44,4 +44,13 @@ interface module_link_texts {
      * @return string[]
      */
     public function text_columns(): array;
+
+    /**
+     * The file area a text column of a record keeps its files in, as the module serves it.
+     *
+     * @param string $column One of text_columns().
+     * @param \stdClass $record A record of table().
+     * @return array{0:string,1:string,2:int} Component, file area and item id.
+     */
+    public function file_area(string $column, \stdClass $record): array;
 }

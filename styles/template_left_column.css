@@ -140,6 +140,58 @@ body.cg-generating.cg-generation-paused
   color: var(--cg-amber-ink);
 }
 
+/* A retry that the page or the service makes by itself looks the same whatever failed: an amber step, nothing turns. */
+body .tpl-left-panel .cg-thread-feed > .cg-log-entry--retrying {
+  background: var(--warn-soft);
+}
+
+body .tpl-left-panel .cg-thread-feed > .cg-log-entry--retrying .cg-log-bar {
+  border: 2px solid var(--warn);
+  background: radial-gradient(circle, var(--warn) 0 2.5px, transparent 3px);
+  animation: none;
+}
+
+body .tpl-left-panel .cg-thread-feed > .cg-log-entry--retrying .cg-log-msg {
+  color: var(--cg-amber-ink);
+  font-weight: 500;
+}
+
+/* The thread has two feeds, one above the list of the activities and one under it. The step the run is on is the
+   last of the feed that has the newest entries, so the last step of the upper feed is a plain one as soon as the
+   lower feed has something. */
+body .tpl-left-panel #cgLog:has(~ #cgLogAfter > .cg-log-entry) > .cg-log-entry--turn-ai:nth-last-child(1 of .cg-log-entry) {
+  background: transparent;
+}
+
+body .tpl-left-panel #cgLog:has(~ #cgLogAfter > .cg-log-entry) > .cg-log-entry--turn-ai:nth-last-child(1 of .cg-log-entry) .cg-log-bar {
+  border: 0;
+  background: radial-gradient(circle, var(--cg-dot) 0 3.5px, var(--card) 4px);
+  animation: none;
+}
+
+body .tpl-left-panel #cgLog:has(~ #cgLogAfter > .cg-log-entry) > .cg-log-entry--turn-ai:nth-last-child(1 of .cg-log-entry) .cg-log-msg {
+  color: inherit;
+  font-weight: inherit;
+}
+
+/* A step that went wrong stays one while the run is stopped: it keeps its own color and its marker does not turn. */
+body.cg-generating.cg-generation-paused
+  .tpl-left-panel .cg-thread-feed > .cg-log-entry--danger:nth-last-child(1 of .cg-log-entry) {
+  background: transparent;
+}
+
+body.cg-generating.cg-generation-paused
+  .tpl-left-panel .cg-thread-feed > .cg-log-entry--danger:nth-last-child(1 of .cg-log-entry) .cg-log-bar {
+  border: 0;
+  background: radial-gradient(circle, var(--danger) 0 3.5px, var(--card) 4px);
+  animation: none;
+}
+
+body.cg-generating.cg-generation-paused
+  .tpl-left-panel .cg-thread-feed > .cg-log-entry--danger:nth-last-child(1 of .cg-log-entry) .cg-log-msg {
+  color: var(--danger);
+}
+
 /* Over: the last step is a check. */
 body.cg-generation-settled
   .tpl-left-panel .cg-thread-feed > .cg-log-entry--turn-ai:nth-last-child(1 of .cg-log-entry) .cg-log-bar {
@@ -246,4 +298,60 @@ body.cg-generation-paused .tpl-left-panel .cg-working-slot {
   .tpl-left-panel .cg-waiting-line::before {
     animation: none;
   }
+}
+
+/* The time left for the next retry changes every second: the digits keep their width so the line does not move. */
+.tpl-left-panel .cg-retry-status {
+  font-variant-numeric: tabular-nums;
+}
+
+/* The slot of the messages about the run, above the buttons of the run: nothing takes room while it is empty. */
+.tpl-left-panel .cg-notice-dock {
+  flex: 0 0 auto;
+  margin: 0 14px 8px;
+}
+
+.tpl-left-panel .cg-notice-dock:empty {
+  display: none;
+}
+
+/* While a message about the run is in the slot (a retry, a failure), the line that says it is working is not shown: a run
+   that is retrying has a problem, and one that is working has none, so only one of the two is ever on the screen. */
+.tpl-left-panel:has(#cgNoticeDock > *) #cgWorkingSlot {
+  display: none;
+}
+
+/* While a message about the run is shown, nothing on the page turns or looks like it is turning: a spinner that goes on
+   over a failure says that it advances and is stuck, and an arc that stopped halfway looks like one that froze. The marks
+   of the activities become a plain ring that waits; the card says that it retries, with the time left, and that is what
+   moves. */
+body:has(#cgNoticeDock > *) * {
+  animation-play-state: paused !important;
+}
+
+body:has(#cgNoticeDock > *) :is(.spinner-icon, .prv-spin, .pc-spin, .spinner, .planning-loading-spinner) {
+  animation: none !important;
+}
+
+body:has(#cgNoticeDock > *) .spinner-icon path {
+  d: path("M12 2a10 10 0 1 1 -0.01 0");
+  opacity: .45;
+}
+
+body:has(#cgNoticeDock > *) .prv-spin path {
+  d: path("M21 12a9 9 0 1 1 -18 0a9 9 0 1 1 18 0");
+  opacity: .45;
+}
+
+body:has(#cgNoticeDock > *) .tpl-left-panel .cg-thread-feed > .cg-log-entry--turn-ai .cg-log-bar {
+  animation: none !important;
+  border-top-color: hsl(10 81% 63% / .25) !important;
+}
+
+/* The mark on the icon of each activity that is being written, and the one of the thread: a plain ring, with no arc in the
+   colour of the brand that would read as a spinner that stopped. */
+body:has(#cgNoticeDock > *) :is(#prvSections, #tplModeStructure) .cg-gen-active .activity-icon::after,
+body:has(#cgNoticeDock > *) .cg-log-spin {
+  animation: none !important;
+  border-color: hsl(10 81% 63% / .3) !important;
 }

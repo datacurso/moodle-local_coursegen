@@ -37,6 +37,8 @@ export const ACTION = {
     REFERENCE: 'reference',
     EXCLUDE: 'exclude',
     TEMPLATE: 'template',
+    SPACE: 'space',
+    AIMODIFY: 'aimodify',
 };
 
 /** @type {Object} What the generator does with a section. */
@@ -55,6 +57,7 @@ export const SCOPE = {
 /** @type {Object} CSS classes the scripts add or remove to change how a row looks (never used to find elements). */
 export const CLASS = {
     HIDDEN: 'd-none',
+    ROW_SPACE: 'tpl-row-space',
 };
 
 /** @type {Object} Tag names the scripts look up on an ancestor. */
@@ -91,6 +94,7 @@ export const STRING = {
     SCOPE_UNAVAILABLE: 'template_instance_scope_unavailable',
     ADD_SPACE: 'template_add_space',
     SPACE_MODAL_TITLE: 'template_space_modal_title',
+    SPACE_MODAL_TITLE_AI: 'template_space_modal_title_ai',
     SPACE_REQUIRED: 'template_space_required',
     SPACE_OPTIONAL: 'template_space_optional',
     SPACE_BADGE: 'template_space_badge',

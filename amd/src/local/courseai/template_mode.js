@@ -44,6 +44,10 @@ import {
 } from './template/state';
 import Selectors from './template/selectors';
 import {renderStructure, wireStructureEvents} from './template/render';
+import {pickSpaceFile, removeSpaceFile, refreshGenerateState} from './template/space_files';
+import {pickSpaceActivity, removeSpaceActivity} from './template/space_activities';
+import {clearSpaceGate, missingSpaces, requiredSpaceCount, showSpaceGate} from './template/space_gate';
+import {pickSpaceChoice, removeSpaceChoice} from './template/space_choices';
 import {formatTemplate} from './utils';
 
 // The "N sections · M activities" stats template. Fetched once and cached —
@@ -55,19 +59,6 @@ const getStatsTemplate = () => {
         statsTemplatePromise = getString('courseai_plan_sections_counter', 'local_coursegen');
     }
     return statsTemplatePromise;
-};
-
-/**
- * Turn the Generate button on once a template is loaded and no run is on screen.
- *
- * @param {Object} tplState
- * @param {HTMLElement|null} genBtn
- */
-const refreshGenerateState = (tplState, genBtn) => {
-    if (!genBtn || !tplState.loaded || document.body.classList.contains('cg-generating')) {
-        return;
-    }
-    genBtn.disabled = false;
 };
 
 /**
@@ -158,8 +149,8 @@ export const wireTemplateMode = (state, host) => {
     // The activities pill of the top bar opens and closes its list of activities.
     initTopBar();
 
-    // Input-bar defaults: no images, page default language, no syllabus yet.
-    const tplState = createTemplateState({lang: state.defaultLang || ''});
+    // Input-bar defaults: no images, language left to the AI (detect automatically), no syllabus yet.
+    const tplState = createTemplateState({lang: ''});
 
     wireInputBar(tplState, state);
     wireUnitsField(tplState);
@@ -200,13 +191,72 @@ export const wireTemplateMode = (state, host) => {
                 Notification.exception(e);
             }
         },
+        onPickSpaceFile: (sectionIndex, activityIndex) => {
+            pickSpaceFile(tplState, sectionIndex, activityIndex, rerenderStructure);
+        },
+        onRemoveSpaceFile: (sectionIndex, activityIndex) => {
+            removeSpaceFile(tplState, sectionIndex, activityIndex, rerenderStructure);
+        },
+        onPickSpaceChoice: (sectionIndex, activityIndex) => {
+            pickSpaceChoice(tplState, sectionIndex, activityIndex, rerenderStructure);
+        },
+        onRemoveSpaceChoice: (sectionIndex, activityIndex) => {
+            removeSpaceChoice(tplState, sectionIndex, activityIndex, rerenderStructure);
+        },
+        onPickSpaceActivity: (sectionIndex, activityIndex) => {
+            pickSpaceActivity(tplState, sectionIndex, activityIndex, rerenderStructure);
+        },
+        onRemoveSpaceActivity: (sectionIndex, activityIndex) => {
+            removeSpaceActivity(tplState, sectionIndex, activityIndex, rerenderStructure);
+        },
     });
 
-    // Generate: the button is only on while a template is loaded.
+    // Generate: a required space still without its file stops it here, before the AI is asked anything; the card that
+    // says so lets the teacher bring the file, and the generation starts as soon as nothing is missing.
+    const generate = () => {
+        const missing = missingSpaces(tplState);
+        if (missing.length) {
+            showSpaceGate(missing, requiredSpaceCount(tplState), {onBring: bringSpace, onReveal: revealSpace});
+            return;
+        }
+        clearSpaceGate();
+        runGeneration(tplState, tplSelect, genBtn, state, host);
+    };
+    const afterBrought = async() => {
+        await rerenderStructure();
+        if (document.getElementById('cgSpaceGateCard')) {
+            generate();
+        }
+    };
+    const bringSpace = (sectionIndex, activityIndex) => {
+        const row = tplState.sections[sectionIndex]?.activities[activityIndex];
+        if (row?.spacekind === 'choice') {
+            pickSpaceChoice(tplState, sectionIndex, activityIndex, afterBrought);
+            return;
+        }
+        pickSpaceFile(tplState, sectionIndex, activityIndex, afterBrought);
+    };
+    // The card of a file in the structure, brought into view (its section opened if it was closed) and marked for a
+    // moment, so the teacher sees where the file goes.
+    const revealSpace = async(sectionIndex, activityIndex) => {
+        const section = tplState.sections[sectionIndex];
+        if (section?.collapsed) {
+            toggleSectionCollapsed(tplState, sectionIndex);
+            await rerenderStructure();
+        }
+        const position = `[data-section-index="${sectionIndex}"][data-activity-index="${activityIndex}"]`;
+        const spaceCard = container?.querySelector(`[data-region="local_coursegen/template/space-card"]${position}`);
+        if (!spaceCard) {
+            return;
+        }
+        spaceCard.scrollIntoView({block: 'center', behavior: 'smooth'});
+        spaceCard.classList.remove('cg-space-row--flash');
+        // Read once so that the animation starts again when the same card is shown twice in a row.
+        void spaceCard.offsetWidth;
+        spaceCard.classList.add('cg-space-row--flash');
+    };
     if (genBtn) {
-        genBtn.addEventListener('click', () => {
-            runGeneration(tplState, tplSelect, genBtn, state, host);
-        });
+        genBtn.addEventListener('click', generate);
     }
 
     // Template selection — load structure.
@@ -270,6 +320,7 @@ const loadTemplateStructure = async(templateId, tplState, container, state, requ
         updateStats(tplState, statsTemplate);
         await renderLimitsBanner(limitsEl, limitsBadge, tplState);
 
+        // A required space keeps the button off until its file is picked.
         refreshGenerateState(tplState, genBtn);
         state.templateStructureLoaded = true;
     } catch (e) {
@@ -347,6 +398,7 @@ const clearStructure = (tplState, container, state) => {
     if (genBtn) {
         genBtn.disabled = true;
     }
+    clearSpaceGate();
     const statsEl = document.getElementById('tplModeStats');
     if (statsEl) {
         statsEl.textContent = '';

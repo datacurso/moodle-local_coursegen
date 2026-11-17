@@ -30,6 +30,12 @@ export default {
     actions: {
         toggleSection: '[data-action="local_coursegen/template/toggle-section"]',
         unitsInput: '[data-action="local_coursegen/template/units-input"]',
+        pickSpaceFile: '[data-action="local_coursegen/template/pick-space-file"]',
+        removeSpaceFile: '[data-action="local_coursegen/template/remove-space-file"]',
+        pickSpaceChoice: '[data-action="local_coursegen/template/pick-space-choice"]',
+        removeSpaceChoice: '[data-action="local_coursegen/template/remove-space-choice"]',
+        pickSpaceActivity: '[data-action="local_coursegen/template/pick-space-activity"]',
+        removeSpaceActivity: '[data-action="local_coursegen/template/remove-space-activity"]',
     },
     classes: {
         generating: 'cg-generating',
@@ -38,5 +44,6 @@ export default {
     regions: {
         unitsField: '[data-region="local_coursegen/template/units"]',
         generationNotices: '[data-region="local_coursegen/template/generation-notices"]',
+        spaceButtonLabel: '[data-region="local_coursegen/template/space-button-label"]',
     },
 };

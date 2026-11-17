@@ -22,7 +22,7 @@
  */
 
 import {call as fetchMany} from 'core/ajax';
-import {buildStartArgs} from './start_args';
+import {buildStartArgs} from 'local_coursegen/local/courseai/template/start_args';
 
 /**
  * Fetch a template's guided-form structure: its sections and activities, the
@@ -37,8 +37,8 @@ export const getTemplateStructure = (templateId) => fetchMany([{
 }])[0];
 
 /**
- * Open a generation: exports the template, attaches the syllabus, and returns the
- * stream whose consumption actually runs it.
+ * Open a generation: exports the template, attaches the syllabus and the files
+ * of the spaces, and returns the stream whose consumption actually runs it.
  *
  * @param {number} templateId
  * @param {string} prompt The professor's single general instruction.
@@ -47,10 +47,18 @@ export const getTemplateStructure = (templateId) => fetchMany([{
  * @param {boolean} withImages Whether the professor asked for the images to be generated.
  * @param {number|null} units Number of units wanted, null to keep the template's own.
  * @param {number} guidelineId Institutional guideline id, 0 for none (only the id travels, the server reads the text).
+ * @param {Object[]} spaceFiles The file of each space: {cmid, draftitemid}.
+ * @param {Object[]} spaceActivities The activity the teacher brings to each space: {uid, cmid}.
+ * @param {Object[]} spaceChoices The activity the teacher adds in each space, which the AI writes: {uid, modname, instruction}.
  * @returns {Promise<Object>} {threadid, sessionid, streamurl}
  */
-export const startTemplateGeneration = (templateId, prompt, draftItemId, lang, withImages, units = null, guidelineId = 0) => {
-    const args = buildStartArgs(templateId, prompt, draftItemId, lang, withImages, units, guidelineId);
+export const startTemplateGeneration = (
+    templateId, prompt, draftItemId, lang, withImages, units = null, guidelineId = 0,
+    spaceFiles = [], spaceActivities = [], spaceChoices = []
+) => {
+    const args = buildStartArgs(
+        templateId, prompt, draftItemId, lang, withImages, units, guidelineId, spaceFiles, spaceActivities, spaceChoices
+    );
     return fetchMany([{methodname: 'local_coursegen_start_template_generation', args}])[0];
 };
 
@@ -122,6 +130,34 @@ export const retryTemplateGeneration = (sessionId) => fetchMany([{
  * @param {string} shortname
  * @returns {Promise<Object>} {saved}
  */
+/**
+ * Tell the service to stop the run of a session; it answers once nothing of it is running any more.
+ *
+ * @param {number} sessionId
+ * @returns {Promise<Object>} {wasrunning, stopped}
+ */
+export const stopTemplateGeneration = (sessionId) => fetchMany([{
+    methodname: 'local_coursegen_stop_template_generation',
+    args: {sessionid: sessionId},
+}])[0];
+
+/**
+ * Answer the questions a run asked before it started, or go on without answering.
+ *
+ * @param {number} sessionId
+ * @param {boolean} skipped
+ * @param {Array<Object>} answers [{question_id, value}]; a file answer carries {draftitemid, filename}.
+ * @returns {Promise<Object>} {settled, answered}
+ */
+export const answerTemplateQuestions = (sessionId, skipped, answers) => fetchMany([{
+    methodname: 'local_coursegen_answer_template_questions',
+    args: {
+        sessionid: sessionId,
+        skipped: Boolean(skipped),
+        answers: answers.map((answer) => ({questionid: answer.question_id, value: JSON.stringify(answer.value)})),
+    },
+}])[0];
+
 export const nameTemplateSession = (sessionId, fullname, shortname) => fetchMany([{
     methodname: 'local_coursegen_name_template_session',
     args: {sessionid: sessionId, fullname: fullname, shortname: shortname},

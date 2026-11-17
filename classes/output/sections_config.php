@@ -25,10 +25,13 @@
 
 namespace local_coursegen\output;
 
+use local_coursegen\local\ai_activity_types;
 use local_coursegen\local\models\template_activity;
 use local_coursegen\local\models\template_instance;
 use local_coursegen\local\models\template_section;
 use local_coursegen\local\models\template_space;
+use local_coursegen\local\placeholder\activity_scanner;
+use local_coursegen\local\space\space_rules;
 use local_coursegen\local\service\template_instance_layout;
 use local_coursegen\local\service\template_section_tree;
 
@@ -95,6 +98,8 @@ class sections_config {
         $courseid = (int) $course->id;
         $scopelabelcourse = get_string('template_activity_scope_course', 'local_coursegen');
         $scopelabelsection = get_string('template_activity_scope_section', 'local_coursegen');
+        $spacebadgerequired = template_row_options::space_badge_label(true);
+        $spacebadgeoptional = template_row_options::space_badge_label(false);
 
         return [
             // The collapse ids are built from course id + section id: they
@@ -110,6 +115,11 @@ class sections_config {
             // without an extra string lookup.
             'scopelabelcourse' => $scopelabelcourse,
             'scopelabelsection' => $scopelabelsection,
+            // Both space badge labels, for the same reason: the row's badge
+            // swaps between them after a requirement change without a string
+            // lookup.
+            'spacebadgerequired' => $spacebadgerequired,
+            'spacebadgeoptional' => $spacebadgeoptional,
         ];
     }
 
@@ -140,10 +150,10 @@ class sections_config {
      * makes: empty for a new template (id 0).
      *
      * @param int $templateid Existing template id, 0 for a new template.
-     * @return array {behaviors, actions, scopes, instances}
+     * @return array {behaviors, actions, scopes, spaces, instances}
      */
     private static function saved_configuration(int $templateid): array {
-        $saved = ['behaviors' => [], 'actions' => [], 'scopes' => [], 'instances' => []];
+        $saved = ['behaviors' => [], 'actions' => [], 'scopes' => [], 'spaces' => [], 'instances' => []];
         if ($templateid <= 0) {
             return $saved;
         }
@@ -171,21 +181,28 @@ class sections_config {
     }
 
     /**
-     * The saved action and template scope of each activity, keyed by cmid.
+     * The saved action, template scope and space settings of each activity,
+     * keyed by cmid.
      *
      * @param int $templateid
-     * @return array {actions, scopes}
+     * @return array {actions, scopes, spaces, prompts}
      */
     private static function saved_activity_settings(int $templateid): array {
         $records = template_activity::get_records(['templateid' => $templateid]);
         $actions = [];
         $scopes = [];
+        $spaces = [];
+        $prompts = [];
         foreach ($records as $record) {
             $cmid = (int) $record->get('cmid');
             $actions[$cmid] = $record->get('action');
+            $prompts[$cmid] = (string) $record->get('prompt');
             $scopes[$cmid] = $record->get('templatescope');
+            $required = (bool) $record->get('spacerequired');
+            $instruction = (string) $record->get('spaceinstruction');
+            $spaces[$cmid] = ['required' => $required, 'instruction' => $instruction];
         }
-        return ['actions' => $actions, 'scopes' => $scopes];
+        return ['actions' => $actions, 'scopes' => $scopes, 'spaces' => $spaces, 'prompts' => $prompts];
     }
 
     /**
@@ -195,7 +212,11 @@ class sections_config {
      * @return array
      */
     private static function saved_virtual_rows(int $templateid): array {
-        $instances = template_instance::get_records(['templateid' => $templateid]);
+        // The instance an activity "modified with AI" makes for itself is drawn as that activity, not as a row of its own.
+        $instances = array_filter(
+            template_instance::get_records(['templateid' => $templateid]),
+            fn($instance) => (int) $instance->get('ownercmid') === 0
+        );
         $spaces = template_space::get_records(['templateid' => $templateid]);
         $virtualrows = array_merge($instances, $spaces);
         $bysection = [];
@@ -281,6 +302,10 @@ class sections_config {
         $savedscope = $saved['scopes'][$cmid] ?? template_activity::SCOPE_COURSE;
         $scopeoptions = template_row_options::template_scope_options($cmid, $savedscope);
         $scopelabel = template_row_options::active_scope_label($scopeoptions);
+        $space = $saved['spaces'][$cmid] ?? ['required' => true, 'instruction' => ''];
+        $isspace = $activeaction === template_activity::ACTION_SPACE;
+        $legacyspace = $savedaction === template_activity::ACTION_SPACE && !space_rules::allows($cm->modname);
+        $spacebadge = template_row_options::space_badge_label($space['required']);
 
         // Link to the real activity in the base course; null for modules
         // with no view page of their own (label), whose names stay plain text.
@@ -309,6 +334,22 @@ class sections_config {
             // by sections_events.js.
             'istemplate' => $activeaction === template_activity::ACTION_TEMPLATE,
             'scopelabel' => $scopelabel,
+            // Drives the clickable "Space" badge the same way: hidden unless
+            // the row's action is "space", reopening the space settings.
+            'isspace' => $isspace,
+            // "Modify with AI": the badge that reopens its instruction, the instruction under the name, and whether the
+            // activity already has markers (then the instruction is optional).
+            'isaimodify' => $activeaction === template_activity::ACTION_AIMODIFY,
+            'aimodifyinstruction' => $activeaction === template_activity::ACTION_AIMODIFY ? ($saved['prompts'][$cmid] ?? '') : '',
+            'hasmarkers' => in_array($cm->modname, ai_activity_types::MODNAMES, true)
+                && activity_scanner::scan($cm)->has_placeholders(),
+            'spacerequired' => $space['required'],
+            'spacerequiredvalue' => (int) $space['required'],
+            'spaceinstruction' => $space['instruction'],
+            'hasspaceinstruction' => $isspace && $space['instruction'] !== '',
+            'spacebadge' => $spacebadge,
+            // A space saved before only a file resource could be one: shown as exclude, with a warning.
+            'legacyspace' => $legacyspace,
         ];
     }
 

@@ -70,10 +70,13 @@ final class template_export_service_test extends \advanced_testcase {
         $picked = template_export_service::build_init_payload($templateid, '', 'es');
         $this->assertSame('es', $picked['lang']);
         $this->assertSame('es', $picked['course_configuration']['lang']);
+        $this->assertFalse($picked['lang_auto']);
 
         $kept = template_export_service::build_init_payload($templateid);
         $this->assertSame('en', $kept['lang']);
         $this->assertSame('en', $kept['course_configuration']['lang']);
+        // No language picked: the service detects it, and the template course's one is only the fallback.
+        $this->assertTrue($kept['lang_auto']);
     }
 
     /**
@@ -181,6 +184,54 @@ final class template_export_service_test extends \advanced_testcase {
         $entry = $this->find_activity($payload, (int) $page->cmid);
 
         $this->assertNull($entry);
+    }
+
+    /**
+     * An activity saved with action "space" is for the professor to provide,
+     * so it never reaches the payload the AI service is asked about, while
+     * a neighbouring activity that is kept still does.
+     */
+    public function test_space_activity_is_left_out_of_the_payload(): void {
+        $this->resetAfterTest(true);
+        $this->setAdminUser();
+
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course();
+        $page = $generator->create_module('page', ['course' => $course->id]);
+        $forum = $generator->create_module('forum', ['course' => $course->id]);
+        $template = $this->create_template($course->id);
+        $templateid = $template->get('id');
+        $this->mark_with_action($templateid, (int) $page->cmid, 'space');
+
+        $payload = template_export_service::build_init_payload($templateid);
+
+        $pageentry = $this->find_activity($payload, (int) $page->cmid);
+        $forumentry = $this->find_activity($payload, (int) $forum->cmid);
+        $this->assertNull($pageentry);
+        $this->assertNotNull($forumentry);
+    }
+
+    /**
+     * A file resource marked "space" never reaches the payload either, and a
+     * space saved on any other type is read as exclude, so it stays out too.
+     */
+    public function test_space_on_a_resource_or_on_another_type_is_left_out_of_the_payload(): void {
+        $this->resetAfterTest(true);
+        $this->setAdminUser();
+
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course();
+        $resource = $generator->create_module('resource', ['course' => $course->id]);
+        $forum = $generator->create_module('forum', ['course' => $course->id]);
+        $template = $this->create_template($course->id);
+        $templateid = $template->get('id');
+        $this->mark_with_action($templateid, (int) $resource->cmid, 'space');
+        $this->mark_with_action($templateid, (int) $forum->cmid, 'space');
+
+        $payload = template_export_service::build_init_payload($templateid);
+
+        $this->assertNull($this->find_activity($payload, (int) $resource->cmid));
+        $this->assertNull($this->find_activity($payload, (int) $forum->cmid));
     }
 
     /**
@@ -399,5 +450,24 @@ final class template_export_service_test extends \advanced_testcase {
             }
         }
         return null;
+    }
+
+    /**
+     * A reference marker in the template asks for a picture only when the person chose to have images.
+     */
+    public function test_pictures_of_the_course_are_asked_only_when_images_are_on(): void {
+        $this->resetAfterTest(true);
+        $this->setAdminUser();
+
+        $course = $this->getDataGenerator()->create_course([
+            'summary' => '<p>Welcome</p>[[coursegen:reference: a calm cover]]',
+        ]);
+        $templateid = $this->create_template($course->id)->get('id');
+
+        $without = template_export_service::build_init_payload($templateid, '', '', false);
+        $this->assertSame([], $without['image_slots']);
+
+        $with = template_export_service::build_init_payload($templateid, '', '', true);
+        $this->assertCount(1, $with['image_slots']);
     }
 }

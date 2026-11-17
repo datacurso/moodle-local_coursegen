@@ -100,6 +100,28 @@ final class template_config_transfer_test extends \advanced_testcase {
     }
 
     /**
+     * A file whose activities have empty fields, as one exported from a site where they were empty, still imports.
+     */
+    public function test_a_file_with_empty_fields_imports(): void {
+        global $DB;
+
+        [$course, $templateid] = $this->create_template();
+        $data = template_config_transfer::export($templateid);
+        foreach ($data['activities'] as &$activity) {
+            $activity['templatescope'] = null;
+            unset($activity['prompt'], $activity['useasreference']);
+        }
+        unset($activity);
+
+        $result = template_config_transfer::import((int) $course->id, $data, 'Imported');
+
+        $this->assertTrue($result['ok']);
+        $scopes = $DB->get_fieldset_select('local_coursegen_tpl_activity', 'templatescope', 'templateid = ?', [$templateid]);
+        $this->assertNotEmpty($scopes);
+        $this->assertSame(['course'], array_values(array_unique($scopes)));
+    }
+
+    /**
      * A course that lacks an activity of the template gets nothing written, and the activity is named.
      */
     public function test_a_missing_activity_stops_the_import(): void {

@@ -154,6 +154,52 @@ final class stream_authorizer_test extends \advanced_testcase {
     }
 
     /**
+     * The user who started a template generation, and may still do it, can read its stream.
+     */
+    public function test_owner_with_the_capability_may_read_a_template_stream(): void {
+        $this->resetAfterTest();
+        $user = $this->getDataGenerator()->create_user();
+        $this->grant_template_generation($user);
+        $this->create_planning_session($user, 'thread-1');
+        $this->setUser($user);
+
+        (new stream_authorizer())->authorize(stream_type::TEMPLATE, 'thread-1');
+
+        $this->assertTrue(true);
+    }
+
+    /**
+     * Another user cannot read the stream of a template generation they did not start.
+     */
+    public function test_other_user_cannot_read_a_template_stream(): void {
+        $this->resetAfterTest();
+        $owner = $this->getDataGenerator()->create_user();
+        $intruder = $this->getDataGenerator()->create_user();
+        $this->grant_template_generation($intruder);
+        $this->create_planning_session($owner, 'thread-1');
+        $this->setUser($intruder);
+
+        $this->expectException(\moodle_exception::class);
+        $this->expectExceptionMessage(get_string('error_no_session_found', 'local_coursegen'));
+
+        (new stream_authorizer())->authorize(stream_type::TEMPLATE, 'thread-1');
+    }
+
+    /**
+     * The owner of a template generation who lost the capability cannot read its stream.
+     */
+    public function test_owner_without_the_capability_cannot_read_a_template_stream(): void {
+        $this->resetAfterTest();
+        $user = $this->getDataGenerator()->create_user();
+        $this->create_planning_session($user, 'thread-1');
+        $this->setUser($user);
+
+        $this->expectException(\required_capability_exception::class);
+
+        (new stream_authorizer())->authorize(stream_type::TEMPLATE, 'thread-1');
+    }
+
+    /**
      * A stream type that does not exist is refused.
      */
     public function test_unknown_stream_type_is_refused(): void {
@@ -163,7 +209,7 @@ final class stream_authorizer_test extends \advanced_testcase {
         $this->expectException(\moodle_exception::class);
         $this->expectExceptionMessage(get_string('error_stream_unknown_type', 'local_coursegen'));
 
-        (new stream_authorizer())->authorize('template', 'thread-1');
+        (new stream_authorizer())->authorize('unknown', 'thread-1');
     }
 
     /**
@@ -176,6 +222,18 @@ final class stream_authorizer_test extends \advanced_testcase {
         $context = \context_system::instance();
         assign_capability('moodle/course:create', CAP_ALLOW, $roleid, $context->id, true);
         assign_capability('local/coursegen:createcoursewithai', CAP_ALLOW, $roleid, $context->id, true);
+        role_assign($roleid, $user->id, $context->id);
+    }
+
+    /**
+     * Give the user the capability to generate a course from a template at the system level.
+     *
+     * @param \stdClass $user User.
+     */
+    private function grant_template_generation(\stdClass $user): void {
+        $roleid = $this->getDataGenerator()->create_role();
+        $context = \context_system::instance();
+        assign_capability('local/coursegen:createtemplatecoursewithai', CAP_ALLOW, $roleid, $context->id, true);
         role_assign($roleid, $user->id, $context->id);
     }
 

@@ -287,7 +287,7 @@ final class template_flexsections_course_test extends \advanced_testcase {
         $map = template_section_map::from_sections_info($this->sent);
 
         $kept = [];
-        $failures = template_keep_copier::copy_into($this->templateid, $result['courseid'], $kept, $map);
+        $failures = template_keep_copier::copy_into($this->templateid, $result['courseid'], $kept, [], $map);
 
         $this->assertSame([], $failures);
         $this->assertSame([
@@ -303,7 +303,7 @@ final class template_flexsections_course_test extends \advanced_testcase {
         $map = template_section_map::from_sections_info($this->sent);
 
         $kept = [];
-        $failures = template_keep_copier::copy_into($this->templateid, $result['courseid'], $kept, $map);
+        $failures = template_keep_copier::copy_into($this->templateid, $result['courseid'], $kept, [], $map);
 
         $this->assertSame(['Resource two'], $failures);
         $this->assertSame([5 => ['Closing one', 'Closing two']], $this->activities_of($result['courseid']));
@@ -316,12 +316,12 @@ final class template_flexsections_course_test extends \advanced_testcase {
         $result = $this->create_from_template(3);
         $map = template_section_map::from_sections_info($this->sent);
         $kept = [];
-        template_keep_copier::copy_into($this->templateid, $result['courseid'], $kept, $map);
+        template_keep_copier::copy_into($this->templateid, $result['courseid'], $kept, [], $map);
         $sectionid = $DB->get_field('course_sections', 'id', ['course' => $result['courseid'], 'section' => 11]);
         $sequence = explode(',', $DB->get_field('course_sections', 'sequence', ['id' => $sectionid]));
         $DB->set_field('course_sections', 'sequence', implode(',', array_reverse($sequence)), ['id' => $sectionid]);
 
-        template_course_order::apply($this->templateid, $result['courseid'], [], [], $kept, $map);
+        template_course_order::apply($this->templateid, $result['courseid'], [], [], $kept, [], $map);
 
         $this->assertSame(['Closing one', 'Closing two'], $this->activities_of($result['courseid'])[11]);
     }
@@ -359,7 +359,7 @@ final class template_flexsections_course_test extends \advanced_testcase {
         $this->assertSame([], array_filter($sections, static fn($parameters) => $parameters['section'] > 4));
         $map = template_section_map::from_sections_info($this->sent);
         $kept = [];
-        $failures = template_keep_copier::copy_into($this->templateid, $result['courseid'], $kept, $map);
+        $failures = template_keep_copier::copy_into($this->templateid, $result['courseid'], $kept, [], $map);
         $this->assertSame(['Resource two', 'Last activity'], $failures);
         $this->assertSame([], $this->activities_of($result['courseid']));
     }

@@ -37,6 +37,7 @@ use local_coursegen\local\service\course_session_service;
 use local_coursegen\local\service\create_course_service;
 use local_coursegen\local\service\generated_activities_filter;
 use local_coursegen\local\service\kept_link_rewriter;
+use local_coursegen\local\service\teacher_space_choices;
 use local_coursegen\local\service\template_ai_api_service;
 use local_coursegen\local\service\template_course_image_applier;
 use local_coursegen\local\service\template_course_order;
@@ -45,6 +46,14 @@ use local_coursegen\local\service\template_run_history;
 use local_coursegen\local\service\template_schedule_builder;
 use local_coursegen\local\service\template_section_map;
 use local_coursegen\local\service\template_settings_copier;
+use local_coursegen\local\service\template_syllabus_linker;
+use local_coursegen\local\space\activity_spaces;
+use local_coursegen\local\space\file_spaces;
+use local_coursegen\local\space\space_file_storage;
+use local_coursegen\local\space\space_resource_file;
+use local_coursegen\local\space\space_scope;
+use local_coursegen\local\space\space_selection;
+use local_coursegen\local\space\upload_spaces;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -59,6 +68,12 @@ require_once($CFG->libdir . '/externallib.php');
  * finished, not to carry a whole course through itself.
  */
 class finish_template_generation extends external_api {
+    /** @var int Seconds a request waits for the one that is building the course. */
+    private const WAIT_SECONDS = 600;
+
+    /** @var int Seconds without news after which a creation that says it is going on is taken as dead. */
+    private const STALE_SECONDS = 90;
+
     /**
      * Parameters.
      *
@@ -85,7 +100,40 @@ class finish_template_generation extends external_api {
      * @return array
      */
     public static function execute($sessionid, $fullname = '', $shortname = '', $category = 0, $startdate = '') {
-        global $USER, $CFG;
+        try {
+            return self::build_course($sessionid, $fullname, $shortname, $category, null, $startdate);
+        } catch (\Throwable $e) {
+            // The person sees a short message; the cause is kept in the log of the server.
+            error_log('local_coursegen: creating the course of session ' . (int) $sessionid . ' failed: ' . get_class($e) . ': '
+                . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
+            throw $e;
+        }
+    }
+
+    /**
+     * Create the course of a finished generation.
+     *
+     * The web service and the stream of the page both end here. The stream passes a callback, which hears of each
+     * step as it is done: a request that stays silent for two minutes is cut by the proxies in front of the site, and
+     * the creation of a course with a hundred activities takes longer than that.
+     *
+     * @param int $sessionid
+     * @param string $fullname
+     * @param string $shortname
+     * @param int $category
+     * @param callable|null $progress Called with (string $step, int $done, int $total) as the creation goes on.
+     * @param string $startdate Course start day (Y-m-d) chosen at the review, empty for none.
+     * @return array
+     */
+    public static function build_course(
+        $sessionid,
+        $fullname,
+        $shortname,
+        $category,
+        ?callable $progress = null,
+        $startdate = ''
+    ) {
+        global $USER, $CFG, $DB;
 
         $params = self::validate_parameters(self::execute_parameters(), [
             'sessionid' => $sessionid,
@@ -94,6 +142,15 @@ class finish_template_generation extends external_api {
             'category' => $category,
             'startdate' => $startdate,
         ]);
+
+        // Each step also says, in the record of the session, that the creation is alive: a request that finds the
+        // session "creating" waits only while that is recent, and builds the course itself when it is not.
+        $report = static function (string $step, int $done = 0, int $total = 0) use ($progress, $DB, $params): void {
+            $DB->set_field('local_coursegen_course_sessions', 'timemodified', time(), ['id' => (int) $params['sessionid']]);
+            if ($progress !== null) {
+                $progress($step, $done, $total);
+            }
+        };
 
         $context = context_system::instance();
         self::validate_context($context);
@@ -108,7 +165,23 @@ class finish_template_generation extends external_api {
         if ((int) $session->get('status') === course_session::STATUS_CREATED) {
             return self::created_response((int) $session->get('courseid'), $CFG->wwwroot);
         }
+        // A request that is already building it goes on; this one waits for it instead of building a second course.
+        // When the one that was building stopped (its process died), nobody is going to finish it: this one builds.
+        if (self::is_being_built($session)) {
+            // Waiting is not news of the creation, so it does not go through the report that marks it alive.
+            $answer = self::wait_for_creation(
+                (int) $params['sessionid'],
+                $progress ?? static function (string $step, int $done = 0, int $total = 0): void {
+                },
+                $CFG->wwwroot
+            );
+            if ($answer !== null) {
+                return $answer;
+            }
+            $session = new course_session($params['sessionid']);
+        }
 
+        $report('result');
         $api = new template_ai_api_service();
         $result = $api->get_result($session->get('session_id'));
         $templateid = self::template_id_of($session);
@@ -120,6 +193,7 @@ class finish_template_generation extends external_api {
         $generatedactivities = $result['generated_activities'] ?? [];
         $writtenactivities = generated_activities_filter::only_ai_written($generatedactivities);
         $result['generated_activities'] = $writtenactivities;
+        $selection = self::space_selection_of($session, $templateid);
 
         $overrides = course_review_service::overrides(
             (string) $params['fullname'],
@@ -127,21 +201,47 @@ class finish_template_generation extends external_api {
             (int) $params['category'],
             (string) $params['startdate']
         );
-        $created = create_course_service::create_course($session, $result, $overrides);
+        $report('course');
+        create_course_service::on_progress($report);
+        try {
+            $created = self::create_in_space_scope($selection, $session, $result, $overrides);
+        } finally {
+            create_course_service::on_progress(null);
+        }
         course_creation_guard::ensure_created($created);
         $courseid = $created['courseid'] ?? 0;
         $courseid = (int) $courseid;
         $keptcms = [];
         $sectionmap = self::section_map($session);
         if ($courseid > 0 && $templateid !== null && $templateid > 0) {
-            template_keep_copier::copy_into($templateid, $courseid, $keptcms, $sectionmap);
+            $report('kept');
+            template_keep_copier::copy_into($templateid, $courseid, $keptcms, $selection->filled_cmids(), $sectionmap);
+        }
+        self::place_space_files($session, $selection, $keptcms);
+        $spacecms = self::place_space_activities($session, $templateid, $courseid);
+        // The places where the teacher uploaded a file get a File resource with it, in their place.
+        if ($templateid !== null && $templateid > 0) {
+            $spacecms += upload_spaces::create_resources((int) $templateid, $courseid, $selection);
         }
         $generatedcms = $created['generatedcms'] ?? [];
-        self::arrange_course($templateid, $courseid, $generatedactivities, $generatedcms, $keptcms, $sectionmap);
+        // The activities the teacher added in the spaces were generated: they go in the place of their space.
+        foreach (teacher_space_choices::spaces_of((int) $templateid) as $uid => $space) {
+            $payloadcmid = teacher_space_choices::cmid_of($space);
+            if (isset($generatedcms[$payloadcmid])) {
+                $spacecms[$uid] = (int) $generatedcms[$payloadcmid];
+            }
+        }
+        $report('arrange');
+        self::arrange_course($templateid, $courseid, $generatedactivities, $generatedcms, $keptcms, $sectionmap, $spacecms);
         self::resolve_activity_links($session, $courseid, $generatedactivities, $generatedcms, $keptcms);
         if ($courseid > 0) {
             // Needs every activity, its visibility and the shifted dates of its restrictions.
             template_schedule_builder::apply($courseid);
+            template_syllabus_linker::apply(
+                $courseid,
+                array_values($generatedcms),
+                course_session_service::syllabus_file((int) $params['sessionid'])
+            );
             $coursedata = json_decode((string) $session->get('coursedata'), true);
             template_course_image_applier::apply(
                 $courseid,
@@ -151,8 +251,72 @@ class finish_template_generation extends external_api {
             // Kept for the conversation a reload shows again.
             template_run_history::record_completed((int) $params['sessionid'], $courseid, $generatedcms);
         }
+        space_file_storage::delete_session((int) $session->get('userid'), (int) $session->get('id'));
 
         return self::created_response($courseid, $CFG->wwwroot);
+    }
+
+    /**
+     * Copy into the new course the activities the teacher brought to the spaces of the template.
+     *
+     * @param course_session $session
+     * @param int|null $templateid
+     * @param int $courseid
+     * @return array Space uid => cmid of the copy in the new course.
+     */
+    private static function place_space_activities(course_session $session, ?int $templateid, int $courseid): array {
+        if ($templateid === null || $templateid <= 0 || $courseid <= 0) {
+            return [];
+        }
+        $coursedata = json_decode((string) $session->get('coursedata'), true);
+        $chosen = (array) ($coursedata['space_activities'] ?? []);
+        return activity_spaces::place($templateid, $courseid, $chosen);
+    }
+
+    /**
+     * Whether another request is building the course of the session right now.
+     *
+     * The session says "creating" while a request builds it, and a request that dies leaves it saying so. What tells
+     * them apart is the time of the last news: a creation that has not moved for a while is not going on.
+     *
+     * @param course_session $session
+     * @return bool
+     */
+    private static function is_being_built(course_session $session): bool {
+        return (int) $session->get('status') === course_session::STATUS_CREATING
+            && time() - (int) $session->get('timemodified') < self::STALE_SECONDS;
+    }
+
+    /**
+     * Wait for the request that is building the course, and answer as it does.
+     *
+     * Each turn tells the one who listens that it is still waiting, so a stream that waits is never silent.
+     *
+     * @param int $sessionid Local session id.
+     * @param callable $report Called with (string $step, int $done, int $total).
+     * @param string $wwwroot
+     * @return array|null The created course, or null when the creation stopped without ending.
+     * @throws \moodle_exception When the creation failed or did not end in time.
+     */
+    private static function wait_for_creation(int $sessionid, callable $report, string $wwwroot): ?array {
+        $deadline = time() + self::WAIT_SECONDS;
+        while (time() < $deadline) {
+            sleep(2);
+            $session = new course_session($sessionid);
+            $status = (int) $session->get('status');
+            if ($status === course_session::STATUS_CREATED) {
+                return self::created_response((int) $session->get('courseid'), $wwwroot);
+            }
+            if ($status === course_session::STATUS_FAILED) {
+                throw new \moodle_exception('error_course_creation_failed', 'local_coursegen');
+            }
+            if (!self::is_being_built($session)) {
+                return null;
+            }
+            $report('waiting');
+        }
+        course_session_service::update_status($sessionid, course_session::STATUS_FAILED);
+        throw new \moodle_exception('error_course_creation_failed', 'local_coursegen');
     }
 
     /**
@@ -164,6 +328,7 @@ class finish_template_generation extends external_api {
      * @param array $generatedcms Payload cmid => created cmid, for the generated activities.
      * @param array $keptcms Payload cmid => created cmid, for the copied kept activities.
      * @param template_section_map $sectionmap Where each section of the template went in the new course.
+     * @param array $spacecms Space uid => cmid of the activity the teacher brought, in the new course.
      */
     private static function arrange_course(
         ?int $templateid,
@@ -171,13 +336,14 @@ class finish_template_generation extends external_api {
         array $payloadactivities,
         array $generatedcms,
         array $keptcms,
-        template_section_map $sectionmap
+        template_section_map $sectionmap,
+        array $spacecms = []
     ): void {
         if ($courseid <= 0 || $templateid === null || $templateid <= 0) {
             return;
         }
         kept_link_rewriter::rewrite_for_course($courseid, $payloadactivities, $generatedcms, $keptcms);
-        template_course_order::apply($templateid, $courseid, $payloadactivities, $generatedcms, $keptcms, $sectionmap);
+        template_course_order::apply($templateid, $courseid, $payloadactivities, $generatedcms, $keptcms, $spacecms, $sectionmap);
         template_settings_copier::copy_into($templateid, $courseid, $payloadactivities, $generatedcms, $keptcms, $sectionmap);
     }
 
@@ -222,6 +388,70 @@ class finish_template_generation extends external_api {
             $sessionid = (int) $session->get('id');
             course_session_service::update_status($sessionid, course_session::STATUS_FAILED);
             throw $exception;
+        }
+    }
+
+    /**
+     * The spaces of the template with the files the teacher brought for this generation.
+     *
+     * @param course_session $session
+     * @param int|null $templateid
+     * @return space_selection
+     */
+    private static function space_selection_of(course_session $session, ?int $templateid): space_selection {
+        if ($templateid === null || $templateid <= 0) {
+            return new space_selection([], []);
+        }
+        $userid = (int) $session->get('userid');
+        $sessionid = (int) $session->get('id');
+        return file_spaces::selection_of_session($templateid, $userid, $sessionid);
+    }
+
+    /**
+     * Build the course with the spaces in scope, so every activity gets the teacher's file or loses its element.
+     *
+     * @param space_selection $selection
+     * @param course_session $session
+     * @param array $result The result with the activities to build.
+     * @param array $overrides What the teacher chose at the review.
+     * @return array What create_course returns.
+     */
+    private static function create_in_space_scope(
+        space_selection $selection,
+        course_session $session,
+        array $result,
+        array $overrides
+    ): array {
+        space_scope::enter($selection);
+        try {
+            return create_course_service::create_course($session, $result, $overrides);
+        } finally {
+            space_scope::leave();
+        }
+    }
+
+    /**
+     * Put the teacher's file in the copy of each space's resource.
+     *
+     * When a copy is missing the generation is marked failed and the error reaches the caller.
+     *
+     * @param course_session $session
+     * @param space_selection $selection
+     * @param array $keptcms Base course cmid => created cmid, for the copied activities.
+     */
+    private static function place_space_files(course_session $session, space_selection $selection, array $keptcms): void {
+        foreach ($selection->filled() as $space) {
+            if ($space->cmid < 0) {
+                // A place where the teacher uploads a file: its resource is created apart (upload_spaces).
+                continue;
+            }
+            $created = $keptcms[$space->cmid] ?? null;
+            if ($created === null) {
+                $sessionid = (int) $session->get('id');
+                course_session_service::update_status($sessionid, course_session::STATUS_FAILED);
+                throw new \moodle_exception('spacecopyfailed', 'local_coursegen', '', $space->name);
+            }
+            space_resource_file::replace((int) $created, $selection->file_of($space));
         }
     }
 

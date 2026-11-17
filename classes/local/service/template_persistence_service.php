@@ -20,6 +20,8 @@ use local_coursegen\local\models\template_activity;
 use local_coursegen\local\models\template_instance;
 use local_coursegen\local\models\template_section;
 use local_coursegen\local\models\template_space;
+use local_coursegen\local\space\space_rules;
+use local_coursegen\local\text\plain_name;
 
 /**
  * Replaces a template's saved section/activity/instance configuration.
@@ -141,16 +143,46 @@ class template_persistence_service {
      * @param array $actdata
      */
     private static function create_activity(int $templateid, int $sectionid, array $actdata): void {
+        self::require_space_allowed($actdata['action'], (int) $actdata['cmid']);
         $act = new template_activity(0);
         $act->set('templateid', $templateid);
         $act->set('sectionid', $sectionid);
         $act->set('cmid', $actdata['cmid']);
         $act->set('action', $actdata['action']);
         $act->set('useasreference', (int) $actdata['useasreference']);
-        $templatescope = self::normalise_scope($actdata['templatescope']);
+        $templatescope = self::normalise_scope((string) ($actdata['templatescope'] ?? ''));
         $act->set('templatescope', $templatescope);
-        $act->set('prompt', $actdata['prompt']);
+        $act->set('prompt', $actdata['prompt'] ?? '');
+        $act->set('spacerequired', (int) ($actdata['spacerequired'] ?? 0));
+        $instruction = self::space_instruction((string) ($actdata['spaceinstruction'] ?? ''));
+        $act->set('spaceinstruction', $instruction);
         $act->create();
+        if ($actdata['action'] === template_activity::ACTION_AIMODIFY) {
+            ai_modified_activity::save($templateid, $sectionid, (int) $actdata['cmid'], (string) ($actdata['prompt'] ?? ''));
+        }
+    }
+
+    /**
+     * Refuse a space on an activity whose type cannot be one.
+     *
+     * @param string $action The action being saved.
+     * @param int $cmid The activity's course module id.
+     * @throws \invalid_parameter_exception When the action is space and the activity is not a file resource.
+     */
+    private static function require_space_allowed(string $action, int $cmid): void {
+        global $DB;
+
+        if ($action !== template_activity::ACTION_SPACE) {
+            return;
+        }
+        $sql = "SELECT m.name
+                  FROM {course_modules} cm
+                  JOIN {modules} m ON m.id = cm.module
+                 WHERE cm.id = :cmid";
+        $modname = $DB->get_field_sql($sql, ['cmid' => $cmid]);
+        if ($modname === false || !space_rules::allows((string) $modname)) {
+            throw new \invalid_parameter_exception('A space can only be a file resource: cmid ' . $cmid);
+        }
     }
 
     /**
@@ -171,9 +203,11 @@ class template_persistence_service {
         $instance->set('templateid', $templateid);
         $instance->set('sectionid', $sectionid);
         $instance->set('sourcecmid', $instdata['sourcecmid']);
-        $instance->set('sourcename', $instdata['sourcename']);
-        $instance->set('name', $instdata['name']);
-        $instance->set('typelabel', $instdata['typelabel']);
+        $typelabel = plain_name::of($instdata['typelabel'], (string) $modname);
+        $instance->set('sourcename', plain_name::of($instdata['sourcename']));
+        $instance->set('name', plain_name::of($instdata['name'], $typelabel));
+        $instance->set('ainame', empty($instdata['ainame']) ? 0 : 1);
+        $instance->set('typelabel', $typelabel);
         $instance->set('modname', $modname);
         $instance->set('prompt', $instdata['prompt']);
         $instance->set('aftercmid', $instdata['aftercmid']);
@@ -201,6 +235,7 @@ class template_persistence_service {
         $space->set('modname', $spacedata['modname']);
         $space->set('required', (int) $spacedata['required']);
         $space->set('instruction', $instruction);
+        $space->set('options', teacher_space_options::clean((string) ($spacedata['options'] ?? '')));
         $space->set('aftercmid', $spacedata['aftercmid']);
         $space->set('sortorder', $spacedata['sortorder']);
         $space->create();

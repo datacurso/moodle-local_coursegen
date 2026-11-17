@@ -44,11 +44,13 @@ class template_export_service {
      *
      * @param int $templateid
      * @param string $generalinstruction The professor's single prompt/syllabus instruction.
-     * @param string $lang The language the professor picked for the generated course, empty to keep the template's.
+     * @param string $lang The language the professor picked for the generated course. Empty leaves it to the AI
+     *                     service to detect it (the template course's language travels only as the fallback).
      * @param bool $withimages Whether the professor asked for the images to be generated.
      * @param int|null $units How many units a flexsections course has to hold; null keeps the template's own.
      *                        Another format has no units, so it is left as it is.
      * @param string $instructions The institutional guidelines text; the payload has no such key when it is empty.
+     * @param array $spacechoices The activities the teacher adds in the spaces (teacher_space_choices::validated()).
      * @return array
      */
     public static function build_init_payload(
@@ -57,7 +59,8 @@ class template_export_service {
         string $lang = '',
         bool $withimages = false,
         ?int $units = null,
-        string $instructions = ''
+        string $instructions = '',
+        array $spacechoices = []
     ): array {
         global $CFG;
 
@@ -73,7 +76,8 @@ class template_export_service {
         $actions = self::saved_activity_actions($templateid);
         $behaviors = self::saved_section_behaviors($templateid);
 
-        if ($lang === '') {
+        $langauto = ($lang === '');
+        if ($langauto) {
             $lang = $course->lang;
         }
         if (!$lang) {
@@ -88,7 +92,12 @@ class template_export_service {
 
         $realactivities = self::real_activities($modinfo, $actions);
         $instanceactivities = self::instance_activities($templateid, $modinfo);
-        $activities = array_merge($realactivities, $instanceactivities);
+        $sectionnums = [];
+        foreach ($sectioninfoall as $sectioninfo) {
+            $sectionnums[(int) $sectioninfo->id] = (int) $sectioninfo->section;
+        }
+        $spaceactivities = teacher_space_choices::payload_entries($spacechoices, $sectionnums);
+        $activities = array_merge($realactivities, $instanceactivities, $spaceactivities);
         if ($units !== null && $course->format === 'flexsections') {
             // The service keeps the structure it is given, so the units are made as many as wanted here.
             $templatesections = count($sectionsinfo);
@@ -117,10 +126,14 @@ class template_export_service {
             'course_configuration' => $courseconfiguration,
             'sections_info' => $sectionsinfo,
             'activities' => $activities,
-            // The pictures of the course itself the author asked to be made again, with their instruction.
-            'image_slots' => template_course_image_slots::payload(template_course_image_slots::for_course($course)),
+            // The pictures of the course itself the author asked to be made again, with their instruction. When the person
+            // chose no images there are none to make: a marker in the template does not override that choice.
+            'image_slots' => $withimages
+                ? template_course_image_slots::payload(template_course_image_slots::for_course($course))
+                : [],
             'general_instruction' => $generalinstruction,
             'lang' => $lang,
+            'lang_auto' => $langauto,
             'with_images' => $withimages,
             'site_url' => $CFG->wwwroot,
             // Reference files are attached after /init (they need its
@@ -169,8 +182,9 @@ class template_export_service {
     }
 
     /**
-     * The base course's own activities, excluding the ones marked "exclude":
-     * the AI service is never asked about them.
+     * The base course's own activities, excluding the ones marked "exclude"
+     * and the ones marked "space": those are for the professor to provide,
+     * so the AI service is never asked about them.
      *
      * @param \course_modinfo $modinfo
      * @param array $actions
@@ -184,8 +198,12 @@ class template_export_service {
                 continue;
             }
             $action = $actions[$cm->id] ?? template_activity::ACTION_KEEP;
-            if ($action === template_activity::ACTION_EXCLUDE) {
+            if ($action === template_activity::ACTION_EXCLUDE || $action === template_activity::ACTION_SPACE) {
                 continue;
+            }
+            if ($action === template_activity::ACTION_AIMODIFY) {
+                // What the AI reads to change it: its mold when it has markers, its reference otherwise.
+                $action = ai_modified_activity::export_action($cm);
             }
             $activities[] = self::real_activity_entry($cm, $action);
         }
@@ -277,6 +295,7 @@ class template_export_service {
 
         $prompt = $instance->get('prompt');
         $prompt = (string) $prompt;
+        $ainame = (int) $instance->get('ainame') === 1;
 
         $sourcecmid = $instance->get('sourcecmid');
         $sourcecmid = (int) $sourcecmid;
@@ -294,6 +313,7 @@ class template_export_service {
                 'useasreference' => true,
                 'prompt' => $prompt,
                 'template_source_cmid' => $sourcecmid,
+                'name_from_ai' => $ainame,
             ],
         ];
     }

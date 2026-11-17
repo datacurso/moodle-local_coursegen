@@ -129,6 +129,23 @@ export const applyStructureResponse = (state, data) => {
             // and in its own preview link — the same uid the payload sent
             // and the run's events/answer echo back.
             generationuid: activity.generationuid || '',
+            // A space is a file resource the teacher brings a file for;
+            // spacefile is that file once picked: {draftitemid, filename}.
+            isspace: !!activity.isspace,
+            // "file": a file resource the teacher brings a file for; "activity": a place of the template the teacher
+            // fills with one of their own activities, kept in spaceactivity once chosen: {cmid, name, coursename}.
+            spacekind: activity.spacekind || (activity.isspace ? 'file' : ''),
+            spaceinstruction: activity.spaceinstruction || '',
+            spacerequired: !!activity.spacerequired,
+            // The course module id the file of the space goes under: the resource's own, or the placeholder of a place
+            // where the teacher uploads a file of their own.
+            spacecmid: parseInt(activity.spacecmid || activity.id, 10) || 0,
+            spacefile: null,
+            spaceactivity: null,
+            // "choice": a place where the teacher adds one of the activities the admin allowed; spaceoptions lists them
+            // ({modname, title, instruction, iconhtml}) and spacechoice is the one added: {modname, title, instruction}.
+            spaceoptions: parseOptions(activity.spaceoptions),
+            spacechoice: null,
         })),
     }));
 };
@@ -219,6 +236,189 @@ export const countsForUnits = (state) => {
     counts.activities += copies * total(last, (activity) => activity.isinstance);
     return counts;
 };
+
+/**
+ * The activity rows of every section, in order.
+ *
+ * @param {Object} state
+ * @returns {Object[]}
+ */
+const allActivities = (state) => state.sections.flatMap((section) => section.activities);
+
+/**
+ * The space row at a position, or null when the position holds none.
+ *
+ * @param {Object} state
+ * @param {number} sectionIndex
+ * @param {number} activityIndex
+ * @returns {Object|null}
+ */
+const findSpace = (state, sectionIndex, activityIndex) => {
+    const section = state.sections[sectionIndex];
+    if (!section) {
+        return null;
+    }
+    const activity = section.activities[activityIndex];
+    if (!activity || !activity.isspace) {
+        return null;
+    }
+    return activity;
+};
+
+/**
+ * Set the file of one space row.
+ *
+ * @param {Object} state
+ * @param {number} sectionIndex - The section's position in state.sections.
+ * @param {number} activityIndex - The row's position in its section.
+ * @param {string} filename
+ * @param {number} draftitemid - Draft area holding the picked file.
+ * @returns {boolean} Whether the row is a space and took the file.
+ */
+export const setSpaceFile = (state, sectionIndex, activityIndex, filename, draftitemid) => {
+    const activity = findSpace(state, sectionIndex, activityIndex);
+    if (!activity) {
+        return false;
+    }
+    activity.spacefile = {draftitemid, filename};
+    return true;
+};
+
+/**
+ * Empty the file of one space row.
+ *
+ * @param {Object} state
+ * @param {number} sectionIndex - The section's position in state.sections.
+ * @param {number} activityIndex - The row's position in its section.
+ * @returns {boolean} Whether the row is a space.
+ */
+export const clearSpaceFile = (state, sectionIndex, activityIndex) => {
+    const activity = findSpace(state, sectionIndex, activityIndex);
+    if (!activity) {
+        return false;
+    }
+    activity.spacefile = null;
+    return true;
+};
+
+/**
+ * Set the activity the teacher brings to one space row.
+ *
+ * @param {Object} state
+ * @param {number} sectionIndex - The section's position in state.sections.
+ * @param {number} activityIndex - The row's position in its section.
+ * @param {Object} chosen - {cmid, name, coursename}.
+ * @returns {boolean} Whether the row is a space for an activity and took it.
+ */
+export const setSpaceActivity = (state, sectionIndex, activityIndex, chosen) => {
+    const activity = findSpace(state, sectionIndex, activityIndex);
+    if (!activity || activity.spacekind !== 'activity') {
+        return false;
+    }
+    activity.spaceactivity = {cmid: chosen.cmid, name: chosen.name, coursename: chosen.coursename};
+    return true;
+};
+
+/**
+ * Empty the activity of one space row.
+ *
+ * @param {Object} state
+ * @param {number} sectionIndex - The section's position in state.sections.
+ * @param {number} activityIndex - The row's position in its section.
+ * @returns {boolean} Whether the row is a space.
+ */
+export const clearSpaceActivity = (state, sectionIndex, activityIndex) => {
+    const activity = findSpace(state, sectionIndex, activityIndex);
+    if (!activity) {
+        return false;
+    }
+    activity.spaceactivity = null;
+    return true;
+};
+
+/**
+ * Whether a space row already has what the teacher brings: its file or its activity.
+ *
+ * @param {Object} activity
+ * @returns {boolean}
+ */
+export const isSpaceFilled = (activity) => !!(activity.spacefile || activity.spaceactivity || activity.spacechoice);
+
+/**
+ * The activities a space offers, from the JSON the structure sent.
+ *
+ * @param {string} json
+ * @returns {Object[]}
+ */
+const parseOptions = (json) => {
+    try {
+        const parsed = JSON.parse(json || '[]');
+        return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+        return [];
+    }
+};
+
+/**
+ * Set the activity the teacher adds in a space.
+ *
+ * @param {Object} state
+ * @param {number} sectionIndex
+ * @param {number} activityIndex
+ * @param {Object|null} choice {modname, title, instruction}, or null to empty the space.
+ * @returns {boolean} Whether the row is a space of that kind.
+ */
+export const setSpaceChoice = (state, sectionIndex, activityIndex, choice) => {
+    const activity = state.sections[sectionIndex]?.activities[activityIndex];
+    if (!activity || activity.spacekind !== 'choice') {
+        return false;
+    }
+    activity.spacechoice = choice;
+    return true;
+};
+
+/**
+ * The activities the teacher added in the spaces, as the generation start takes them.
+ *
+ * @param {Object} state
+ * @returns {Object[]} Each {uid, modname, instruction}.
+ */
+export const pickedSpaceChoices = (state) => allActivities(state)
+    .filter((activity) => activity.spacekind === 'choice' && activity.spacechoice)
+    .map((activity) => ({
+        uid: activity.id,
+        modname: activity.spacechoice.modname,
+        instruction: activity.spacechoice.instruction || '',
+    }));
+
+/**
+ * Whether a required space is still without its file or its activity.
+ *
+ * @param {Object} state
+ * @returns {boolean}
+ */
+export const hasMissingRequiredSpace = (state) => allActivities(state)
+    .some((activity) => activity.isspace && activity.spacerequired && !isSpaceFilled(activity));
+
+/**
+ * The files picked for the spaces, as the generation start takes them.
+ *
+ * @param {Object} state
+ * @returns {Object[]} Each {cmid, draftitemid}.
+ */
+export const pickedSpaceFiles = (state) => allActivities(state)
+    .filter((activity) => activity.isspace && activity.spacekind !== 'activity' && activity.spacefile)
+    .map((activity) => ({cmid: activity.spacecmid, draftitemid: activity.spacefile.draftitemid}));
+
+/**
+ * The activities chosen for the spaces, as the generation start takes them.
+ *
+ * @param {Object} state
+ * @returns {Object[]} Each {uid, cmid}.
+ */
+export const pickedSpaceActivities = (state) => allActivities(state)
+    .filter((activity) => activity.isspace && activity.spacekind === 'activity' && activity.spaceactivity)
+    .map((activity) => ({uid: String(activity.id), cmid: activity.spaceactivity.cmid}));
 
 /**
  * Toggle a section's collapsed state.

@@ -27,6 +27,7 @@ import {initFilepicker} from '../../../repository/courseai';
 import {bindToggleWrap, showFilePicker} from '../context/filepicker';
 import {refreshChipsRow} from './chips_row';
 import {wireGuidelinePicker} from './guideline_picker';
+import {wireLanguagePicker} from './language_picker';
 
 /**
  * Show/refresh or hide the input bar's syllabus chip to match tplState.
@@ -83,6 +84,7 @@ export const wireInputBar = (tplState, state) => {
         langSelect.addEventListener('change', () => {
             tplState.lang = langSelect.value;
         });
+        wireLanguagePicker(langSelect);
     }
 
     // Generate-images toggle — same toggle-track pattern as free mode.

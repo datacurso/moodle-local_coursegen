@@ -38,4 +38,9 @@ final class label_link_texts implements module_link_texts {
     public function text_columns(): array {
         return ['intro'];
     }
+
+    #[\Override]
+    public function file_area(string $column, \stdClass $record): array {
+        return ['mod_label', 'intro', 0];
+    }
 }

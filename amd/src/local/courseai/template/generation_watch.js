@@ -25,12 +25,14 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+import RelaySource from 'local_coursegen/local/courseai/stream/relay-source';
+
 /**
  * Close the pass's source once, then run the given action. Guards against
  * running twice: a pass can be finished by more than one listener racing
  * (a terminal message and a transient 'error', say).
  *
- * @param {Object} state {source: EventSource, settled: boolean}
+ * @param {Object} state {source: RelaySource, settled: boolean}
  * @param {Function} action
  * @returns {void}
  */
@@ -46,17 +48,23 @@ const finishPass = (state, action) => {
 /**
  * Fail the pass: close its source, report the message, and reject.
  *
- * @param {Object} state {source: EventSource, settled: boolean}
+ * @param {Object} state {source: RelaySource, settled: boolean}
  * @param {Function} onFail Called with the message once the pass fails.
  * @param {Function} reject The pass promise's reject.
  * @param {string} message
  * @param {string} [code] The code the service gave to the failure.
+ * @param {boolean} [retryable] Whether trying again can mend it: the connection, or what the service says.
+ * @param {boolean} [fromService] Whether the failure is one that the AI service reported, and not of the connection.
  * @returns {void}
  */
-const failPass = (state, onFail, reject, message, code = 'connection') => finishPass(state, () => {
+const failPass = (
+    state, onFail, reject, message, code = 'connection', retryable = code === 'connection', fromService = false
+) => finishPass(state, () => {
     onFail(message);
     const error = new Error(message);
     error.code = code;
+    error.retryable = retryable;
+    error.fromService = fromService;
     reject(error);
 });
 
@@ -64,7 +72,7 @@ const failPass = (state, onFail, reject, message, code = 'connection') => finish
  * Handle one decoded 'message' event: apply it, and finish or fail the pass
  * once it reaches a terminal outcome.
  *
- * @param {Object} state {source: EventSource, settled: boolean}
+ * @param {Object} state {source: RelaySource, settled: boolean}
  * @param {Object} progress Mutable {total, done} counters.
  * @param {Function} applyEvent (data, progress) => outcome string.
  * @param {Function} onFail Called with a message once the pass fails.
@@ -81,32 +89,46 @@ const handleStreamMessage = (state, progress, applyEvent, onFail, resolve, rejec
         return;
     }
 
+    if (data.type === 'stopped') {
+        // The service ended the run because it was told to: this pass is over and nothing more will come.
+        finishPass(state, () => resolve({outcome: 'stopped', data}));
+        return;
+    }
+
     const outcome = applyEvent(data, progress);
-    if (outcome === 'review' || outcome === 'completed') {
+    if (outcome === 'review' || outcome === 'questions' || outcome === 'completed') {
         // The stream is closed on both. A pause left open would be
-        // reconnected by EventSource, which resumes the graph from the
+        // reconnected by the browser, which resumes the graph from the
         // same point and re-emits the same pause, forever.
         finishPass(state, () => resolve({outcome, data}));
     } else if (outcome === 'failed') {
-        failPass(state, onFail, reject, data.message || 'The generation could not be completed.', data.code || 'failed');
+        failPass(
+            state, onFail, reject, data.message || 'The generation could not be completed.', data.code || 'failed',
+            // The relay of Moodle spells it retryable and the service retriable: both say that waiting can mend it.
+            data.retryable === true || data.retriable === true,
+            // Only the service names the failure with a code: the relay of Moodle, when it cannot reach the service, does not.
+            !!data.code
+        );
     }
 };
 
 /**
  * Watch one pass of the stream.
  *
- * A pass ends in one of three ways: the graph pauses for the review, the run
- * completes, or it fails. The first two are not the end of the work, only of
- * this connection, which is why the caller loops.
+ * A pass ends in one of four ways: the graph pauses for the review, the run
+ * completes, it fails, or the person stops it. The first, second and last are
+ * not a failure, only the end of this connection, which is why the caller loops.
  *
  * @param {string} streamUrl
  * @param {Object} progress Mutable {total, done} counters.
  * @param {Function} applyEvent (data, progress) => outcome string.
  * @param {Function} onFail Called with a message once the pass fails.
- * @returns {Promise<Object>} {outcome: 'review'|'completed', data}
+ * @param {Function} onOpen Called with the function that closes this pass and settles it as stopped.
+ * @returns {Promise<Object>} {outcome: 'review'|'questions'|'completed'|'stopped', data}
  */
-export const watchOnce = (streamUrl, progress, applyEvent, onFail) => new Promise((resolve, reject) => {
-    const state = {source: new EventSource(streamUrl), settled: false};
+export const watchOnce = (streamUrl, progress, applyEvent, onFail, onOpen = () => undefined) => new Promise((resolve, reject) => {
+    const state = {source: new RelaySource(streamUrl), settled: false};
+    onOpen(() => finishPass(state, () => resolve({outcome: 'stopped', data: null})));
 
     state.source.addEventListener('message', (event) => {
         handleStreamMessage(state, progress, applyEvent, onFail, resolve, reject, event);
@@ -120,11 +142,8 @@ export const watchOnce = (streamUrl, progress, applyEvent, onFail) => new Promis
     });
 
     state.source.onerror = () => {
-        // EventSource reconnects by itself on a transient drop, reporting
-        // CONNECTING while it does; only a closed connection is a failure.
-        if (state.source.readyState === EventSource.CONNECTING) {
-            return;
-        }
+        // The relay does not reconnect by itself: a drop is a failure of this pass, and the caller offers to try
+        // again, which opens the stream once more from where the run stopped.
         failPass(state, onFail, reject, 'The connection to the generation was lost.');
     };
 });

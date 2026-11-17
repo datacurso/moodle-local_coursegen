@@ -33,10 +33,11 @@ import {
     insertGeneratedRow,
 } from 'local_coursegen/local/template/template_instance_rows';
 import {openSpaceModal} from 'local_coursegen/local/template/template_space_modal';
-import {chooseActivityType} from 'local_coursegen/local/template/template_space_chooser';
+import {pickSpace} from 'local_coursegen/local/template/template_space_picker';
 import {closeInstanceMenu} from 'local_coursegen/local/template/template_instance_menu';
 import {get_string as getString} from 'core/str';
 import {prefetchStrings} from 'core/prefetch';
+import {editTeacherSpace} from 'local_coursegen/local/template/template_teacher_space';
 import Selectors from 'local_coursegen/local/template/selectors';
 import {CLASS, COMPONENT, EVENT, NEW_ROW_PREFIX, REQUIRED_VALUE, STRING, TAG} from 'local_coursegen/local/template/constants';
 
@@ -123,6 +124,7 @@ export const insertSpaceRow = async(tbody, beforeEl, space) => {
         badge,
         instruction: space.instruction,
         hasinstruction: space.instruction !== '',
+        options: space.options ? JSON.stringify(space.options) : '',
     };
     const fragment = await renderRowFragment('local_coursegen/template_space_row', context);
     const row = fragment.querySelector(Selectors.regions.spaceRow);
@@ -150,6 +152,27 @@ const applyChoiceToRow = async(row, choice) => {
 };
 
 /**
+ * The generic name of a new activity of a type whose name the AI writes: the type and the next number among the ones
+ * of the same type already named so in the template ("Book 1", "Book 2"...).
+ *
+ * @param {Object} picked {modname, name} of the picked type.
+ * @returns {string}
+ */
+export const genericName = (picked) => {
+    const escaped = picked.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const pattern = new RegExp(`^${escaped} (\\d+)$`);
+    let highest = 0;
+    document.querySelectorAll(`${Selectors.rows.instance}[data-modname="${picked.modname}"]`).forEach((row) => {
+        const value = row.querySelector(Selectors.regions.instanceNameEditable)?.dataset.value || '';
+        const number = pattern.exec(value.trim());
+        if (number) {
+            highest = Math.max(highest, parseInt(number[1], 10));
+        }
+    });
+    return `${picked.name} ${highest + 1}`;
+};
+
+/**
  * Insert the space the admin just configured for a freshly picked type.
  *
  * @param {HTMLElement} tbody The section's table body.
@@ -160,11 +183,13 @@ const applyChoiceToRow = async(row, choice) => {
  */
 const saveNewSpace = async(tbody, beforeEl, picked, markDirty, choice) => {
     if (choice.mode === 'ai') {
-        // The AI always creates it from this instruction: an activity of its own, with no template behind it.
+        // The AI always creates it from this instruction: an activity of its own, with no template behind it. With no
+        // name, it is "Book 1", "Book 2"... in the template, and the AI writes its real title when it is generated.
         const iconurl = (/src="([^"]+)"/.exec(picked.icon || '') || [])[1] || '';
         await insertGeneratedRow(tbody, beforeEl, {
             modname: picked.modname,
-            name: choice.name || picked.name,
+            name: choice.name || genericName(picked),
+            ainame: !choice.name,
             typelabel: picked.name,
             iconurl,
             prompt: choice.instruction,
@@ -175,31 +200,62 @@ const saveNewSpace = async(tbody, beforeEl, picked, markDirty, choice) => {
     markDirty();
 };
 
+/** @type {boolean} The modal of a new space is being opened or is open: a second click opens no second modal. */
+let picking = false;
+
 /**
- * Add a space for an activity at the position the menu opened from: pick the
- * activity type in the chooser, then say whether it is required and what the
- * professor has to provide, then insert the row.
+ * Add a space for an activity at the position the menu opened from: the admin ticks one activity or several, each
+ * with its instruction, and the row is inserted. A second click while the modal is open does nothing.
  *
  * @param {HTMLElement} item The clicked "add a space" menu item.
  * @param {Object} state The live wizard state from init.js.
  * @param {Function} markDirty Marks the wizard as having unsaved changes.
  */
 export const addSpace = async(item, state, markDirty) => {
+    if (picking) {
+        return;
+    }
+    picking = true;
+    try {
+        await addSpaceAt(item, state, markDirty);
+    } finally {
+        picking = false;
+    }
+};
+
+/**
+ * Add a space at the place the menu item opened from (see {@see addSpace}).
+ *
+ * @param {HTMLElement} item The clicked "add a space" menu item.
+ * @param {Object} state The live wizard state from init.js.
+ * @param {Function} markDirty Marks the wizard as having unsaved changes.
+ */
+const addSpaceAt = async(item, state, markDirty) => {
     const beforeEl = item.closest(Selectors.regions.gapOrAddInstance);
     const table = beforeEl.closest(TAG.TABLE);
     const tbody = table.querySelector(TAG.TABLE_BODY);
     const triggerEl = beforeEl.querySelector(Selectors.actions.instanceTrigger);
     closeInstanceMenu(triggerEl);
 
-    const picked = await chooseActivityType({
-        courseId: state.selectedCourseId,
-        supportedTypes: state.supportedTypes,
-    });
-    if (picked === null) {
+    // One activity or several, each with its instruction: one is created by the AI (a File can instead be one the
+    // teacher uploads); among several, the teacher chooses one when creating the course.
+    const result = await pickSpace({courseId: state.selectedCourseId, supportedTypes: state.supportedTypes});
+    if (result === null) {
         return;
     }
-    const onSave = saveNewSpace.bind(null, tbody, beforeEl, picked, markDirty);
-    openSpaceModal({subject: picked.name, required: true, instruction: '', onSave});
+    if (result.kind === 'several') {
+        await insertSpaceRow(tbody, beforeEl, {
+            name: await getString('template_teacher_space_name', COMPONENT, result.titles.join(', ')),
+            modname: result.options[0].modname,
+            icon: '',
+            required: result.required,
+            instruction: '',
+            options: result.options,
+        });
+        markDirty();
+        return;
+    }
+    await saveNewSpace(tbody, beforeEl, result.picked, markDirty, result.choice);
 };
 
 /**
@@ -221,6 +277,11 @@ const saveEditedSpace = async(row, markDirty, choice) => {
  * @param {Function} markDirty Marks the wizard as having unsaved changes.
  */
 const editSpaceRow = (row, markDirty) => {
+    if (row.dataset.options) {
+        // A space for the teacher: the activities they can add, each with its instruction.
+        editTeacherSpace(row, markDirty);
+        return;
+    }
     const nameCell = row.querySelector(Selectors.regions.typeLabel);
     const subject = nameCell.textContent.trim();
     const instructionEl = row.querySelector(Selectors.regions.spaceInstruction);

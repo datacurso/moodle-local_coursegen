@@ -34,9 +34,15 @@
  * @param {boolean} withImages Whether the professor asked for the images to be generated.
  * @param {number|null} units Number of units wanted, null to keep the template's own.
  * @param {number} guidelineId Institutional guideline id, 0 for none.
+ * @param {Object[]} spaceFiles The file of each space: {cmid, draftitemid}.
+ * @param {Object[]} spaceActivities The activity the teacher brings to each space: {uid, cmid}.
+ * @param {Object[]} spaceChoices The activity the teacher adds in each space, which the AI writes: {uid, modname, instruction}.
  * @returns {Object}
  */
-export const buildStartArgs = (templateId, prompt, draftItemId, lang, withImages, units = null, guidelineId = 0) => {
+export const buildStartArgs = (
+    templateId, prompt, draftItemId, lang, withImages, units = null, guidelineId = 0,
+    spaceFiles = [], spaceActivities = [], spaceChoices = []
+) => {
     const args = {
         templateid: templateId,
         prompt: prompt,
@@ -44,6 +50,16 @@ export const buildStartArgs = (templateId, prompt, draftItemId, lang, withImages
         lang: lang || '',
         withimages: Boolean(withImages),
     };
+    // Only what the teacher brought travels: the server takes an empty list when there is none.
+    if (spaceFiles && spaceFiles.length) {
+        args.spacefiles = spaceFiles;
+    }
+    if (spaceActivities && spaceActivities.length) {
+        args.spaceactivities = spaceActivities;
+    }
+    if (spaceChoices && spaceChoices.length) {
+        args.spacechoices = spaceChoices;
+    }
     if (units !== null) {
         args.units = units;
     }

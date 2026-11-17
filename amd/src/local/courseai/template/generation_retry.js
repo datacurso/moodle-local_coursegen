@@ -23,8 +23,11 @@
  */
 
 import {getStrings} from 'core/str';
+import {noticeFeed} from 'local_coursegen/local/courseai/template/thread_feed';
 
 const CARD_ID = 'cgRetryCard';
+// The failure of a run whose activities have a mold with nothing for the AI to fill: trying again cannot mend it.
+export const UNFILLABLE = 'template_source_invalid';
 const STRINGS = [
     'courseai_template_error_title',
     'courseai_template_error_text',
@@ -37,38 +40,51 @@ const STRINGS = [
  * Ask whether to try again.
  *
  * @param {string} code The code the service gave to the failure.
+ * @param {string} detail What the service said about it: for a mold with nothing to fill, the names of the activities.
  * @returns {Promise<boolean>} True to try again, false to close.
  */
-export const askToRetry = async(code) => {
-    const [title, text, busy, retry, close] = await getStrings(
-        STRINGS.map((key) => ({key, component: 'local_coursegen'}))
-    );
+export const askToRetry = async(code, detail = '') => {
+    const [title, text, busy, retry, close, unfillable] = await getStrings([
+        ...STRINGS.map((key) => ({key, component: 'local_coursegen'})),
+        {key: 'courseai_template_error_unfillable', component: 'local_coursegen', param: detail},
+    ]);
     document.getElementById(CARD_ID)?.remove();
 
+    // The same markup as any other turn of the thread (see ui/log.js), so the failure reads as one more message of
+    // the left column and not as a banner over the page.
     const card = document.createElement('div');
     card.id = CARD_ID;
-    card.className = 'alert alert-danger m-2';
+    card.className = 'cg-log-entry cg-log-entry--danger cg-log-entry--turn-ai';
     card.setAttribute('role', 'alert');
-    const heading = document.createElement('p');
-    heading.className = 'fw-bold mb-1';
+    const bar = document.createElement('span');
+    bar.className = 'cg-log-bar';
+    bar.setAttribute('aria-hidden', 'true');
+    const content = document.createElement('span');
+    content.className = 'cg-log-body';
+    const message = document.createElement('span');
+    message.className = 'cg-log-msg';
+    const heading = document.createElement('strong');
+    heading.className = 'd-block mb-1';
     heading.textContent = title;
-    const body = document.createElement('p');
-    body.className = 'mb-2';
-    body.textContent = code === 'high_demand' ? busy : text;
-    const buttons = document.createElement('div');
-    buttons.className = 'd-flex gap-2';
+    const body = document.createElement('span');
+    body.className = 'd-block mb-2';
+    body.textContent = code === 'high_demand' ? busy : (code === UNFILLABLE ? unfillable : text);
+    const buttons = document.createElement('span');
+    buttons.className = 'cg-card-actions';
     const retryButton = document.createElement('button');
     retryButton.type = 'button';
-    retryButton.className = 'btn btn-primary btn-sm';
+    retryButton.className = 'cg-card-button cg-card-button--primary';
     retryButton.textContent = retry;
     const closeButton = document.createElement('button');
     closeButton.type = 'button';
-    closeButton.className = 'btn btn-secondary btn-sm';
+    closeButton.className = 'cg-card-button';
     closeButton.textContent = close;
     buttons.append(retryButton, closeButton);
-    card.append(heading, body, buttons);
+    message.append(heading, body, buttons);
+    content.append(message);
+    card.append(bar, content);
 
-    const host = document.getElementById('courseaiChatScroll') || document.body;
+    const host = noticeFeed() || document.getElementById('courseaiChatScroll') || document.body;
     host.append(card);
     card.scrollIntoView({block: 'nearest'});
 

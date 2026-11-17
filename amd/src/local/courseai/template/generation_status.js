@@ -26,6 +26,7 @@
  */
 
 import {getString} from 'core/str';
+import {serviceRecovered, showServiceRetry} from 'local_coursegen/local/courseai/template/auto_retry';
 
 const NOTICE_ID = 'cgGenNotice';
 const PICTURES_ID = 'cgGenPictures';
@@ -39,7 +40,6 @@ const NOTICE_STRINGS = {
     rate_limit_wait: 'courseai_template_notice_rate_limit_wait',
     rate_limit_over: 'courseai_template_notice_rate_limit_over',
     slow_calls: 'courseai_template_notice_slow_calls',
-    retrying: 'courseai_template_notice_retrying',
 };
 
 let noticeTimer = null;
@@ -80,9 +80,10 @@ const ensureElements = () => {
 /**
  * Empty everything this module shows: a new run, or a phase that has nothing to add.
  *
+ * @param {boolean} [keepProgress] A run that goes on where it was keeps the count and the pictures it already showed.
  * @returns {void}
  */
-export const resetStatus = () => {
+export const resetStatus = (keepProgress = false) => {
     const elements = ensureElements();
     if (!elements) {
         return;
@@ -90,6 +91,9 @@ export const resetStatus = () => {
     clearTimeout(noticeTimer);
     elements.notice.hidden = true;
     elements.notice.textContent = '';
+    if (keepProgress) {
+        return;
+    }
     elements.counter.hidden = true;
     elements.counter.textContent = '';
     elements.pictures.replaceChildren();
@@ -102,6 +106,16 @@ export const resetStatus = () => {
  * @returns {Promise<string>} The sentence shown, empty when there was nothing to show.
  */
 export const showNotice = async(data) => {
+    if (data.code === 'retry_over') {
+        serviceRecovered();
+        return '';
+    }
+    if (data.code === 'retrying') {
+        // The service is trying again after the AI provider failed: the same card as when the connection fails. The
+        // card keeps the line of the status bar alive itself, so nothing is returned to be written there once.
+        await showServiceRetry(data);
+        return '';
+    }
     const elements = ensureElements();
     const key = NOTICE_STRINGS[data.code];
     if (!elements || !key) {

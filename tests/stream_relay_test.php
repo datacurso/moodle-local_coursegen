@@ -341,6 +341,112 @@ final class stream_relay_test extends \advanced_testcase {
         $this->assertCount(2, $this->client->calls);
     }
 
+    /** @var float Time the relay sees, set by the tests that need to move it. */
+    private float $now = 1000.0;
+
+    /**
+     * Build a relay that reads the time from this test.
+     *
+     * @return stream_relay
+     */
+    private function relay_with_clock(): stream_relay {
+        $service = $this->service_double();
+        $service->method('get_license_header')->willReturn('License-Key: license-123');
+
+        return new stream_relay($this->authorizer, $service, $this->client, $this->output, fn(): float => $this->now);
+    }
+
+    /**
+     * After seconds of silence the relay writes a comment, so that a browser that left is noticed.
+     */
+    public function test_silence_is_broken_with_a_comment(): void {
+        $this->client->script = ['tick', 'tick', ['event' => 'done', 'data' => '']];
+        $relay = $this->relay_with_clock();
+        $this->client->onstep = function (int $step): void {
+            if ($step === 1) {
+                $this->now += stream_relay::KEEPALIVE_SECONDS;
+            }
+        };
+
+        $relay->run(stream_type::COURSE, 'thread-1');
+
+        $this->assertSame([
+            ": keepalive\n\n",
+            "event: done\ndata: \n\n",
+        ], $this->output->written);
+    }
+
+    /**
+     * Nothing is written while the service keeps talking or the silence is short.
+     */
+    public function test_no_comment_before_the_silence_is_long_enough(): void {
+        $this->client->script = ['tick', 'tick', 'tick', ['event' => 'done', 'data' => '']];
+        $relay = $this->relay_with_clock();
+        $this->client->onstep = function (int $step): void {
+            $this->now += 0.5;
+        };
+
+        $relay->run(stream_type::COURSE, 'thread-1');
+
+        $this->assertSame(["event: done\ndata: \n\n"], $this->output->written);
+    }
+
+    /**
+     * An event counts as a write: the silence is measured from it.
+     */
+    public function test_an_event_restarts_the_silence(): void {
+        $this->client->script = [
+            ['event' => 'message', 'data' => 'a'],
+            'tick',
+            ['event' => 'done', 'data' => ''],
+        ];
+        $relay = $this->relay_with_clock();
+        $this->client->onstep = function (int $step): void {
+            if ($step === 0) {
+                $this->now += stream_relay::KEEPALIVE_SECONDS - 0.5;
+            }
+        };
+
+        $relay->run(stream_type::COURSE, 'thread-1');
+
+        $this->assertSame([
+            "event: message\ndata: a\n\n",
+            "event: done\ndata: \n\n",
+        ], $this->output->written);
+    }
+
+    /**
+     * A browser that left ends the transfer and nothing more is written to it.
+     */
+    public function test_a_browser_that_left_stops_the_transfer_at_the_next_tick(): void {
+        $this->client->script = ['tick', ['event' => 'message', 'data' => 'never read']];
+        $relay = $this->relay_with_clock();
+        $this->client->onstep = function (int $step): void {
+            $this->now += 10 * stream_relay::KEEPALIVE_SECONDS;
+            $this->output->aborted = true;
+        };
+
+        $relay->run(stream_type::COURSE, 'thread-1');
+
+        $this->assertSame([], $this->output->written);
+    }
+
+    /**
+     * A long silence writes one comment per tick that finds it, not one per second.
+     */
+    public function test_a_long_silence_writes_a_comment_every_few_seconds(): void {
+        $this->client->script = ['tick', 'tick', 'tick', 'tick', 'tick', 'tick', ['event' => 'done', 'data' => '']];
+        $relay = $this->relay_with_clock();
+        $this->client->onstep = function (int $step): void {
+            $this->now += 1.0;
+        };
+
+        $relay->run(stream_type::COURSE, 'thread-1');
+
+        $comments = array_filter($this->output->written, fn($block) => $block === ": keepalive\n\n");
+        $this->assertCount(2, $comments);
+    }
+
     /**
      * Decode the payload of a written failed event.
      *

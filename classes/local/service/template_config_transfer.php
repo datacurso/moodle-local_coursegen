@@ -78,17 +78,24 @@ final class template_config_transfer {
                 'key' => $key((int) $row->cmid),
                 'action' => $row->action,
                 'useasreference' => (int) $row->useasreference,
-                'templatescope' => $row->templatescope,
+                'templatescope' => (string) $row->templatescope,
                 'prompt' => (string) $row->prompt,
+                'spacerequired' => (int) ($row->spacerequired ?? 0),
+                'spaceinstruction' => (string) ($row->spaceinstruction ?? ''),
             ];
         }
         foreach ($DB->get_records('local_coursegen_tpl_instance', $params, 'sectionid, sortorder, id') as $row) {
+            if (!empty($row->ownercmid)) {
+                // The instance of an activity modified with AI is made again when the template is saved.
+                continue;
+            }
             $data['instances'][] = [
                 'section' => $sectionnums[(int) $row->sectionid] ?? null,
                 'source' => $key((int) $row->sourcecmid),
                 'after' => $key((int) $row->aftercmid),
                 'sourcename' => $row->sourcename,
                 'name' => $row->name,
+                'ainame' => (int) ($row->ainame ?? 0),
                 'typelabel' => $row->typelabel,
                 'modname' => $row->modname,
                 'prompt' => (string) $row->prompt,
@@ -102,6 +109,7 @@ final class template_config_transfer {
                 'modname' => $row->modname,
                 'required' => (int) $row->required,
                 'instruction' => $row->instruction,
+                'options' => (string) ($row->options ?? ''),
                 'sortorder' => (int) $row->sortorder,
             ];
         }
@@ -253,9 +261,12 @@ final class template_config_transfer {
             $sections[(int) $row['section']]['activities'][] = [
                 'cmid' => $cmid($row['key']),
                 'action' => $row['action'],
-                'useasreference' => $row['useasreference'],
-                'templatescope' => $row['templatescope'],
-                'prompt' => $row['prompt'],
+                'useasreference' => (int) ($row['useasreference'] ?? 1),
+                // A file exported before these fields existed, or from a template without them, still imports.
+                'templatescope' => (string) ($row['templatescope'] ?? ''),
+                'prompt' => (string) ($row['prompt'] ?? ''),
+                'spacerequired' => (int) ($row['spacerequired'] ?? 0),
+                'spaceinstruction' => (string) ($row['spaceinstruction'] ?? ''),
             ];
         }
         foreach ($data['instances'] as $row) {
@@ -263,6 +274,7 @@ final class template_config_transfer {
                 'sourcecmid' => $cmid($row['source']),
                 'sourcename' => $row['sourcename'],
                 'name' => $row['name'],
+                'ainame' => (int) ($row['ainame'] ?? 0),
                 'typelabel' => $row['typelabel'],
                 'modname' => $row['modname'],
                 'prompt' => $row['prompt'],
@@ -275,6 +287,7 @@ final class template_config_transfer {
                 'modname' => $row['modname'],
                 'required' => $row['required'],
                 'instruction' => (string) $row['instruction'],
+                'options' => (string) ($row['options'] ?? ''),
                 'aftercmid' => $cmid($row['after']),
                 'sortorder' => $row['sortorder'],
             ];

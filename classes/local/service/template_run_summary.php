@@ -43,9 +43,12 @@ class template_run_summary {
         $syllabus = array_key_exists('syllabus', $coursedata) ? (string) $coursedata['syllabus'] : null;
         return self::context(
             $record ? format_string($record->get('name')) : '',
-            self::language_name((string) ($payload['lang'] ?? '')),
+            !empty($payload['lang_auto'])
+                ? get_string('courseai_lang_auto', 'local_coursegen')
+                : self::language_name((string) ($payload['lang'] ?? '')),
             $syllabus,
-            (string) ($payload['general_instruction'] ?? '')
+            (string) ($payload['general_instruction'] ?? ''),
+            !empty($payload['with_images'])
         );
     }
 
@@ -56,15 +59,23 @@ class template_run_summary {
      * @param string $language Language as the selector names it.
      * @param string|null $syllabus Attached syllabus file name, '' for none, null when unknown.
      * @param string $instruction General instruction typed by the professor.
+     * @param bool $images Whether the pictures are made.
      * @return array
      */
-    public static function context(string $template, string $language, ?string $syllabus, string $instruction): array {
+    public static function context(
+        string $template,
+        string $language,
+        ?string $syllabus,
+        string $instruction,
+        bool $images = false
+    ): array {
         return [
             'template' => $template,
             'language' => $language,
             'syllabusknown' => $syllabus !== null,
             'syllabus' => (string) $syllabus,
             'instruction' => trim($instruction),
+            'images' => $images,
         ];
     }
 

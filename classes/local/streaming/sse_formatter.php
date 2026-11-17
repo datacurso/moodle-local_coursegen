@@ -47,6 +47,18 @@ class sse_formatter {
     }
 
     /**
+     * Build a comment, which the browser reads and ignores.
+     *
+     * It carries no event: it exists to be written, because PHP only learns that the browser left when it writes.
+     *
+     * @param string $text Text of the comment.
+     * @return string Block that ends in a blank line.
+     */
+    public static function comment(string $text): string {
+        return ': ' . self::without_line_breaks($text) . "\n\n";
+    }
+
+    /**
      * Remove CR and LF from a single-line value.
      *
      * @param string $value Value to clean.

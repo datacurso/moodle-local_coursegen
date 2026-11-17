@@ -46,6 +46,12 @@ $PAGE->set_title(get_string('createwithai', 'local_coursegen'));
 // reach the true top of the viewport (see aicoursecreation.css).
 $PAGE->add_body_class('local-coursegen-aicoursecreation');
 
+// This page is the whole screen of the course creator: the HTML the site adds to every page (support and chat
+// widgets, social buttons, banners) is left out of it for this request only.
+$CFG->additionalhtmlhead = '';
+$CFG->additionalhtmltopofbody = '';
+$CFG->additionalhtmlfooter = '';
+
 // Load courseai CSS + sidebar CSS. Direct plugin stylesheets get NO revision
 // from Moodle's cache pipeline, so browsers keep stale copies across plugin
 // upgrades — bust them with the plugin version.
@@ -54,6 +60,7 @@ $PAGE->requires->css(new moodle_url('/local/coursegen/styles/aicoursecreation.cs
 $PAGE->requires->css(new moodle_url('/local/coursegen/styles/chatui.css', ['v' => $cssrev]));
 $PAGE->requires->css(new moodle_url('/local/coursegen/styles/sidebar.css', ['v' => $cssrev]));
 $PAGE->requires->css(new moodle_url('/local/coursegen/styles/template_mode_prompt.css', ['v' => $cssrev]));
+$PAGE->requires->css(new moodle_url('/local/coursegen/styles/template_space_card.css', ['v' => $cssrev]));
 $PAGE->requires->css(new moodle_url('/local/coursegen/styles/template_left_column.css', ['v' => $cssrev]));
 $PAGE->requires->css(new moodle_url('/local/coursegen/styles/template_left_cards.css', ['v' => $cssrev]));
 $PAGE->requires->css(new moodle_url('/local/coursegen/styles/template_top_bar.css', ['v' => $cssrev]));

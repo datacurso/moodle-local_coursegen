@@ -16,6 +16,8 @@
 
 namespace local_coursegen\local\link;
 
+use core_h5p\local\library\autoloader;
+
 /**
  * Shows an H5P activity inside the text that links to it.
  *
@@ -67,8 +69,6 @@ final class embed_link {
      * @return string|null Null when the URL is not an H5P activity with a package.
      */
     private static function player(string $href): ?string {
-        global $CFG;
-
         if (!preg_match('~/mod/h5pactivity/view\.php\?(?:[^#]*&)?id=(\d+)~', $href, $found)) {
             return null;
         }
@@ -96,6 +96,7 @@ final class embed_link {
         return '<div class="coursegen-h5p-embed" style="margin:0 auto;max-width:1000px;">'
             . '<iframe src="' . s($embed->out(false)) . '" width="100%" height="637" allowfullscreen="allowfullscreen" '
             . 'style="border:0;width:100%;" title="H5P"></iframe>'
-            . '<script src="' . s($CFG->wwwroot) . '/h5p/h5p-resizer.js" charset="UTF-8"></script></div>';
+            . '<script src="' . s(autoloader::get_h5p_core_library_url('js/h5p-resizer.js')->out(false))
+            . '" charset="UTF-8"></script></div>';
     }
 }

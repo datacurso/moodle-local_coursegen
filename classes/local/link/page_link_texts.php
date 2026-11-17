@@ -38,4 +38,9 @@ final class page_link_texts implements module_link_texts {
     public function text_columns(): array {
         return ['content', 'intro'];
     }
+
+    #[\Override]
+    public function file_area(string $column, \stdClass $record): array {
+        return ['mod_page', $column === 'intro' ? 'intro' : 'content', 0];
+    }
 }

@@ -24,8 +24,8 @@
 import {announceSession} from 'local_coursegen/local/courseai/template/session_name';
 import Notification from 'core/notification';
 import {startTemplateGeneration} from './repository';
-import {requestedUnits} from './state';
-import {GenerationStopped, runGenerationStream} from './generation_stream';
+import {pickedSpaceActivities, pickedSpaceChoices, pickedSpaceFiles, requestedUnits} from './state';
+import {GenerationStopped, abortGenerationView, beginGenerationView, runGenerationStream} from './generation_stream';
 import {usePreviewSession} from './preview';
 import {reviewAndCreate} from './finish';
 
@@ -39,7 +39,7 @@ const selectedText = (select) => select?.options[select.selectedIndex]?.text || 
 
 /**
  * Generate the course from the picked template, with the input bar's own
- * values (prompt and syllabus), and watch it happen.
+ * values (prompt and syllabus) and the files of its spaces, and watch it happen.
  *
  * Nothing runs until the stream is opened: start_template_generation only
  * exports the template, attaches the syllabus and hands back the stream whose
@@ -63,7 +63,18 @@ export const runGeneration = async(tplState, tplSelect, genBtn, state, host) => 
         return;
     }
     genBtn.disabled = true;
+    const context = {
+        template: selectedText(tplSelect),
+        language: selectedText(document.getElementById('tplLangSelect')),
+        syllabus: tplState.syllabusfilename || '',
+        images: Boolean(tplState.generateimages),
+        instruction: tplState.prompt || '',
+    };
+    let opened = false;
     try {
+        // The page shows the generation from the click: sending the material to the AI can take a while.
+        await beginGenerationView(context);
+        opened = true;
         const started = await startTemplateGeneration(
             templateId,
             tplState.prompt || '',
@@ -71,7 +82,10 @@ export const runGeneration = async(tplState, tplSelect, genBtn, state, host) => 
             tplState.lang || '',
             Boolean(tplState.generateimages),
             requestedUnits(tplState),
-            tplState.guidelineid || 0
+            tplState.guidelineid || 0,
+            pickedSpaceFiles(tplState),
+            pickedSpaceActivities(tplState),
+            pickedSpaceChoices(tplState)
         );
         usePreviewSession(started.sessionid);
         announceSession(started.sessionid);
@@ -79,17 +93,16 @@ export const runGeneration = async(tplState, tplSelect, genBtn, state, host) => 
             started.streamurl,
             () => reviewAndCreate(host, state, tplState, started.sessionid),
             started.sessionid,
-            {
-                template: selectedText(tplSelect),
-                language: selectedText(document.getElementById('tplLangSelect')),
-                syllabus: tplState.syllabusfilename || '',
-                instruction: tplState.prompt || '',
-            }
+            context,
+            true
         );
     } catch (e) {
         genBtn.disabled = false;
         // After an error the person was already offered to try again, and closed it: nothing more to say.
         if (!(e instanceof GenerationStopped)) {
+            if (opened) {
+                abortGenerationView('');
+            }
             Notification.exception(e);
         }
     }

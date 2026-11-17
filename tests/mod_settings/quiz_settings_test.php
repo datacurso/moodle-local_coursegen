@@ -335,4 +335,69 @@ final class quiz_settings_test extends \advanced_testcase {
         $this->assertSame([1, 2], array_map('intval', array_column($slots, 'page')));
         $this->assertSame([5.0, 2.0], array_map('floatval', array_column($slots, 'maxmark')));
     }
+
+    /**
+     * Many questions are all added, and the total is computed once at the end with every one of them.
+     */
+    public function test_many_questions_are_added_and_the_total_counts_them_all(): void {
+        global $DB;
+
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        [$quiz, $cm] = $this->make_quiz_cm();
+        $questions = [];
+        for ($number = 1; $number <= 30; $number++) {
+            $questions[] = $this->truefalse_payload('Pregunta ' . $number, ['maxmark' => 1]);
+        }
+        $settings = new quiz_settings($cm, ['questions' => $questions]);
+
+        $settings->add_settings();
+
+        $this->assertCount(30, $this->slots((int) $quiz->id));
+        $this->assertSame(30.0, (float) $DB->get_field('quiz', 'sumgrades', ['id' => $quiz->id]));
+    }
+
+    /**
+     * A question that cannot be stored is left out and the total counts only the ones added.
+     */
+    public function test_a_question_that_cannot_be_stored_is_left_out_of_the_total(): void {
+        global $DB;
+
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        [$quiz, $cm] = $this->make_quiz_cm();
+        $broken = $this->truefalse_payload('Rota', ['maxmark' => 5]);
+        $broken['qtype'] = 'calculated';
+        $settings = new quiz_settings($cm, ['questions' => [
+            $this->truefalse_payload('Buena', ['maxmark' => 3]),
+            $broken,
+        ]]);
+
+        $settings->add_settings();
+
+        $this->assertCount(1, $this->slots((int) $quiz->id));
+        $this->assertSame(3.0, (float) $DB->get_field('quiz', 'sumgrades', ['id' => $quiz->id]));
+    }
+
+    /**
+     * A quiz whose questions all fail is left empty, with no total to compute.
+     */
+    public function test_a_quiz_whose_questions_all_fail_stays_empty(): void {
+        global $DB;
+
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        [$quiz, $cm] = $this->make_quiz_cm();
+        $broken = $this->truefalse_payload('Rota');
+        $broken['qtype'] = 'calculated';
+        $settings = new quiz_settings($cm, ['questions' => [$broken]]);
+
+        $settings->add_settings();
+
+        $this->assertCount(0, $this->slots((int) $quiz->id));
+        $this->assertSame(0.0, (float) $DB->get_field('quiz', 'sumgrades', ['id' => $quiz->id]));
+    }
 }

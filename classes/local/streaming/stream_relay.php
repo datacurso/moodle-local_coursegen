@@ -45,8 +45,17 @@ class stream_relay {
     /** @var browser_output Writer to the browser. */
     private browser_output $output;
 
+    /** @var int Seconds of silence after which the relay writes a comment to the browser. */
+    public const KEEPALIVE_SECONDS = 1;
+
     /** @var bool Whether the service ended the stream with its done event. */
     private bool $finished = false;
+
+    /** @var float When the relay last wrote to the browser, in seconds. */
+    private float $lastwrite = 0.0;
+
+    /** @var callable Gives the time in seconds; replaced by tests. */
+    private $clock;
 
     /**
      * Constructor. Every collaborator can be replaced, which is how tests run without a service.
@@ -55,12 +64,14 @@ class stream_relay {
      * @param ai_course_api_service|null $service Source of the service URL and license key.
      * @param upstream_stream_client|null $client Reader of the service stream.
      * @param browser_output|null $output Writer to the browser.
+     * @param callable|null $clock Gives the time in seconds.
      */
     public function __construct(
         ?stream_authorizer $authorizer = null,
         ?ai_course_api_service $service = null,
         ?upstream_stream_client $client = null,
-        ?browser_output $output = null
+        ?browser_output $output = null,
+        ?callable $clock = null
     ) {
         if ($authorizer === null) {
             $authorizer = new stream_authorizer();
@@ -75,6 +86,11 @@ class stream_relay {
             $output = new browser_output();
         }
 
+        if ($clock === null) {
+            $clock = static fn(): float => microtime(true);
+        }
+
+        $this->clock = $clock;
         $this->authorizer = $authorizer;
         $this->service = $service;
         $this->client = $client;
@@ -111,6 +127,7 @@ class stream_relay {
     public function forward(array $event): void {
         $block = sse_formatter::event($event['event'], $event['data']);
         $this->output->send($block);
+        $this->lastwrite = ($this->clock)();
 
         if ($event['event'] === 'done') {
             $this->finished = true;
@@ -123,7 +140,30 @@ class stream_relay {
      * @return bool True when the transfer must stop.
      */
     public function tick(): bool {
+        if ($this->output->is_aborted()) {
+            return true;
+        }
+
+        $this->keep_alive();
         return $this->output->is_aborted();
+    }
+
+    /**
+     * Write a comment to the browser when nothing has been written for a while.
+     *
+     * PHP only learns that the browser left when it writes to it. While the service is silent (a long request to the
+     * AI is one) nothing would be written, the relay would never notice, and the service would go on generating
+     * for a person who is not there. The comment is ignored by the browser and makes the departure show within
+     * seconds, which ends the transfer and with it the run of the service.
+     */
+    private function keep_alive(): void {
+        $now = ($this->clock)();
+        if ($now - $this->lastwrite < self::KEEPALIVE_SECONDS) {
+            return;
+        }
+
+        $this->output->send(sse_formatter::comment('keepalive'));
+        $this->lastwrite = $now;
     }
 
     /**
@@ -153,6 +193,7 @@ class stream_relay {
      */
     private function relay(string $url, string $licenseheader): void {
         $this->finished = false;
+        $this->lastwrite = ($this->clock)();
         $this->client->listen([$this, 'forward'], [$this, 'tick']);
         $this->client->stream($url, $licenseheader);
 

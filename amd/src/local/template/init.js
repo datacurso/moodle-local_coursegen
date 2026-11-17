@@ -49,7 +49,7 @@ const state = {
     // prompt). The rendered selects already preselect the saved actions
     // server-side.
     savedSections: {}, savedActivities: {},
-    maxSections: 0, noLimit: false, supportedTypes: [],
+    maxSections: 0, noLimit: false, supportedTypes: [], activitySpace: {},
     namingPattern: '', namingContract: null, namingStart: 1, categories: [],
 };
 /** @type {HTMLElement} Root element. */
@@ -153,6 +153,7 @@ const initSectionState = () => {
     state.activityRef = {};
     state.activityPrompt = {};
     state.activityScope = {};
+    state.activitySpace = {};
 
     state.courseStructure.forEach(seedSection);
     // maxSections counts EXTRA sections the teacher may add on top of the
@@ -172,7 +173,7 @@ const seedSection = (section) => {
 };
 
 /**
- * Seed the action, reference flag, prompt and scope of one activity,
+ * Seed the action, reference flag, prompt, scope and space of one activity,
  * preferring what the template already saved for it.
  *
  * @param {Object} activity An activity of the loaded course structure.
@@ -187,6 +188,10 @@ const seedActivity = (activity) => {
     state.activityRef[activity.id] = useasreference;
     state.activityPrompt[activity.id] = saved?.prompt || '';
     state.activityScope[activity.id] = saved?.templatescope || SCOPE.COURSE;
+    state.activitySpace[activity.id] = {
+        required: saved?.spacerequired !== false,
+        instruction: saved?.spaceinstruction || '',
+    };
 };
 
 /**

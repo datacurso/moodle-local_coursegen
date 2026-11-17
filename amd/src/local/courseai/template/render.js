@@ -30,6 +30,7 @@
 import Templates from 'core/templates';
 import {getStrings} from 'core/str';
 import Selectors from './selectors';
+import {isSpaceFilled} from './state';
 
 /**
  * Resolve a human-readable label per distinct modname present in the state
@@ -61,6 +62,23 @@ const ensureTypeLabels = async(state) => {
 };
 
 /**
+ * What a filled space shows: the name of its file, or its activity with the course it comes from.
+ *
+ * @param {Object} activity
+ * @returns {string}
+ */
+const spaceLabel = (activity) => {
+    if (activity.spacechoice) {
+        const own = String(activity.spacechoice.instruction || '').trim();
+        return own ? `${activity.spacechoice.title} · ${own}` : activity.spacechoice.title;
+    }
+    if (activity.spaceactivity) {
+        return `${activity.spaceactivity.name} · ${activity.spaceactivity.coursename}`;
+    }
+    return activity.spacefile?.filename || '';
+};
+
+/**
  * The Mustache fields of one activity row.
  *
  * @param {Object} activity
@@ -73,7 +91,6 @@ const buildActivityContext = (activity, state, sectionindex, index) => ({
     name: activity.name,
     modname: activity.modname,
     purpose: activity.purpose,
-    iconhtml: activity.iconhtml,
     locked: activity.locked,
     isinstance: !!activity.isinstance,
     aigenerated: !!activity.aigenerated,
@@ -84,6 +101,19 @@ const buildActivityContext = (activity, state, sectionindex, index) => ({
     sectionindex,
     index,
     typelabel: activity.typelabel || state.typeLabels[activity.modname] || '',
+    isspace: !!activity.isspace,
+    spaceinstruction: activity.spaceinstruction || '',
+    hasspaceinstruction: !!activity.spaceinstruction,
+    spacerequired: !!activity.spacerequired,
+    isactivityspace: activity.spacekind === 'activity',
+    ischoicespace: activity.spacekind === 'choice',
+    // The icon of the activity the teacher added, in place of the "+" of the empty space.
+    iconhtml: activity.spacechoice
+        ? (activity.spaceoptions.find((option) => option.modname === activity.spacechoice.modname)?.iconhtml || activity.iconhtml)
+        : activity.iconhtml,
+    spacemissing: !!activity.isspace && !!activity.spacerequired && !isSpaceFilled(activity),
+    hasspacefile: isSpaceFilled(activity),
+    spacefilename: spaceLabel(activity),
 });
 
 /**
@@ -128,6 +158,17 @@ export const renderStructure = async(container, state) => {
 };
 
 /**
+ * The section and row positions a control carries.
+ *
+ * @param {HTMLElement} control
+ * @returns {number[]} [sectionIndex, activityIndex]
+ */
+const positionOf = (control) => [
+    parseInt(control.dataset.sectionIndex, 10),
+    parseInt(control.dataset.activityIndex, 10),
+];
+
+/**
  * Wire delegated click handling on the structure container. Called ONCE per
  * page load — the container node itself is never replaced (only its children,
  * by renderStructure), so this delegation keeps working across every re-render.
@@ -135,6 +176,10 @@ export const renderStructure = async(container, state) => {
  * @param {HTMLElement} container
  * @param {Object} handlers
  * @param {Function} handlers.onToggleSection - (sectionIndex) => void
+ * @param {Function} handlers.onPickSpaceFile - (sectionIndex, activityIndex) => void
+ * @param {Function} handlers.onRemoveSpaceFile - (sectionIndex, activityIndex) => void
+ * @param {Function} handlers.onPickSpaceActivity - (sectionIndex, activityIndex) => void
+ * @param {Function} handlers.onRemoveSpaceActivity - (sectionIndex, activityIndex) => void
  */
 export const wireStructureEvents = (container, handlers) => {
     if (!container) {
@@ -149,5 +194,60 @@ export const wireStructureEvents = (container, handlers) => {
             return;
         }
 
+        // "Remove" sits inside the card, which as a whole opens the file picker: it is looked for first.
+        const dropChoiceEl = event.target.closest(Selectors.actions.removeSpaceChoice);
+        if (dropChoiceEl) {
+            event.preventDefault();
+            event.stopPropagation();
+            handlers.onRemoveSpaceChoice(...positionOf(dropChoiceEl));
+            return;
+        }
+
+        const choiceEl = event.target.closest(Selectors.actions.pickSpaceChoice);
+        if (choiceEl) {
+            event.preventDefault();
+            handlers.onPickSpaceChoice(...positionOf(choiceEl));
+            return;
+        }
+
+        const removeEl = event.target.closest(Selectors.actions.removeSpaceFile);
+        if (removeEl) {
+            event.preventDefault();
+            event.stopPropagation();
+            handlers.onRemoveSpaceFile(...positionOf(removeEl));
+            return;
+        }
+
+        const pickEl = event.target.closest(Selectors.actions.pickSpaceFile);
+        if (pickEl) {
+            event.preventDefault();
+            handlers.onPickSpaceFile(...positionOf(pickEl));
+            return;
+        }
+
+        const chooseEl = event.target.closest(Selectors.actions.pickSpaceActivity);
+        if (chooseEl) {
+            event.preventDefault();
+            handlers.onPickSpaceActivity(...positionOf(chooseEl));
+            return;
+        }
+
+        const dropEl = event.target.closest(Selectors.actions.removeSpaceActivity);
+        if (dropEl) {
+            event.preventDefault();
+            handlers.onRemoveSpaceActivity(...positionOf(dropEl));
+        }
+    });
+
+    // The card of a space and its buttons are not <button> elements: Enter and Space press them as a click would.
+    container.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter' && event.key !== ' ') {
+            return;
+        }
+        const pressed = event.target.closest('[role="button"][data-action]');
+        if (pressed && pressed === event.target) {
+            event.preventDefault();
+            pressed.click();
+        }
     });
 };

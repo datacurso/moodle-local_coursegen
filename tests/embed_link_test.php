@@ -74,4 +74,26 @@ final class embed_link_test extends \advanced_testcase {
         $this->assertStringContainsString('/h5p/embed.php?url=', $result);
         $this->assertStringNotContainsString('<a ', $result);
     }
+
+    /**
+     * The player loads the script that fits the frame to its content from the H5P library of Moodle.
+     *
+     * The script used to be asked from a path that does not exist, so an activity taller than the frame was cut off
+     * instead of the frame growing with it.
+     */
+    public function test_the_player_loads_the_resizer_from_the_h5p_library_of_moodle(): void {
+        global $CFG;
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        $course = $this->getDataGenerator()->create_course();
+        $activity = $this->getDataGenerator()->create_module('h5pactivity', ['course' => $course->id]);
+        $cm = get_coursemodule_from_instance('h5pactivity', $activity->id);
+        $text = '<a data-coursegen-embed="1" href="' . $CFG->wwwroot . '/mod/h5pactivity/view.php?id=' . $cm->id . '">Go</a>';
+
+        $result = embed_link::apply($text);
+
+        $resizer = \core_h5p\local\library\autoloader::get_h5p_core_library_url('js/h5p-resizer.js')->out(false);
+        $this->assertStringContainsString('<script src="' . s($resizer) . '"', $result);
+        $this->assertStringNotContainsString($CFG->wwwroot . '/h5p/h5p-resizer.js', $result);
+    }
 }
