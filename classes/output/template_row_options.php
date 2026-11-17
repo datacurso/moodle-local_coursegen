@@ -294,6 +294,7 @@ class template_row_options {
             'instruction' => $instruction,
             'hasinstruction' => $instruction !== '',
             'options' => $options ? json_encode($options, JSON_UNESCAPED_UNICODE) : '',
+            'ismulti' => !empty($options),
         ];
     }
 

@@ -125,6 +125,7 @@ export const insertSpaceRow = async(tbody, beforeEl, space) => {
         instruction: space.instruction,
         hasinstruction: space.instruction !== '',
         options: space.options ? JSON.stringify(space.options) : '',
+        ismulti: !!space.options,
     };
     const fragment = await renderRowFragment('local_coursegen/template_space_row', context);
     const row = fragment.querySelector(Selectors.regions.spaceRow);
