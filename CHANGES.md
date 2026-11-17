@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10-wp] - 2026111703
+
+### Changed
+- **An activity the AI creates looks like a space in the template editor**  
+  It is added from "Add space for an activity", and its row now looks like the rows of the spaces: the frame of a space, the badge "Space · Created by the AI" and its instruction under its name (cut at three lines). Its pencil opens the same modal with its type, name and instruction; turned into several activities or into the File the teacher uploads, the row is replaced by it in the same place. What is saved and sent to the service does not change.
+
 ## [2.0.10-wp] - 2026111702
 
 ### Fixed

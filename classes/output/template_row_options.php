@@ -222,7 +222,8 @@ class template_row_options {
         $generated = (int) $instance->get('sourcecmid') === 0;
         return [
             'generated' => $generated,
-            'promptopen' => $generated,
+            // An activity of the AI shows its instruction under its name, like a space: its text box stays closed.
+            'promptopen' => false,
             'instanceid' => (int) $instance->get('id'),
             'name' => $name,
             'ainame' => (int) $instance->get('ainame'),
