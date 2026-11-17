@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10-wp] - 2026111152
+
+### Changed
+- **The question of whether a space is required says what the teacher does**  
+  With several activities it asks "Does the teacher have to choose one of these activities?" and says that the AI creates the chosen one (and, when a File the teacher uploads is among them, that they upload that one); with a File the teacher uploads, alone or of the course, it asks "Does the teacher have to upload the file?". Each option says what happens if the teacher does not do it.
+
 ## [2.0.10-wp] - 2026111151
 
 ### Changed
