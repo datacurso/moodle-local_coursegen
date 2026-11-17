@@ -46,6 +46,30 @@ class template_export_sections {
         foreach ($sectioninfos as $section) {
             $sections[] = self::section_entry($course, $format, $section, $images, $behaviors, $contextid);
         }
+        if ($course->format === 'flexsections') {
+            $sections = self::with_hierarchy($sections);
+        }
+        return $sections;
+    }
+
+    /**
+     * Say where each section hangs in the tree of a flexsections course.
+     *
+     * The parent option is already in each section's format options; it is
+     * also given on its own, as parent_section, with how deep the section is,
+     * so whatever reads the payload does not need to know where a format keeps
+     * it. Additive: nothing already in an entry changes.
+     *
+     * @param array $sections The entries built by section_entry().
+     * @return array
+     */
+    private static function with_hierarchy(array $sections): array {
+        $tree = template_section_tree::from_entries($sections);
+        foreach ($sections as $index => $entry) {
+            $number = (int) $entry['section'];
+            $sections[$index]['parent_section'] = $tree->parent_of($number);
+            $sections[$index]['depth'] = $tree->depth_of($number);
+        }
         return $sections;
     }
 

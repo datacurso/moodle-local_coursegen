@@ -24,6 +24,7 @@ use local_coursegen\local\models\template_space;
 use local_coursegen\local\service\teacher_space_options;
 use local_coursegen\local\service\template_export_uids;
 use local_coursegen\local\service\template_instance_layout;
+use local_coursegen\local\service\template_section_tree;
 use local_coursegen\local\space\activity_spaces;
 use local_coursegen\local\space\space_rules;
 use local_coursegen\local\space\upload_spaces;
@@ -126,6 +127,7 @@ trait get_template_structure_rows {
     ): array {
         $sections = [];
         $sectioninfos = $modinfo->get_section_info_all();
+        $tree = template_section_tree::from_modinfo($modinfo);
         foreach ($sectioninfos as $section) {
             $behavior = $sectionsettings[$section->id] ?? template_section::BEHAVIOR_AI_MODIFY;
             if ($behavior === template_section::BEHAVIOR_EXCLUDE) {
@@ -133,7 +135,7 @@ trait get_template_structure_rows {
             }
             $activities = self::section_activities($modinfo, $section, $activitysettings, $instancesbysection, $output);
             $name = get_section_name($course, $section);
-            $sections[] = [
+            $entry = [
                 'id'         => (int) $section->id,
                 'num'        => (int) $section->section,
                 'name'       => $name,
@@ -141,6 +143,12 @@ trait get_template_structure_rows {
                 'locked'     => ($behavior === template_section::BEHAVIOR_KEEP),
                 'activities' => $activities,
             ];
+            if ($tree !== null) {
+                // A flexsections course says where each section hangs; any other format adds nothing.
+                $entry['parent'] = $tree->parent_of($entry['num']);
+                $entry['depth'] = $tree->depth_of($entry['num']);
+            }
+            $sections[] = $entry;
         }
         return $sections;
     }

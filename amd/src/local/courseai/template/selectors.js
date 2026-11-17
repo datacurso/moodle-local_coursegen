@@ -29,6 +29,7 @@
 export default {
     actions: {
         toggleSection: '[data-action="local_coursegen/template/toggle-section"]',
+        unitsInput: '[data-action="local_coursegen/template/units-input"]',
         pickSpaceFile: '[data-action="local_coursegen/template/pick-space-file"]',
         removeSpaceFile: '[data-action="local_coursegen/template/remove-space-file"]',
         pickSpaceChoice: '[data-action="local_coursegen/template/pick-space-choice"]',
@@ -41,6 +42,7 @@ export default {
         busy: 'is-busy',
     },
     regions: {
+        unitsField: '[data-region="local_coursegen/template/units"]',
         generationNotices: '[data-region="local_coursegen/template/generation-notices"]',
         spaceButtonLabel: '[data-region="local_coursegen/template/space-button-label"]',
     },

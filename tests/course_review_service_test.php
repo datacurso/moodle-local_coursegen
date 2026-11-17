@@ -90,4 +90,101 @@ final class course_review_service_test extends \advanced_testcase {
 
         $this->assertSame([], course_review_service::available_categories());
     }
+
+    /**
+     * A start date of the review form becomes the timestamp of the start of that day, and an empty or invalid
+     * one is no override.
+     */
+    public function test_overrides_turn_a_valid_start_date_into_a_timestamp(): void {
+        $this->resetAfterTest();
+        $this->setTimezone('UTC');
+
+        $overrides = course_review_service::overrides('', '', 0, '2027-03-15');
+
+        $this->assertSame(['startdate' => gmmktime(0, 0, 0, 3, 15, 2027)], $overrides);
+        foreach (['', '  ', '15/03/2027', '2027-02-31', '2027-13-01', 'tomorrow'] as $invalid) {
+            $this->assertSame([], course_review_service::overrides('', '', 0, $invalid), $invalid);
+        }
+    }
+
+    /**
+     * The start date is read in the timezone of the user.
+     */
+    public function test_the_start_date_follows_the_timezone_of_the_user(): void {
+        $this->resetAfterTest();
+        $this->setTimezone('Europe/Madrid');
+
+        $overrides = course_review_service::overrides('', '', 0, '2027-01-10');
+
+        $this->assertSame(gmmktime(0, 0, 0, 1, 10, 2027) - 3600, $overrides['startdate']);
+    }
+
+    /**
+     * Each warning of the generation is worded for the review step.
+     */
+    public function test_warning_messages_word_the_units_mismatch(): void {
+        $messages = course_review_service::warning_messages([
+            ['code' => 'units_count_mismatch', 'expected' => 5, 'actual' => 3],
+            ['code' => 'something_unknown', 'expected' => 1, 'actual' => 2],
+        ]);
+
+        $this->assertSame([get_string('courseai_review_warning_units_count_mismatch', 'local_coursegen', (object) [
+            'expected' => 5, 'actual' => 3,
+        ])], $messages);
+        $this->assertStringContainsString('5', $messages[0]);
+        $this->assertStringContainsString('3', $messages[0]);
+        $this->assertSame([], course_review_service::warning_messages([]));
+    }
+
+    /**
+     * The skipped unit lock is worded with its unit number.
+     */
+    public function test_warning_messages_word_the_unit_lock_skipped_code(): void {
+        $messages = course_review_service::warning_messages([['code' => 'guideline_lock_skipped', 'unit' => 3]]);
+
+        $this->assertCount(1, $messages);
+        $this->assertStringContainsString('3', $messages[0]);
+        $this->assertStringNotContainsString('{$a', $messages[0]);
+    }
+
+    /**
+     * Every warning code the service can send for a guideline structure is worded, in order.
+     */
+    public function test_warning_messages_word_the_guideline_structure_codes(): void {
+        $messages = course_review_service::warning_messages([
+            ['code' => 'guideline_structure_failed', 'reason' => 'model_error'],
+            ['code' => 'guideline_units_mismatch', 'expected' => 5, 'actual' => 7],
+            ['code' => 'section_names_fallback', 'units' => 4],
+            ['code' => 'h5p_degraded_fallback', 'activity' => 'Libro de repaso', 'kind' => 'h5p'],
+        ]);
+
+        $this->assertCount(4, $messages);
+        $this->assertSame(get_string('courseai_review_warning_guideline_structure_failed', 'local_coursegen'), $messages[0]);
+        $this->assertStringContainsString('7', $messages[1]);
+        $this->assertStringContainsString('5', $messages[1]);
+        $this->assertStringContainsString('4', $messages[2]);
+        $this->assertStringContainsString('Libro de repaso', $messages[3]);
+    }
+
+    /**
+     * A warning without a code, with an unknown code or that is not an array is left out.
+     */
+    public function test_warning_messages_skip_what_they_cannot_word(): void {
+        $this->assertSame([], course_review_service::warning_messages([
+            ['reason' => 'x'],
+            ['code' => 'video_not_found'],
+            'text',
+        ]));
+    }
+
+    /**
+     * The units mismatch no longer sends the teacher to a units field of the guideline.
+     */
+    public function test_the_units_mismatch_does_not_mention_the_removed_units_field(): void {
+        foreach (['en', 'es'] as $lang) {
+            $text = get_string_manager()->get_string('courseai_review_warning_units_count_mismatch', 'local_coursegen', null, $lang);
+            $this->assertStringNotContainsString('units field', $text);
+            $this->assertStringNotContainsString('campo de unidades', $text);
+        }
+    }
 }

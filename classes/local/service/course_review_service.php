@@ -35,6 +35,16 @@ use core_course_category;
  * two modes cannot drift apart.
  */
 class course_review_service {
+    /** @var string[] The string that words each warning code of the generation. */
+    private const WARNING_STRINGS = [
+        'units_count_mismatch' => 'courseai_review_warning_units_count_mismatch',
+        'guideline_structure_failed' => 'courseai_review_warning_guideline_structure_failed',
+        'guideline_units_mismatch' => 'courseai_review_warning_guideline_units_mismatch',
+        'guideline_lock_skipped' => 'courseai_review_warning_guideline_lock_skipped',
+        'section_names_fallback' => 'courseai_review_warning_section_names_fallback',
+        'h5p_degraded_fallback' => 'courseai_review_warning_h5p_degraded_fallback',
+    ];
+
     /**
      * The categories the teacher can place the new course in, with their full path.
      *
@@ -60,9 +70,10 @@ class course_review_service {
      * @param string $fullname
      * @param string $shortname
      * @param int $category
-     * @return array Keys fullname, shortname and category, each only when given.
+     * @param string $startdate The day the course starts, as the form's date field sends it (Y-m-d), or empty.
+     * @return array Keys fullname, shortname, category and startdate (a timestamp), each only when given.
      */
-    public static function overrides(string $fullname, string $shortname, int $category): array {
+    public static function overrides(string $fullname, string $shortname, int $category, string $startdate = ''): array {
         $overrides = [];
         $fullname = trim($fullname);
         if ($fullname !== '') {
@@ -75,6 +86,68 @@ class course_review_service {
         if ($category > 0) {
             $overrides['category'] = $category;
         }
+        $start = self::start_of_day(trim($startdate));
+        if ($start !== null) {
+            $overrides['startdate'] = $start;
+        }
         return $overrides;
+    }
+
+    /**
+     * The worded warnings of a generation, for the review step.
+     *
+     * A warning that is not known is not shown: the review only says what it can word.
+     *
+     * @param array $warnings The result's generation_warnings, each with its code and the fields of that code.
+     * @return string[]
+     */
+    public static function warning_messages(array $warnings): array {
+        $messages = [];
+        foreach ($warnings as $warning) {
+            $message = self::warning_message((array) $warning);
+            if ($message !== null) {
+                $messages[] = $message;
+            }
+        }
+        return $messages;
+    }
+
+    /**
+     * The wording of one warning, or null when its code is not one the review knows.
+     *
+     * @param array $warning
+     * @return string|null
+     */
+    private static function warning_message(array $warning): ?string {
+        $code = (string) ($warning['code'] ?? '');
+        $keys = self::WARNING_STRINGS;
+        if (!isset($keys[$code])) {
+            return null;
+        }
+        $a = (object) [
+            'expected' => (int) ($warning['expected'] ?? 0),
+            'actual' => (int) ($warning['actual'] ?? 0),
+            'units' => (int) ($warning['units'] ?? 0),
+            'unit' => (int) ($warning['unit'] ?? 0),
+            'name' => trim((string) ($warning['activity'] ?? '')),
+        ];
+        return get_string($keys[$code], 'local_coursegen', $a);
+    }
+
+    /**
+     * The timestamp of the start of a day in the user's timezone.
+     *
+     * @param string $date Y-m-d.
+     * @return int|null Null when it is empty or not a real date.
+     */
+    private static function start_of_day(string $date): ?int {
+        if (!preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $date, $parts)) {
+            return null;
+        }
+        [, $year, $month, $day] = array_map('intval', $parts);
+        if (!checkdate($month, $day, $year)) {
+            return null;
+        }
+        return make_timestamp($year, $month, $day);
     }
 }

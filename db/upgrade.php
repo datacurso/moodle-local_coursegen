@@ -516,5 +516,54 @@ function xmldb_local_coursegen_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026110948, 'local', 'coursegen');
     }
 
+    if ($oldversion < 2026111401) {
+        // A guideline can carry the number of units a template run takes; null keeps the template's own.
+        $table = new xmldb_table('local_coursegen_system_instruction');
+        $field = new xmldb_field('units', XMLDB_TYPE_INTEGER, '3', null, null, null, null, 'deleted');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+        upgrade_plugin_savepoint(true, 2026111401, 'local', 'coursegen');
+    }
+
+    if ($oldversion < 2026111403) {
+        // The optional number of units per institutional guideline is gone: templates keep their own count.
+        $table = new xmldb_table('local_coursegen_system_instruction');
+        $field = new xmldb_field('units');
+        if ($dbman->field_exists($table, $field)) {
+            $dbman->drop_field($table, $field);
+        }
+        upgrade_plugin_savepoint(true, 2026111403, 'local', 'coursegen');
+    }
+
+    if ($oldversion < 2026111404) {
+        // Merge of the dev and template branches: a site already past the dev builds (2026110935-2026110948) skipped
+        // their steps, so the fields they add are checked again. Every check is a no-op when the field exists.
+        $table = new xmldb_table('local_coursegen_tpl_activity');
+        $field = new xmldb_field('spacerequired', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '1', 'prompt');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+        $field = new xmldb_field('spaceinstruction', XMLDB_TYPE_TEXT, null, null, null, null, null, 'spacerequired');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+        $table = new xmldb_table('local_coursegen_tpl_instance');
+        $field = new xmldb_field('ainame', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '0', 'name');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+        $field = new xmldb_field('ownercmid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0', 'ainame');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+        $table = new xmldb_table('local_coursegen_tpl_space');
+        $field = new xmldb_field('options', XMLDB_TYPE_TEXT, null, null, null, null, null, 'instruction');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+        upgrade_plugin_savepoint(true, 2026111404, 'local', 'coursegen');
+    }
+
     return true;
 }

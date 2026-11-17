@@ -46,6 +46,8 @@ final class template_course_order {
      * @param array $generatedcms Payload cmid => created cmid, for the generated activities.
      * @param array $keptcms Base course cmid => created cmid, for the copied kept activities.
      * @param array $spacecms Space uid => created cmid, for the activities the teacher brought to the spaces.
+     * @param template_section_map|null $sectionmap Where each section of the template went in the new course;
+     *     null when the sections are the template's own.
      */
     public static function apply(
         int $templateid,
@@ -53,7 +55,8 @@ final class template_course_order {
         array $payloadactivities,
         array $generatedcms,
         array $keptcms,
-        array $spacecms = []
+        array $spacecms = [],
+        ?template_section_map $sectionmap = null
     ): void {
         global $DB;
 
@@ -69,7 +72,7 @@ final class template_course_order {
 
         course_modinfo::clear_instance_cache($courseid);
         $targetmodinfo = get_fast_modinfo($courseid);
-        $neworders = self::new_orders($basemodinfo, $instances, $createdbyuid, $keptcms);
+        $neworders = self::new_orders($basemodinfo, $instances, $createdbyuid, $keptcms, $sectionmap);
         self::store_orders($targetmodinfo, $neworders);
         rebuild_course_cache($courseid, true);
     }
@@ -118,15 +121,25 @@ final class template_course_order {
      * @param array<int,template_instance[]> $instances
      * @param array<string,int> $createdbyuid
      * @param array $keptcms
-     * @return array<int,int[]> Section number => cmids in the wanted order.
+     * @param template_section_map|null $sectionmap
+     * @return array<int,int[]> Section number of the new course => cmids in the wanted order.
      */
-    private static function new_orders(course_modinfo $basemodinfo, array $instances, array $createdbyuid, array $keptcms): array {
+    private static function new_orders(
+        course_modinfo $basemodinfo,
+        array $instances,
+        array $createdbyuid,
+        array $keptcms,
+        ?template_section_map $sectionmap = null
+    ): array {
         $orders = [];
         foreach ($basemodinfo->get_section_info_all() as $section) {
             $number = (int) $section->section;
             $realcmids = $basemodinfo->sections[$number] ?? [];
             $rows = template_instance_layout::ordered_rows($realcmids, $instances[$number] ?? []);
-            $orders[$number] = self::created_cmids($rows, $createdbyuid, $keptcms);
+            $target = ($sectionmap === null) ? $number : $sectionmap->target_of_source($number);
+            if ($target !== null) {
+                $orders[$target] = self::created_cmids($rows, $createdbyuid, $keptcms);
+            }
         }
         return $orders;
     }

@@ -32,12 +32,17 @@ import {getTemplateStructure} from './template/repository';
 import {runGeneration} from './template/run_generation';
 import {wireInputBar} from './template/input_bar';
 import {refreshPreviewLinks} from './template/preview';
+import {mergeAddedStructure, setStructureListener} from './template/added_structure';
+import {ALL_STATUS_CLASSES, STATUS_CLASS} from './template/generation_events';
 import {initTopBar} from './template/top_bar';
 import {
     createTemplateState,
     applyStructureResponse,
     toggleSectionCollapsed,
+    setUnits,
+    countsForUnits,
 } from './template/state';
+import Selectors from './template/selectors';
 import {renderStructure, wireStructureEvents} from './template/render';
 import {pickSpaceFile, removeSpaceFile, refreshGenerateState} from './template/space_files';
 import {pickSpaceActivity, removeSpaceActivity} from './template/space_activities';
@@ -67,10 +72,57 @@ const updateStats = (tplState, statsTemplate) => {
     if (!statsEl) {
         return;
     }
-    const totalActivities = tplState.sections.reduce((sum, section) => sum + section.activities.length, 0);
-    statsEl.textContent = formatTemplate(statsTemplate, {
-        sections: tplState.sections.length,
-        activities: totalActivities,
+    // The counts follow the number of units asked, not only the template's own sections.
+    const counts = countsForUnits(tplState);
+    statsEl.textContent = formatTemplate(statsTemplate, counts);
+};
+
+/**
+ * Mark the rows drawn after the run began as waiting, the way the rows of the template already are.
+ */
+const markRowsPending = () => {
+    document.querySelectorAll('[data-generation-uid]').forEach((row) => {
+        const started = ALL_STATUS_CLASSES.some((name) => row.classList.contains(name));
+        if (!started) {
+            row.classList.add(STATUS_CLASS.pending);
+        }
+    });
+};
+
+/**
+ * Show the units field for a template that has units, with its range and the professor's number.
+ *
+ * @param {Object} tplState
+ */
+const refreshUnitsField = (tplState) => {
+    const field = document.querySelector(Selectors.regions.unitsField);
+    const input = document.querySelector(Selectors.actions.unitsInput);
+    if (!field || !input) {
+        return;
+    }
+    field.hidden = !tplState.unitcount;
+    if (tplState.unitcount) {
+        input.min = 1;
+        input.max = tplState.maxunits;
+        input.value = tplState.units;
+    }
+};
+
+/**
+ * Keep the state in step with the units field.
+ *
+ * @param {Object} tplState
+ */
+const wireUnitsField = (tplState) => {
+    const input = document.querySelector(Selectors.actions.unitsInput);
+    if (!input) {
+        return;
+    }
+    input.addEventListener('change', async() => {
+        setUnits(tplState, input.value);
+        // Show the value that was kept, which may differ from what was typed.
+        input.value = tplState.units;
+        updateStats(tplState, await getStatsTemplate());
     });
 };
 
@@ -101,6 +153,7 @@ export const wireTemplateMode = (state, host) => {
     const tplState = createTemplateState({lang: ''});
 
     wireInputBar(tplState, state);
+    wireUnitsField(tplState);
 
     // Sequence guard: reselecting the template autocomplete before a previous
     // getTemplateStructure() fetch resolves must not let the slower, stale
@@ -119,6 +172,13 @@ export const wireTemplateMode = (state, host) => {
         updateStats(tplState, statsTemplate);
         refreshGenerateState(tplState, genBtn);
     };
+
+    // The sections and activities the guideline adds join the structure and its counters while the run is on.
+    setStructureListener(async(data) => {
+        mergeAddedStructure(tplState, data);
+        await rerenderStructure();
+        markRowsPending();
+    });
 
     wireStructureEvents(container, {
         onToggleSection: async(sectionIndex) => {
@@ -248,6 +308,7 @@ const loadTemplateStructure = async(templateId, tplState, container, state, requ
             return;
         }
         applyStructureResponse(tplState, data);
+        refreshUnitsField(tplState);
 
         if (detailsEl) {
             detailsEl.style.display = '';
@@ -317,6 +378,10 @@ const clearStructure = (tplState, container, state) => {
     if (detailsEl) {
         detailsEl.style.display = 'none';
     }
+    const unitsField = document.querySelector(Selectors.regions.unitsField);
+    if (unitsField) {
+        unitsField.hidden = true;
+    }
     const workspace = document.getElementById('courseaiWorkspace');
     if (workspace) {
         workspace.classList.remove('tpl-active');
@@ -346,6 +411,7 @@ const clearStructure = (tplState, container, state) => {
         lang: tplState.lang,
         syllabusdraftitemid: tplState.syllabusdraftitemid,
         syllabusfilename: tplState.syllabusfilename,
+        guidelineid: tplState.guidelineid,
     }));
     state.templateStructureLoaded = false;
 };

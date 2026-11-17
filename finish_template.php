@@ -35,5 +35,6 @@ $sessionid = required_param('sessionid', PARAM_INT);
 $fullname = optional_param('fullname', '', PARAM_TEXT);
 $shortname = optional_param('shortname', '', PARAM_TEXT);
 $category = optional_param('category', 0, PARAM_INT);
+$startdate = optional_param('startdate', '', PARAM_TEXT);
 
-(new \local_coursegen\local\streaming\finish_stream())->run($sessionid, $fullname, $shortname, $category);
+(new \local_coursegen\local\streaming\finish_stream())->run($sessionid, $fullname, $shortname, $category, $startdate);
