@@ -156,6 +156,9 @@ class template_persistence_service {
         $instruction = self::space_instruction((string) ($actdata['spaceinstruction'] ?? ''));
         $act->set('spaceinstruction', $instruction);
         $act->create();
+        if ($actdata['action'] === template_activity::ACTION_AIMODIFY) {
+            ai_modified_activity::save($templateid, $sectionid, (int) $actdata['cmid'], (string) ($actdata['prompt'] ?? ''));
+        }
     }
 
     /**
@@ -230,6 +233,7 @@ class template_persistence_service {
         $space->set('modname', $spacedata['modname']);
         $space->set('required', (int) $spacedata['required']);
         $space->set('instruction', $instruction);
+        $space->set('options', teacher_space_options::clean((string) ($spacedata['options'] ?? '')));
         $space->set('aftercmid', $spacedata['aftercmid']);
         $space->set('sortorder', $spacedata['sortorder']);
         $space->create();

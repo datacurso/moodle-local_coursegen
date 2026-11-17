@@ -89,7 +89,7 @@ const supportedItemsOf = (items, supportedTypes) => {
  * @param {string[]} supportedTypes Module names a space can be made for.
  * @returns {Promise<Array>} Content items, each flagged so no favourite star is drawn.
  */
-const fetchSupportedItems = async(courseId, supportedTypes) => {
+export const fetchSupportedItems = async(courseId, supportedTypes) => {
     const data = await Repository.activityModules(courseId, 0);
     const supported = supportedItemsOf(data.content_items, supportedTypes);
     return withoutFavouriteStars(supported);

@@ -21,6 +21,7 @@ use local_coursegen\local\models\template_activity;
 use local_coursegen\local\models\template_instance;
 use local_coursegen\local\models\template_section;
 use local_coursegen\local\models\template_space;
+use local_coursegen\local\service\teacher_space_options;
 use local_coursegen\local\service\template_export_uids;
 use local_coursegen\local\service\template_instance_layout;
 use local_coursegen\local\space\activity_spaces;
@@ -88,8 +89,12 @@ trait get_template_structure_rows {
         // The spaces the teacher fills share the anchors of the instances, so both are placed by the same rule. For now
         // they are not offered (only a file is, in its own row): see activity_spaces::ENABLED.
         $records = template_instance::get_records(['templateid' => $templateid]);
-        if (activity_spaces::ENABLED) {
-            $records = array_merge($records, template_space::get_records(['templateid' => $templateid]));
+        foreach (template_space::get_records(['templateid' => $templateid]) as $space) {
+            // A space for the teacher (the activities they can add) is always offered; one of the earlier kind (one of
+            // their own activities) only while those are enabled.
+            if (teacher_space_options::decode($space->get('options')) || activity_spaces::ENABLED) {
+                $records[] = $space;
+            }
         }
         foreach ($records as $instance) {
             $sectionid = $instance->get('sectionid');
@@ -258,6 +263,10 @@ trait get_template_structure_rows {
      * @return array
      */
     private static function activity_space_row(template_space $space, $output): array {
+        $options = teacher_space_options::decode($space->get('options'));
+        if ($options) {
+            return self::choice_space_row($space, $options, $output);
+        }
         $modname = (string) $space->get('modname');
         $typelabel = get_string_manager()->string_exists('modulename', 'mod_' . $modname)
             ? get_string('modulename', 'mod_' . $modname)
@@ -278,6 +287,49 @@ trait get_template_structure_rows {
             'spacekind' => 'activity',
             'spaceinstruction' => format_string((string) $space->get('instruction')),
             'spacerequired' => (int) $space->get('required') === 1,
+        ];
+    }
+
+    /**
+     * One space where the teacher adds one of the activities the admin allowed, which the AI then writes.
+     *
+     * Its id, and the id its progress answers to, is the space's uid: the activity the teacher chooses is generated
+     * under it.
+     *
+     * @param template_space $space
+     * @param array[] $options Each {modname, instruction}.
+     * @param \renderer_base $output
+     * @return array
+     */
+    private static function choice_space_row(template_space $space, array $options, $output): array {
+        $choices = [];
+        foreach ($options as $option) {
+            $modname = $option['modname'];
+            $choices[] = [
+                'modname' => $modname,
+                'title' => get_string('modulename', 'mod_' . $modname),
+                'instruction' => format_string($option['instruction']),
+                'iconhtml' => $output->image_icon('monologo', $modname, 'mod_' . $modname, ['class' => 'icon activityicon']),
+            ];
+        }
+        $titles = implode(', ', array_column($choices, 'title'));
+        return [
+            'id' => (string) $space->get('uid'),
+            'name' => get_string('courseai_template_choice_space_name', 'local_coursegen'),
+            'modname' => $options[0]['modname'],
+            'purpose' => self::get_purpose($options[0]['modname']),
+            'typelabel' => $titles,
+            'iconhtml' => $output->pix_icon('t/add', ''),
+            'locked' => true,
+            'action' => '',
+            'isinstance' => false,
+            'aigenerated' => true,
+            'generationuid' => (string) $space->get('uid'),
+            'isspace' => true,
+            'spacekind' => 'choice',
+            'spaceinstruction' => get_string('courseai_template_choice_space_hint', 'local_coursegen', $titles),
+            'spacerequired' => (int) $space->get('required') === 1,
+            'spaceoptions' => json_encode($choices, JSON_UNESCAPED_UNICODE),
         ];
     }
 

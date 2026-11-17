@@ -65,8 +65,10 @@ import {
 } from 'local_coursegen/local/template/template_row_space';
 import {bindInstanceInserts} from 'local_coursegen/local/template/template_instance_events';
 import {bindNameEditing} from 'local_coursegen/local/template/template_instance_name_edit';
+import {setTeacherSpaceContext} from 'local_coursegen/local/template/template_teacher_space';
 import Selectors from 'local_coursegen/local/template/selectors';
 import {ACTION, EVENT} from 'local_coursegen/local/template/constants';
+import {applyAimodifyVisual, bindAimodifyTags, openAimodifyModal} from 'local_coursegen/local/template/template_row_aimodify';
 
 /** @type {boolean} Whether any config has been modified. */
 let dirty = false;
@@ -170,12 +172,39 @@ const applySpaceResolution = (ctx, finalspace) => {
  */
 const continueAfterUnmark = (ctx, before, finalaction) => {
     ctx.prioraction = finalaction;
+    applyAimodifyVisual(ctx.row, finalaction === ACTION.AIMODIFY, ctx.cmid, ctx.state);
+    if (finalaction === ACTION.AIMODIFY) {
+        startAimodifyFlow(ctx, before);
+        return;
+    }
     if (finalaction === ACTION.SPACE) {
         const onSpaceResolved = applySpaceResolution.bind(null, ctx);
         openSpaceModalForNewSelection(ctx.row, ctx.select, ctx.cmid, before, ctx.state, onSpaceResolved);
         return;
     }
     applySpaceVisual(ctx.row, false, ctx.cmid, ctx.state);
+};
+
+/**
+ * Changing a row TO "modify with AI" opens the modal of its instruction; closing it without saving puts the row back.
+ *
+ * @param {Object} ctx The row's binding context (see bindActivityActionSelect()).
+ * @param {string} before The action the row had.
+ */
+const startAimodifyFlow = (ctx, before) => {
+    openAimodifyModal(ctx.row, ctx.cmid, ctx.state, {
+        onSave: (instruction) => {
+            ctx.state.activityPrompt[ctx.cmid] = instruction;
+            applyAimodifyVisual(ctx.row, true, ctx.cmid, ctx.state);
+            markDirty();
+        },
+        onCancel: () => {
+            ctx.select.value = before;
+            ctx.state.activityAction[ctx.cmid] = before;
+            ctx.prioraction = before;
+            applyAimodifyVisual(ctx.row, false, ctx.cmid, ctx.state);
+        },
+    });
 };
 
 /**
@@ -245,6 +274,7 @@ const bindActivityActionSelect = (container, select, state) => {
     if (row) {
         applyTemplateVisual(row, select.value === ACTION.TEMPLATE, cmid, state);
         applySpaceVisual(row, select.value === ACTION.SPACE, cmid, state);
+        applyAimodifyVisual(row, select.value === ACTION.AIMODIFY, cmid, state);
     }
     const onChange = handleActionChange.bind(null, ctx);
     select.addEventListener(EVENT.CHANGE, onChange);
@@ -315,6 +345,8 @@ export const bindServerRenderedControls = (container, state) => {
     bindTemplateTagClicks(container, state, markDirty);
     bindSpaceTagClicks(container, state, markDirty);
     bindInstanceInserts(container, state, markDirty);
+    bindAimodifyTags(container, state, markDirty);
+    setTeacherSpaceContext(state);
     bindNameEditing(container, markDirty);
     // Row selection checkboxes (three synced tiers) and the single global
     // bulk action bar — see selection_bulk.js.

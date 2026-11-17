@@ -37,6 +37,7 @@ import {chooseActivityType} from 'local_coursegen/local/template/template_space_
 import {closeInstanceMenu} from 'local_coursegen/local/template/template_instance_menu';
 import {get_string as getString} from 'core/str';
 import {prefetchStrings} from 'core/prefetch';
+import {editTeacherSpace} from 'local_coursegen/local/template/template_teacher_space';
 import Selectors from 'local_coursegen/local/template/selectors';
 import {CLASS, COMPONENT, EVENT, NEW_ROW_PREFIX, REQUIRED_VALUE, STRING, TAG} from 'local_coursegen/local/template/constants';
 
@@ -123,6 +124,7 @@ export const insertSpaceRow = async(tbody, beforeEl, space) => {
         badge,
         instruction: space.instruction,
         hasinstruction: space.instruction !== '',
+        options: space.options ? JSON.stringify(space.options) : '',
     };
     const fragment = await renderRowFragment('local_coursegen/template_space_row', context);
     const row = fragment.querySelector(Selectors.regions.spaceRow);
@@ -245,6 +247,11 @@ const saveEditedSpace = async(row, markDirty, choice) => {
  * @param {Function} markDirty Marks the wizard as having unsaved changes.
  */
 const editSpaceRow = (row, markDirty) => {
+    if (row.dataset.options) {
+        // A space for the teacher: the activities they can add, each with its instruction.
+        editTeacherSpace(row, markDirty);
+        return;
+    }
     const nameCell = row.querySelector(Selectors.regions.typeLabel);
     const subject = nameCell.textContent.trim();
     const instructionEl = row.querySelector(Selectors.regions.spaceInstruction);

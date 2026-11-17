@@ -47,6 +47,9 @@ class template_activity extends persistent {
     /** Action: the professor provides this activity instead. */
     const ACTION_SPACE = 'space';
 
+    /** Action: the activity is copied into the new course modified by the AI (its instruction and its markers). */
+    const ACTION_AIMODIFY = 'aimodify';
+
     /** Template scope: the mold serves the whole course. */
     const SCOPE_COURSE = 'course';
 

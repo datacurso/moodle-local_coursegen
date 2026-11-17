@@ -501,5 +501,20 @@ function xmldb_local_coursegen_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026110947, 'local', 'coursegen');
     }
 
+    if ($oldversion < 2026110948) {
+        // An activity modified with AI makes an instance of its own, and a space lists the activities the teacher can add.
+        $table = new xmldb_table('local_coursegen_tpl_instance');
+        $field = new xmldb_field('ownercmid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0', 'ainame');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+        $table = new xmldb_table('local_coursegen_tpl_space');
+        $field = new xmldb_field('options', XMLDB_TYPE_TEXT, null, null, null, null, null, 'instruction');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+        upgrade_plugin_savepoint(true, 2026110948, 'local', 'coursegen');
+    }
+
     return true;
 }

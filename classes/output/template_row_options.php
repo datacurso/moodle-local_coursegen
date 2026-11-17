@@ -33,6 +33,7 @@ use local_coursegen\local\models\template_activity;
 use local_coursegen\local\models\template_instance;
 use local_coursegen\local\models\template_section;
 use local_coursegen\local\models\template_space;
+use local_coursegen\local\service\teacher_space_options;
 use local_coursegen\local\space\space_rules;
 
 /**
@@ -107,6 +108,7 @@ class template_row_options {
     public static function activity_actions(int $cmid, string $modname, ?string $savedaction = null): array {
         $keys = [
             template_activity::ACTION_TEMPLATE,
+            template_activity::ACTION_AIMODIFY,
             template_activity::ACTION_KEEP,
             template_activity::ACTION_REFERENCE,
             template_activity::ACTION_EXCLUDE,
@@ -274,6 +276,12 @@ class template_row_options {
         $typename = self::module_type_name($modname);
         $iconurl = self::instance_icon_url($modname);
         $badge = self::space_badge_label($required);
+        $options = teacher_space_options::decode($space->get('options'));
+        if ($options) {
+            // A space for the teacher: what they can add there.
+            $titles = array_map(fn($option) => self::module_type_name($option['modname']), $options);
+            $typename = get_string('template_teacher_space_name', 'local_coursegen', implode(', ', $titles));
+        }
         return [
             'spaceid' => (int) $space->get('id'),
             'name' => $typename,
@@ -285,6 +293,7 @@ class template_row_options {
             'badge' => $badge,
             'instruction' => $instruction,
             'hasinstruction' => $instruction !== '',
+            'options' => $options ? json_encode($options, JSON_UNESCAPED_UNICODE) : '',
         ];
     }
 

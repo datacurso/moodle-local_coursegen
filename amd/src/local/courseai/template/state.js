@@ -104,6 +104,10 @@ export const applyStructureResponse = (state, data) => {
             spacerequired: !!activity.spacerequired,
             spacefile: null,
             spaceactivity: null,
+            // "choice": a place where the teacher adds one of the activities the admin allowed; spaceoptions lists them
+            // ({modname, title, instruction, iconhtml}) and spacechoice is the one added: {modname, title, instruction}.
+            spaceoptions: parseOptions(activity.spaceoptions),
+            spacechoice: null,
         })),
     }));
 };
@@ -213,7 +217,54 @@ export const clearSpaceActivity = (state, sectionIndex, activityIndex) => {
  * @param {Object} activity
  * @returns {boolean}
  */
-export const isSpaceFilled = (activity) => !!(activity.spacefile || activity.spaceactivity);
+export const isSpaceFilled = (activity) => !!(activity.spacefile || activity.spaceactivity || activity.spacechoice);
+
+/**
+ * The activities a space offers, from the JSON the structure sent.
+ *
+ * @param {string} json
+ * @returns {Object[]}
+ */
+const parseOptions = (json) => {
+    try {
+        const parsed = JSON.parse(json || '[]');
+        return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+        return [];
+    }
+};
+
+/**
+ * Set the activity the teacher adds in a space.
+ *
+ * @param {Object} state
+ * @param {number} sectionIndex
+ * @param {number} activityIndex
+ * @param {Object|null} choice {modname, title, instruction}, or null to empty the space.
+ * @returns {boolean} Whether the row is a space of that kind.
+ */
+export const setSpaceChoice = (state, sectionIndex, activityIndex, choice) => {
+    const activity = state.sections[sectionIndex]?.activities[activityIndex];
+    if (!activity || activity.spacekind !== 'choice') {
+        return false;
+    }
+    activity.spacechoice = choice;
+    return true;
+};
+
+/**
+ * The activities the teacher added in the spaces, as the generation start takes them.
+ *
+ * @param {Object} state
+ * @returns {Object[]} Each {uid, modname, instruction}.
+ */
+export const pickedSpaceChoices = (state) => allActivities(state)
+    .filter((activity) => activity.spacekind === 'choice' && activity.spacechoice)
+    .map((activity) => ({
+        uid: activity.id,
+        modname: activity.spacechoice.modname,
+        instruction: activity.spacechoice.instruction || '',
+    }));
 
 /**
  * Whether a required space is still without its file or its activity.

@@ -1,0 +1,79 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+{{!
+    @template local_coursegen/template_teacher_space_modal_body
+
+    The body of the modal of a space for the teacher: the activities the teacher can add in this place (one of them,
+    when the course is created), an optional instruction for each, and whether the space is required.
+
+    Data attributes required for JS:
+    * data-region="local_coursegen/template/teacher-space-option" on each activity (data-modname).
+    * data-region="local_coursegen/template/teacher-space-check" on the checkbox of each activity.
+    * data-region="local_coursegen/template/teacher-space-instruction" on the instruction of each activity.
+    * data-region="local_coursegen/template/teacher-space-required" on the two requirement radios.
+
+    Context variables required for this template:
+    * uniqid string - Unique id of this render.
+    * options array - Each: modname string, title string, icon string (core markup), checked bool, instruction string.
+    * required bool - The space is required.
+
+    Example context (json):
+    {
+        "options": [{"modname": "quiz", "title": "Quiz", "icon": "", "checked": true, "instruction": ""}],
+        "required": true
+    }
+}}
+<p class="text-muted small mb-2">{{#str}} template_teacher_space_help, local_coursegen {{/str}}</p>
+<fieldset class="mb-3">
+    <legend class="h6">{{#str}} template_teacher_space_types, local_coursegen {{/str}}</legend>
+    <div class="tpl-teacher-space-grid">
+    {{#options}}
+    <div class="tpl-teacher-space-option py-1" data-region="local_coursegen/template/teacher-space-option" data-modname="{{modname}}">
+        <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="{{uniqid}}-{{modname}}"
+                   data-region="local_coursegen/template/teacher-space-check"{{#checked}} checked{{/checked}}>
+            {{! The icon is markup built by Moodle core for the chooser, which core itself prints with triple braces. }}
+            <label class="form-check-label d-flex align-items-center" for="{{uniqid}}-{{modname}}">
+                <span class="mr-2">{{{icon}}}</span>{{title}}
+            </label>
+        </div>
+        <textarea class="form-control form-control-sm mt-2{{^checked}} d-none{{/checked}}" rows="2"
+                  data-region="local_coursegen/template/teacher-space-instruction"
+                  placeholder="{{#str}} template_teacher_space_instruction, local_coursegen {{/str}}">{{instruction}}</textarea>
+    </div>
+    {{/options}}
+    </div>
+</fieldset>
+<fieldset class="mb-0">
+    <legend class="h6">{{#str}} template_space_requirement_label, local_coursegen {{/str}}</legend>
+    <div class="form-check mb-2">
+        <input class="form-check-input" type="radio" name="{{uniqid}}-required" id="{{uniqid}}-required-yes" value="1"
+               data-region="local_coursegen/template/teacher-space-required"{{#required}} checked{{/required}}>
+        <label class="form-check-label" for="{{uniqid}}-required-yes">
+            <strong>{{#str}} template_space_required, local_coursegen {{/str}}</strong>
+            <span class="d-block text-muted small">{{#str}} template_teacher_space_required_desc, local_coursegen {{/str}}</span>
+        </label>
+    </div>
+    <div class="form-check">
+        <input class="form-check-input" type="radio" name="{{uniqid}}-required" id="{{uniqid}}-required-no" value="0"
+               data-region="local_coursegen/template/teacher-space-required"{{^required}} checked{{/required}}>
+        <label class="form-check-label" for="{{uniqid}}-required-no">
+            <strong>{{#str}} template_space_optional, local_coursegen {{/str}}</strong>
+            <span class="d-block text-muted small">{{#str}} template_teacher_space_optional_desc, local_coursegen {{/str}}</span>
+        </label>
+    </div>
+</fieldset>

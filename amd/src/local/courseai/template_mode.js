@@ -42,6 +42,7 @@ import {renderStructure, wireStructureEvents} from './template/render';
 import {pickSpaceFile, removeSpaceFile, refreshGenerateState} from './template/space_files';
 import {pickSpaceActivity, removeSpaceActivity} from './template/space_activities';
 import {clearSpaceGate, missingSpaces, requiredSpaceCount, showSpaceGate} from './template/space_gate';
+import {pickSpaceChoice, removeSpaceChoice} from './template/space_choices';
 import {formatTemplate} from './utils';
 
 // The "N sections · M activities" stats template. Fetched once and cached —
@@ -136,6 +137,12 @@ export const wireTemplateMode = (state, host) => {
         onRemoveSpaceFile: (sectionIndex, activityIndex) => {
             removeSpaceFile(tplState, sectionIndex, activityIndex, rerenderStructure);
         },
+        onPickSpaceChoice: (sectionIndex, activityIndex) => {
+            pickSpaceChoice(tplState, sectionIndex, activityIndex, rerenderStructure);
+        },
+        onRemoveSpaceChoice: (sectionIndex, activityIndex) => {
+            removeSpaceChoice(tplState, sectionIndex, activityIndex, rerenderStructure);
+        },
         onPickSpaceActivity: (sectionIndex, activityIndex) => {
             pickSpaceActivity(tplState, sectionIndex, activityIndex, rerenderStructure);
         },
@@ -162,6 +169,11 @@ export const wireTemplateMode = (state, host) => {
         }
     };
     const bringSpace = (sectionIndex, activityIndex) => {
+        const row = tplState.sections[sectionIndex]?.activities[activityIndex];
+        if (row?.spacekind === 'choice') {
+            pickSpaceChoice(tplState, sectionIndex, activityIndex, afterBrought);
+            return;
+        }
         pickSpaceFile(tplState, sectionIndex, activityIndex, afterBrought);
     };
     // The card of a file in the structure, brought into view (its section opened if it was closed) and marked for a
