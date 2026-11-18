@@ -59,6 +59,8 @@ class feedback_settings extends base_settings {
             $question['presentation'] = $presentation;
         }
 
+        // The item is new: the item classes read its id unguarded to tell an insert from an update.
+        $question['id'] = 0;
         $question['cmid'] = $this->cm->coursemodule;
         $question['feedback'] = $this->cm->instance;
 
