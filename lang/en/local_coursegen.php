@@ -325,6 +325,7 @@ $string['courseai_images_panel'] = 'Pictures of the course';
 $string['courseai_images_position'] = '{$a->position} of {$a->total}';
 $string['courseai_images_previous'] = 'Previous';
 $string['courseai_images_ready'] = '{$a->done} of {$a->total} ready';
+$string['courseai_images_ready_growing'] = '{$a} ready · more may appear while the activities are written';
 $string['courseai_images_section_fallback'] = 'Section {$a}';
 $string['courseai_images_select_all'] = 'Select all images';
 $string['courseai_images_suggested_label'] = 'suggested images';

@@ -313,6 +313,7 @@ $string['courseai_images_panel'] = 'Imágenes del curso';
 $string['courseai_images_position'] = '{$a->position} de {$a->total}';
 $string['courseai_images_previous'] = 'Anterior';
 $string['courseai_images_ready'] = '{$a->done} de {$a->total} listas';
+$string['courseai_images_ready_growing'] = '{$a} listas · pueden aparecer más mientras se escriben las actividades';
 $string['courseai_images_section_fallback'] = 'Sección {$a}';
 $string['courseai_images_select_all'] = 'Seleccionar todas las imágenes';
 $string['courseai_images_suggested_label'] = 'imágenes sugeridas';

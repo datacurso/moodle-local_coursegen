@@ -13,6 +13,8 @@ All notable changes to this project will be documented in this file. Each change
   The "Quedan N secciones" badge beside the structure stats is gone; the stats and the preview link stay.
 - **The long lines about each picture are gone from the progress of a template run**  
   The phase line and the working box no longer list every picture with its technical name and template file, nor count only the pictures of the course; the images pill counts and lists every picture with readable names.
+- **The images pill shows a total only once it is final**  
+  While the AI writes the activities it may still add pictures, so the pill and its list show only how many pictures are ready ("3 listas · pueden aparecer más mientras se escriben las actividades"); once every activity is written they show the final total with its bar ("3 de 4 listas").
 
 ## [2.0.16] - 2026111804
 

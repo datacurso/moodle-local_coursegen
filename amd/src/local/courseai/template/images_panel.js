@@ -52,6 +52,8 @@ const IDS = {
 const pictures = new Map();
 let sessionId = 0;
 let renderTimer = null;
+/** Whether every activity is written, so no new picture can appear and the total is final. */
+let totalKnown = false;
 
 const byId = (id) => document.getElementById(id);
 
@@ -69,6 +71,7 @@ export const useImagesSession = (id) => {
  */
 export const resetImages = () => {
     pictures.clear();
+    totalKnown = false;
     closeModal();
     const box = byId(IDS.box);
     if (box) {
@@ -112,6 +115,42 @@ const visibleRows = () => {
 };
 
 /**
+ * Draw how many pictures are ready: out of the total once it is final, alone while activities are still written.
+ *
+ * While the AI writes the activities it may still add pictures, so a total would only grow; it is shown, with the
+ * bar, once every activity is written.
+ *
+ * @param {number} done
+ * @param {number} total
+ * @returns {Promise<void>}
+ */
+const renderCounts = async(done, total) => {
+    const bar = byId(IDS.bar);
+    if (!totalKnown) {
+        byId(IDS.count).textContent = `${done}`;
+        byId(IDS.ready).textContent = await getString('courseai_images_ready_growing', COMPONENT, done);
+        bar.parentElement.hidden = true;
+        return;
+    }
+    byId(IDS.count).textContent = `${done}/${total}`;
+    byId(IDS.ready).textContent = await getString('courseai_images_ready', COMPONENT, {done, total});
+    let percent = 0;
+    if (total > 0) {
+        percent = Math.round((done / total) * 100);
+    }
+    bar.parentElement.hidden = false;
+    bar.style.width = `${percent}%`;
+};
+
+/**
+ * Say that every activity is written: no new picture can appear, so the total is final from now on.
+ */
+export const markImagesTotalKnown = () => {
+    totalKnown = true;
+    scheduleRender();
+};
+
+/**
  * Draw the pill, the head of the list and its rows.
  *
  * @returns {Promise<void>}
@@ -128,13 +167,7 @@ const render = async() => {
     if (box && total > 0) {
         box.hidden = false;
     }
-    byId(IDS.count).textContent = `${done}/${total}`;
-    byId(IDS.ready).textContent = await getString('courseai_images_ready', COMPONENT, {done, total});
-    let percent = 0;
-    if (total > 0) {
-        percent = Math.round((done / total) * 100);
-    }
-    byId(IDS.bar).style.width = `${percent}%`;
+    await renderCounts(done, total);
     const contexts = await Promise.all(visibleRows().map((row) => rowContext(row.picture, row.waitingAfter)));
     const rendered = await Promise.all(contexts.map((context) => Templates.renderForPromise(ROW_TEMPLATE, context)));
     const html = rendered.map((item) => item.html).join('');
