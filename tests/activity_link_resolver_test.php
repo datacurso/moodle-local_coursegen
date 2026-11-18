@@ -222,9 +222,10 @@ final class activity_link_resolver_test extends \advanced_testcase {
     }
 
     /**
-     * A target with no page of its own, such as a label, cannot be linked to.
+     * A target with no page of its own, such as a label, is linked at its place in the course page.
      */
-    public function test_target_without_a_view_url_throws(): void {
+    public function test_target_without_a_view_url_links_to_its_place_in_the_course(): void {
+        global $DB;
         $this->resetAfterTest();
         $course = $this->getDataGenerator()->create_course();
         $label = $this->getDataGenerator()->create_module('label', ['course' => $course->id]);
@@ -233,14 +234,17 @@ final class activity_link_resolver_test extends \advanced_testcase {
             'content' => $this->link('uid-label'),
         ]);
 
-        $this->expectException(\moodle_exception::class);
-
         activity_link_resolver::resolve_for_course(
             $course->id,
             $this->payload(['uid-label' => -5]),
             ['uid-label' => (int) $label->cmid, 'other-6' => (int) $page->cmid],
             []
         );
+
+        $content = $DB->get_field('page', 'content', ['id' => $page->id]);
+        $expected = (new \moodle_url('/course/view.php', ['id' => $course->id], 'module-' . $label->cmid))->out(false);
+        $this->assertStringContainsString($expected, $content);
+        $this->assertStringNotContainsString('COURSEGENLINK', $content);
     }
 
     /**
