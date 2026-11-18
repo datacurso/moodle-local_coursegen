@@ -52,7 +52,7 @@ final class space_files_request {
     /**
      * Keep the files of a validated request for a generation.
      *
-     * @param array<int,int> $drafts What validated() returned.
+     * @param array $drafts What validated() returned.
      * @param int $userid
      * @param int $sessionid
      */
@@ -87,7 +87,7 @@ final class space_files_request {
      * The names of the required spaces that have no file.
      *
      * @param file_space[] $spaces
-     * @param array<int,int> $drafts
+     * @param array $drafts
      * @return string[]
      */
     private static function missing_required_names(array $spaces, array $drafts): array {

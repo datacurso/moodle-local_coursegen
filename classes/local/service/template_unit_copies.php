@@ -129,8 +129,8 @@ final class template_unit_copies {
      * The course modules of a copy in the order of the activities they repeat.
      *
      * @param int[] $cmids The copy's course modules, as they are.
-     * @param array<int,int> $positions Course module of the first copy => its place.
-     * @param array<int,int> $original Course module of a copy => the course module it repeats.
+     * @param array $positions Course module of the first copy => its place.
+     * @param array $original Course module of a copy => the course module it repeats.
      * @return int[]
      */
     public static function ordered_like(array $cmids, array $positions, array $original): array {

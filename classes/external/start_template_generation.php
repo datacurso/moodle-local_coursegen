@@ -368,7 +368,7 @@ class start_template_generation extends external_api {
      * The files of a request, checked against the choices of the teacher: the File the teacher picked to upload in a
      * space must come with its file, and a file of a space where the teacher picked an activity of the AI is dropped.
      *
-     * @param array<int,int> $drafts The draft of each filled space, by cmid.
+     * @param array $drafts The draft of each filled space, by cmid.
      * @param array[] $spacechoices What teacher_space_choices::validated() returned.
      * @return array<int,int>
      * @throws \moodle_exception When the File the teacher picked to upload has no file.

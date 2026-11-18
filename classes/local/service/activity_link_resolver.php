@@ -61,7 +61,7 @@ final class activity_link_resolver {
      * Resolve the tokens in the texts of the given generated activities.
      *
      * @param int $courseid
-     * @param array<string,int> $cmidbyuid Target uid => created cmid.
+     * @param array $cmidbyuid Target uid => created cmid.
      * @param int[] $generatedcmids The activities whose texts are searched.
      * @throws \moodle_exception When a token names no activity of the course.
      */
@@ -86,7 +86,7 @@ final class activity_link_resolver {
     /**
      * The URL of every target that has a page of its own.
      *
-     * @param array<string,int> $cmidbyuid
+     * @param array $cmidbyuid
      * @param course_modinfo $modinfo
      * @return array<string,string> uid => URL.
      */
@@ -106,7 +106,7 @@ final class activity_link_resolver {
      *
      * @param course_modinfo $modinfo
      * @param int[] $generatedcmids
-     * @param array<string,string> $urlbyuid
+     * @param array $urlbyuid
      */
     private static function resolve_activities(course_modinfo $modinfo, array $generatedcmids, array $urlbyuid): void {
         foreach ($generatedcmids as $cmid) {
@@ -119,7 +119,7 @@ final class activity_link_resolver {
      * Resolve every text of one activity, when its module is searched.
      *
      * @param cm_info $cm
-     * @param array<string,string> $urlbyuid
+     * @param array $urlbyuid
      */
     private static function resolve_activity(cm_info $cm, array $urlbyuid): void {
         global $DB;
@@ -138,7 +138,7 @@ final class activity_link_resolver {
      * @param cm_info $cm
      * @param module_link_texts $texts
      * @param \stdClass[] $records
-     * @param array<string,string> $urlbyuid
+     * @param array $urlbyuid
      */
     private static function resolve_records(cm_info $cm, module_link_texts $texts, array $records, array $urlbyuid): void {
         foreach ($records as $record) {
@@ -152,7 +152,7 @@ final class activity_link_resolver {
      * @param cm_info $cm
      * @param module_link_texts $texts
      * @param \stdClass $record
-     * @param array<string,string> $urlbyuid
+     * @param array $urlbyuid
      */
     private static function resolve_columns(cm_info $cm, module_link_texts $texts, \stdClass $record, array $urlbyuid): void {
         foreach ($texts->text_columns() as $column) {
@@ -167,7 +167,7 @@ final class activity_link_resolver {
      * @param string $table
      * @param \stdClass $record
      * @param string $column
-     * @param array<string,string> $urlbyuid
+     * @param array $urlbyuid
      * @throws \moodle_exception When a token remains after resolving.
      */
     private static function resolve_column(cm_info $cm, string $table, \stdClass $record, string $column, array $urlbyuid): void {

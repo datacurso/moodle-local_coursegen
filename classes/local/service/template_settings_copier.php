@@ -126,8 +126,8 @@ final class template_settings_copier {
      *
      * @param int $basecourseid
      * @param int $courseid
-     * @param array<int,int> $counterparts Template cmid => new cmid.
-     * @param array<int,int[]> $created Template cmid => created cmids.
+     * @param array $counterparts Template cmid => new cmid.
+     * @param array $created Template cmid => created cmids.
      * @param \stdClass[] $sources The records of the template activities.
      * @param array $sections The pairs of sections.
      * @return array<string,array<int,int>>
@@ -217,9 +217,9 @@ final class template_settings_copier {
      * Give one section of the new course the visibility and the restrictions of its template section.
      *
      * @param int $courseid
-     * @param array{source: \stdClass, target: \stdClass} $pair
-     * @param array<string,array<int,int>> $maps
-     * @param array<string,array<int,bool>> $existing
+     * @param array $pair The template row and the new row of one section: {source, target}.
+     * @param array $maps
+     * @param array $existing
      * @param int|null $delta Seconds to move the dates of the restrictions by; null leaves them out.
      */
     private static function apply_section(int $courseid, array $pair, array $maps, array $existing, ?int $delta): void {
@@ -237,8 +237,8 @@ final class template_settings_copier {
      *
      * @param int $cmid The activity of the new course.
      * @param \stdClass|null $source The template activity's record.
-     * @param array<string,array<int,int>> $maps
-     * @param array<string,array<int,bool>> $existing
+     * @param array $maps
+     * @param array $existing
      * @param int|null $delta Seconds to move the dates of the restrictions by; null leaves them out.
      */
     private static function apply_activity(

@@ -39,7 +39,7 @@ final class template_course_completion_copier {
      *
      * @param int $basecourseid The template's course.
      * @param int $courseid The new course.
-     * @param array<int,int> $counterparts Template cmid => new course cmid.
+     * @param array $counterparts Template cmid => new course cmid.
      */
     public static function copy(int $basecourseid, int $courseid, array $counterparts): void {
         self::copy_criteria($basecourseid, $courseid, $counterparts);
@@ -53,7 +53,7 @@ final class template_course_completion_copier {
      *
      * @param int $basecourseid
      * @param int $courseid
-     * @param array<int,int> $counterparts
+     * @param array $counterparts
      */
     private static function copy_criteria(int $basecourseid, int $courseid, array $counterparts): void {
         global $DB;
@@ -123,7 +123,7 @@ final class template_course_completion_copier {
     /**
      * The competencies each template activity is linked to are linked to its counterpart.
      *
-     * @param array<int,int> $counterparts
+     * @param array $counterparts
      */
     private static function copy_module_competencies(array $counterparts): void {
         global $DB;

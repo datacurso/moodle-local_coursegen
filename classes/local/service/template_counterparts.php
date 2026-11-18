@@ -31,7 +31,7 @@ final class template_counterparts {
      *
      * @param int $basecourseid
      * @param int $courseid
-     * @param array<int,int[]> $created Template cmid => created cmids.
+     * @param array $created Template cmid => created cmids.
      * @return array<int,int> Template grade item id => new grade item id.
      */
     public static function grade_items(int $basecourseid, int $courseid, array $created): array {

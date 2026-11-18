@@ -46,8 +46,8 @@ final class template_availability_tree {
      * The restrictions of a template item, ready for its counterpart in the new course.
      *
      * @param string|null $availability The restrictions as Moodle stores them (JSON), or empty for none.
-     * @param array<string,array<int,int>> $maps For each table a condition may refer to: template id => new id.
-     * @param array<string,array<int,bool>> $existing For each of those tables, the ids the new course owns.
+     * @param array $maps For each table a condition may refer to: template id => new id.
+     * @param array $existing For each of those tables, the ids the new course owns.
      * @param int|null $delta Seconds to move every date condition by; 0 keeps the dates as they are and null
      *     leaves the date conditions out.
      * @return string|null The restrictions of the new item, or null when there is none.
@@ -156,7 +156,7 @@ final class template_availability_tree {
      *
      * @param tree $tree
      * @param string $table
-     * @param array<int,int> $map Template id => new id.
+     * @param array $map Template id => new id.
      */
     private static function point_at_new_ids(tree $tree, string $table, array $map): void {
         foreach ($map as $old => $new) {
@@ -171,7 +171,7 @@ final class template_availability_tree {
      * Give what still names something of the template's course the value Moodle's restore gives it.
      *
      * @param \stdClass $node A set of conditions, or one condition, read from the saved tree.
-     * @param array<string,array<int,bool>> $existing
+     * @param array $existing
      */
     private static function mark_broken(\stdClass $node, array $existing): void {
         foreach ($node->c ?? [] as $child) {

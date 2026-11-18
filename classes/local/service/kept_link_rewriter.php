@@ -109,7 +109,7 @@ final class kept_link_rewriter {
      *
      * @param course_modinfo $modinfo
      * @param int[] $cmids
-     * @param array<int,int> $newcmidbyoldcmid
+     * @param array $newcmidbyoldcmid
      */
     private static function rewrite_activities(course_modinfo $modinfo, array $cmids, array $newcmidbyoldcmid): void {
         global $DB;
@@ -130,7 +130,7 @@ final class kept_link_rewriter {
      *
      * @param module_link_texts $texts
      * @param \stdClass[] $records
-     * @param array<int,int> $newcmidbyoldcmid
+     * @param array $newcmidbyoldcmid
      */
     private static function rewrite_records(module_link_texts $texts, array $records, array $newcmidbyoldcmid): void {
         foreach ($records as $record) {
@@ -143,7 +143,7 @@ final class kept_link_rewriter {
      *
      * @param module_link_texts $texts
      * @param \stdClass $record
-     * @param array<int,int> $newcmidbyoldcmid
+     * @param array $newcmidbyoldcmid
      */
     private static function rewrite_columns(module_link_texts $texts, \stdClass $record, array $newcmidbyoldcmid): void {
         global $DB;
