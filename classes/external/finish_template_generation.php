@@ -239,6 +239,8 @@ class finish_template_generation extends external_api {
         }
         $report('arrange');
         self::arrange_course($templateid, $courseid, $generatedactivities, $generatedcms, $keptcms, $sectionmap, $spacecms);
+        $storedsections = json_decode((string) $session->get('coursedata'), true)['payload']['sections_info'] ?? [];
+        template_unit_copies::order_copies($courseid, (array) $storedsections, $generatedactivities, $generatedcms);
         self::resolve_activity_links($session, $courseid, $generatedactivities, $generatedcms, $keptcms);
         if ($courseid > 0) {
             template_syllabus_linker::apply(

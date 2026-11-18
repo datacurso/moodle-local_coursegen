@@ -88,4 +88,16 @@ final class template_unit_copies_test extends \advanced_testcase {
         $this->assertSame('General', $stored['payload']['sections_info'][0]['name']);
         $this->assertCount(3, $stored['payload']['sections_info']);
     }
+
+    /**
+     * A copy follows the order of the first copy; what repeats nothing stays after, in its own order.
+     */
+    public function test_a_copy_follows_the_order_of_the_first_one(): void {
+        $positions = array_flip([10, 11, 12, 13]);
+        $original = [21 => 10, 22 => 11, 23 => 12, 24 => 13];
+
+        $ordered = template_unit_copies::ordered_like([21, 23, 30, 24, 22], $positions, $original);
+
+        $this->assertSame([21, 22, 23, 24, 30], $ordered);
+    }
 }
