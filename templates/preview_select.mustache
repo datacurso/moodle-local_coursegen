@@ -23,6 +23,21 @@
     Context variables required for this template:
     * id - string, used as both the id and the name.
     * options - array of {value, label}.
+
+    Example context (json):
+    {
+        "id": "jump",
+        "options": [
+            {
+                "value": "1",
+                "label": "First"
+            },
+            {
+                "value": "2",
+                "label": "Second"
+            }
+        ]
+    }
 }}
 <select id="{{id}}" name="{{id}}" class="select custom-select">
     {{#options}}

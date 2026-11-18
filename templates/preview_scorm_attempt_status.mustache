@@ -27,6 +27,15 @@
     * grademethod - string.
     * gradereported - string.
     * exceeded - bool.
+
+    Example context (json):
+    {
+        "allowedattempts": "Unlimited",
+        "attemptcount": 0,
+        "grademethod": "Highest attempt",
+        "gradereported": "None",
+        "exceeded": false
+    }
 }}
 <p>
     {{#str}} noattemptsallowed, scorm {{/str}}: {{allowedattempts}}<br>

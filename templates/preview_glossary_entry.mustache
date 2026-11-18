@@ -23,16 +23,24 @@
     Context variables required for this template:
     * concepthtml, definitionhtml, tagshtml, lowersectionhtml - string,
       already-rendered HTML.
+
+    Example context (json):
+    {
+        "concepthtml": "<b>Aerenchyma</b>",
+        "definitionhtml": "<div class=\"no-overflow\"><p>Air channels in the tissue of aquatic plants.</p></div>",
+        "tagshtml": "",
+        "lowersectionhtml": ""
+    }
 }}
-<table class="glossarypost dictionary" cellspacing="0">
-    <tr valign="top">
+<table class="glossarypost dictionary" style="border-spacing: 0">
+    <tr style="vertical-align: top">
         <td class="entry">
             <div class="concept">{{{concepthtml}}}</div>
             {{{definitionhtml}}}
             {{{tagshtml}}}
         </td>
     </tr>
-    <tr valign="top">
+    <tr style="vertical-align: top">
         <td class="entrylowersection">{{{lowersectionhtml}}}</td>
     </tr>
 </table>

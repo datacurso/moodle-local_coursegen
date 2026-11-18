@@ -27,6 +27,42 @@
     * coursemoduleid - int.
     * options - array of {type, name, id, value, disabled, text, isfull,
                 fulltext, showavailable, responsestext, limittext}.
+
+    Example context (json):
+    {
+        "action": "https://example.com/mod/choice/view.php",
+        "layoutclass": "vertical",
+        "sesskey": "abc123",
+        "coursemoduleid": 7,
+        "options": [
+            {
+                "type": "radio",
+                "name": "answer",
+                "id": "choice_1",
+                "value": "1",
+                "disabled": false,
+                "text": "Option one",
+                "isfull": false,
+                "fulltext": "",
+                "showavailable": false,
+                "responsestext": "",
+                "limittext": ""
+            },
+            {
+                "type": "radio",
+                "name": "answer",
+                "id": "choice_2",
+                "value": "2",
+                "disabled": true,
+                "text": "Option two",
+                "isfull": true,
+                "fulltext": "(Full)",
+                "showavailable": false,
+                "responsestext": "",
+                "limittext": ""
+            }
+        ]
+    }
 }}
 <form method="POST" action="{{{action}}}" class="{{layoutclass}}">
     <ul class="choices list-unstyled unstyled">

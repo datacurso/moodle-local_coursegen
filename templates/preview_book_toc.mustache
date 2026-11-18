@@ -28,6 +28,42 @@
                  url, hassubchapters, subchapters}. Each subchapter has the
                  same {id, title, titleunescaped, cssclass, iscurrent, url}
                  shape.
+
+    Example context (json):
+    {
+        "numberingclass": "book_toc_numbered",
+        "chapters": [
+            {
+                "id": 1,
+                "title": "1. Introduction",
+                "titleunescaped": "1. Introduction",
+                "cssclass": "bookprev",
+                "iscurrent": true,
+                "url": "https://example.com/mod/book/view.php?chapterid=1",
+                "hassubchapters": true,
+                "subchapters": [
+                    {
+                        "id": 2,
+                        "title": "1.1 Goals",
+                        "titleunescaped": "1.1 Goals",
+                        "cssclass": "bookprev",
+                        "iscurrent": false,
+                        "url": "https://example.com/mod/book/view.php?chapterid=2"
+                    }
+                ]
+            },
+            {
+                "id": 3,
+                "title": "2. Methods",
+                "titleunescaped": "2. Methods",
+                "cssclass": "bookprev",
+                "iscurrent": false,
+                "url": "https://example.com/mod/book/view.php?chapterid=3",
+                "hassubchapters": false,
+                "subchapters": []
+            }
+        ]
+    }
 }}
 <div class="book_toc {{numberingclass}} clearfix">
     <ul>

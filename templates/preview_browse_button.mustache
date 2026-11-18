@@ -25,6 +25,12 @@
 
     Context variables optional for this template:
     * url - string.
+
+    Example context (json):
+    {
+        "label": "Browse package",
+        "url": "https://example.com/mod/scorm/launch.php"
+    }
 }}
 {{#url}}
 <a class="btn btn-secondary me-1" target="_blank" rel="noopener" href="{{{url}}}">{{label}}</a>

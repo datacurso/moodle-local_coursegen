@@ -29,6 +29,21 @@
     * url - string, required when haslink is true.
     * subitems - array, required when hassubitems is true, each shaped the
                  way this same template expects.
+
+    Example context (json):
+    {
+        "haslink": true,
+        "title": "Unit 1",
+        "url": "https://example.com/mod/imscp/view.php?r=1",
+        "hassubitems": true,
+        "subitems": [
+            {
+                "haslink": false,
+                "title": "Unit 1.1",
+                "hassubitems": false
+            }
+        ]
+    }
 }}
 <li>
     {{#haslink}}<a href="{{{url}}}">{{{title}}}</a>{{/haslink}}

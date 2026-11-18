@@ -30,5 +30,14 @@
     * url - string, required when current is false.
     * title - string.
     * suffix - string, already-rendered HTML appended after either form.
+
+    Example context (json):
+    {
+        "current": false,
+        "text": "All",
+        "url": "https://example.com/mod/glossary/view.php?id=7",
+        "title": "Browse all entries",
+        "suffix": ""
+    }
 }}
 {{#current}}<b>{{{text}}}</b>{{/current}}{{^current}}<a{{#title}} title="{{title}}"{{/title}} href="{{{url}}}">{{{text}}}</a>{{/current}}{{{suffix}}}
