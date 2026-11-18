@@ -42,6 +42,7 @@ final class structure_array_processor_test extends \basic_testcase {
      */
     public static function setUpBeforeClass(): void {
         global $CFG;
+        parent::setUpBeforeClass();
         require_once($CFG->dirroot . '/backup/util/includes/backup_includes.php');
     }
 
