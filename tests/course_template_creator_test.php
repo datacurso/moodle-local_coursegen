@@ -107,6 +107,9 @@ final class course_template_creator_test extends \advanced_testcase {
         global $DB;
         $course = $this->course_with_one_guide();
         $first = course_template_creator::create($course->id);
+        // A template keeps a row for every section of its course, the empty ones included.
+        $coursesections = $DB->count_records('course_sections', ['course' => $course->id]);
+        $this->assertSame($coursesections, $this->row_count('local_coursegen_tpl_section', ['templateid' => $first['templateid']]));
 
         $second = course_template_creator::create($course->id);
 
@@ -117,7 +120,7 @@ final class course_template_creator_test extends \advanced_testcase {
         $sections = $this->row_count('local_coursegen_tpl_section', ['templateid' => $first['templateid']]);
         $this->assertSame(1, $templates);
         $this->assertSame(1, $instances);
-        $this->assertSame(1, $sections);
+        $this->assertSame($coursesections, $sections);
     }
 
     /**
