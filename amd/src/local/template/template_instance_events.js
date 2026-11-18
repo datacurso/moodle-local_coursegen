@@ -38,11 +38,10 @@ import {
     beginMenuOpen,
 } from 'local_coursegen/local/template/template_instance_menu';
 import {insertInstanceRow, removeInstanceRow} from 'local_coursegen/local/template/template_instance_rows';
-import {addSpace, bindSpaceRows, insertSpaceRow} from 'local_coursegen/local/template/template_space_rows';
+import {addSpace, bindSpaceRows} from 'local_coursegen/local/template/template_space_rows';
 import {buildAvailableTemplates} from 'local_coursegen/local/template/template_picker_options';
 import Notification from 'core/notification';
 import {prefetchStrings} from 'core/prefetch';
-import {addTeacherSpace} from 'local_coursegen/local/template/template_teacher_space';
 import Selectors from 'local_coursegen/local/template/selectors';
 import {CLASS, COMPONENT, EVENT, STRING, TAG} from 'local_coursegen/local/template/constants';
 
@@ -105,10 +104,6 @@ const handleMenuAction = async(item, container, state, markDirty) => {
     }
     if (item.matches(Selectors.actions.menuBack)) {
         await showAddMenu(trigger);
-        return;
-    }
-    if (item.matches(Selectors.actions.menuTeacherSpace)) {
-        await addTeacherSpace(item, state, markDirty, insertSpaceRow);
         return;
     }
     await addSpace(item, state, markDirty);
