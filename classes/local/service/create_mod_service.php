@@ -317,12 +317,44 @@ class create_mod_service {
         }
         unset($defaults['sesskey']);
         $defaults = self::complete_editor_values($defaults);
+        $defaults += self::first_options_of_unset_group_selects($quickform, $defaults);
         foreach ($defaults as $name => $value) {
             if (!property_exists($parameters, $name)) {
                 $parameters->$name = $value;
             }
         }
         return $parameters;
+    }
+
+    /**
+     * The first option of every select inside a group of the form that exported no value.
+     *
+     * A browser always posts the selected option of a select, which is the first one when none was chosen. The
+     * form exports nothing for such a select inside a group (the grade category of a workshop), and Moodle reads
+     * the field unguarded, so it is given the value the browser would have posted.
+     *
+     * @param \MoodleQuickForm $quickform The form of the module.
+     * @param array $exported What the form exported, by element name.
+     * @return array Value by name for the selects that had none.
+     */
+    private static function first_options_of_unset_group_selects(\MoodleQuickForm $quickform, array $exported): array {
+        $values = [];
+        foreach ($quickform->_elements as $element) {
+            if (!($element instanceof \HTML_QuickForm_group)) {
+                continue;
+            }
+            foreach ($element->getElements() as $member) {
+                $name = $member->getName();
+                if (!($member instanceof \HTML_QuickForm_select) || array_key_exists($name, $exported) || $name === '') {
+                    continue;
+                }
+                $first = reset($member->_options);
+                if ($first !== false && isset($first['attr']['value'])) {
+                    $values[$name] = $first['attr']['value'];
+                }
+            }
+        }
+        return $values;
     }
 
     /**
