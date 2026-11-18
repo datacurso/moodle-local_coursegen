@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.13] - 2026111715
+
+### Fixed
+- **Each copy of a template section has the order of the template**  
+  The template section itself was ordered from the template, but its copies kept the order the activities were created in, so the H5P activities of a lesson ended at the bottom of the section. Each copy now follows the order of the first one.
+
 ## [2.0.13] - 2026111714
 
 ### Fixed
