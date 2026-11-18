@@ -72,6 +72,7 @@ final class template_syllabus_linker_test extends \advanced_testcase {
     public function test_a_page_links_its_own_copy_of_the_syllabus(): void {
         global $DB;
         $this->resetAfterTest();
+        $this->setAdminUser();
         $course = $this->getDataGenerator()->create_course();
         $page = $this->getDataGenerator()->create_module('page', [
             'course' => $course->id,
@@ -124,6 +125,7 @@ final class template_syllabus_linker_test extends \advanced_testcase {
     public function test_a_label_keeps_one_copy_for_several_links(): void {
         global $DB;
         $this->resetAfterTest();
+        $this->setAdminUser();
         $course = $this->getDataGenerator()->create_course();
         $label = $this->getDataGenerator()->create_module('label', [
             'course' => $course->id,
@@ -143,6 +145,7 @@ final class template_syllabus_linker_test extends \advanced_testcase {
     public function test_without_a_syllabus_the_links_are_taken_out(): void {
         global $DB;
         $this->resetAfterTest();
+        $this->setAdminUser();
         $course = $this->getDataGenerator()->create_course();
         $page = $this->getDataGenerator()->create_module('page', [
             'course' => $course->id,
@@ -161,6 +164,7 @@ final class template_syllabus_linker_test extends \advanced_testcase {
     public function test_only_the_given_activities_of_searched_modules_are_touched(): void {
         global $DB;
         $this->resetAfterTest();
+        $this->setAdminUser();
         $course = $this->getDataGenerator()->create_course();
         $kept = $this->getDataGenerator()->create_module('page', ['course' => $course->id, 'content' => self::LINK]);
         $forum = $this->getDataGenerator()->create_module('forum', ['course' => $course->id, 'intro' => self::LINK]);
