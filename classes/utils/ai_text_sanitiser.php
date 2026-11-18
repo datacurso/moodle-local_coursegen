@@ -106,7 +106,7 @@ final class ai_text_sanitiser {
         if (stripos($text, '<iframe') === false) {
             return $text;
         }
-        $prefix = $CFG->wwwroot . '/pluginfile.php/';
+        $prefix = [$CFG->wwwroot . '/pluginfile.php/', '@@PLUGINFILE@@/'];
         $salt = bin2hex(random_bytes(4));
         $callback = static function (array $matches) use (&$frames, $prefix, $salt): string {
             $frame = self::site_file_frame($matches[1], $prefix);
@@ -124,10 +124,11 @@ final class ai_text_sanitiser {
      * The frame of a file of this site, written again with only the attributes a frame needs.
      *
      * @param string $attributes What the opening tag holds.
-     * @param string $prefix The start of the address of every file of this site.
+     * @param string[] $prefixes The starts a file address of this site may have: its pluginfile address, or the
+     *     placeholder that Moodle resolves to the files of the activity itself.
      * @return string|null Null when the frame does not point at a file of this site.
      */
-    private static function site_file_frame(string $attributes, string $prefix): ?string {
+    private static function site_file_frame(string $attributes, array $prefixes): ?string {
         preg_match_all('~\b([a-z-]+)\s*=\s*(["\'])(.*?)\2~isu', $attributes, $found, PREG_SET_ORDER);
         $kept = [];
         $source = '';
@@ -141,7 +142,11 @@ final class ai_text_sanitiser {
                 $kept[] = $name . '="' . $value . '"';
             }
         }
-        if (!str_starts_with($source, $prefix) || preg_match('~[\x00-\x20]~', $source)) {
+        $known = false;
+        foreach ($prefixes as $prefix) {
+            $known = $known || str_starts_with($source, $prefix);
+        }
+        if (!$known || preg_match('~[\x00-\x20]~', $source) || str_contains($source, '/../')) {
             return null;
         }
         return '<iframe ' . implode(' ', $kept) . '></iframe>';

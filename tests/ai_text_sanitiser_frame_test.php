@@ -43,6 +43,29 @@ final class ai_text_sanitiser_frame_test extends \advanced_testcase {
     }
 
     /**
+     * The frame of a file of the activity itself, written with the placeholder, is kept too.
+     */
+    public function test_a_frame_of_the_pluginfile_placeholder_is_kept(): void {
+        $this->resetAfterTest();
+
+        $text = '<iframe src="@@PLUGINFILE@@/mine.pdf" width="100%" onload="alert(1)"></iframe>';
+        $clean = ai_text_sanitiser::sanitise_string($text);
+
+        $this->assertSame('<iframe src="@@PLUGINFILE@@/mine.pdf" width="100%"></iframe>', $clean);
+    }
+
+    /**
+     * A placeholder frame that climbs out of the files of the activity is removed.
+     */
+    public function test_a_frame_of_the_placeholder_that_climbs_out_is_removed(): void {
+        $this->resetAfterTest();
+
+        $clean = ai_text_sanitiser::sanitise_string('<iframe src="@@PLUGINFILE@@/../x.pdf"></iframe>');
+
+        $this->assertStringNotContainsString('iframe', $clean);
+    }
+
+    /**
      * A frame that points anywhere else is removed.
      */
     public function test_a_frame_of_another_address_is_removed(): void {
