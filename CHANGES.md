@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.16] - 2026111720
+
+### Fixed
+- **Activities are created whatever the page that asks for them**  
+  The module form is now built for the course of the new activity even when the page that runs the creation belongs to the site, so the section it needs is found.
+- **Quizzes, assignments, feedback and workshops are created from an incomplete AI result**  
+  The editor fields a module form leaves unset (the feedback texts of a quiz, the intro of an assignment) now start empty with the HTML format and an empty draft area, the grade category of a workshop starts with its first option as the form shows it, and a feedback question is saved as a new item.
+- **The teacher's file frame keeps working in the text of a page**  
+  A frame whose address is the placeholder of the activity's own files is no longer removed when the text of the AI result is cleaned; a frame that climbs out of those files still is.
+- **A file that is already stored no longer needs the AI service**  
+  The files generated for an activity are read from the stored copy without opening a connection to the AI service, which is only reached when a file has to be downloaded.
+
 ## [2.0.16] - 2026111719
 
 ### Fixed
