@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.16] - 2026111805
+
+### Added
+- **The pictures of a template run have their own pill beside the activities**  
+  An "Imágenes" pill in the top bar says how many pictures of the run are ready out of how many there are, every picture included (the cover, the section pictures, the pictures of the activities and the ones inside them). It opens the list of the pictures, each with the template picture it starts from and the new one, a readable name, what it starts from, its state (waiting, being made, ready, failed) and links to open both; a press on the thumbnails shows both pictures side by side with the previous and the next one. The addresses come from a new web service function that only serves the pictures of the person's own session.
+
 ## [2.0.16] - 2026111804
 
 ### Fixed

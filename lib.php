@@ -63,9 +63,16 @@ function local_coursegen_pluginfile(
         return false;
     }
 
-    // The files the AI service made for a template run, shown in the review preview.
-    if ($filearea === \local_coursegen\utils\generated_file_cache::FILEAREA) {
-        return \local_coursegen\local\service\generated_file_server::serve($context, $args, $forcedownload, $options);
+    // The files the AI service made for a template run, shown in the review preview and in the list of pictures.
+    if ($filearea === \local_coursegen\utils\generated_file_cache::FILEAREA
+            || $filearea === \local_coursegen\local\files\generated_image_source::FILEAREA) {
+        return \local_coursegen\local\service\generated_file_server::serve(
+            $context,
+            $args,
+            $forcedownload,
+            $options,
+            $filearea
+        );
     }
 
     // Syllabus files live in the system context only.

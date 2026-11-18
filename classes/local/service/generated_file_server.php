@@ -16,16 +16,21 @@
 
 namespace local_coursegen\local\service;
 
+use local_coursegen\local\files\generated_image_source;
 use local_coursegen\utils\generated_file_cache;
 
 /**
- * Serves a generated file stored for a review preview.
+ * Serves a file the AI service made for a template run: a stored file of the review preview, or a picture saved
+ * inside an activity, shown in the list of the pictures of the run.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class generated_file_server {
+    /** @var string[] The areas served: the files of the review preview and the pictures saved inside activities. */
+    private const AREAS = [generated_file_cache::FILEAREA, generated_image_source::FILEAREA];
+
     /**
      * Send the stored file an address of the preview names, or report there is none.
      *
@@ -33,9 +38,19 @@ class generated_file_server {
      * @param array $args Path after the item id: the thread, then the file name.
      * @param bool $forcedownload
      * @param array $options
+     * @param string $filearea The area of the file: the generated files or the generated pictures.
      * @return bool False when the file cannot be served; otherwise the file is sent and the script ends.
      */
-    public static function serve(\context $context, array $args, bool $forcedownload, array $options): bool {
+    public static function serve(
+        \context $context,
+        array $args,
+        bool $forcedownload,
+        array $options,
+        string $filearea = generated_file_cache::FILEAREA
+    ): bool {
+        if (!in_array($filearea, self::AREAS, true)) {
+            return false;
+        }
         if ($context->contextlevel !== CONTEXT_SYSTEM) {
             return false;
         }
@@ -51,7 +66,7 @@ class generated_file_server {
         $stored = $fs->get_file(
             $context->id,
             'local_coursegen',
-            generated_file_cache::FILEAREA,
+            $filearea,
             0,
             '/' . $thread . '/',
             $filename

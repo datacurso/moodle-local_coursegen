@@ -35,6 +35,7 @@ import {refreshPreviewLinks} from './template/preview';
 import {mergeAddedStructure, mergeUnitCopies, setCopiesListener, setStructureListener} from './template/added_structure';
 import {ALL_STATUS_CLASSES, STATUS_CLASS} from './template/generation_events';
 import {initTopBar} from './template/top_bar';
+import {initImagesPanel} from 'local_coursegen/local/courseai/template/images_panel';
 import {
     createTemplateState,
     applyStructureResponse,
@@ -154,6 +155,7 @@ export const wireTemplateMode = (state, host, reopened = null) => {
 
     // The activities pill of the top bar opens and closes its list of activities.
     initTopBar();
+    initImagesPanel();
 
     // Input-bar defaults: no images, language left to the AI (detect automatically), no syllabus yet.
     const tplState = createTemplateState({lang: ''});

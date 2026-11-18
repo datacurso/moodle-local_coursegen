@@ -163,6 +163,10 @@ const pictureLine = (data) => {
  * @returns {Promise<string>} The counter and the line of the picture as one sentence, empty when nothing was shown.
  */
 export const showPicture = async(data) => {
+    // A picture that is only known and waits is not being made yet: it gets no line.
+    if (data.state === 'queued') {
+        return '';
+    }
     const elements = ensureElements();
     if (!elements) {
         return '';

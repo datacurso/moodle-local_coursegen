@@ -148,6 +148,15 @@ $functions = [
         'capabilities' => 'moodle/course:create,local/coursegen:createfreecoursewithai,local/coursegen:createtemplatecoursewithai',
         'loginrequired' => true,
     ],
+    'local_coursegen_get_template_image_urls' => [
+        'classname' => 'local_coursegen\\external\\get_template_image_urls',
+        'methodname' => 'execute',
+        'description' => 'Get the addresses of the template picture and the new picture of each picture of a template run',
+        'type' => 'read',
+        'ajax' => true,
+        'capabilities' => 'local/coursegen:createtemplatecoursewithai',
+        'loginrequired' => true,
+    ],
     'local_coursegen_get_templates' => [
         'classname' => 'local_coursegen\\external\\get_templates',
         'methodname' => 'execute',

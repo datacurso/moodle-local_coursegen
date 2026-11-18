@@ -162,3 +162,15 @@ export const nameTemplateSession = (sessionId, fullname, shortname) => fetchMany
     methodname: 'local_coursegen_name_template_session',
     args: {sessionid: sessionId, fullname: fullname, shortname: shortname},
 }])[0];
+
+/**
+ * The addresses of some pictures of a template run: the template's picture each one starts from, and the new one.
+ *
+ * @param {number} sessionId
+ * @param {Object[]} items Each: key, kind, reference, thread_id, file_id, filename, path.
+ * @returns {Promise<Object[]>} Each: key, original, current.
+ */
+export const getTemplateImageUrls = (sessionId, items) => fetchMany([{
+    methodname: 'local_coursegen_get_template_image_urls',
+    args: {recordid: sessionId, items},
+}])[0];

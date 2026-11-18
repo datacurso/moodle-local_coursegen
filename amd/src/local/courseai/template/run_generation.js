@@ -27,6 +27,7 @@ import {startTemplateGeneration} from './repository';
 import {pickedSpaceActivities, pickedSpaceChoices, pickedSpaceFiles, requestedUnits} from './state';
 import {GenerationStopped, abortGenerationView, beginGenerationView, runGenerationStream} from './generation_stream';
 import {usePreviewSession} from './preview';
+import {resetImages, useImagesSession} from './images_panel';
 import {reviewAndCreate} from './finish';
 
 /**
@@ -88,6 +89,8 @@ export const runGeneration = async(tplState, tplSelect, genBtn, state, host) => 
             pickedSpaceChoices(tplState)
         );
         usePreviewSession(started.sessionid);
+        resetImages();
+        useImagesSession(started.sessionid);
         announceSession(started.sessionid);
         await runGenerationStream(
             started.streamurl,
@@ -130,6 +133,7 @@ export const reopenGeneration = async(tplState, genBtn, state, host, session) =>
     try {
         await beginGenerationView(context);
         usePreviewSession(session.id);
+        useImagesSession(session.id);
         await runGenerationStream(
             session.streamurl,
             () => reviewAndCreate(host, state, tplState, session.id),

@@ -38,6 +38,7 @@ import {
 import {showWorkingIndicator} from 'local_coursegen/local/courseai/ui/feedback-progress';
 import {createRepeatTracker} from 'local_coursegen/local/courseai/template/repeat_progress';
 import {resetStatus, showNotice, showPicture} from 'local_coursegen/local/courseai/template/generation_status';
+import {onPicture} from 'local_coursegen/local/courseai/template/images_panel';
 
 const repeats = createRepeatTracker();
 
@@ -134,6 +135,7 @@ const EVENT_HANDLERS = {
         return '';
     },
     template_image: (data) => {
+        onPicture(data);
         showPicture(data).then((text) => text && showWorkingIndicator({}, text)).catch(() => undefined);
         return '';
     },

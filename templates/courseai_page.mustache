@@ -151,6 +151,35 @@
         <ul class="courseai-checklist-list" id="courseaiChecklistList"></ul>
       </div>
     </div>
+    {{! Template mode only: the pictures of the run, beside the activities. The pill says how many are ready; a
+        press opens the list of every picture with the template's picture and the new one. Hidden until a run
+        tells the first picture. }}
+    <div class="tpl-topbar-activities tpl-topbar-images" id="tplTopImages" data-region="tpl-top-images" hidden>
+      <button class="tpl-topbar-pill" id="tplTopImagesToggle" type="button" aria-haspopup="true"
+              aria-expanded="false" aria-controls="tplTopImagesPanel"
+              title="{{#str}}courseai_images_toggle, local_coursegen{{/str}}"
+              aria-label="{{#str}}courseai_images_toggle, local_coursegen{{/str}}">
+        <svg class="tpl-topbar-pill-icon" width="15" height="15" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>
+        </svg>
+        <span class="tpl-topbar-pill-label">{{#str}}courseai_images, local_coursegen{{/str}}</span>
+        <span class="tpl-topbar-pill-count" id="tplTopImagesCount"></span>
+        <svg class="tpl-topbar-pill-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M6 9l6 6 6-6"/>
+        </svg>
+      </button>
+      <div class="tpl-topbar-panel tpl-images-panel" id="tplTopImagesPanel" role="region"
+           aria-label="{{#str}}courseai_images_panel, local_coursegen{{/str}}" hidden>
+        <div class="cg-group-head">
+          <span class="cg-group-title">{{#str}}courseai_images_panel, local_coursegen{{/str}}</span>
+          <span class="cg-group-count" id="tplTopImagesReady"></span>
+        </div>
+        <div class="tpl-images-bar" aria-hidden="true"><span id="tplTopImagesBar"></span></div>
+        <ul class="tpl-images-list" id="tplTopImagesList"></ul>
+      </div>
+    </div>
     {{/templatemodeactive}}
     <span class="courseai-topbar-spacer"></span>
     {{! Template mode only: what the structure holds and the way to see the whole course. The stats chip is
@@ -1428,3 +1457,35 @@
      data-defaultlang="{{defaultlang}}"
      data-templates="{{templates}}">
 </div>
+
+{{#templatemodeactive}}
+{{! The detail of one picture of the run: the template's picture and the new one side by side, where it is used,
+    and the way to the previous and the next picture. Filled by the images panel script. }}
+<div class="tpl-image-modal" id="tplImageModal" role="dialog" aria-modal="true" aria-labelledby="tplImageModalTitle" hidden>
+  <div class="tpl-image-modal-box">
+    <div class="tpl-image-modal-head">
+      <h3 class="tpl-image-modal-title" id="tplImageModalTitle"></h3>
+      <button type="button" class="tpl-image-modal-close" id="tplImageModalClose"
+              aria-label="{{#str}}closebuttontitle, core{{/str}}">&times;</button>
+    </div>
+    <p class="tpl-image-modal-where" id="tplImageModalWhere"></p>
+    <div class="tpl-image-modal-pair">
+      <figure>
+        <figcaption>{{#str}}courseai_images_template_picture, local_coursegen{{/str}}</figcaption>
+        <div class="tpl-image-modal-frame" id="tplImageModalOriginal"></div>
+        <a href="#" target="_blank" rel="noopener" id="tplImageModalOriginalLink" hidden>{{#str}}courseai_images_open_tab, local_coursegen{{/str}}</a>
+      </figure>
+      <figure>
+        <figcaption>{{#str}}courseai_images_new_picture, local_coursegen{{/str}}</figcaption>
+        <div class="tpl-image-modal-frame" id="tplImageModalCurrent"></div>
+        <a href="#" target="_blank" rel="noopener" id="tplImageModalCurrentLink" hidden>{{#str}}courseai_images_open_tab, local_coursegen{{/str}}</a>
+      </figure>
+    </div>
+    <div class="tpl-image-modal-nav">
+      <button type="button" class="btn btn-secondary" id="tplImageModalPrev">{{#str}}courseai_images_previous, local_coursegen{{/str}}</button>
+      <span id="tplImageModalPosition"></span>
+      <button type="button" class="btn btn-secondary" id="tplImageModalNext">{{#str}}courseai_images_next, local_coursegen{{/str}}</button>
+    </div>
+  </div>
+</div>
+{{/templatemodeactive}}
