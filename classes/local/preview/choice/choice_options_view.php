@@ -62,7 +62,8 @@ trait choice_options_view {
                 } else {
                     $option->countanswers = 0;
                 }
-                if (!empty($choice->limitanswers) && ($option->countanswers >= $option->maxanswers) && empty($option->attributes->checked)) {
+                $full = $option->countanswers >= $option->maxanswers;
+                if (!empty($choice->limitanswers) && $full && empty($option->attributes->checked)) {
                     $option->attributes->disabled = true;
                 }
                 $cdisplay['options'][] = $option;
