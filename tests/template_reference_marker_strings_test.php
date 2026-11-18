@@ -41,12 +41,6 @@ final class template_reference_marker_strings_test extends \advanced_testcase {
             ['template_video_marker_example'],
             ['template_video_marker_help'],
             ['courseai_template_video_missing'],
-            ['courseai_reference_title'],
-            ['courseai_reference_intro'],
-            ['courseai_reference_hint'],
-            ['courseai_reference_current'],
-            ['courseai_reference_remove'],
-            ['courseai_reference_in_activity'],
         ];
     }
 
