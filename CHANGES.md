@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.16] - 2026111714
+
+### Added
+- **Course structure defined by the guideline**  
+  A course made from a template can take its units, subsections, activities, completion tracking and unit locks from the guideline text, so the structure no longer depends on the sections of the template.
+
+### Changed
+- **The dev line is brought together with MOODLE_405_STABLE**  
+  This release carries the template work of the dev branch (template sections, embedded H5P, section names and the structure shown while the run is on) together with every fix that was released on MOODLE_405_STABLE up to 2.0.15, so both lines continue from one branch.
+
 ## [2.0.13] - 2026111713
 
 ### Added
