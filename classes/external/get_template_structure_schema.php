@@ -16,9 +16,9 @@
 
 namespace local_coursegen\external;
 
-use external_multiple_structure;
-use external_single_structure;
-use external_value;
+use core_external\external_multiple_structure;
+use core_external\external_single_structure;
+use core_external\external_value;
 
 /**
  * get_template_structure's return-value contract, kept apart from the rest of
