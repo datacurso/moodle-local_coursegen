@@ -186,7 +186,7 @@ class create_mod_service {
         $COURSE = clone $DB->get_record('course', ['id' => $course->id], '*', MUST_EXIST);
         \course_modinfo::clear_instance_cache($course->id);
         try {
-            $mform = new $mformclassname($data, (int) $cw->section, $cm, $COURSE);
+            $mform = new $mformclassname($data, (int) $cw->sectionnum, $cm, $COURSE);
         } finally {
             $COURSE = $previouscourse;
         }
@@ -299,7 +299,19 @@ class create_mod_service {
      */
     private static function with_defaults_of_the_form(object $parameters, \moodleform_mod $mform): object {
         $quickform = (new \ReflectionProperty(\moodleform::class, '_form'))->getValue($mform);
-        $defaults = $quickform->exportValues();
+        try {
+            // The visibility of a new activity starts as the one of its section, as the form shows it. The form
+            // was never submitted, so its select has no value to export until it is given this default.
+            $current = $mform->get_current();
+            if (isset($current->visible)) {
+                $quickform->setDefaults(['visible' => $current->visible]);
+            }
+            $defaults = $quickform->exportValues();
+        } catch (\Throwable $exception) {
+            // Defence in depth: the values that were declared are still better than none.
+            debugging('The module form could not export its defaults: ' . $exception->getMessage(), DEBUG_DEVELOPER);
+            $defaults = (new \ReflectionProperty(\HTML_QuickForm::class, '_defaultValues'))->getValue($quickform);
+        }
         unset($defaults['sesskey']);
         foreach ($defaults as $name => $value) {
             if (!property_exists($parameters, $name)) {
