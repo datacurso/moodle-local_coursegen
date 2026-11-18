@@ -192,7 +192,7 @@ final class creation_permissions_test extends \advanced_testcase {
     }
 
     /**
-     * Removing any one of the four required capabilities from the full role denies the creation.
+     * Removing any one of the required capabilities from the full role denies the creation (both modes for a mode).
      *
      * @dataProvider required_capability_provider
      * @param string $missing The one capability removed from the role.
@@ -203,7 +203,13 @@ final class creation_permissions_test extends \advanced_testcase {
         $category = $this->getDataGenerator()->create_category();
         $this->assertTrue(creation_permissions::can_create_in((int) $category->id, (int) $user->id));
 
-        unassign_capability($missing, $roleid, \context_system::instance()->id);
+        // Either creation mode is enough on its own, so a mode capability is only missing once both are.
+        $removed = in_array($missing, creation_permissions::MODE_CAPABILITIES, true)
+            ? creation_permissions::MODE_CAPABILITIES
+            : [$missing];
+        foreach ($removed as $capability) {
+            unassign_capability($capability, $roleid, \context_system::instance()->id);
+        }
 
         $this->assertFalse(creation_permissions::can_create_in((int) $category->id, (int) $user->id), 'Missing ' . $missing);
     }
@@ -241,9 +247,17 @@ final class creation_permissions_test extends \advanced_testcase {
         $userid = (int) $user->id;
 
         foreach (creation_permissions::required_capabilities() as $capability) {
-            assign_capability($capability, CAP_PROHIBIT, $roleid, $systemcontextid, true);
+            // Either creation mode is enough on its own, so a mode capability is only missing once both are.
+            $removed = in_array($capability, creation_permissions::MODE_CAPABILITIES, true)
+                ? creation_permissions::MODE_CAPABILITIES
+                : [$capability];
+            foreach ($removed as $prohibited) {
+                assign_capability($prohibited, CAP_PROHIBIT, $roleid, $systemcontextid, true);
+            }
             $this->assertFalse(creation_permissions::can_create_in($categoryid, $userid), 'Missing ' . $capability);
-            assign_capability($capability, CAP_ALLOW, $roleid, $systemcontextid, true);
+            foreach ($removed as $prohibited) {
+                assign_capability($prohibited, CAP_ALLOW, $roleid, $systemcontextid, true);
+            }
         }
         $this->assertTrue(creation_permissions::can_create_in($categoryid, $userid), 'Full set restored');
     }
@@ -331,7 +345,10 @@ final class creation_permissions_test extends \advanced_testcase {
         [$user, $roleid] = $this->create_user_with_full_role(\context_system::instance());
         $category = $this->getDataGenerator()->create_category();
         $systemcontextid = \context_system::instance()->id;
-        unassign_capability('local/coursegen:createfreecoursewithai', $roleid, $systemcontextid);
+        // Either creation mode is enough on its own, so the system capability is missing once both are.
+        foreach (creation_permissions::MODE_CAPABILITIES as $capability) {
+            unassign_capability($capability, $roleid, $systemcontextid);
+        }
         // A category capability that sorts before the system one.
         unassign_capability('local/coursegen:createactivitywithai', $roleid, $systemcontextid);
 
