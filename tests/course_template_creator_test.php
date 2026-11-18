@@ -222,11 +222,11 @@ final class course_template_creator_test extends \advanced_testcase {
      * A name longer than the column is cut and the cut is reported.
      */
     public function test_a_very_long_name_is_cut_and_reported(): void {
+        // The full name of a course cannot be longer than its column, so the long name is the one asked for.
         $longname = str_repeat('N', 300);
-        $options = ['fullname' => $longname];
-        $course = $this->course_with_one_guide($options);
+        $course = $this->course_with_one_guide();
 
-        $result = course_template_creator::create($course->id);
+        $result = course_template_creator::create($course->id, ['name' => $longname]);
 
         $length = \core_text::strlen($result['name']);
         $warnings = implode(' ', $result['warnings']);
