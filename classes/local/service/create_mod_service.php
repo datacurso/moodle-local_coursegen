@@ -27,6 +27,7 @@ defined('MOODLE_INTERNAL') || die();
 require_once($CFG->dirroot . '/course/externallib.php');
 require_once($CFG->dirroot . '/course/lib.php');
 require_once($CFG->dirroot . '/course/modlib.php');
+require_once($CFG->libdir . '/filelib.php');
 
 /**
  * Class create_mod_service
@@ -103,7 +104,7 @@ class create_mod_service {
 
         $newcm = add_moduleinfo($parameters, $course, $mform);
 
-        $modsettings = $parameters->mod_settings;
+        $modsettings = $parameters->mod_settings ?? null;
 
         self::apply_mod_settings($modname, $newcm, $modsettings);
 
@@ -247,6 +248,28 @@ class create_mod_service {
 
         $parameters = self::process_mod_parameters($modname, $parameters);
 
+        return self::with_form_defaults($modname, $parameters);
+    }
+
+    /**
+     * Give the properties a module form always posts, and Moodle reads without checking, a neutral value.
+     *
+     * The AI payload does not repeat every field of the module form, and add_moduleinfo() and the module's own
+     * add function read some of them unguarded, so the creation would stop on an undefined property for a
+     * result that is otherwise complete. A value the payload carries is never replaced.
+     *
+     * @param string $modname Module plugin name.
+     * @param object $parameters Parameters object, after the module's own parameters class ran.
+     * @return object The same object with the missing properties defaulted.
+     */
+    private static function with_form_defaults(string $modname, object $parameters): object {
+        if (!property_exists($parameters, 'cmidnumber')) {
+            $parameters->cmidnumber = '';
+        }
+        if ($modname === 'lesson' && !property_exists($parameters, 'mediafile')) {
+            // The lesson saves the draft area of its media file; an empty one stands for no file.
+            $parameters->mediafile = file_get_unused_draft_itemid();
+        }
         return $parameters;
     }
 
