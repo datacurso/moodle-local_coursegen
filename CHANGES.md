@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.16] - 2026111717
+
+### Fixed
+- **The guideline list of "Create from template" is shown again**  
+  The popover of the guidelines in the template mode opened empty after the lines were merged, because it gave the shared list handlers the bare list instead of the region they render into. It now has its own region, and choosing and previewing a guideline work as in free mode.
+- **The creation tests run on a plain Moodle site**  
+  The tests that need the Datacurso AI provider or the flexsections format skip themselves when it is not installed, the web services use the core_external classes instead of lib/externallib.php, and the stale tests and strings left over from the merge of both lines were aligned with the code that is current.
+- **Fewer failures on MariaDB and on modules without every field**  
+  The site course is recognised whatever the type its id has, a module created from an AI result gets the form fields Moodle reads unguarded, and a lesson, a feedback question, a space and a generated file take the paths the module code expects.
+- **The coding style and documentation checks pass**  
+  The Moodle coding style fixes, the phpdoc parameter lists and the example context of every template were completed, and the HTML the template lint reported was corrected.
+
 ## [2.0.16] - 2026111716
 
 ### Added
