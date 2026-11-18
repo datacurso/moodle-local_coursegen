@@ -44,8 +44,8 @@ trait choice_options_view {
     protected function choice_prepare_options($choice, $user, $coursemodule, $allresponses) {
         $cdisplay = ['options' => []];
 
-        $cdisplay['limitanswers'] = $choice->limitanswers;
-        $cdisplay['showavailable'] = $choice->showavailable;
+        $cdisplay['limitanswers'] = $choice->limitanswers ?? 0;
+        $cdisplay['showavailable'] = $choice->showavailable ?? 0;
 
         foreach ($choice->option as $optionid => $text) {
             // Make sure there are no dud entries in the db with blank text values.
@@ -62,7 +62,7 @@ trait choice_options_view {
                 } else {
                     $option->countanswers = 0;
                 }
-                if ($choice->limitanswers && ($option->countanswers >= $option->maxanswers) && empty($option->attributes->checked)) {
+                if (!empty($choice->limitanswers) && ($option->countanswers >= $option->maxanswers) && empty($option->attributes->checked)) {
                     $option->attributes->disabled = true;
                 }
                 $cdisplay['options'][] = $option;
