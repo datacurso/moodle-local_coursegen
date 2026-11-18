@@ -29,8 +29,9 @@ use local_coursegen\local\link\module_link_texts_registry;
  * Runs once every activity of the course exists, the generated ones and the
  * copied kept ones, because a token may name any of them. Only the texts of
  * the generated activities of the modules in module_link_texts_registry are
- * read. A token that cannot be resolved stops the run: nothing is rewritten
- * and no token is ever left in the stored content without being reported.
+ * read. Every text is resolved in memory before any is stored, so a token that
+ * cannot be resolved stops the run with nothing rewritten, and no token is
+ * ever left in the stored content without being reported.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -72,9 +73,14 @@ final class activity_link_resolver {
         $modinfo = get_fast_modinfo($courseid);
         $urlbyuid = self::urls_by_uid($cmidbyuid, $modinfo);
 
+        // Every text is resolved in memory first, so a token that cannot be resolved stops the run before anything is written.
+        $updates = self::resolve_activities($modinfo, $generatedcmids, $urlbyuid);
+
         $transaction = $DB->start_delegated_transaction();
         try {
-            self::resolve_activities($modinfo, $generatedcmids, $urlbyuid);
+            foreach ($updates as $update) {
+                $DB->set_field($update->table, $update->column, $update->value, ['id' => $update->id]);
+            }
             $transaction->allow_commit();
         } catch (\Throwable $exception) {
             $transaction->rollback($exception);
@@ -102,17 +108,21 @@ final class activity_link_resolver {
     }
 
     /**
-     * Resolve the texts of each of the given activities.
+     * Resolve the texts of each of the given activities, without storing anything.
      *
      * @param course_modinfo $modinfo
      * @param int[] $generatedcmids
      * @param array $urlbyuid
+     * @return \stdClass[] The texts that changed, each with table, id, column and value.
+     * @throws \moodle_exception When a token remains after resolving.
      */
-    private static function resolve_activities(course_modinfo $modinfo, array $generatedcmids, array $urlbyuid): void {
+    private static function resolve_activities(course_modinfo $modinfo, array $generatedcmids, array $urlbyuid): array {
+        $updates = [];
         foreach ($generatedcmids as $cmid) {
             $cm = $modinfo->get_cm($cmid);
-            self::resolve_activity($cm, $urlbyuid);
+            $updates = array_merge($updates, self::resolve_activity($cm, $urlbyuid));
         }
+        return $updates;
     }
 
     /**
@@ -120,16 +130,18 @@ final class activity_link_resolver {
      *
      * @param cm_info $cm
      * @param array $urlbyuid
+     * @return \stdClass[] The texts that changed, each with table, id, column and value.
+     * @throws \moodle_exception When a token remains after resolving.
      */
-    private static function resolve_activity(cm_info $cm, array $urlbyuid): void {
+    private static function resolve_activity(cm_info $cm, array $urlbyuid): array {
         global $DB;
 
         $texts = module_link_texts_registry::for_module($cm->modname);
         if ($texts === null) {
-            return;
+            return [];
         }
         $records = $DB->get_records($texts->table(), [$texts->instance_column() => $cm->instance]);
-        self::resolve_records($cm, $texts, $records, $urlbyuid);
+        return self::resolve_records($cm, $texts, $records, $urlbyuid);
     }
 
     /**
@@ -139,11 +151,15 @@ final class activity_link_resolver {
      * @param module_link_texts $texts
      * @param \stdClass[] $records
      * @param array $urlbyuid
+     * @return \stdClass[] The texts that changed, each with table, id, column and value.
+     * @throws \moodle_exception When a token remains after resolving.
      */
-    private static function resolve_records(cm_info $cm, module_link_texts $texts, array $records, array $urlbyuid): void {
+    private static function resolve_records(cm_info $cm, module_link_texts $texts, array $records, array $urlbyuid): array {
+        $updates = [];
         foreach ($records as $record) {
-            self::resolve_columns($cm, $texts, $record, $urlbyuid);
+            $updates = array_merge($updates, self::resolve_columns($cm, $texts, $record, $urlbyuid));
         }
+        return $updates;
     }
 
     /**
@@ -153,26 +169,38 @@ final class activity_link_resolver {
      * @param module_link_texts $texts
      * @param \stdClass $record
      * @param array $urlbyuid
+     * @return \stdClass[] The texts that changed, each with table, id, column and value.
+     * @throws \moodle_exception When a token remains after resolving.
      */
-    private static function resolve_columns(cm_info $cm, module_link_texts $texts, \stdClass $record, array $urlbyuid): void {
+    private static function resolve_columns(cm_info $cm, module_link_texts $texts, \stdClass $record, array $urlbyuid): array {
+        $updates = [];
         foreach ($texts->text_columns() as $column) {
-            self::resolve_column($cm, $texts->table(), $record, $column, $urlbyuid);
+            $update = self::resolve_column($cm, $texts->table(), $record, $column, $urlbyuid);
+            if ($update !== null) {
+                $updates[] = $update;
+            }
         }
+        return $updates;
     }
 
     /**
-     * Resolve one text, store it when it changed, and refuse to leave a token in it.
+     * Resolve one text and refuse to leave a token in it.
      *
      * @param cm_info $cm
      * @param string $table
      * @param \stdClass $record
      * @param string $column
      * @param array $urlbyuid
+     * @return \stdClass|null The update to store, or null when the text did not change.
      * @throws \moodle_exception When a token remains after resolving.
      */
-    private static function resolve_column(cm_info $cm, string $table, \stdClass $record, string $column, array $urlbyuid): void {
-        global $DB;
-
+    private static function resolve_column(
+        cm_info $cm,
+        string $table,
+        \stdClass $record,
+        string $column,
+        array $urlbyuid
+    ): ?\stdClass {
         $original = (string) $record->{$column};
         $resolved = link_token::replace($original, $urlbyuid);
         $resolved = embed_link::apply($resolved);
@@ -183,8 +211,8 @@ final class activity_link_resolver {
             throw new \moodle_exception('linkunresolved', 'local_coursegen', '', $details);
         }
         if ($resolved === $original) {
-            return;
+            return null;
         }
-        $DB->set_field($table, $column, $resolved, ['id' => $record->id]);
+        return (object) ['table' => $table, 'id' => $record->id, 'column' => $column, 'value' => $resolved];
     }
 }

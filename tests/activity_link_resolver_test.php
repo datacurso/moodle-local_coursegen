@@ -26,8 +26,6 @@ use local_coursegen\local\service\activity_link_resolver;
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  * @covers     \local_coursegen\local\service\activity_link_resolver
- *
- * @runTestsInSeparateProcesses
  */
 final class activity_link_resolver_test extends \advanced_testcase {
     /**
