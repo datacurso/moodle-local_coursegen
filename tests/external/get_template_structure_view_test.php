@@ -340,7 +340,7 @@ final class get_template_structure_view_test extends \advanced_testcase {
         ]);
 
         $result = get_template_structure::execute($templateid);
-        $result = \external_api::clean_returnvalue(get_template_structure::execute_returns(), $result);
+        $result = \core_external\external_api::clean_returnvalue(get_template_structure::execute_returns(), $result);
 
         $activities = $this->section_by_id($result, (int) $section1->id)['activities'];
         $this->assertSame(['Discussion 1', format_string($page->name), 'No icon'], array_column($activities, 'name'));
