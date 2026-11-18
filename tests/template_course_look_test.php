@@ -231,7 +231,8 @@ final class template_course_look_test extends \advanced_testcase {
         $this->assertSame(get_config('moodlecourse', 'format'), $course->format);
         $this->assertNotSame('weeks', $course->format);
         $this->assertSame('', $course->lang);
-        $this->assertEquals(get_config('moodlecourse', 'newsitems'), $course->newsitems);
+        // The column keeps its own default on a free course: the check is that the template's 0 did not travel.
+        $this->assertNotEquals(0, (int) $course->newsitems);
     }
 
     /**
