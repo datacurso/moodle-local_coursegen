@@ -270,8 +270,11 @@ final class template_course_image_slots {
 
         $context = \context_course::instance($courseid);
         $files = get_file_storage()->get_area_files($context->id, 'format_grid', 'sectionimage', $sectionid, 'filename', false);
-        $record = $DB->get_record('format_grid_image', ['sectionid' => $sectionid]);
-        if (!$files || !$record) {
+        // A site without the grid format has neither its file area nor its table.
+        if (!$files || !$DB->get_manager()->table_exists('format_grid_image')) {
+            return null;
+        }
+        if (!$DB->record_exists('format_grid_image', ['sectionid' => $sectionid])) {
             return null;
         }
         return reset($files);
