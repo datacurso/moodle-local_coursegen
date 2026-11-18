@@ -59,32 +59,31 @@ final class template_structure_template_test extends \advanced_testcase {
     }
 
     /**
-     * The space is a card of its own: label, badge, the admin's instruction as the main line and the hint.
+     * The space is one more row of the list: icon, name, badge and the admin's instruction as its description.
      */
-    public function test_a_space_is_drawn_as_a_call_to_action_card(): void {
+    public function test_a_space_is_drawn_as_a_row_of_the_list(): void {
         global $OUTPUT;
         $this->resetAfterTest();
 
         $html = $OUTPUT->render_from_template('local_coursegen/template_structure', $this->structure_context());
 
-        $this->assertSame(1, substr_count($html, 'class="cg-space-card '));
-        $this->assertStringContainsString('cg-space-card--required', $html);
-        $this->assertStringContainsString('cg-space-card--empty', $html);
+        $this->assertSame(1, substr_count($html, 'data-region="local_coursegen/template/space-card"'));
+        $this->assertStringContainsString('cg-space-row', $html);
+        $this->assertStringContainsString('cg-space-row--empty', $html);
         $this->assertStringContainsString(get_string('courseai_template_space_eyebrow', 'local_coursegen'), $html);
         $this->assertStringContainsString(get_string('courseai_template_space_required', 'local_coursegen'), $html);
-        $this->assertStringContainsString(get_string('courseai_template_space_hint', 'local_coursegen'), $html);
         $this->assertStringContainsString(get_string('courseai_template_space_uploading', 'local_coursegen'), $html);
-        $this->assertStringContainsString('<p class="cg-space-card__instruction">Course guide in PDF</p>', $html);
-        $this->assertStringContainsString('<p class="cg-space-card__target">Weekly guide</p>', $html);
-        $this->assertStringContainsString('role="status" aria-live="polite"', $html);
-        $this->assertStringNotContainsString('cg-space-card--done', $html);
-        $this->assertStringNotContainsString('activity-item', substr($html, strpos($html, 'cg-space-item')));
+        $this->assertStringContainsString('<p class="cg-activity-desc mb-0">Course guide in PDF</p>', $html);
+        $this->assertStringContainsString('<span class="instancename">Weekly guide</span>', $html);
+        $this->assertStringNotContainsString('cg-space-row--done', $html);
+        // The instruction is the description, so the generic hint is left out.
+        $this->assertStringNotContainsString(get_string('courseai_template_space_hint', 'local_coursegen'), $html);
     }
 
     /**
-     * A space without an instruction falls back to the activity name as its main line.
+     * A space without an instruction describes itself with the hint, and still names the activity.
      */
-    public function test_a_space_without_instruction_uses_the_activity_name(): void {
+    public function test_a_space_without_instruction_uses_the_hint(): void {
         global $OUTPUT;
         $this->resetAfterTest();
         $context = $this->structure_context();
@@ -94,8 +93,11 @@ final class template_structure_template_test extends \advanced_testcase {
 
         $html = $OUTPUT->render_from_template('local_coursegen/template_structure', $context);
 
-        $this->assertStringContainsString('<p class="cg-space-card__instruction">Weekly guide</p>', $html);
-        $this->assertStringNotContainsString('cg-space-card__target', $html);
+        $this->assertStringContainsString('<span class="instancename">Weekly guide</span>', $html);
+        $this->assertStringContainsString(
+            '<p class="cg-activity-desc mb-0">' . get_string('courseai_template_space_hint', 'local_coursegen') . '</p>',
+            $html
+        );
     }
 
     /**
@@ -115,9 +117,8 @@ final class template_structure_template_test extends \advanced_testcase {
         $this->assertStringContainsString('guide.pdf', $html);
         $this->assertStringContainsString(get_string('courseai_template_space_change', 'local_coursegen'), $html);
         $this->assertStringContainsString('remove-space-file', $html);
-        $this->assertStringContainsString('cg-space-card--done', $html);
-        $this->assertStringNotContainsString('cg-space-card--empty', $html);
-        $this->assertStringNotContainsString(get_string('courseai_template_space_hint', 'local_coursegen'), $html);
+        $this->assertStringContainsString('cg-space-row--done', $html);
+        $this->assertStringNotContainsString('cg-space-row--empty', $html);
         $this->assertStringNotContainsString(get_string('courseai_template_space_missing', 'local_coursegen'), $html);
     }
 
@@ -131,12 +132,13 @@ final class template_structure_template_test extends \advanced_testcase {
         $space = &$context['sections'][0]['activities'][1];
         $space['spacerequired'] = false;
         $space['spacemissing'] = false;
+        $space['spaceinstruction'] = '';
+        $space['hasspaceinstruction'] = false;
 
         $html = $OUTPUT->render_from_template('local_coursegen/template_structure', $context);
 
         $this->assertStringContainsString(get_string('courseai_template_space_optional', 'local_coursegen'), $html);
-        $this->assertStringNotContainsString('cg-space-card--required', $html);
-        $this->assertStringNotContainsString('cg-space-card__badge--required', $html);
+        $this->assertStringNotContainsString(get_string('courseai_template_space_required', 'local_coursegen'), $html);
         $this->assertStringContainsString(get_string('courseai_template_space_hint', 'local_coursegen'), $html);
         $this->assertStringNotContainsString(get_string('courseai_template_space_missing', 'local_coursegen'), $html);
     }
