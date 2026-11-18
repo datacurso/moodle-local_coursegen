@@ -124,7 +124,7 @@ trait book_chapters {
         $title = trim($formatted);
         $numbers = [];
         if ($book->numbering == self::BOOK_NUM_NUMBERS) {
-            if ($ch->parent and $chapters[$ch->parent]->number) {
+            if ($ch->parent && $chapters[$ch->parent]->number) {
                 $numbers[] = $chapters[$ch->parent]->number;
             }
             if ($ch->number) {

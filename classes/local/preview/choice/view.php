@@ -141,7 +141,7 @@ class view {
         $current = [];
         // The "your selection" box needs a response; there is none.
 
-        /// Print the form
+        // Print the form
         $choiceopen = true;
         if ((!empty($choice->timeopen)) && ($choice->timeopen > $timenow)) {
             if ($choice->showpreview) {
@@ -154,7 +154,7 @@ class view {
             $choiceopen = false;
         }
 
-        if ((!$current or $choice->allowupdate) and $choiceopen and $this->can_choose()) {
+        if ((!$current || $choice->allowupdate) && $choiceopen && $this->can_choose()) {
             // Show information on how the results will be published to students.
             $publishinfo = $this->publish_info($choice);
 
@@ -204,7 +204,8 @@ class view {
         }
 
         $out = '';
-        if ($results->publish) { // If set to publish full results, display a heading for the responses section.
+        // If set to publish full results, display a heading for the responses section.
+        if ($results->publish) {
             $responsestext = get_string("responses", "choice");
             $heading = format_string($responsestext);
             $out .= $OUTPUT->heading($heading, 3, 'mt-4');

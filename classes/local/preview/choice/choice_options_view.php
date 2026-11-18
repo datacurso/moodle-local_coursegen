@@ -48,7 +48,8 @@ trait choice_options_view {
         $cdisplay['showavailable'] = $choice->showavailable;
 
         foreach ($choice->option as $optionid => $text) {
-            if (isset($text)) { // make sure there are no dud entries in the db with blank text values.
+            // Make sure there are no dud entries in the db with blank text values.
+            if (isset($text)) {
                 $option = new stdClass();
                 $option->attributes = new stdClass();
                 $option->attributes->value = $optionid;

@@ -68,7 +68,8 @@ trait scorm_toc_build {
             // If this is a normal package with an org sco and child scos get the first child.
             if (!empty($scoes['scoes'][0]->children)) {
                 $result->sco = $scoes['scoes'][0]->children[0];
-            } else { // This package only has one sco - it may be a simple external AICC package.
+            } else {
+                // This package only has one sco - it may be a simple external AICC package.
                 $result->sco = $scoes['scoes'][0] ?? new stdClass();
             }
         } else {

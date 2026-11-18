@@ -224,7 +224,7 @@ final class template_course_blocks_test extends \advanced_testcase {
         $course = $this->create_from($source->id);
 
         [$block] = $this->course_blocks($course);
-        $config = unserialize(base64_decode($block->configdata));
+        $config = unserialize_object(base64_decode($block->configdata));
         $this->assertSame('Welcome', $config->title);
         $this->assertSame('Read this first', $config->text);
     }

@@ -55,9 +55,9 @@ trait choice_results_view {
         }
 
         if (
-            $choice->showresults == self::CHOICE_SHOWRESULTS_ALWAYS or
-            ($choice->showresults == self::CHOICE_SHOWRESULTS_AFTER_ANSWER and !empty($current)) or
-            ($choice->showresults == self::CHOICE_SHOWRESULTS_AFTER_CLOSE and !$choiceopen)
+            $choice->showresults == self::CHOICE_SHOWRESULTS_ALWAYS ||
+            ($choice->showresults == self::CHOICE_SHOWRESULTS_AFTER_ANSWER && !empty($current)) ||
+            ($choice->showresults == self::CHOICE_SHOWRESULTS_AFTER_CLOSE && !$choiceopen)
         ) {
             return true;
         }
@@ -130,13 +130,15 @@ trait choice_results_view {
      * @return string
      */
     protected function display_result($choices, $forcepublish = false) {
-        if (empty($forcepublish)) { // allow the publish setting to be overridden
+        // Allow the publish setting to be overridden.
+        if (empty($forcepublish)) {
             $forcepublish = $choices->publish;
         }
 
         $displaylayout = $choices->display;
 
-        if ($forcepublish) {  // CHOICE_PUBLISH_NAMES
+        // CHOICE_PUBLISH_NAMES.
+        if ($forcepublish) {
             return $this->display_publish_name_vertical($choices);
         } else {
             return $this->display_publish_anonymous($choices, $displaylayout);

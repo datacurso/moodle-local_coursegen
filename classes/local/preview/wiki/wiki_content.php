@@ -109,7 +109,7 @@ trait wiki_content {
         $subwiki = $this->subwiki();
         $context = $this->context;
 
-        $parser_options = [
+        $parseroptions = [
             'link_callback' => '/local/coursegen/classes/local/preview/wiki/links.php:local_coursegen_wiki_preview_link',
             'link_callback_args' => ['swid' => $options['swid']],
             'table_callback' => '/mod/wiki/locallib.php:wiki_parser_table',
@@ -131,7 +131,7 @@ trait wiki_content {
 
         self::$parsing = $this;
         try {
-            return \wiki_parser_proxy::parse($pagecontent, $markup, $parser_options);
+            return \wiki_parser_proxy::parse($pagecontent, $markup, $parseroptions);
         } finally {
             self::$parsing = null;
         }

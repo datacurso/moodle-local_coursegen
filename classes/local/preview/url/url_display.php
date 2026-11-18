@@ -46,7 +46,7 @@ trait url_display {
 
         // detect links to local moodle pages
         if (strpos($url->externalurl, $CFG->wwwroot) === 0) {
-            if (strpos($url->externalurl, 'file.php') === false and strpos($url->externalurl, '.php') !== false) {
+            if (strpos($url->externalurl, 'file.php') === false && strpos($url->externalurl, '.php') !== false) {
                 // most probably our moodle page with navigation
                 return RESOURCELIB_DISPLAY_OPEN;
             }
@@ -190,7 +190,8 @@ trait url_display {
             core_media_manager::OPTION_BLOCK => true,
         ];
 
-        if (in_array($mimetype, ['image/gif', 'image/jpeg', 'image/png'])) {  // It's an image
+        // It's an image.
+        if (in_array($mimetype, ['image/gif', 'image/jpeg', 'image/png'])) {
             $code = resourcelib_embed_image($fullurl, $title);
         } else if ($mediamanager->can_embed_url($moodleurl, $embedoptions)) {
             // Media (audio/video) file.

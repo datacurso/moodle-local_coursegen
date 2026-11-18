@@ -63,7 +63,8 @@ trait resource_embed {
             core_media_manager::OPTION_BLOCK => true,
         ];
 
-        if (file_mimetype_in_typegroup($mimetype, 'web_image')) {  // It's an image
+        // It's an image.
+        if (file_mimetype_in_typegroup($mimetype, 'web_image')) {
             $code = resourcelib_embed_image($moodleurl->out(), $title);
         } else if ($mimetype === 'application/pdf') {
             // PDF document

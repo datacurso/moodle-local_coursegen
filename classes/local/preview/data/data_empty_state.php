@@ -96,17 +96,19 @@ trait data_empty_state {
             return false;
         }
 
-        if (has_capability('mod/data:manageentries', $context)) {
-            // no entry limits apply if user can manage
-        } else if (!has_capability('mod/data:writeentry', $context)) {
-            return false;
-        } else if (data_in_readonly_period($data)) {
-            // Check whether we're in a read-only period
-            return false;
+        // No entry limits apply if the user can manage the entries.
+        if (!has_capability('mod/data:manageentries', $context)) {
+            if (!has_capability('mod/data:writeentry', $context)) {
+                return false;
+            }
+            // Check whether we're in a read-only period.
+            if (data_in_readonly_period($data)) {
+                return false;
+            }
         }
         // data_atmaxentries(): the reader has added none.
 
-        if (!$groupmode or has_capability('moodle/site:accessallgroups', $context)) {
+        if (!$groupmode || has_capability('moodle/site:accessallgroups', $context)) {
             return true;
         }
 

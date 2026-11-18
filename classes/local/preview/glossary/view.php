@@ -161,7 +161,7 @@ class view {
         $pivotkey = 'concept';
         [$allentries, $count] = $this->glossary_get_entries_by_letter($hook, $offset, $entriesbypage);
 
-        /// printing the entries
+        // printing the entries
         $entriesshown = 0;
         $currentpivot = '';
         $paging = null;
@@ -220,7 +220,7 @@ class view {
                     }
                 }
 
-                /// and finally print the entry.
+                // and finally print the entry.
                 $out .= $this->glossary_print_entry($entry, $mode, $hook, 1, $this->glossary->displayformat);
                 $entriesshown++;
             }
