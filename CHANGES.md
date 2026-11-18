@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.16] - 2026111802
+
+### Fixed
+- **The H5P of a template is shown embedded again**  
+  A link that asks to be shown as the player of an H5P activity lost its marker when the texts of the AI result were cleaned, so it stayed a plain link. The cleaning now keeps that marker on links, and removes it anywhere else.
+- **The H5P package of a template is no longer broken by the cleaning of the AI texts**  
+  The JSON of an H5P package went through the cleaning of the texts, which turned the escaped quotes of its HTML into raw quotes and left the package unreadable. Those JSON documents are now left as they are, since H5P validates its own content.
+
 ## [2.0.16] - 2026111801
 
 ### Fixed
