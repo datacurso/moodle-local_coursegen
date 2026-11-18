@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.16] - 2026111718
+
+### Fixed
+- **A template from a site without the grid format no longer fails**  
+  Reading the section pictures of a template queried the table of the grid format even when the site does not have it. It now looks for that table first, so a template of any course format is read.
+- **New activities are created with the defaults of their module form**  
+  A module made from an AI result now takes every field the payload leaves out from the form of its module, as saving the form untouched would, so forums, lessons, glossaries, quizzes and workshops no longer stop on a missing field. A feedback label question is also saved with its editor context.
+- **Blocks of a template keep their files, and the teacher's file frame is kept**  
+  The files of a copied block (the images of an HTML block, for one) are copied into the new block, and the frame that shows the file the teacher brings in a template page is no longer removed when the text of the AI result is cleaned.
+- **The choice and lesson previews open with incomplete data**  
+  The previews take the default of the showing options and of the page layout when the exported activity does not carry them.
+
 ## [2.0.16] - 2026111717
 
 ### Fixed
