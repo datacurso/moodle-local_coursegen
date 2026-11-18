@@ -213,9 +213,13 @@ final class template_course_look_test extends \advanced_testcase {
     public function test_free_course_does_not_take_the_format_or_settings(): void {
         $this->resetAfterTest();
         $this->setAdminUser();
-        // The site default must differ from the template's format whatever formats the site has installed.
-        set_config('format', 'weeks', 'moodlecourse');
-        $template = $this->create_template($this->create_template_course()->id);
+        // The site default is fixed, and the template's format is one the site default is not, whichever
+        // optional formats (flexsections, grid) the site has installed.
+        set_config('format', 'topics', 'moodlecourse');
+        $templatecourse = $this->getDataGenerator()->create_course([
+            'format' => 'weeks', 'numsections' => 2, 'lang' => 'es', 'newsitems' => 0,
+        ]);
+        $template = $this->create_template($templatecourse->id);
 
         $result = create_course_service::create_course(
             $this->create_session(0),
@@ -225,7 +229,7 @@ final class template_course_look_test extends \advanced_testcase {
         $this->assertTrue($result['success'], $result['message']);
         $course = get_course($result['courseid']);
         $this->assertSame(get_config('moodlecourse', 'format'), $course->format);
-        $this->assertNotSame('topics', $course->format);
+        $this->assertNotSame('weeks', $course->format);
         $this->assertSame('', $course->lang);
         $this->assertEquals(get_config('moodlecourse', 'newsitems'), $course->newsitems);
     }
