@@ -27,6 +27,10 @@ use local_coursegen\local\service\template_section_look;
 use local_coursegen\local\service\template_section_map;
 use local_coursegen\local\service\template_settings_copier;
 
+defined('MOODLE_INTERNAL') || die();
+
+require_once(__DIR__ . '/flexsections_required_trait.php');
+
 /**
  * A course made from a flexsections template keeps its units and the subsections under them.
  *
@@ -41,6 +45,8 @@ use local_coursegen\local\service\template_settings_copier;
  * @runTestsInSeparateProcesses
  */
 final class template_flexsections_course_test extends \advanced_testcase {
+    use flexsections_required_trait;
+
     /** @var int The template made by create_from_template(). */
     private int $templateid = 0;
 
@@ -59,6 +65,7 @@ final class template_flexsections_course_test extends \advanced_testcase {
      * @return \stdClass
      */
     private function create_template_course(): \stdClass {
+        $this->require_flexsections();
         $course = $this->getDataGenerator()->create_course(['format' => 'flexsections', 'numsections' => 0]);
         $format = course_get_format($course);
         $tree = [
@@ -427,6 +434,7 @@ final class template_flexsections_course_test extends \advanced_testcase {
         $this->setAdminUser();
         $result = $this->create_from_template(null);
         $course = get_course($result['courseid']);
+        $this->require_flexsections();
         $bare = $this->getDataGenerator()->create_course(['format' => 'flexsections', 'numsections' => 0]);
         $before = $DB->get_field('course_sections', 'summary', ['course' => $course->id, 'section' => 8]);
         $info = ['section' => 8, 'source_section' => 99, 'summary' => 'Fresh'];

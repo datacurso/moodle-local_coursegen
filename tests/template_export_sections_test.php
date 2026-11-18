@@ -18,6 +18,10 @@ namespace local_coursegen;
 
 use local_coursegen\local\service\template_export_sections;
 
+defined('MOODLE_INTERNAL') || die();
+
+require_once(__DIR__ . '/flexsections_required_trait.php');
+
 /**
  * Unit tests for template_export_sections::sections_info().
  *
@@ -30,6 +34,8 @@ use local_coursegen\local\service\template_export_sections;
  * @runTestsInSeparateProcesses
  */
 final class template_export_sections_test extends \advanced_testcase {
+    use flexsections_required_trait;
+
     /**
      * Every section's own entry carries a random UUID uid, not the old
      * "section-{templateid}-{id}" derived key.
@@ -118,6 +124,7 @@ final class template_export_sections_test extends \advanced_testcase {
      * @return \stdClass
      */
     private function create_flexsections_course(): \stdClass {
+        $this->require_flexsections();
         $course = $this->getDataGenerator()->create_course(['format' => 'flexsections', 'numsections' => 0]);
         $format = course_get_format($course);
         // Section number => parent number: 1 and 2 are units, 3 and 4 are children of 2 and 5 of 4.

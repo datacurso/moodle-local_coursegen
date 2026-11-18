@@ -21,6 +21,10 @@ use local_coursegen\local\models\template_activity;
 use local_coursegen\local\models\template_instance;
 use local_coursegen\local\service\template_export_service;
 
+defined('MOODLE_INTERNAL') || die();
+
+require_once(__DIR__ . '/flexsections_required_trait.php');
+
 /**
  * Unit tests for template_export_service::build_init_payload().
  *
@@ -33,6 +37,8 @@ use local_coursegen\local\service\template_export_service;
  * @runTestsInSeparateProcesses
  */
 final class template_export_service_test extends \advanced_testcase {
+    use flexsections_required_trait;
+
     /**
      * A real activity's own entry carries a random UUID uid, not the old
      * "cm-{templateid}-{cmid}" derived key.
@@ -311,6 +317,7 @@ final class template_export_service_test extends \advanced_testcase {
      * @return \stdClass
      */
     private function create_flexsections_course(): \stdClass {
+        $this->require_flexsections();
         $course = $this->getDataGenerator()->create_course(['format' => 'flexsections', 'numsections' => 0]);
         $format = course_get_format($course);
         $parents = [1 => 0, 2 => 1, 3 => 1, 4 => 0, 5 => 4, 6 => 4, 7 => 0];
