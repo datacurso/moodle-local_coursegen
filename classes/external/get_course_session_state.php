@@ -40,8 +40,6 @@ use local_coursegen\local\service\creation_permissions;
 
 defined('MOODLE_INTERNAL') || die();
 
-require_once($CFG->libdir . '/externallib.php');
-
 /**
  * External API to retrieve resumable state for an AI course session.
  *

@@ -39,8 +39,6 @@ use context_system;
 
 defined('MOODLE_INTERNAL') || die();
 
-require_once($CFG->libdir . '/externallib.php');
-
 /**
  * External API for fetching the AI-generated course settings for final review.
  *

@@ -77,16 +77,13 @@ final class plugin_disabled_external_test extends \advanced_testcase {
     ];
 
     /**
-     * Log in a user without capabilities, point the service URL nowhere and load the legacy external API.
+     * Log in a user without capabilities, point the service URL nowhere.
      *
      * @return void
      */
     protected function setUp(): void {
-        global $CFG;
-
         parent::setUp();
         $this->resetAfterTest();
-        require_once($CFG->libdir . '/externallib.php');
         set_config('datacurso_service_url', 'https://invalid.invalid', 'local_coursegen');
         $this->setUser($this->getDataGenerator()->create_user());
     }

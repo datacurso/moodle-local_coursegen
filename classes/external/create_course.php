@@ -44,8 +44,6 @@ use invalid_parameter_exception;
 
 defined('MOODLE_INTERNAL') || die();
 
-require_once($CFG->libdir . '/externallib.php');
-
 /**
  * External API for creating courses with AI assistance.
  */

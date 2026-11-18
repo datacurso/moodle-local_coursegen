@@ -39,8 +39,6 @@ use local_coursegen\local\service\creation_permissions;
 
 defined('MOODLE_INTERNAL') || die();
 
-require_once($CFG->libdir . '/externallib.php');
-
 /**
  * External API to send human feedback for AI course planning sessions.
  */
