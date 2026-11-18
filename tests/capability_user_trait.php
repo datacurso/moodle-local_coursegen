@@ -71,4 +71,16 @@ trait capability_user_trait {
         $granted = array_merge($extra, $others);
         $this->login_user_with($granted);
     }
+
+    /**
+     * Skip the test on a site that has no Datacurso AI provider with the plugin settings class.
+     *
+     * The external functions ask that class whether the plugin is enabled before anything else, so a test
+     * that calls one cannot run where the provider is not installed (plain Moodle CI).
+     */
+    protected function skip_without_ai_provider(): void {
+        if (!class_exists(\aiprovider_datacurso\local\plugin_settings::class)) {
+            $this->markTestSkipped('aiprovider_datacurso is not installed.');
+        }
+    }
 }

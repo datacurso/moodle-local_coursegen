@@ -68,6 +68,14 @@ final class course_creation_capabilities_test extends \advanced_testcase {
     use capability_user_trait;
 
     /**
+     * Every test calls an external function, which needs the Datacurso AI provider.
+     */
+    protected function setUp(): void {
+        parent::setUp();
+        $this->skip_without_ai_provider();
+    }
+
+    /**
      * A user with everything else is refused a function whose own capability they lack.
      *
      * @dataProvider function_provider
