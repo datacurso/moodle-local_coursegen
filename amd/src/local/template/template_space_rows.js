@@ -1,0 +1,417 @@
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+/**
+ * DOM behaviour of a virtual space row: inserting one (the same markup
+ * template_course_sections_row.mustache renders server-side, so a freshly
+ * added row is indistinguishable from a saved one), editing it through the
+ * shared space modal, and removing it. Scraping rows back into the save
+ * payload lives with the other virtual rows, in template_instance_rows.js.
+ *
+ * @module     local_coursegen/local/template/template_space_rows
+ * @copyright  2026 Wilber Narvaez <https://datacurso.com>
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
+import {
+    renderRowFragment,
+    buildGapRow,
+    dropGapBeforeAddRow,
+    removeInstanceRow,
+    insertGeneratedRow,
+} from 'local_coursegen/local/template/template_instance_rows';
+import {openSpaceModal} from 'local_coursegen/local/template/template_space_modal';
+import {pickSpace} from 'local_coursegen/local/template/template_space_picker';
+import {closeInstanceMenu} from 'local_coursegen/local/template/template_instance_menu';
+import {get_string as getString} from 'core/str';
+import {prefetchStrings} from 'core/prefetch';
+import {editTeacherSpace} from 'local_coursegen/local/template/template_teacher_space';
+import Selectors from 'local_coursegen/local/template/selectors';
+import {CLASS, COMPONENT, EVENT, NEW_ROW_PREFIX, REQUIRED_VALUE, STRING, TAG} from 'local_coursegen/local/template/constants';
+
+/** @type {number} Client-only counter for unique data-space-id values on unsaved rows. */
+let nextTempId = 1;
+
+/**
+ * The 1/0 flag a requirement is stored as on a row and in the save payload.
+ *
+ * @param {boolean} required
+ * @returns {number}
+ */
+const requiredFlagOf = (required) => {
+    if (required) {
+        return 1;
+    }
+    return 0;
+};
+
+/**
+ * The language string key of a requirement label.
+ *
+ * @param {boolean} required
+ * @returns {string}
+ */
+const requirementKeyOf = (required) => {
+    if (required) {
+        return STRING.SPACE_REQUIRED;
+    }
+    return STRING.SPACE_OPTIONAL;
+};
+
+/**
+ * The badge text for a requirement: "Space · Required" / "Space · Optional".
+ *
+ * @param {boolean} required
+ * @returns {Promise<string>}
+ */
+export const spaceBadgeText = async(required) => {
+    const key = requirementKeyOf(required);
+    const requirement = await getString(key, COMPONENT);
+    return getString(STRING.SPACE_BADGE, COMPONENT, requirement);
+};
+
+/**
+ * Whether a gap row already sits immediately before the given element.
+ *
+ * @param {HTMLElement} beforeEl The row-gap or add-row the trigger belongs to.
+ * @returns {boolean}
+ */
+const hasLeadingGap = (beforeEl) => {
+    const previous = beforeEl.previousElementSibling;
+    if (!previous) {
+        return false;
+    }
+    return previous.matches(Selectors.regions.rowGap);
+};
+
+/**
+ * Insert a new space row (plus its own trailing gap) immediately before the
+ * given element, adding a leading gap first when none precedes it.
+ *
+ * @param {HTMLElement} tbody The section's table body.
+ * @param {HTMLElement} beforeEl The row-gap or add-row the trigger belongs to.
+ * @param {Object} space {modname, name, icon, required, instruction}
+ * @returns {Promise<HTMLElement>} The new space row.
+ */
+export const insertSpaceRow = async(tbody, beforeEl, space) => {
+    if (!hasLeadingGap(beforeEl)) {
+        const leadingGap = await buildGapRow();
+        tbody.insertBefore(leadingGap, beforeEl);
+    }
+
+    const badge = await spaceBadgeText(space.required);
+    const requiredvalue = requiredFlagOf(space.required);
+    const tempId = nextTempId++;
+    const context = {
+        spaceid: NEW_ROW_PREFIX + tempId,
+        name: space.name,
+        typelabel: space.name,
+        modname: space.modname,
+        icon: space.icon,
+        requiredvalue,
+        badge,
+        instruction: space.instruction,
+        hasinstruction: space.instruction !== '',
+        options: space.options ? JSON.stringify(space.options) : '',
+        ismulti: !!space.options,
+    };
+    const fragment = await renderRowFragment('local_coursegen/template_space_row', context);
+    const row = fragment.querySelector(Selectors.regions.spaceRow);
+    tbody.insertBefore(fragment, beforeEl);
+    const trailingGap = await buildGapRow();
+    tbody.insertBefore(trailingGap, beforeEl);
+    dropGapBeforeAddRow(tbody);
+    return row;
+};
+
+/**
+ * Paint a new requirement and instruction onto an existing space row.
+ *
+ * @param {HTMLElement} row The row (a space row).
+ * @param {{required: boolean, instruction: string}} choice
+ */
+const applyChoiceToRow = async(row, choice) => {
+    const flag = requiredFlagOf(choice.required);
+    row.dataset.required = String(flag);
+    const badgeEl = row.querySelector(Selectors.regions.spaceBadge);
+    badgeEl.textContent = await spaceBadgeText(choice.required);
+    const instructionEl = row.querySelector(Selectors.regions.spaceInstruction);
+    instructionEl.textContent = choice.instruction;
+    instructionEl.classList.toggle(CLASS.HIDDEN, choice.instruction === '');
+};
+
+/**
+ * The generic name of a new activity of a type whose name the AI writes: the type and the next number among the ones
+ * of the same type already named so in the template ("Book 1", "Book 2"...).
+ *
+ * @param {Object} picked {modname, name} of the picked type.
+ * @returns {string}
+ */
+export const genericName = (picked) => {
+    const escaped = picked.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const pattern = new RegExp(`^${escaped} (\\d+)$`);
+    let highest = 0;
+    document.querySelectorAll(`${Selectors.rows.instance}[data-modname="${picked.modname}"]`).forEach((row) => {
+        const value = row.querySelector(Selectors.regions.instanceNameEditable)?.dataset.value || '';
+        const number = pattern.exec(value.trim());
+        if (number) {
+            highest = Math.max(highest, parseInt(number[1], 10));
+        }
+    });
+    return `${picked.name} ${highest + 1}`;
+};
+
+/**
+ * Insert the space the admin just configured for a freshly picked type.
+ *
+ * @param {HTMLElement} tbody The section's table body.
+ * @param {HTMLElement} beforeEl The row-gap or add-row the menu opened from.
+ * @param {Object} picked {modname, name, icon} of the picked type.
+ * @param {Function} markDirty Marks the wizard as having unsaved changes.
+ * @param {{mode: string, name: string, required: boolean, instruction: string}} choice What the modal saved.
+ */
+const saveNewSpace = async(tbody, beforeEl, picked, markDirty, choice) => {
+    if (choice.mode === 'ai') {
+        // The AI always creates it from this instruction: an activity of its own, with no template behind it. With no
+        // name, it is "Book 1", "Book 2"... in the template, and the AI writes its real title when it is generated.
+        const iconurl = (/src="([^"]+)"/.exec(picked.icon || '') || [])[1] || '';
+        await insertGeneratedRow(tbody, beforeEl, {
+            modname: picked.modname,
+            name: choice.name || genericName(picked),
+            ainame: !choice.name,
+            typelabel: picked.name,
+            iconurl,
+            prompt: choice.instruction,
+        });
+    } else {
+        await insertSpaceRow(tbody, beforeEl, {...picked, ...choice});
+    }
+    markDirty();
+};
+
+/** @type {boolean} The modal of a new space is being opened or is open: a second click opens no second modal. */
+let picking = false;
+
+/**
+ * Add a space for an activity at the position the menu opened from: the admin ticks one activity or several, each
+ * with its instruction, and the row is inserted. A second click while the modal is open does nothing.
+ *
+ * @param {HTMLElement} item The clicked "add a space" menu item.
+ * @param {Object} state The live wizard state from init.js.
+ * @param {Function} markDirty Marks the wizard as having unsaved changes.
+ */
+export const addSpace = async(item, state, markDirty) => {
+    if (picking) {
+        return;
+    }
+    picking = true;
+    try {
+        await addSpaceAt(item, state, markDirty);
+    } finally {
+        picking = false;
+    }
+};
+
+/**
+ * Add a space at the place the menu item opened from (see {@see addSpace}).
+ *
+ * @param {HTMLElement} item The clicked "add a space" menu item.
+ * @param {Object} state The live wizard state from init.js.
+ * @param {Function} markDirty Marks the wizard as having unsaved changes.
+ */
+const addSpaceAt = async(item, state, markDirty) => {
+    const beforeEl = item.closest(Selectors.regions.gapOrAddInstance);
+    const table = beforeEl.closest(TAG.TABLE);
+    const tbody = table.querySelector(TAG.TABLE_BODY);
+    const triggerEl = beforeEl.querySelector(Selectors.actions.instanceTrigger);
+    closeInstanceMenu(triggerEl);
+
+    // One activity or several, each with its instruction: one is created by the AI (a File can instead be one the
+    // teacher uploads); among several, the teacher chooses one when creating the course.
+    const result = await pickSpace({courseId: state.selectedCourseId, supportedTypes: state.supportedTypes});
+    if (result === null) {
+        return;
+    }
+    if (result.kind === 'several') {
+        await insertSpaceRow(tbody, beforeEl, {
+            name: await getString('template_teacher_space_name', COMPONENT, result.titles.join(', ')),
+            modname: result.options[0].modname,
+            icon: '',
+            required: result.required,
+            instruction: '',
+            options: result.options,
+        });
+        markDirty();
+        return;
+    }
+    await saveNewSpace(tbody, beforeEl, result.picked, markDirty, result.choice);
+};
+
+/**
+ * Apply the choice saved for an existing space row.
+ *
+ * @param {HTMLElement} row The row (a space row).
+ * @param {Function} markDirty Marks the wizard as having unsaved changes.
+ * @param {{required: boolean, instruction: string}} choice What the modal saved.
+ */
+const saveEditedSpace = async(row, markDirty, choice) => {
+    await applyChoiceToRow(row, choice);
+    markDirty();
+};
+
+/**
+ * Reopen the shared modal for one existing space row.
+ *
+ * @param {HTMLElement} row The row (a space row).
+ * @param {Function} markDirty Marks the wizard as having unsaved changes.
+ */
+const editSpaceRow = (row, markDirty) => {
+    if (row.dataset.options) {
+        // A space with several activities: the same modal as a new one, with what it saved. When one activity is left,
+        // the row is replaced by what one activity is, in the same place.
+        editTeacherSpace(row, markDirty, async(result) => {
+            const tbody = row.closest(TAG.TABLE_BODY);
+            await saveNewSpace(tbody, row, result.picked, markDirty, result.choice);
+            removeInstanceRow(row);
+        });
+        return;
+    }
+    const nameCell = row.querySelector(Selectors.regions.typeLabel);
+    const subject = nameCell.textContent.trim();
+    const instructionEl = row.querySelector(Selectors.regions.spaceInstruction);
+    const instruction = instructionEl.textContent.trim();
+    const onSave = saveEditedSpace.bind(null, row, markDirty);
+    openSpaceModal({subject, required: row.dataset.required === REQUIRED_VALUE, instruction, onSave, lockMode: true});
+};
+
+/** @type {Object} The course and the types of the template, for the modal opened from a row. */
+const editContext = {courseId: 0, supportedTypes: []};
+
+/**
+ * Remember the course and the types of the template, for the modal opened from a row of an activity of the AI.
+ *
+ * @param {Object} state The live wizard state.
+ */
+export const setGeneratedEditContext = (state) => {
+    editContext.courseId = state.selectedCourseId;
+    editContext.supportedTypes = state.supportedTypes;
+};
+
+/**
+ * Edit an activity the AI creates in the modal of "Add space for an activity", with its type, name and instruction.
+ * Kept as one activity of the AI, the row is updated in place; turned into anything else (several activities, the
+ * File the teacher uploads, another type) the row is replaced by it, in the same place.
+ *
+ * @param {HTMLElement} row The instance row.
+ * @param {Function} markDirty Marks the wizard as having unsaved changes.
+ * @returns {Promise<void>}
+ */
+const editGeneratedRow = async(row, markDirty) => {
+    const nameEl = row.querySelector(Selectors.regions.instanceNameEditable);
+    const promptRow = row.nextElementSibling;
+    const promptEl = promptRow?.querySelector(Selectors.regions.instancePrompt);
+    const modname = row.dataset.modname;
+    const preset = {
+        options: [{
+            modname,
+            instruction: promptEl?.value || '',
+            name: row.dataset.ainame === '1' ? '' : (nameEl?.dataset.value || ''),
+            mode: 'ai',
+        }],
+        required: true,
+    };
+    const result = await pickSpace({courseId: editContext.courseId, supportedTypes: editContext.supportedTypes, preset});
+    if (result === null) {
+        return;
+    }
+    const same = result.kind === 'single' && result.choice.mode === 'ai' && result.picked.modname === modname;
+    if (!same) {
+        const tbody = row.closest(TAG.TABLE_BODY);
+        if (result.kind === 'several') {
+            await insertSpaceRow(tbody, row, {
+                name: await getString('template_teacher_space_name', COMPONENT, result.titles.join(', ')),
+                modname: result.options[0].modname,
+                icon: '',
+                required: result.required,
+                instruction: '',
+                options: result.options,
+            });
+            markDirty();
+        } else {
+            await saveNewSpace(tbody, row, result.picked, markDirty, result.choice);
+        }
+        removeInstanceRow(row);
+        return;
+    }
+    const name = result.choice.name || genericName(result.picked);
+    row.dataset.ainame = result.choice.name ? '0' : '1';
+    if (nameEl) {
+        nameEl.dataset.value = name;
+        nameEl.querySelector('[data-region="instance-name-display"]').textContent = name;
+    }
+    if (promptEl) {
+        promptEl.value = result.choice.instruction;
+    }
+    const shown = row.querySelector('[data-region="local_coursegen/template/generated-instruction"]');
+    shown.textContent = result.choice.instruction;
+    shown.classList.toggle(CLASS.HIDDEN, result.choice.instruction === '');
+    markDirty();
+};
+
+/**
+ * Handle a click on a space row: the badge and the edit icon reopen the
+ * shared modal for that row; the remove icon removes it.
+ *
+ * @param {Function} markDirty Marks the wizard as having unsaved changes.
+ * @param {MouseEvent} e The click.
+ */
+const handleSpaceRowClick = (markDirty, e) => {
+    const generated = e.target.closest('[data-action="local_coursegen/template/generated-edit"]');
+    if (generated) {
+        editGeneratedRow(generated.closest(Selectors.rows.instance), markDirty);
+        return;
+    }
+    const row = e.target.closest(Selectors.regions.spaceRow);
+    if (!row) {
+        return;
+    }
+    if (e.target.closest(Selectors.actions.spaceRemove)) {
+        removeInstanceRow(row);
+        markDirty();
+        return;
+    }
+    if (e.target.closest(Selectors.actions.spaceEdit)) {
+        editSpaceRow(row, markDirty);
+    }
+};
+
+/**
+ * Bind the clicks of space rows.
+ *
+ * @param {HTMLElement} container The rendered course sections review.
+ * @param {Function} markDirty Marks the wizard as having unsaved changes.
+ */
+export const bindSpaceRows = (container, markDirty) => {
+    prefetchStrings(COMPONENT, [
+        STRING.SPACE_BADGE,
+        STRING.SPACE_REQUIRED,
+        STRING.SPACE_OPTIONAL,
+        'template_space_edit',
+        'template_space_remove',
+        STRING.SPACE_MODAL_TITLE,
+    ]);
+    const onClick = handleSpaceRowClick.bind(null, markDirty);
+    container.addEventListener(EVENT.CLICK, onClick);
+};

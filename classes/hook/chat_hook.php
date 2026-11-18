@@ -94,11 +94,14 @@ class chat_hook {
         global $PAGE, $COURSE;
         if (self::can_create_activity()) {
             $languageoptions = self::get_supported_language_options();
+            $coursecontext = \context_course::instance($COURSE->id);
+            $canimages = has_capability('local/coursegen:generateactivityimages', $coursecontext);
             $PAGE->requires->js_call_amd('local_coursegen/activityai', 'init', [
                 $COURSE->id,
                 self::is_moodle_45(),
                 $languageoptions,
                 self::get_default_language_code($languageoptions),
+                $canimages,
                 \local_coursegen\local\bootstrap_classes::get(),
             ]);
         }
@@ -165,21 +168,5 @@ class chat_hook {
             'moodle/course:manageactivities',
             'local/coursegen:createactivitywithai',
         ], $context);
-    }
-
-    /**
-     * Check if user can create a course
-     */
-    private static function can_create_course(): bool {
-        global $PAGE;
-
-        // Show only on personal area pages (e.g. My courses).
-        $path = $PAGE->url->get_path();
-        $ispersonalarea = strpos($path, '/my/') === 0;
-        if (!$ispersonalarea) {
-            return false;
-        }
-
-        return \local_coursegen\local\service\creation_permissions::can_create_anywhere();
     }
 }

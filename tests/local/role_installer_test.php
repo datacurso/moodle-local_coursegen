@@ -37,7 +37,10 @@ final class role_installer_test extends \advanced_testcase {
     /** @var string[] Capabilities the creator role adds on top of the archetype defaults. */
     private const CREATOR_EXTRAS = [
         'local/coursegen:createactivitywithai',
-        'local/coursegen:createcoursewithai',
+        'local/coursegen:createfreecoursewithai',
+        'local/coursegen:createtemplatecoursewithai',
+        'local/coursegen:generatecourseimages',
+        'local/coursegen:uploadcoursesyllabus',
         'moodle/course:create',
         'moodle/course:view',
     ];
@@ -333,7 +336,7 @@ final class role_installer_test extends \advanced_testcase {
 
         $DB->delete_records('capabilities', ['component' => 'local_coursegen']);
         \cache::make('core', 'capabilities')->delete('core_capabilities');
-        $this->assertNull(get_capability_info('local/coursegen:createcoursewithai', false));
+        $this->assertNull(get_capability_info('local/coursegen:createfreecoursewithai', false));
 
         $created = role_installer::install_missing_roles();
 

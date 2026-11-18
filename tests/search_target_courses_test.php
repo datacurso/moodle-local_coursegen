@@ -125,7 +125,7 @@ final class search_target_courses_test extends \advanced_testcase {
 
         $this->user = $generator->create_user();
 
-        $this->allow_createcoursewithai_at_system($this->user->id);
+        $this->allow_createfreecoursewithai_at_system($this->user->id);
         $this->allow_course_create_in_category($this->user->id, (int) $this->categorya->id);
 
         $this->grant_in_course($this->user->id, (int) $this->coursealpha->id, true, true);
@@ -138,15 +138,15 @@ final class search_target_courses_test extends \advanced_testcase {
     }
 
     /**
-     * Give the user local/coursegen:createcoursewithai at system level.
+     * Give the user local/coursegen:createfreecoursewithai at system level.
      *
      * @param int $userid User id.
      * @return void
      */
-    private function allow_createcoursewithai_at_system(int $userid): void {
+    private function allow_createfreecoursewithai_at_system(int $userid): void {
         $systemcontext = \context_system::instance();
         $roleid = $this->getDataGenerator()->create_role(['shortname' => 'aicoursecreator']);
-        assign_capability('local/coursegen:createcoursewithai', CAP_ALLOW, $roleid, $systemcontext->id, true);
+        assign_capability('local/coursegen:createfreecoursewithai', CAP_ALLOW, $roleid, $systemcontext->id, true);
         role_assign($roleid, $userid, $systemcontext->id);
     }
 
@@ -227,9 +227,9 @@ final class search_target_courses_test extends \advanced_testcase {
     }
 
     /**
-     * A user without local/coursegen:createcoursewithai is rejected.
+     * A user without local/coursegen:createfreecoursewithai is rejected.
      */
-    public function test_missing_createcoursewithai_is_rejected(): void {
+    public function test_missing_createfreecoursewithai_is_rejected(): void {
         $other = $this->getDataGenerator()->create_user();
         $this->allow_course_create_in_category($other->id, (int) $this->categorya->id);
         $this->setUser($other);

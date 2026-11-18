@@ -28,22 +28,25 @@ use aiprovider_datacurso\local\plugin_settings;
 defined('MOODLE_INTERNAL') || die();
 
 if ($hassiteconfig) {
-    // The target page requires BOTH capabilities, so the menu entry must check
-    // both too: admin_externalpage ORs the capabilities it is given and cannot
-    // express that, which showed the entry to users the page then rejected.
-    $coursegencapabilities = ['moodle/course:create', 'local/coursegen:createcoursewithai'];
+    // The target page requires the core capability to create courses AND one of
+    // the two modes, so the menu entry must check the same: admin_externalpage
+    // ORs the capabilities it is given and cannot express that, which showed the
+    // entry to users the page then rejected.
+    $creationmodes = ['local/coursegen:createfreecoursewithai', 'local/coursegen:createtemplatecoursewithai'];
+    $systemcontext = context_system::instance();
     // The entry is hidden while the plugin is disabled in the Datacurso AI provider, or the provider is missing
     // (the admin tree is also built while installing a site, before the dependency can be checked).
     if (
         class_exists(plugin_settings::class)
         && plugin_settings::is_enabled('local_coursegen')
-        && has_all_capabilities($coursegencapabilities, context_system::instance())
+        && has_capability('moodle/course:create', $systemcontext)
+        && has_any_capability($creationmodes, $systemcontext)
     ) {
         $ADMIN->add('courses', new admin_externalpage(
             'local_coursegen_addnewcourseai',
             get_string('courseai_admin_addnewcourse', 'local_coursegen'),
             new moodle_url('/local/coursegen/aicoursecreation.php'),
-            'local/coursegen:createcoursewithai'
+            $creationmodes
         ), 'restorecourse');
     }
 
@@ -141,30 +144,54 @@ if ($hassiteconfig) {
     $ADMIN->add($pluginname, new admin_externalpage(
         'local_coursegen_manage_system_instructions',
         get_string('managesysteminstructions', 'local_coursegen'),
-        new moodle_url('/local/coursegen/manage_system_instructions.php')
+        new moodle_url('/local/coursegen/manage_system_instructions.php'),
+        'local/coursegen:viewsysteminstructions'
     ));
 
     $ADMIN->add($pluginname, new admin_externalpage(
         'local_coursegen_manage_image_generation',
         get_string('manage_image_generation', 'local_coursegen'),
         new moodle_url('/local/coursegen/manage_image_generation.php'),
-        'local/coursegen:manageimagegeneration'
+        'local/coursegen:viewimagegenerationsettings'
+    ));
+
+    $ADMIN->add($pluginname, new admin_externalpage(
+        'local_coursegen_manage_templates',
+        get_string('managetemplates', 'local_coursegen'),
+        new moodle_url('/local/coursegen/manage_templates.php'),
+        'local/coursegen:viewtemplates'
+    ));
+
+    $ADMIN->add($pluginname, new admin_externalpage(
+        'local_coursegen_import_template',
+        get_string('template_import', 'local_coursegen'),
+        new moodle_url('/local/coursegen/import_template.php'),
+        'local/coursegen:edittemplates',
+        true
+    ));
+
+    $ADMIN->add($pluginname, new admin_externalpage(
+        'local_coursegen_edit_template',
+        get_string('template_create', 'local_coursegen'),
+        new moodle_url('/local/coursegen/edit_template.php'),
+        ['local/coursegen:createtemplates', 'local/coursegen:edittemplates'],
+        true
     ));
 
     $ADMIN->add($pluginname, new admin_externalpage(
         'local_coursegen_edit_system_instruction',
         get_string('editsysteminstruction', 'local_coursegen'),
         new moodle_url('/local/coursegen/edit_system_instruction.php'),
-        'moodle/site:config',
+        ['local/coursegen:createsysteminstructions', 'local/coursegen:editsysteminstructions'],
         true
     ));
-} else if (has_capability('local/coursegen:manageimagegeneration', context_system::instance())) {
-    // Users who manage image generation without being site administrators still need
+} else if (has_capability('local/coursegen:viewimagegenerationsettings', context_system::instance())) {
+    // Users who can view the image generation settings without being site administrators still need
     // the page in the admin tree: admin_externalpage_setup() only opens registered pages.
     $ADMIN->add('localplugins', new admin_externalpage(
         'local_coursegen_manage_image_generation',
         get_string('manage_image_generation', 'local_coursegen'),
         new moodle_url('/local/coursegen/manage_image_generation.php'),
-        'local/coursegen:manageimagegeneration'
+        'local/coursegen:viewimagegenerationsettings'
     ));
 }

@@ -1,0 +1,337 @@
+<?php
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+namespace local_coursegen\local\service;
+
+use local_coursegen\local\models\template;
+use local_coursegen\local\models\template_activity;
+use local_coursegen\local\models\template_instance;
+use local_coursegen\local\models\template_section;
+
+/**
+ * Builds the /course-template/init payload for one saved template.
+ *
+ * Two kinds of entry travel in "activities": the base course's own real
+ * activities (carrying the admin's saved action - keep/reference/template),
+ * and the template's virtual instances, which have no course module of their
+ * own and are submitted as action="instance" driven by the mold they were
+ * created from (template_source_cmid).
+ *
+ * How every element is named stably across requests lives in
+ * template_export_uids.php; how a section's own layout is described lives in
+ * template_export_sections.php.
+ *
+ * @package    local_coursegen
+ * @copyright  2026 Wilber Narvaez <https://datacurso.com>
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+class template_export_service {
+    /**
+     * Build the full init payload.
+     *
+     * @param int $templateid
+     * @param string $generalinstruction The professor's single prompt/syllabus instruction.
+     * @param string $lang The language the professor picked for the generated course. Empty leaves it to the AI
+     *                     service to detect it (the template course's language travels only as the fallback).
+     * @param bool $withimages Whether the professor asked for the images to be generated.
+     * @param int|null $units How many units a flexsections course has to hold; null keeps the template's own.
+     *                        Another format has no units, so it is left as it is.
+     * @param string $instructions The institutional guidelines text; the payload has no such key when it is empty.
+     * @param array $spacechoices The activities the teacher adds in the spaces (teacher_space_choices::validated()).
+     * @return array
+     */
+    public static function build_init_payload(
+        int $templateid,
+        string $generalinstruction = '',
+        string $lang = '',
+        bool $withimages = false,
+        ?int $units = null,
+        string $instructions = '',
+        array $spacechoices = []
+    ): array {
+        global $CFG;
+
+        $template = template::get_record(['id' => $templateid]);
+        if (!$template) {
+            throw new \moodle_exception('invalidtemplate', 'local_coursegen');
+        }
+
+        $courseid = $template->get('courseid');
+        $course = get_course($courseid);
+        $modinfo = get_fast_modinfo($course);
+
+        $actions = self::saved_activity_actions($templateid);
+        $behaviors = self::saved_section_behaviors($templateid);
+        $namings = self::saved_section_namings($templateid);
+
+        $langauto = ($lang === '');
+        if ($langauto) {
+            $lang = $course->lang;
+        }
+        if (!$lang) {
+            $lang = current_language();
+        }
+
+        $sectioninfoall = $modinfo->get_section_info_all();
+        $numsections = count($sectioninfoall) - 1;
+
+        $formatoptions = template_export_sections::format_settings($course);
+        $sectionsinfo = template_export_sections::sections_info($course, $modinfo, $behaviors, $namings);
+
+        $realactivities = self::real_activities($modinfo, $actions);
+        $instanceactivities = self::instance_activities($templateid, $modinfo);
+        $sectionnums = [];
+        foreach ($sectioninfoall as $sectioninfo) {
+            $sectionnums[(int) $sectioninfo->id] = (int) $sectioninfo->section;
+        }
+        $spaceactivities = teacher_space_choices::payload_entries($spacechoices, $sectionnums);
+        $activities = array_merge($realactivities, $instanceactivities, $spaceactivities);
+        if ($units !== null && $course->format === 'flexsections') {
+            // The service keeps the structure it is given, so the units are made as many as wanted here.
+            $templatesections = count($sectionsinfo);
+            $sectionsinfo = template_unit_resizer::resize($sectionsinfo, $units);
+            $activities = template_unit_resizer::activities($activities, $sectionsinfo, $templatesections);
+            $numsections = count($sectionsinfo) - 1;
+        }
+
+        $courseconfiguration = [
+            'fullname' => $course->fullname,
+            'shortname' => $course->shortname,
+            'lang' => $lang,
+            'numsections' => $numsections,
+            // How the course is laid out, and how its format is set up.
+            // A course generated from a template is the template's course
+            // with other content in it, so it is read the same way, and a
+            // preview of it has to be drawn the same way.
+            'format' => $course->format,
+            'format_options' => $formatoptions,
+            // What the new course takes from the template's course as it is.
+            'enablecompletion' => (int) $course->enablecompletion,
+            'course_settings' => template_course_settings::export($course),
+        ];
+
+        $payload = [
+            'course_configuration' => $courseconfiguration,
+            'sections_info' => $sectionsinfo,
+            'activities' => $activities,
+            // The pictures of the course itself the author asked to be made again, with their instruction. They are sent
+            // even when the person chose no images, since the run can turn images on; the service makes them only then.
+            'image_slots' => template_course_image_slots::payload(template_course_image_slots::for_run($course, $withimages)),
+            'general_instruction' => $generalinstruction,
+            'lang' => $lang,
+            'lang_auto' => $langauto,
+            'with_images' => $withimages,
+            'site_url' => $CFG->wwwroot,
+            // Reference files are attached after /init (they need its
+            // thread_id), so the run must not start until they have landed.
+            'defer_start' => true,
+        ];
+        if ($instructions !== '') {
+            // Only when a guideline was chosen, so the payload stays as it was for everyone else.
+            $payload['instructions'] = $instructions;
+        }
+        return $payload;
+    }
+
+    /**
+     * cmid => saved action, for this template.
+     *
+     * @param int $templateid
+     * @return array
+     */
+    private static function saved_activity_actions(int $templateid): array {
+        $records = template_activity::get_records(['templateid' => $templateid]);
+        $actions = [];
+        foreach ($records as $activity) {
+            $cmid = (int) $activity->get('cmid');
+            $action = $activity->get('action');
+            $actions[$cmid] = $action;
+        }
+        return $actions;
+    }
+
+    /**
+     * sectionid => how each template section names its copies, for this template.
+     *
+     * @param int $templateid
+     * @return array
+     */
+    private static function saved_section_namings(int $templateid): array {
+        $namings = [];
+        $records = template_section::get_records(['templateid' => $templateid, 'behavior' => template_section::BEHAVIOR_TEMPLATE]);
+        foreach ($records as $section) {
+            $namings[(int) $section->get('sectionid')] = [
+                'naming_pattern' => (string) $section->get('namingpattern'),
+                'naming_start' => (int) $section->get('namingstart'),
+            ];
+        }
+        return $namings;
+    }
+
+    /**
+     * sectionid => saved behavior, for this template.
+     *
+     * @param int $templateid
+     * @return array
+     */
+    private static function saved_section_behaviors(int $templateid): array {
+        $records = template_section::get_records(['templateid' => $templateid]);
+        $behaviors = [];
+        foreach ($records as $section) {
+            $sectionid = (int) $section->get('sectionid');
+            $behavior = $section->get('behavior');
+            $behaviors[$sectionid] = $behavior;
+        }
+        return $behaviors;
+    }
+
+    /**
+     * The base course's own activities, excluding the ones marked "exclude"
+     * and the ones marked "space": those are for the professor to provide,
+     * so the AI service is never asked about them.
+     *
+     * @param \course_modinfo $modinfo
+     * @param array $actions
+     * @return array
+     */
+    private static function real_activities($modinfo, array $actions): array {
+        $cms = $modinfo->get_cms();
+        $activities = [];
+        foreach ($cms as $cm) {
+            if (!$cm->uservisible) {
+                continue;
+            }
+            $action = $actions[$cm->id] ?? template_activity::ACTION_KEEP;
+            if ($action === template_activity::ACTION_EXCLUDE || $action === template_activity::ACTION_SPACE) {
+                continue;
+            }
+            if ($action === template_activity::ACTION_AIMODIFY) {
+                // What the AI reads to change it: its mold when it has markers, its reference otherwise.
+                $action = ai_modified_activity::export_action($cm);
+            }
+            $activities[] = self::real_activity_entry($cm, $action);
+        }
+        return $activities;
+    }
+
+    /**
+     * One real activity's own entry.
+     *
+     * @param \cm_info $cm
+     * @param string $action
+     * @return array
+     */
+    private static function real_activity_entry($cm, string $action): array {
+        $cmid = (int) $cm->id;
+        $uid = template_export_uids::random_uid();
+        $parameters = template_activity_export::parameters_for($cm);
+        if ($cm->modname === 'h5pactivity' && $action === template_activity::ACTION_TEMPLATE) {
+            // The pictures the mold's own package holds, so the content the AI writes can point at
+            // them. The files stay in the package, which the plugin rebuilds the activity from.
+            $parameters['package_images'] = h5p_package_images::of_activity($cm);
+        }
+        return [
+            'resource_type' => $cm->modname,
+            'uid' => $uid,
+            'cmid' => $cmid,
+            'parameters' => $parameters,
+            'template_behavior' => ['action' => $action, 'useasreference' => true],
+        ];
+    }
+
+    /**
+     * The template's virtual instances, as "instance" activities driven by their mold.
+     *
+     * @param int $templateid
+     * @param \course_modinfo $modinfo
+     * @return array
+     */
+    private static function instance_activities(int $templateid, $modinfo): array {
+        $sectionnums = self::section_numbers_by_id($modinfo);
+
+        $instances = template_instance::get_records(['templateid' => $templateid], 'sortorder');
+        $activities = [];
+        foreach ($instances as $instance) {
+            $activities[] = self::instance_activity_entry($instance, $sectionnums);
+        }
+        return $activities;
+    }
+
+    /**
+     * Every section's own number, keyed by its id.
+     *
+     * @param \course_modinfo $modinfo
+     * @return array
+     */
+    private static function section_numbers_by_id($modinfo): array {
+        $sections = $modinfo->get_section_info_all();
+        $sectionnums = [];
+        foreach ($sections as $section) {
+            $sectionnums[(int) $section->id] = (int) $section->section;
+        }
+        return $sectionnums;
+    }
+
+    /**
+     * One template instance's own entry, as an "instance" activity driven by its mold.
+     *
+     * @param \local_coursegen\local\models\template_instance $instance
+     * @param array $sectionnums Section id => section number.
+     * @return array
+     */
+    private static function instance_activity_entry($instance, array $sectionnums): array {
+        $modname = $instance->get('modname');
+        if (!$modname) {
+            $modname = 'lesson';
+        }
+
+        $instanceid = $instance->get('id');
+        $instanceid = (int) $instanceid;
+
+        $uid = template_export_uids::instance_uid($instance);
+        $cmid = template_export_uids::instance_cmid($instanceid);
+
+        $sectionid = $instance->get('sectionid');
+        $sectionid = (int) $sectionid;
+        $section = $sectionnums[$sectionid] ?? 0;
+
+        $name = $instance->get('name');
+
+        $prompt = $instance->get('prompt');
+        $prompt = (string) $prompt;
+        $ainame = (int) $instance->get('ainame') === 1;
+
+        $sourcecmid = $instance->get('sourcecmid');
+        $sourcecmid = (int) $sourcecmid;
+
+        return [
+            'resource_type' => $modname,
+            'uid' => $uid,
+            'cmid' => $cmid,
+            'parameters' => [
+                'name' => $name,
+                'section' => $section,
+            ],
+            'template_behavior' => [
+                'action' => template_activity::ACTION_INSTANCE,
+                'useasreference' => true,
+                'prompt' => $prompt,
+                'template_source_cmid' => $sourcecmid,
+                'name_from_ai' => $ainame,
+            ],
+        ];
+    }
+}

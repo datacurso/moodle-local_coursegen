@@ -99,7 +99,7 @@ final class courseai_page_template_test extends \advanced_testcase {
 
     /**
      * aicoursecreation.php feeds the flag from import_permissions::is_offered(): with the setting
-     * on, a user who may open the page (createcoursewithai) but cannot complete an import in any
+     * on, a user who may open the page (createfreecoursewithai) but cannot complete an import in any
      * course gets the panel without the target-mode select; a user holding the full capability
      * set on a course gets it (ticket #9539).
      *
@@ -114,14 +114,14 @@ final class courseai_page_template_test extends \advanced_testcase {
 
         $pageonly = $generator->create_user();
         $roleid = $generator->create_role(['shortname' => 'pageonly']);
-        assign_capability('local/coursegen:createcoursewithai', CAP_ALLOW, $roleid, $systemcontext->id, true);
+        assign_capability('local/coursegen:createfreecoursewithai', CAP_ALLOW, $roleid, $systemcontext->id, true);
         assign_capability('moodle/course:create', CAP_ALLOW, $roleid, $systemcontext->id, true);
         role_assign($roleid, $pageonly->id, $systemcontext->id);
 
         $importer = $generator->create_user();
         $roleid = $generator->create_role(['shortname' => 'importer']);
         $importercapabilities = array_merge(
-            ['local/coursegen:createcoursewithai'],
+            ['local/coursegen:createfreecoursewithai'],
             import_permissions::COURSE_CAPABILITIES,
             import_permissions::CATEGORY_CAPABILITIES
         );

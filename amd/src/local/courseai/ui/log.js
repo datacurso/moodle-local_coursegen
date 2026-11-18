@@ -138,7 +138,15 @@ const formatRelative = (createdAt) => {
         return delta + 's';
     }
     const mins = Math.round(delta / 60);
-    return mins + 'm';
+    if (mins < 60) {
+        return mins + 'm';
+    }
+    // A conversation replayed after a reload can be hours or days old.
+    const hours = Math.round(mins / 60);
+    if (hours < 24) {
+        return hours + 'h';
+    }
+    return Math.round(hours / 24) + 'd';
 };
 
 /**
@@ -186,6 +194,7 @@ export const createLog = ({container, actionContainer, isActionPhase}) => {
      * @param {string} params.actor   - 'user' | 'ai' | 'system'
      * @param {string} params.kind    - 'user'|'ai'|'danger'|'info'|'success'|'neutral'
      * @param {string} params.message - Visible message text.
+     * @param {number} [params.createdAt] - When it happened, in ms since epoch; now when absent.
      */
     /**
      * Pick the chronological target: below the checklist once the plan has settled.
@@ -200,13 +209,12 @@ export const createLog = ({container, actionContainer, isActionPhase}) => {
         return container;
     };
 
-    const add = ({actor, kind, message, markdown}) => {
+    const add = ({actor, kind, message, markdown, createdAt = Date.now()}) => {
         const target = resolveTarget();
         if (!target) {
             return;
         }
 
-        const createdAt = Date.now();
         const kindClass = KIND_CLASS[kind] || KIND_CLASS.neutral;
         const icon = Object.prototype.hasOwnProperty.call(ACTOR_ICON, actor)
             ? ACTOR_ICON[actor]
@@ -252,7 +260,7 @@ export const createLog = ({container, actionContainer, isActionPhase}) => {
 
         const tsSpan = document.createElement('span');
         tsSpan.className = 'cg-log-ts';
-        tsSpan.textContent = 'now';
+        tsSpan.textContent = formatRelative(createdAt);
 
         if (iconSpan) {
             body.appendChild(iconSpan);

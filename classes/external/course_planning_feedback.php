@@ -39,8 +39,6 @@ use local_coursegen\local\service\creation_permissions;
 
 defined('MOODLE_INTERNAL') || die();
 
-require_once($CFG->libdir . '/externallib.php');
-
 /**
  * External API to send human feedback for AI course planning sessions.
  */
@@ -96,6 +94,7 @@ class course_planning_feedback extends external_api {
 
         $context = context_system::instance();
         self::validate_context($context);
+        require_capability('local/coursegen:createfreecoursewithai', $context);
 
         $session = course_session_service::get_user_session($recordid, $USER->id);
 

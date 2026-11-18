@@ -1,3 +1,1484 @@
+# Changelog
+
+All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
+
+## [2.0.16] - 2026111802
+
+### Fixed
+- **The H5P of a template is shown embedded again**  
+  A link that asks to be shown as the player of an H5P activity lost its marker when the texts of the AI result were cleaned, so it stayed a plain link. The cleaning now keeps that marker on links, and removes it anywhere else.
+- **The H5P package of a template is no longer broken by the cleaning of the AI texts**  
+  The JSON of an H5P package went through the cleaning of the texts, which turned the escaped quotes of its HTML into raw quotes and left the package unreadable. Those JSON documents are now left as they are, since H5P validates its own content.
+
+## [2.0.16] - 2026111801
+
+### Fixed
+- **The pictures of the course are made when images are turned on during the run**  
+  A run that started without images and turned them on with the answer to the images question never sent the pictures of the course the template asks for (its banner, its cover), so they kept the ones of the template. They now go with every run, and the service makes them only while the run makes images.
+
+## [2.0.16] - 2026111800
+
+### Fixed
+- **The progress of a course made from a template is shown again**  
+  The request that follows a template generation did not say which plugin sends it and its build, so the service answered that the plugin needs an update and the page lost the connection. It now identifies the plugin like every other call.
+
+## [2.0.16] - 2026111721
+
+### Fixed
+- **Links in the texts are resolved all-or-nothing without relying on a database rollback**  
+  Every text is now resolved in memory first and stored only when none of its links failed, so a link that cannot be resolved leaves
+  every text as it was whatever the database or the transaction nesting in use.
+
+## [2.0.16] - 2026111720
+
+### Fixed
+- **Activities are created whatever the page that asks for them**  
+  The module form is now built for the course of the new activity even when the page that runs the creation belongs to the site, so the section it needs is found.
+- **Quizzes, assignments, feedback and workshops are created from an incomplete AI result**  
+  The editor fields a module form leaves unset (the feedback texts of a quiz, the intro of an assignment) now start empty with the HTML format and an empty draft area, the grade category of a workshop starts with its first option as the form shows it, and a feedback question is saved as a new item.
+- **The teacher's file frame keeps working in the text of a page**  
+  A frame whose address is the placeholder of the activity's own files is no longer removed when the text of the AI result is cleaned; a frame that climbs out of those files still is.
+- **A file that is already stored no longer needs the AI service**  
+  The files generated for an activity are read from the stored copy without opening a connection to the AI service, which is only reached when a file has to be downloaded.
+
+## [2.0.16] - 2026111719
+
+### Fixed
+- **Creating an activity no longer stops while its module form is built**  
+  The form of each module is now built for the section it belongs to, and its default values are read without exporting a form that was never submitted, so activities of every module type are created again.
+- **The template structure screen works without the removed legacy library file**  
+  The structure of a template is described with the core_external classes instead of the global names that lib/externallib.php used to provide, so the screen loads on a site that no longer includes that file.
+
+## [2.0.16] - 2026111718
+
+### Fixed
+- **A template from a site without the grid format no longer fails**  
+  Reading the section pictures of a template queried the table of the grid format even when the site does not have it. It now looks for that table first, so a template of any course format is read.
+- **New activities are created with the defaults of their module form**  
+  A module made from an AI result now takes every field the payload leaves out from the form of its module, as saving the form untouched would, so forums, lessons, glossaries, quizzes and workshops no longer stop on a missing field. A feedback label question is also saved with its editor context.
+- **Blocks of a template keep their files, and the teacher's file frame is kept**  
+  The files of a copied block (the images of an HTML block, for one) are copied into the new block, and the frame that shows the file the teacher brings in a template page is no longer removed when the text of the AI result is cleaned.
+- **The choice and lesson previews open with incomplete data**  
+  The previews take the default of the showing options and of the page layout when the exported activity does not carry them.
+
+## [2.0.16] - 2026111717
+
+### Fixed
+- **The guideline list of "Create from template" is shown again**  
+  The popover of the guidelines in the template mode opened empty after the lines were merged, because it gave the shared list handlers the bare list instead of the region they render into. It now has its own region, and choosing and previewing a guideline work as in free mode.
+- **The creation tests run on a plain Moodle site**  
+  The tests that need the Datacurso AI provider or the flexsections format skip themselves when it is not installed, the web services use the core_external classes instead of lib/externallib.php, and the stale tests and strings left over from the merge of both lines were aligned with the code that is current.
+- **Fewer failures on MariaDB and on modules without every field**  
+  The site course is recognised whatever the type its id has, a module created from an AI result gets the form fields Moodle reads unguarded, and a lesson, a feedback question, a space and a generated file take the paths the module code expects.
+- **The coding style and documentation checks pass**  
+  The Moodle coding style fixes, the phpdoc parameter lists and the example context of every template were completed, and the HTML the template lint reported was corrected.
+
+## [2.0.16] - 2026111716
+
+### Added
+- **Course structure defined by the guideline**  
+  A course made from a template can take its units, subsections, activities, completion tracking and unit locks from the guideline text, so the structure no longer depends on the sections of the template.
+
+### Changed
+- **The dev line is brought together with MOODLE_405_STABLE**  
+  This release carries the template work of the dev branch (template sections, embedded H5P, section names and the structure shown while the run is on) together with every fix that was released on MOODLE_405_STABLE up to 2.0.15, so both lines continue from one branch.
+
+## [2.0.13] - 2026111715
+
+### Fixed
+- **Each copy of a template section has the order of the template**  
+  The template section itself was ordered from the template, but its copies kept the order the activities were created in, so the H5P activities of a lesson ended at the bottom of the section. Each copy now follows the order of the first one.
+
+## [2.0.13] - 2026111714
+
+### Fixed
+- **A link to a text and media area no longer stops the course from being built**  
+  A text and media area has no page of its own, so a generated link to it had no address and the creation of the course failed. Such a link now points to the activity's place in the course page.
+
+## [2.0.13] - 2026111713
+
+### Added
+- **The activities of the first copy of a template section are renamed while the run is on**  
+  The names of a template section's activities can use `{N}`, `{name}` and `{#}`, which the AI service replaces for every copy. The structure shown while the run is on takes the new names of the first copy's activities too, so it matches the course.
+
+## [2.0.13] - 2026111712
+
+### Changed
+- **The naming pattern belongs to the template section**  
+  The section naming pattern of the template is gone from the template's settings, where it named every section and was never applied. A template section now shows its own pattern and the number of its first copy in its card, and only its copies are named with it: `{N}` is the copy's number and `{name}` the name of its unit in the syllabus. The first copy takes its name too, in the course and in the structure shown while the run is on.
+
+## [2.0.13] - 2026111711
+
+### Added
+- **Template section**  
+  A section of a template can be set to "Template section". When a course is generated with a syllabus, the AI service repeats that section once per unit of the syllabus, named after each unit, with the section's activities as the mold of every unit. The copies appear in the structure while the run is on, and the course is built with every copy, every section after them in its place, and the look of each copy taken from the section it repeats.
+
+## [2.0.13] - 2026111710
+
+### Changed
+- **The activities the AI writes are matched by their uid when the course is built**  
+  An activity the AI writes has no course module in the template, so the course module created for it is now kept under its uid, and every step that follows it (order, settings copied from the template, links, unit locks) reads it that way. The units cloned for a resized template no longer get an invented course module id. An entry of an older payload with no uid is still matched by the id it travelled with.
+
+## [2.0.13] - 2026111709
+
+### Changed
+- **The list of recent courses marks the course open on the page**  
+  The entry of the course open on the page has a grey background and its name in bold, so it is clear which one of the list is selected. A run that has just started is marked as soon as it joins the list.
+- **The list of the sidebar is called "Courses"**  
+  It was "Recent courses"; a run that has just started joins it at once, so it is the list of the courses, not of the recent ones.
+
+### Fixed
+- **Reopening an unfinished run no longer says the stop could not be confirmed**  
+  A run reopened by the page was never running, so the service is no longer asked to stop it, and the red notice that the stop could not be confirmed no longer appears.
+
+## [2.0.13] - 2026111708
+
+### Changed
+- **The list of recent courses names a run that has no name yet "New course", and shows the whole name on hover**  
+  A run whose name the AI has not returned yet is listed as "New course" instead of "Untitled course"; the name and short name replace it as soon as the AI returns them. Hovering an entry shows its whole name in a tooltip, since a long name is cut in the list.
+
+## [2.0.13] - 2026111707
+
+### Fixed
+- **A generation from a template that did not finish opens where it was**  
+  Reloading the page, or coming back to a run that was stopped or failed, used to show the empty template picker and the run looked lost. The page now opens the run with its template, its structure and the summary of what it was generated with, paused, and offers Resume; resuming goes on from where the run was, with the activities already written shown as done.
+
+## [2.0.13] - 2026111706
+
+### Changed
+- **The activity counts of a template course say what each number is**  
+  The line at the top of a template run names the activities copied from the template as they are, for example "113 activities (11 copied from the template)", and the progress while the course is saved reads "Generated with AI: 56 of 102", since it only counts what the AI writes.
+
+## [2.0.13] - 2026111705
+
+### Removed
+- **The schedule marker of a template page**  
+  The marker that replaced itself with a table of the activities of the course once it was created is gone, with its texts and tests: it served a single kind of template and does not belong in the generic generator.
+
+## [2.0.13] - 2026111704
+
+### Changed
+- **The table of the template editor shows no long instructions, and the pencil of a space puts the cursor in its instruction**  
+  The instructions of the activities the AI creates and of the activities modified with AI are no longer shown under their names, so the table reads easily; they stay saved and show in the modal of the pencil. Editing a space opens the modal with the cursor in the instruction of its first activity.
+
+## [2.0.13] - 2026111703
+
+### Changed
+- **An activity the AI creates looks like a space in the template editor**  
+  It is added from "Add space for an activity", and its row now looks like the rows of the spaces: the frame of a space, the badge "Space · Created by the AI" and its instruction under its name (cut at three lines). Its pencil opens the same modal with its type, name and instruction; turned into several activities or into the File the teacher uploads, the row is replaced by it in the same place. What is saved and sent to the service does not change.
+
+## [2.0.13] - 2026111702
+
+### Fixed
+- **The badges that are buttons have no border**  
+  "Modify with AI" and the badge of a space look like every other badge of the template editor, with no border around them; the keyboard focus shows a soft ring.
+
+## [2.0.13] - 2026111701
+
+### Changed
+- **The work on the spaces of the templates joins the work on units, guidelines and dates**  
+  Both lines are in this build: the spaces for an activity, the File the teacher uploads and the related fixes, together with the number of units, the institutional guidelines in template mode, the start date of the course and the other changes of 2.0.11 to 2.0.13.
+
+## [2.0.10] - 2026111700
+
+### Fixed
+- **The File the teacher uploads has no line under it in the modal of a space**  
+  Its instruction is shown only above the button that uploads the file. The build number follows the date of the day from now on.
+
+## [2.0.10] - 2026110974
+
+### Fixed
+- **The instruction of the File the teacher uploads is shown once, above the button that uploads it**  
+  In the modal of a space, the File option says that the teacher uploads their own file, and the admin's instruction (which file to upload) is shown once, as plain text, right above the button that uploads it.
+
+## [2.0.10] - 2026110972
+
+### Fixed
+- **The instruction for the File the teacher uploads stands out where the file is uploaded**  
+  Picking the File in the modal of a space shows the admin's instruction as a highlighted note right above the button that uploads the file, not only as a small line under the option.
+
+## [2.0.10] - 2026110971
+
+### Fixed
+- **The teacher sees the instruction the admin wrote for the File they upload**  
+  In the modal of a space with several activities, the File the teacher uploads shows the admin's instruction under it (which file to upload), and once an activity is chosen the card shows the admin's instruction for it instead of the list of activities available.
+
+## [2.0.10] - 2026110970
+
+### Fixed
+- **Every space row of the template editor shows an icon**  
+  A saved space row showed no icon, because the row only drew the icon the chooser gives when the row is added: it now draws the icon of its type, and a space with several activities shows the icon of activities of Moodle, in the muted colour of the other icons.
+- **The creation screen speaks to the person who creates the course**  
+  The warning before generating says "One item is left to complete" or "2 of 2 items are left to complete", the cards say "To complete · Required" and a space with several activities is "Activity to choose", instead of naming the teacher in the third person.
+
+## [2.0.10] - 2026110968
+
+### Changed
+- **The question of whether a space is required says what the teacher does**  
+  With several activities it asks "Does the teacher have to choose one of these activities?" and says that the AI creates the chosen one (and, when a File the teacher uploads is among them, that they upload that one); with a File the teacher uploads, alone or of the course, it asks "Does the teacher have to upload the file?". Each option says what happens if the teacher does not do it.
+
+## [2.0.10] - 2026110967
+
+### Changed
+- **The teacher uploads their File right in the modal of the space, and modifies it from its card**  
+  Picking the File the admin left to the teacher shows, right under the options, the field to upload it or replace it, and "Add the activity" waits until the file is there. Once added, the card shows the activity and its file with an edit icon: pressing it opens the same modal with what was chosen, to replace the file or to switch to another activity, which drops the file. Cancelling after uploading keeps nothing.
+
+## [2.0.10] - 2026110966
+
+### Fixed
+- **A File of the course marked as a space for the teacher asks for no mode**  
+  Choosing "Space for the teacher" on a File of the base course opens "Space for the teacher" with only whether it is required and the instruction for the teacher: the teacher uploads their own file in its place, with no choice between the AI and the teacher.
+
+## [2.0.10] - 2026110965
+
+### Fixed
+- **The card of a space with several activities uses the icon of an activity, and the warning before generating names what is missing**  
+  In the creation screen the card of such a space shows the line icon of the first activity it offers, like every other row, instead of a large plus sign; the icon of the activity the teacher chooses replaces it. The warning shown when Generate is pressed says that a contribution of the teacher is missing, which fits a file to upload as well as an activity to choose.
+
+## [2.0.10] - 2026110964
+
+### Changed
+- **Each activity of a space keeps its own fields, however many are selected**  
+  In "Add space for an activity" the instruction and the name of each selected activity, and who provides a File, no longer disappear when another activity is selected. A File is the only activity with both modes: the AI creates it, or the teacher uploads it; every other activity is created by the AI. Each option of a space with several activities keeps its name and its mode, and the pencil of the row opens the same modal with all of it.
+- **The teacher can pick, among the options of a space, the File they upload**  
+  In the creation screen the options show the name the admin gave them. Picking the File the admin left to the teacher asks for no topic and opens the file picker; the space counts as done once the file is there, and the new course has a File resource with it in the place of the space, with nothing generated there. An option the admin named keeps that name in the new course.
+
+## [2.0.10] - 2026110963
+
+### Changed
+- **Who provides a File is chosen with radio buttons**  
+  "The AI creates it" and "The teacher uploads it" are two radio buttons instead of a pair of buttons.
+
+## [2.0.10] - 2026110962
+
+### Changed
+- **Whether a space is required is a section with radio buttons, and the footer shows a badge**  
+  With several activities or a File the teacher uploads, "Does the teacher have to provide it?" is a section under the list with two radio buttons, each saying what it means. The footer shows how many activities are selected as a badge, next to a plain sentence about what happens when the course is created.
+
+## [2.0.10] - 2026110961
+
+### Changed
+- **The list of "Add space for an activity" looks like its design**  
+  Each icon sits in a soft square, the help button is a small filled circle with a small focus ring, and the fields that open under a selected activity are aligned with its icon.
+
+## [2.0.10] - 2026110960
+
+### Added
+- **A "+" before the first activity of each section**  
+  An activity, a space or an activity from a template can now be added at the start of a section: what is added there goes first and stays first after saving. Inserting or removing never leaves two "+" in a row.
+
+## [2.0.10] - 2026110959
+
+### Changed
+- **"Add space for an activity" lists one activity per row, and the instruction opens under the selected one**  
+  Each activity takes the whole width of the modal, with its icon, its name, a short description and its help, under a search and the tabs All, Activities and Resources. Selecting an activity opens its instruction right under its own row, with the cursor in it; with one activity, the same row asks for its optional name and, for a File, who provides it. The footer, which stays at the bottom, says what the selection makes and, with several activities or a File the teacher uploads, whether the space is required.
+
+### Fixed
+- **"Add space for an activity" never stops answering**  
+  Closing the modal in any way after a save that could not go through no longer leaves the option blocked until the page is reloaded, and a row selected near the bottom brings its instruction into view above the footer.
+
+## [2.0.10] - 2026110958
+
+### Changed
+- **"Add space for an activity" is the activity chooser of the course page, with several activities**  
+  The modal is the standard chooser, with its search, its tabs and the help of each type, where one click selects an activity and another unselects it; the selected ones carry a mark in every tab and in the results of a search. Under the chooser, each selected activity is a card with its instruction and a button to remove it, then what applies to them.
+
+### Fixed
+- **The search of the chooser of a space shows its results**  
+  The search found the types but failed before showing them, because the chooser had no favourite star in its items; the star is kept in the markup and hidden, so the search works.
+## [2.0.13] - 2026111404
+
+### Changed
+- **The branches of the template work and of the teacher's spaces are merged**  
+  The step of this build checks again the fields that the builds 2026110935 to 2026110948 add (the teacher's space of a file, the name the AI writes for an activity, the activity modified with AI and the activities a space offers), so a site that already ran the template builds up to 2026111403 gets them too. A course made from a template now also keeps, when it is created, the start date the teacher chose at the review whether the creation goes through the page's stream or the web service.
+
+## [2.0.13] - 2026111403
+
+### Added
+- **Hidden activities, completion tracking and unit locks the guideline asks for**  
+  The activities the AI service adds can now carry `parameters.visible` (false leaves the activity hidden) and `parameters.completion_rule` (`none`, `view`, `grade`, `submit` or `post`), and the unit sections can carry `unlock_requires_uids`. After the course is created, `guideline_activity_settings` hides the activities (`set_coursemodule_visible`) and writes the completion rule (view: automatic completion with completionview; grade: automatic completion requiring a grade, or the view when the module has no grade item; submit: the module's own completionsubmit for assignments and feedback; post: completionposts for forums), turning on course completion when a rule is applied. Then `guideline_unit_locks` restricts each locked unit with a completion availability on the previous unit's activities (the section stays visible, with its restriction shown). Activities that were not created or do not track completion are left out of the condition, and a rule a module cannot honour is skipped with a debugging message. Courses without these keys behave as before.
+- **The review step words the skipped unit lock**  
+  The new `guideline_lock_skipped` warning (a unit could not be locked because the previous one has no evaluation activity) is worded in the review step, in all languages.
+
+## [2.0.12] - 2026111403
+
+### Fixed
+- **Sections the AI service adds now keep their summary**  
+  The summary the service writes for a unit it adds (a short description taken from the syllabus) was dropped: only template sections took a summary. It is now stored in the section, with its format, for sections marked as added.
+
+## [2.0.11] - 2026111403
+
+### Added
+- **Sections the AI service adds after the template's own now hang under their parent**  
+  When the institutional guideline asks for a structure (units, subsections such as "Recursos Educativos", activities), the service appends those sections after the last section of the template. The plugin now writes their parent (flexsections) from the `parent_section` the service returned, marks them as added so they never take the look (summary, picture) of a template section with the same number, and no longer reports them as unexpected. The template's own sections are untouched.
+
+### Fixed
+- **The review step shows the sections and activities the guideline structure added**  
+  The list of activities the AI writes (left) and the structure panel (right) used to show only the template's own sections and activities. The service now sends a `template_structure` event with the sections it added (name, depth) and their activities; the page adds them to the structure grouped by section, with subsections indented under their unit, and the "N sections · M activities" counter and the completion counts include them. Added activities are labelled like the other AI-written ones. A template without added sections renders exactly as before.
+- **More warnings of the generation are worded in the review step**  
+  `guideline_structure_failed`, `guideline_units_mismatch`, `section_names_fallback` and `h5p_degraded_fallback` now show a message next to `units_count_mismatch` (new `courseai_review_warning_*` strings in all the language packs). The `units_count_mismatch` message no longer tells the teacher to adjust the removed units field of the guideline.
+
+### Removed
+- **The optional "Number of units" of an institutional guideline is gone**  
+  The guideline form no longer has the field, the list of guidelines no longer shows it, and a template run no longer takes its number of units from the guideline: the number is the one the person typed when creating the course, else the template's own. The `units` column of `local_coursegen_system_instruction` is dropped on upgrade, together with its strings in all the language packs. The number of units typed at course creation is not affected.
+
+## [2.0.10] - 2026111402
+
+### Added
+- **A page of a template can show the real schedule of the course made from it**  
+  Writing `[[coursegen:schedule]]` (or `⟦coursegen:schedule⟧`, no instruction) in the content of a Page of the template, and saving that page with the action "keep", makes the page of the new course hold a table with the real units and activities of that course instead of the marker. The table has the columns Unit, Activity (a link to the activity), Type and Available from, one row per activity in the order of the course. The units are the top-level sections except the first (in the Flexible sections format the activities of the subsections are listed under the unit they hang from; in any other format every section is a unit), and a unit with no activity keeps its row. Labels, hidden activities, activities not shown on the course page, hidden sections and the page that holds the marker are left out. "Available from" is the date of the "from" restriction of the activity, else of its section, else of the sections it hangs from, already moved to the start date of the new course (an all-of group opens at its latest date and an any-of group at its earliest); it shows a dash when no date applies. A course with no unit gets a short note. Names are escaped, the headings follow the language of the course (the one of the user who creates it when the course has none) and the marker is never left in the course. The table is written once every activity and its settings are in the course. A kept page is copied as it is and never reaches the AI writing step as a placeholder, and the template scanner accepts the marker (it is not a placeholder; with text after it, it is reported as a malformed marker). New strings `schedule_column_unit`, `schedule_column_activity`, `schedule_column_type`, `schedule_column_from` and `schedule_empty` are available in all the language packs of the plugin.
+
+## [2.0.10] - 2026111400
+
+### Added
+- **The dates of the access restrictions follow the start date of the new course**  
+  A course made from a template used to lose every restriction that depended on a date. Now each date of a section or activity restriction (opens on, closes on, in any nested all/any/not-all/not-any group) moves by the number of whole days between the start date of the new course and the start date of the template's course, so the restriction opens at the same point of the course and the distance between two dates stays the same. The operator of each condition and whether it is shown are untouched. When both courses start on the same day, or the template has no start date, the dates stay as they are; when the new course has no start date the dates are left out, as before. The date an activity must be completed by and the date criterion of the course completion are still not copied.
+- **An optional start date can be chosen in the review step**  
+  The review step ("Revisar datos del curso"), before the course is created, has a Start date field next to the name and category. Left empty, the course gets the same start date as before; filled in, the new course starts that day, in the time zone of the person who creates it, and the restrictions on dates move with it. It works in the free mode and in the template mode (`startdate`, a `Y-m-d` day, is an optional argument of `local_coursegen_create_course` and `local_coursegen_finish_template_generation`).
+- **The review step warns when the syllabus and the course do not have the same number of units**  
+  When the generation reports that the syllabus defines a different number of units than the course has, the review step shows a notice (for example "The syllabus defines 5 units but the course has 3. Adjust the units field and regenerate if needed."). It does not block the creation. `local_coursegen_get_template_course_settings` returns the worded notices as `warnings`. The new strings are available in all the language packs of the plugin.
+
+- **An institutional guideline can set the number of units of a template run**  
+  The form of a guideline has an optional "Number of units" field (1 to 50; empty means the template's own number), also shown in the list of guidelines. When a course is made from a template with units (Flexible sections format) with that guideline, the units field of the template form is prefilled with it; choosing another guideline follows it, removing the guideline puts the template's number back, and a number typed by hand is never overwritten. The server resolves the number as: the number asked for in the request, else the units of the chosen guideline, else the template's own, and it is kept between 1 and 50 as before. Templates without units and the free mode ignore it. `local_coursegen_system_instruction` gets a nullable `units` column (upgrade step included).
+
+### Fixed
+- **The section names the AI writes are the names of the sections of the new course**  
+  In a course made from a template the name that the generation gives a section is applied to the section with the same number, after the look and the options of the template are applied, and never touches the number, the section it comes from or the unit it hangs under. A name that is empty or only spaces is ignored, and a name longer than 255 characters is cut instead of making the creation fail.
+
+## [2.0.10] - 2026111102
+
+### Added
+- **The institutional guidelines ("Directrices") can be used when a course is made from a template**  
+  The input bar of the template form has a Directrices button, next to the syllabus one, that opens the same searchable list of guidelines as the free mode. One guideline can be chosen per course (choosing another replaces it), it shows as a chip that can be previewed or removed, and the generation is given its text as institutional guidelines, exactly as in the free mode. Only the id of the guideline travels from the browser: the text is read on the server, and a guideline that no longer exists is ignored. Nothing changes when no guideline is chosen, and the id is kept with the session as in the free mode.
+
+## [2.0.10] - 2026111101
+
+### Added
+- **A template made with the Flexible sections format keeps its units and the subsections inside them**  
+  The sections and subsections of the template course show up indented in the template settings, in the list the professor reads and in the preview of the course, and changing what a unit does (keep it or let the AI modify it) changes it for the subsections inside it. The course that is created has the same units with the same subsections in the same order, each with the look, order and settings of its template section. Courses in any other format are created exactly as before.
+- **A Flexible sections template can hold more or fewer units than the template course has**  
+  When a number of units is asked for, the last unit of the template (with its subsections and the activities the AI writes in them) is copied as many times as needed, right after the last unit and before the sections that close the course, or whole units are dropped from the end. The structure is sent to the AI service already resized, since the service never adds or removes sections. The activities the template keeps as they are stay only in their own section. The professor chooses the number in a "Number of units" field above the structure, which only shows for a template with units and starts at the template's own count (a different number is sent as the optional `units` argument of `local_coursegen_start_template_generation`; the count of the template is not sent at all). The number is kept between 1 and 50 on the server too, and the activities of every unit that is dropped are dropped with it, also when no section closes the course.
+
+### Fixed
+- **The "Number of units" field no longer shows, empty, for a template without units, and the top bar counts follow the number of units**  
+  A template made with a format other than Flexible sections (topics, grid) showed the field with nothing in it, because its flex layout overrode the hidden state; it now stays hidden unless the template has units. The sections and activities in the top bar now change with the number of units asked: more units add the last unit with its subsections and the activities the AI writes in it, fewer units remove whole units with everything inside them.
+
+## [2.0.10] - 2026111100
+
+### Added
+- **An H5P template lists the pictures its package holds**  
+  When the template course has an H5P activity set as a template, the export now tells the AI service which pictures that activity's own package keeps (their path, type and size), so an interactive book can use them. The pictures themselves are not sent: the activity of the new course is built from the template's own package, which already holds them. A package that cannot be read exports as before.
+
+## [2.0.10] - 2026110957
+
+### Changed
+- **"Add space for an activity" with tiles and a card for each selected activity**  
+  The activities are tiles like the activity chooser of the course page, selected and unselected with one click or with the keyboard, with a mark on the selected ones. Under them, each selected activity is a card with its icon, its name, its instruction at full width and a button to remove it; the cursor goes to the instruction of the activity just selected. Who provides a File comes before the name, which only applies when the AI creates it. The modal is large and has no scroll of its own.
+
+## [2.0.10] - 2026110956
+
+### Fixed
+- **A name with a tag or longer than its column no longer makes the whole template fail to save**  
+  The names of the template and of its activities are kept as plain text: tags are dropped and a name is cut at 255 characters on the server, so saving never fails with "invalid parameter" or a database error. The field that renames an activity no longer takes more than 255 characters, and a long name with no spaces breaks inside its cell instead of pushing the row wider than the table.
+- **An activity the AI creates needs its instruction**  
+  With one activity ticked in "Add space for an activity", Save stays off until its instruction is written, since it is all the AI has to know what to create; among several activities each instruction stays optional.
+- **A double click on "Add space for an activity" opens one modal**  
+  A second click while the modal is opening or open does nothing.
+
+## [2.0.10] - 2026110955
+
+### Changed
+- **"Add space for an activity" opens the selection of activities at once**  
+  No chooser and no extra button: the modal lists the activities, and the admin ticks one or several, each with its own instruction. One activity is created by the AI, with an optional name; a single File can instead be uploaded by the teacher, and then the modal asks whether it is required. Several activities make a space where the teacher chooses one when the course is created.
+
+## [2.0.10] - 2026110954
+
+### Added
+- **A space for an activity can offer several activities, each with its instruction**  
+  The chooser of "Add space for an activity" has "Choose several activities" under the types: the admin ticks the activities the teacher can choose from in that place and writes how each one must be. When the course is created, the teacher chooses one of them and the AI creates it in that place with the instruction given for it.
+
+## [2.0.10] - 2026110953
+
+### Changed
+- **The add menu says "Add space for an activity"**  
+  The option of the menu is named so that it is understood by itself, with no line of description under it; the chooser of the type has the same title.
+
+## [2.0.10] - 2026110952
+
+### Changed
+- **The add menu says "Add a space", with what a space is**  
+  The option of the menu reads "Add a space", with a line under it that says it is a place in the course for an activity the AI creates or for a file the teacher uploads; the chooser of the type has the same title.
+
+## [2.0.10] - 2026110951
+
+### Changed
+- **The instructions of an activity the AI creates speak of how it is, not of its topic**  
+  In the template the instructions say how the AI has to build the activity (purpose, structure, length or style); the help text says that the topic and the specific content are given by the teacher in the course creator.
+
+## [2.0.10] - 2026110950
+
+### Changed
+- **One option to add an activity, and the teacher's file in the same place**  
+  The menu of the template keeps a single "Add an activity" next to the one that adds from a mold. After the type is chosen, a File offers who provides it: the AI creates it, or the teacher uploads it when the course is created. Any other type is created by the AI. A file the teacher uploads is a required space with its instruction: the creation screen asks for it before generating, and the new course has a File resource with the teacher's file in that place.
+
+## [2.0.10] - 2026110949
+
+### Fixed
+- **A cordial and professional tone in the texts of the templates**  
+  The texts of the spaces, of "Modify with AI", of the activity the AI creates and of the warning about molds with no instructions no longer address the person informally nor read as orders; they are written in an impersonal, courteous tone.
+- **The menu of "Add activity or space" fits its texts**  
+  The menu is as wide as its longest item, so no text runs over its edge.
+
+## [2.0.10] - 2026110948
+
+### Added
+- **"Modify with AI" for an activity of the template course**  
+  An activity can be set to "Modify with AI" with an instruction of how the AI has to change it: the new course has it changed by the AI, in its place, with no mold and no instance to set up. With markers in the activity the instruction is optional; without them it is required. The editor shows the badge and the instruction under the name, and asks for the instruction when the action is chosen.
+- **Spaces for the teacher**  
+  "Space for the teacher" in "Add activity or space" places a space where the teacher adds one of the activities the admin allows there (quiz, forum, book...), each with an optional instruction, and says whether it is required. In the creation screen the space is a card: the teacher chooses the activity and writes what they want it to cover, and the AI writes it in that place, naming it. A required space is asked for when Generate is pressed, like a file; an optional one the teacher leaves empty creates nothing.
+
+## [2.0.10] - 2026110947
+
+### Changed
+- **Adding an activity the AI creates asks only for its name and its instructions**  
+  The form no longer asks who makes the activity: it is the AI. The name is optional: when it is left empty the activity is "Book 1", "Book 2"... in the template (a number per type) and the AI writes its real title when the course is generated. A name the admin writes later is kept.
+
+## [2.0.10] - 2026110946
+
+### Changed
+- **The card that asks for the files lists all of them in the scroll of the column**  
+  Every missing file is listed again, one per line, and the card sits at the end of the thread of the column: it moves with the one scroll of the column, with no box of its own that scrolls.
+
+## [2.0.10] - 2026110945
+
+### Changed
+- **The card that asks for the files shows one at a time, with no scroll**  
+  Instead of the whole list in a box that scrolls, it shows the next file missing under the count ("9 of 10 files are missing…"), and the next one after each upload, so it never grows. The card of a file in the structure no longer draws Boost's blue ring when it gets the focus back after an upload.
+
+## [2.0.10] - 2026110944
+
+### Changed
+- **The card that asks for the files works with many of them**  
+  Its title counts them ("7 of 10 files are missing to generate the course") and goes down with each upload; each file is one line with its button on the right, in a list that scrolls instead of growing past part of the column; pressing a file shows its card in the structure (its section opened if it was closed) and marks it for a moment.
+
+## [2.0.10] - 2026110943
+
+### Fixed
+- **The hover of the card of the teacher's file keeps its colour**  
+  Hovering the card turned it to the grey of the other rows and showed the browser's tooltip. It now keeps its coral (or neutral) tint one step stronger, and says what it does to screen readers instead of in a tooltip.
+
+## [2.0.10] - 2026110942
+
+### Changed
+- **The whole card of the teacher's file opens the file picker**  
+  A click anywhere on the card, or Enter on it, opens the file picker; only "Remove file" inside it does something else.
+
+## [2.0.10] - 2026110941
+
+### Changed
+- **The row of the file the teacher uploads stands out as a card**  
+  It has a soft coral frame while the required file is missing and a soft neutral one once it is there, so it is seen at once among the other rows.
+
+## [2.0.10] - 2026110940
+
+### Changed
+- **The row of the file the teacher uploads says where it stands**  
+  While the required file is missing, its icon has a coral mark with an arrow up and the row reads "Upload the file to be able to generate the course"; once the file is there, the icon has the check of a row that is done and the row shows the name of the file.
+
+## [2.0.10] - 2026110939
+
+### Changed
+- **The file the teacher uploads is one more row of the list**  
+  In the structure of the course, the space is no longer a card of its own: it is a row like the others, with the icon and name of the file, the badge "Your contribution · Required" in the style of "AI will generate it", what the administrator asked for as its description, and the upload as a button of the row.
+
+## [2.0.10] - 2026110938
+
+### Changed
+- **Only a file is what the teacher brings: the spaces of other activities are not offered**  
+  The creation of a course no longer shows nor asks for the spaces of a quiz or another activity that some templates have; they stay saved in the template. What the teacher brings is a file, marked in the row of the template's file.
+- **The card that asks for the file looks like the questions of the AI**  
+  When Generate is pressed with a required file missing, the card has the look of the questions the AI asks in the column: the instruction of the administrator, the name of the file of the template and the button to upload it.
+
+## [2.0.10] - 2026110937
+
+### Changed
+- **A required space without its file is asked for when Generate is pressed**  
+  Generate is no longer off while a required space is empty. Pressing it stops before the AI is asked anything and shows a card with what the administrator asked for and a button to upload the file (or choose the activity) from there; once nothing is missing, the generation starts by itself.
+- **For now only a file can be what the teacher brings**  
+  In the template editor, "Add activity or space" no longer offers "The teacher provides it" for the other types: what the teacher brings is a file, marked in the row of the template's file as "Space for the teacher". The spaces of other types already saved keep working.
+
+## [2.0.10] - 2026110936
+
+### Fixed
+- **The retries by themselves run out when the run does not move**  
+  When a run started over, the activities it had already written were told again, and the page took that as the run moving: the count went back to "Retry 1 of 10" on every pass and never ended. Only an activity written for the first time counts now.
+- **A mold with nothing for the AI to fill stops the run at once and is named**  
+  When the model activity of an activity of the template has no instruction for the AI, trying again gives the same. The run now stops at once, without retrying by itself, and says which activities have to be fixed.
+
+## [2.0.10] - 2026110935
+
+### Fixed
+- **The plugin installs without a debugging message**  
+  The `uid` columns of the instances and the spaces declared an empty default, which Moodle reports while it installs the plugin (and the CI stops on it). They no longer declare one.
+- **The list of the teacher's activities opens**  
+  "Choose activity" in a space failed with an error because the service that lists the activities did not load the library of external functions. It now opens the list.
+- **A template configuration from another site imports**  
+  A file exported where the scope of the activities was empty, or without the fields of the spaces, stopped the import with an error. The empty fields now take their default, so the file imports; the export writes the fields of the spaces too.
+
+### Added
+- **The teacher fills the spaces of a template with one of their own activities**  
+  A space added to a template with "Add activity or space" (a quiz, a file, any type) now reaches the creation screen: it shows as a card where the teacher picks one of their activities of that type, from the courses where they can copy activities. Generate stays off while a required space has none, the choice is checked again when the generation starts, and the activity is copied into the new course in the place of the space. Before, these spaces were saved in the template but the creation screen never read them.
+
+### Added
+- **A file of a template can again be a space the teacher fills**  
+  The space for the teacher's file comes back as it worked before it was removed: in the editor a file resource can be marked as a space, required or optional, with instructions for the teacher; the creation screen shows it as a card where the teacher uploads the file, Generate stays off while a required one is empty, and the file is placed in the new course where the template has it.
+
+## [2.0.10] - 2026110934
+
+### Fixed
+- **A template configuration from another site imports**  
+  A file exported where the scope of the activities was empty (an older version, or another site) stopped the import with an error. The empty fields now take their default, so the file imports; the export always writes the scope.
+
+## [2.0.10] - 2026110931
+
+### Fixed
+- **An activity that failed is not shown as done**  
+  When the generation of an activity failed, the page marked it with a check, counted it as written ("5 of 5 activities") and, once all of them were counted, moved the header on to saving the course, so a run that had failed looked finished. A failed activity now has no check, it is not counted and the header does not move on; when the run is retried, the activities that are missing are written and then they are marked.
+
+## [2.0.10] - 2026110930
+
+### Fixed
+- **The messages about the run go at the bottom, above the buttons of the run, and each one is said once**  
+  The failure that asks the person to decide and the cards of the retries used to appear in the middle of the thread, over the list of the activities, and a retry was also written in the title and in the line at the bottom. They now go to a slot at the end of the column, above "Stop", with the same look; the retry is said only in its card, the title does not say "Stopped" while it retries by itself, the line that says it is working is not shown while a message about the run is, and the spinners of the page stop while it is, as a plain ring that waits and not as an arc that froze: only the card, with its time left, tells that it retries.
+- **The counter of pictures says which pictures it counts**  
+  "2 of 2 images ready" was read as all the images of the course, but it only counts the cover and the pictures of the sections. It now says so.
+
+## [2.0.10] - 2026110929
+
+### Added
+- **The writing of the course in Moodle shows its real progress**  
+  When the person accepts the generation, the card reads "Guardando el curso" and "Escribiendo el curso en Moodle…", and the bar starts at 0 % and moves with each activity written ("Actividades escritas: 35 de 102"), up to 92 %. Copying the activities that stay as they are and arranging the course like the template take it to 96 %, and it reaches 100 % when the course exists. Before, the bar kept the percentage of the generation, stopped at 98 % and did not say what was being done.
+
+## [2.0.10] - 2026110927
+
+### Fixed
+- **Neutral wording when the generation is resumed**  
+  The stage shown on a retry reads "Reanudando la generación…" in Spanish and "Resuming the generation…" in English.
+
+## [2.0.10] - 2026110926
+
+### Fixed
+- **A retry shows that the generation is resumed**  
+  When the generation is retried, by itself or by the person, the thread shows "Reanudando la generación…" ("Resuming the generation…") and keeps the count of pictures already shown.
+
+## [2.0.10] - 2026110925
+
+### Fixed
+- **No pictures are made when the person chose no images**  
+  A reference marker in the template (the cover of the course, the picture of a section) still asked the AI service for a picture even when the person had turned images off, so the thread kept saying that images were being made. With images off, no picture of the course is asked for, and the markers are still taken out of the texts.
+
+## [2.0.10] - 2026110924
+
+### Fixed
+- **The retries that the page makes by itself have no buttons and a message anyone can read**  
+  While the retries run by themselves the card shows only what happened, in plain words, and which retry it is with the time left for the next one. Nothing technical is shown (no error codes, no names of the transport). The buttons appear only when the retries have run out and the person has to decide.
+- **A failure of the connection and a failure of the AI look the same**  
+  Both are an amber step in the thread without buttons; when the AI is the one that fails, the card says there is a problem with the artificial intelligence.
+- **The ten retries are one count, whoever makes them**  
+  The retries of the service and the ones of the page no longer count twice or restart one after the other. They are one count of ten, with waits that double each time (10, 20, 40, 80 seconds, up to two minutes), and the count starts again from the first retry after something recovers. There is one retry card at a time, and it no longer flickers between two different counts.
+
+## [2.0.10] - 2026110923
+
+### Fixed
+- **The retries of the page count up to ten even when the run tells things on the way**  
+  A run that failed again and again, with the service telling about its own retries and about activities that failed, started counting from the first retry every time, and never reached the end of the ten. Only an activity that was written counts as the run moving; the rest does not.
+- **A failure that the service marks as retriable is retried by itself**  
+  The relay of Moodle spells it "retryable" and the service "retriable"; the page only knew the first, so a failure of the service went straight to the person.
+- **A failure to reach the service while the course is created is retried by itself**  
+  When Moodle cannot reach the service at the moment of creating the course (a cut connection, a 503), the page retries with the same growing waits and the same line under the title, instead of asking the person.
+- **The line of the retry of the service is kept alive in the status bar of the thread**  
+  It is the same line, counting down every second, as under the title and in the card.
+
+## [2.0.10] - 2026110922
+
+### Added
+- **The retries of the service when the AI provider fails are shown like the retries of the connection**  
+  When the AI provider answers with an error that waiting mends, the service tries again by itself and says so. The page shows the same card as for a lost connection: the reason ("The AI provider returned an error (503)"), "Retry 2 of 10 · next one in 18 s" counting down every second, and it goes away when the request is answered. The card has no buttons, because the one who retries is the service.
+
+## [2.0.10] - 2026110921
+
+### Added
+- **A failure of the connection is retried by itself, waiting longer each time**  
+  When the connection with the AI service is lost during a generation, or while the course is being created, the page no longer waits for the person to press "Try again". It retries by itself, ten times: the first retry ten seconds after the failure, the second twenty seconds after that, then forty, eighty and so on, with a ceiling of two minutes between retries. A run that goes on between two failures starts counting again.
+- **The page says which retry it is and how long is left for the next one**  
+  A card in the thread shows the reason, "Retry 3 of 10 · next one in 14 s" counting down every second, and two buttons: "Retry now" and "Stop retrying". While the course is being created the same line is shown under the title. If the ten retries are not enough, or the failure is not one that waiting mends (a missing license, for example), the person is asked as before.
+
+## [2.0.10] - 2026110920
+
+### Fixed
+- **A creation of the course that stopped is no longer waited for**  
+  A request that found the course "being created" waited for up to ten minutes even when the process that was creating it had died. The creation now marks that it is alive at each step, and a request that finds it silent for ninety seconds builds the course itself.
+- **The page says why the creation stream could not be opened**  
+  It always said that the connection was lost; it now says what the server answered.
+
+## [2.0.10] - 2026110919
+
+### Fixed
+- **Creating the course after the generation no longer depends on one long request**  
+  The course was created in a single request that stayed silent until it ended, and with a hundred activities that takes longer than the two minutes the proxies in front of a site wait: the request was cut (error 524 on a site behind Cloudflare) and the course could not be created. The creation is now followed as a stream: the server writes after each activity and the page shows "Creating the activities: 35 of 102", so the connection is never silent. If the connection is cut anyway, the page opens it again and waits for the creation that is running instead of starting another. The creation goes on even if the browser leaves.
+- **The page waits as long as the creation lasts**  
+  It gave up after three minutes whatever happened; it now gives up only after three minutes without news.
+- **The tests of the questions of the AI run again**  
+  The page they simulate shows the list of the activities as hidden, as the real one does.
+
+## [2.0.10] - 2026110918
+
+### Fixed
+- **The thread of the generation only grows downwards**  
+  Anything that happened after the list of the activities was on the page, such as the offer to try again or a question of the AI, was drawn above the list, in the middle of what was already there. It now goes under the list.
+- **The reason a course could not be created is kept in the log of the server**  
+  The person still sees a short message; the cause is written to the log so it can be found.
+
+## [2.0.10] - 2026110917
+
+### Fixed
+- **The review of the course data can be scrolled to its buttons**  
+  Once the course was generated, the review form (name, short name, category) could be taller than the screen and its Cancel and Create course buttons stayed out of sight, with no way to scroll. The column now scrolls on its own, with the same thin scrollbar as the rest of the interface.
+
+## [2.0.10] - 2026110916
+
+### Fixed
+- **The page of the course creator shows only the creator**  
+  The buttons and widgets that the site adds to every page, such as a support button or a chat or social icon, were drawn over the creator. They are left out of this page.
+
+## [2.0.10] - 2026110915
+
+### Changed
+- **The relay of the stream asks the provider for the license header again**  
+  The plugin no longer works out the key of a tenant by itself. A provider that serves several tenants builds the header with `get_license_header()`, as the other providers do, and the plugin keeps reading the site key only when the provider has no such method.
+
+## [2.0.10] - 2026110913
+
+### Fixed
+- **A generation that stopped on an error no longer looks like it is still working**  
+  The ring of the header and the marker of the last step kept turning while the offer to try again was open. Now, as when the person stops the run, nothing turns, the header says it is stopped, and the failed step keeps its own color. Stop did not stop the ring of the header either; it does now.
+- **The buttons of a card in the thread have the look of Stop and Resume**  
+  "Try again" and "Close" were flat and touching each other. They now have the size and shape of the rest of the buttons, with a space between them. The same goes for Continue when there are several questions.
+
+## [2.0.10] - 2026110912
+
+### Changed
+- **Importing a template: the courses follow the category as soon as it changes**  
+  The import page had a "Filter courses" button next to the category, and the list of courses only changed after pressing it. The button is gone: choosing a category fills the list of courses with the ones of that category right away, the list can be searched by typing, and the course chosen for the previous category is emptied.
+
+## [2.0.10] - 2026110911
+
+### Changed
+- **The questions of the AI show only what is needed**  
+  A question that is a yes or no is its question and two buttons, Yes and No, and it is answered by pressing one: no title, no explanation, no "Continue". A question that asks for a file has two buttons, one to attach it (the file is the answer as soon as it is picked) and one to go on without it. The options of a question with one choice are radio buttons, and those of a question with several are checkboxes, with the same markup as the rest of the interface. Only a card with several questions keeps its title and its Continue button.
+
+## [2.0.10] - 2026110910
+
+### Added
+- **The summary at the top of the conversation says whether pictures are made**  
+  It listed the template, the language, the syllabus and the instruction, but not the pictures. It now has an Images row, and it changes when an answer to the AI turns them on, also when the page is opened again.
+
+## [2.0.10] - 2026110909
+
+### Changed
+- **Stop and Resume sit where free mode has them**  
+  They were drawn in the header of the right column with a style of their own. They are now the same buttons as free mode, at the bottom of the left column where the composer would be, and the bar goes away when the run ends.
+
+## [2.0.10] - 2026110908
+
+### Added
+- **The AI asks before it starts, when what was asked for does not fit**  
+  When the instruction or the template asks for something the request was not given (pictures asked for and turned off, a document the instructions lean on and nobody attached, a language that contradicts what was written), the generation now stops and asks, as one more message of the conversation. A question can be a switch, one choice, several choices, a file or some text, and the person answers or goes on without answering. The questions come from the AI service, so a new kind of question needs no change here. A file is attached with the same filepicker as the syllabus.
+
+## [2.0.10] - 2026110907
+
+### Added
+- **A generation from a template can be stopped, and resumed**  
+  The header of the generation now has a Stop button from the moment Generate is pressed, and a Resume button once it is stopped. Stopping closes the stream at once and tells the AI service, which cancels every request it had under the run and answers only when nothing is going any more, so nothing keeps spending the license. What was already made is kept; Resume makes only what is missing. If the service cannot confirm the stop, the thread says so.
+
+### Fixed
+- **The relay notices that the browser left even while the service is silent**  
+  PHP only learns that the browser left when it writes to it, so a long wait for the AI left the relay connected and the service generating for nobody. The relay now writes a comment to the browser every second, which the browser ignores, and ends the transfer as soon as the browser is gone.
+
+## [2.0.10] - 2026110906
+
+### Fixed
+- **The error of a template generation shows in the conversation, not over the page**  
+  When a generation stopped, the message with "Try again" and "Close" was added at the end of the page and spread over its whole width, below both columns. It now appears as one more message of the left column, with the same look as the rest of the thread.
+
+## [2.0.10] - 2026110905
+
+### Fixed
+- **The generation of a course from a template shows from the click**  
+  The page stayed empty until the service answered, which takes close to a minute while the syllabus is sent to the AI. The generating page, with its "Starting the generation…" step, now opens as soon as the button is pressed, and it closes again with the error if the run cannot start.
+
+## [2.0.10] - 2026110904
+
+### Changed
+- **The progress of a course generated from a template reaches the browser through Moodle**  
+  The browser opened the stream of the AI service itself, so the address of the service was in the page and nobody checked who read the run. It now reads it from this plugin, like the activity and the course stream: only the user who started the run, and who may still generate from a template, can read it, and the service address stays on the server.
+
+## [2.0.10] - 2026110903
+
+### Fixed
+- **Creating an activity or a course with the AI no longer ends in "Disconnected from the server"**  
+  The stream that shows the progress asked the provider plugin for its License-Key header, and a provider that does not build it in one place has no such method, so the stream stopped before it began. The header is now built here the same way when the provider cannot.
+
+## [2.0.10] - 2026110902
+
+### Changed
+- **The language of a course made from a template is detected by the AI unless the professor picks one**  
+  The language select of the template form now starts on "Detect automatically": the AI reads the instruction, the attached syllabus and the template and writes the whole course in the language they are in. Before, it started on the language of the professor's own Moodle, so a course written in Spanish from a Spanish template came out in English when the interface was English, with the fixed texts of the template in Spanish. Picking a language still forces the whole course into it. The select is now the same styled chip and searchable list the free mode uses, and every option explains itself in a tooltip.
+
+## [2.0.10] - 2026110901
+
+### Fixed
+- **An H5P activity shown inside a lesson page grows with its content**  
+  The frame that shows the activity asked for the script that fits it to its content from a path that does not exist, so it always kept its starting height and anything taller than that was left out of sight: the exercises and the questions at the bottom of a long activity could not be reached. The script is now asked from the H5P library of Moodle, and the frame takes the height of the activity.
+
+## [2.0.10] - 2026110701
+
+### Changed
+- **A generated quiz is created in Moodle much faster**  
+  Every question used to load the quiz again, check it, clear its previews and add up the marks of all the questions before it, so a final exam of a hundred questions took seconds on its own. That work is now done once for the whole quiz: the questions, their marks, their pages and the total grade are the same.
+
+## [2.0.10] - 2026110601
+
+### Added
+- **A course made from a template offers the syllabus the professor uploaded**  
+  A template can link the syllabus from any page, lesson page or label with a link marked as such (for example, the weekly plan offering the didactic guide as a PDF). The uploaded file is kept with the generation and, once the course exists, each of those links opens a copy of it kept with its page, so the students read the same document the course was made from instead of a version written again. Without an uploaded file those links are taken out.
+
+## [2.0.10] - 2026110301
+
+### Fixed
+- **A course made from a template generates its images when the professor asks for them**  
+  The images switch of the template form was ignored: the generation always ran without images, so no activity of the template could come out with pictures. The choice now travels with the generation, and it needs the same permission as creating a course with images.
+
+## [2.0.10] - 2026102637
+
+### Added
+- **A template can be hidden without deleting it**  
+  The list of templates has a Visible column and, on each row, an action to hide the template or show it again. A hidden template keeps everything it has but is not offered when creating a course from a template, so a template that is being prepared or tested can stay out of sight until it is ready.
+
+## [2.0.10] - 2026102636
+
+### Changed
+- **The syllabus row is always shown in the settings of a course made from a template**  
+  A course generated before the name of its syllabus was kept says "Not recorded" instead of leaving the row out, so the row is never missing without a reason.
+
+## [2.0.10] - 2026102635
+
+### Changed
+- **The settings of a course made from a template read as one more message of the conversation**  
+  They no longer stand out as a card with a title and an icon: they are the grey card of the professor's turns, at the size of the rest of the conversation, so no step weighs more than another.
+
+## [2.0.10] - 2026102634
+
+### Fixed
+- **Reloading a course made from a template keeps its conversation**  
+  The conversation of a generation from a template lived only in the browser, so reloading the page left the course card alone. Moodle now keeps every answer to the review, the moment the course was built and the activities the AI wrote, and a reload shows the conversation again: the steps with their times, the changes asked for, the approval and the generated activities by section. Courses built before this change show the steps that are certain (approved and built), without the list of activities. The finished course now counts its sections the way the generation does, the general section included.
+
+## [2.0.10] - 2026102633
+
+### Added
+- **A course made from a template says what it was generated with**  
+  The conversation of the generation now opens with the course settings: the template, the language, the attached syllabus and the general instruction. Reopening a course that was already made shows the same settings beside its card, so it is always possible to know how it was generated. Courses generated before this change show what they kept: the template, the language and the instruction.
+
+## [2.0.10] - 2026102632
+
+### Fixed
+- **The language picked when creating a course from a template is now the language of the generated course**  
+  The language selector of the creation from a template was kept in the browser and never sent, so the course was always written in the language of the template's course or of the professor's session (English on an English site), whatever was picked. The start of the generation now carries it.
+
+## [2.0.10] - 2026102631
+
+### Removed
+- **The Course Presentation editor and the type chooser of the creation chat are set aside**  
+  The generator of activities goes back to how it was before them. That work stays in its own branch and is not part of this build.
+
+## [2.0.10] - 2026101228
+
+### Added
+- **An H5P activity can be shown inside the page that links to it**  
+  A link written for an H5P activity of the course, marked to be shown embedded, becomes the player of that activity once the course exists, so the student uses it without leaving the page or pressing a button. If the activity cannot be shown that way, the link stays as a normal link.
+
+## [2.0.10] - 2026101227
+
+### Added
+- **A space in a template can be an activity the AI always creates**  
+  In the menu of a section, "Add a space for an activity" now asks who makes the activity. The teacher can still provide it. Or the AI always creates it: the administrator gives it a name and the instructions it must follow, and a course made from the template always gets that activity, written from the syllabus and the material with those instructions, without the teacher seeing it or changing it. There is no need to add a template activity to the template course for it. In the structure of the template these activities have their own green mark and side stripe, so they are not mistaken for an instance of a template activity (purple) or a space for the teacher (orange).
+
+## [2.0.10] - 2026101224
+
+### Fixed
+- **A finished course opens as its card alone**  
+  Opening a course already made from a template showed its card on the right and, on the left, the empty form that makes a new course. The form and the divider are now hidden, so the card is the whole view.
+
+## [2.0.10] - 2026101223
+
+### Fixed
+- **A question that cannot be stored no longer stops its quiz at that point**  
+  When the AI gave a question a penalty Moodle could not store, creating that question failed and every question after it was left out, while the course was still reported as created. The penalty is now always a valid number and a question that still fails is skipped, so the rest of the quiz is added.
+
+## [2.0.10] - 2026101222
+
+### Fixed
+- **The page to create a course no longer runs out of memory when a user has many generations**  
+  Every course made from a template keeps its whole payload, megabytes of text, in its session, and the page read all of the sessions of the user to draw the list of recent courses, twice. After about fifty of them the page failed with an error 500. The list now reads only what it shows: the name, the short name and the template of each session are kept in small columns of their own, filled in for the sessions that already exist, and the list asks only for the sessions it draws.
+
+## [2.0.10] - 2026101221
+
+### Fixed
+- **A picture of the course that cannot be read back no longer stops the course, and an error while the course is created can be tried again**  
+  When a picture the AI made could not be downloaded as the course was being created, the whole creation failed with a technical error and no way to go on. The picture is now skipped, as it only decorates the course, and the size the result states is no longer checked against the file that arrives, as free creation never did, and any other error of that step shows the same card as the rest of the generation, which keeps what was made and offers to try again.
+
+## [2.0.10] - 2026101220
+
+### Fixed
+- **A course made from a template opens as a finished course from the list of recent courses**  
+  Opening a session whose course was already created showed the empty template form with a completion card that said "0 activities were created in 0 sections", because the page treated it as the resume of a free-mode plan. It now shows the completion view with the number of sections and activities the course really holds and the button that opens it, and nothing of the form that makes a new course.
+
+## [2.0.10] - 2026101219
+
+### Fixed
+- **The progress of the pictures and the notices about the wait are shown where they can be seen**  
+  They were written under the title of the right panel, which is out of sight as soon as the list of activities is scrolled, so while the pictures were made nothing seemed to happen. They now also go to the status bar of the conversation, which is always in view: the counter of pictures, the one being made and the reference it is made from, and the notices about a wait or a retry.
+
+## [2.0.10] - 2026101218
+
+### Changed
+- **A generation made from a template shows in the sidebar and in the address as soon as it starts**  
+  The session of the generation is now added at the top of the list of recent courses the moment the course starts to be made, and its identifier goes into the address of the page, the way a conversation does in a chat. The name replaces "Untitled course" when the AI returns it. Opening the address of a template session lands on the template page instead of the resume of a free-mode plan.
+
+## [2.0.10] - 2026101217
+
+### Changed
+- **The list of recent courses shows the name the AI gives the course as soon as it returns it**  
+  A generation made from a template appeared in the list as "Untitled course" with the label "Planning" until it was finished. The name is the first thing the AI returns, so now the full name and the short name replace the placeholder at that moment, in the list on the page and in the one that is loaded later, and the label says "Generating" instead of "Planning".
+
+## [2.0.10] - 2026101216
+
+### Added
+- **The generation says what it is doing and any error can be tried again**  
+  While a course is generated the phase line now tells when the AI provider asked to wait, when a request is being tried again or is slow, and, for the pictures, which image is being made, from which template image, and how many are ready. When the generation stops on an error the technical message with its stack trace is gone: a card says that what was already made is kept and offers to try again, which makes only what is missing, or to close.
+
+## [2.0.10] - 2026101215
+
+### Added
+- **The pictures of the course itself can be made again from the ones of the template**  
+  The cover of the course, the picture each section is shown with in the grid format and the pictures in the summary of a section can now be replaced by new ones the AI makes looking at the template's picture and following an instruction. The author writes `[[coursegen:reference: instruction]]` in the rich text next to the picture: in the summary of the course for its cover, in the summary of a section (with no picture of the text after it) for the picture of that section, and right above a picture of a section summary for that picture. The instructions are taken out of the texts the new course receives, a place where the template has no picture gets one made from nothing, and a marker that points at more than one picture, or two markers for the same place, are refused before the generation starts.
+
+## [2.0.10] - 2026101214
+
+### Fixed
+- **The activities, the sections and the completion of a course made from a template keep the settings of the template**  
+  An activity the AI wrote, and a kept one, was left visible on the course page, without restrictions and without completion tracking even when the template had them, the sections were created without restrictions, and the criteria that complete the course were not carried. Now each activity and section takes from its template counterpart whether it is visible and shown on the course page, its whole tree of access restrictions (through Moodle's own availability tree, so every kind of condition is carried, the ones other plugins add included), how its completion is tracked and the completion rules of its module, its group mode and grouping, its tags and its competencies. The course takes the criteria that complete it, how they are added up and its competencies. The ids those settings hold are pointed at the new course: an activity at its copy, a grade item at the one of the copy, and a group or grouping that is used is created in the new course with the same name. A reference that still has no counterpart (for instance an activity left out of the template) gets the value Moodle's restore gives it, so the restriction shows as broken instead of opening access. The dates of the template are not copied: neither the ones in a restriction, nor the date an activity is to be completed by, nor the criterion that completes the course on a date.
+
+## [2.0.10] - 2026101213
+
+### Added
+- **A template can be exported and imported**  
+  The row of each template in the list has an Export action, and the screen of a template has an Export button: both download its configuration as a file. An Import button on the list opens a page that rebuilds a template over a course from such a file; the courses can be filtered by category, so a template can be moved to a site where its course was restored from a backup. The course must have the same sections and activities as the one the template was exported from: if any is missing, nothing is imported and the page lists what is missing. If the course already has a template, it is replaced. The command line offers the same operation.
+
+## [2.0.10] - 2026101212
+
+### Fixed
+- **Links to the activities of the template course now point at the new course in the activities the AI writes**  
+  A page, label or lesson page that had a link to another activity of the template course written as plain text kept that address in the new course, so the link opened the activity of the template course. The addresses are now changed to the matching activity of the new course in the generated activities as well, not only in the kept ones. An address of an activity that has no counterpart is left as it is.
+
+## [2.0.10] - 2026101211
+
+### Fixed
+- **The Anterior and Siguiente buttons of a generated lesson page sit side by side**  
+  A lesson page created from a template stored its buttons stacked one under the other, while the same page in the template shows them in a row. The page now arranges its buttons horizontally, as the lesson form does by default, unless the page says otherwise.
+
+## [2.0.10] - 2026101210
+
+### Changed
+- **The left column of a template generation looks like the one of free creation**  
+  The progress is a card with one item per section: a spinner that becomes a check when all the activities of the section are written, and under its name the text of its activities (name in bold, type in italics) with the same "Show more" toggle. An activity with repeat blocks adds how many items are written out of how many there are, the one being written and the list of items. The compact rows of the first design are gone from this card; the pill of the top bar keeps its own list of activities.
+
+## [2.0.10] - 2026101209
+
+### Added
+- **The row of an activity shows how many items of its repeat blocks are written**  
+  When an activity has a repeat block, its row in the progress list of the left column and of the top bar shows how many items are written out of how many the plan has ("10 of 50"), the item last written and a fine bar. An activity with several blocks adds them up, and one with none keeps the row it had. The service sends two events for it, one when the plan of a block is ready and one for every group written, which carry the names of the items and counts and nothing of what was written.
+
+## [2.0.10] - 2026101208
+
+### Fixed
+- **The first step of the thread stops turning when the activities start being written**  
+  "Reading the template and the material you attached" kept its spinner and its timer for the whole run, because it was the only step of the thread. A step "Writing the activities of the course" now follows it as soon as the first activity starts, so the reading is a past step and only the step in progress turns.
+
+## [2.0.10] - 2026101207
+
+### Fixed
+- **The type and module of each activity are no longer cut in the left column**  
+  The detail of each row (for example "Lesson · Módulo #1") was shortened with an ellipsis. It is now shown whole, as in the list of the top bar, and the name is the one that wraps when the row is narrow.
+
+## [2.0.10] - 2026101206
+
+### Changed
+- **The left column of a template generation uses a smaller type scale**  
+  The heading, the thread and the list of activities are set at 17, 12 and 12px, with tighter rows and a finer meter, so the whole column reads as one compact card instead of large chat text.
+
+## [2.0.10] - 2026101205
+
+### Fixed
+- **The activities in the left column use the compact card of the redesign**  
+  The list had fallen back to the large rows of the free creation chat. It is now a card with a meter that fills as the activities are written, one tight row per activity with its state, name and type, a ring that turns while it is written, a green check once it is done, and no turning while the review waits for the teacher.
+
+## [2.0.10] - 2026101204
+
+### Fixed
+- **The left column lists the activities as they are written, and stops turning while it waits for the teacher**  
+  The list of activities had been put in the column of free creation, which a template generation never shows, so nothing appeared there. It now sits under the thread of the template column and is kept in step with the list of the top bar. While the review waits for the teacher the last step of the thread is amber and does not turn, and once the run is over it is a check.
+
+## [2.0.10] - 2026101203
+
+### Removed
+- **The space for the teacher's file is gone**  
+  A file resource of a template can no longer be marked "Space for the teacher": the option, its card on the teacher screen, the rule that kept Generate off until the file was added, the step that put the teacher's file in the new course and removed the elements that pointed at the template's file, the scheduled task that purged those files and the fields `spacerequired` and `spaceinstruction` are removed, and the activity file pass no longer reads files from a space. A file resource is now kept, referenced or excluded like any other activity. The spaces the professor fills with an activity of their own are not part of this change.
+
+## [2.0.10] - 2026101202
+
+### Changed
+- **The left column of a template generation is a timeline of cards, and the activities live in a fixed top bar**  
+  The progress of the generation is drawn as cards with a meter that fills as the activities are written. The top bar keeps in view a pill with how many activities the AI has written out of how many it will write, which opens the list of activities, the stats of the structure and the link to preview the whole course. The section limits badge stays next to the stats. The same rows of the activities are also kept in the thread of the left column, so the progress of each activity stays in view while it is written. The question card of the template agent and its texts are not part of this change.
+
+## [2.0.10] - 2026101201
+
+### Added
+- **Generation streams are read through Moodle instead of straight from the AI service**  
+  The browser used to open the planning and activity streams of the AI service directly, so anyone who knew a thread identifier could follow it and Moodle had no say. The pages now read them from `local/coursegen/stream.php`, which checks that the user owns the planning session or activity job and still holds the capabilities of the paid generation, opens the service stream on the server and passes its events on unchanged. The relay releases the Moodle session lock while it streams, writes a keepalive comment every 10 seconds while the service is silent so proxies do not close the connection, stops the transfer from the service as soon as the browser leaves, drops a transfer that stays silent for 5 minutes instead of using a total time limit, and allows only one relay per thread, since a second reader would start a second run of the same generation. A stream that ends without the service's `done` event is closed with a retryable failure. The server-sent events parser handles `event:` and multi-line `data:` fields, LF, CRLF and CR line ends and comments, and the browser side reads the relay with `fetch` instead of `EventSource`, so the stream handlers are unchanged. The `streamingurl` values returned by `start_course_planning`, `get_course_session_state` and `create_mod_stream` now point to the relay, and the Activity AI mutations module was split into stream and activity creation modules.
+
+## [2.0.10] - 2026100225
+
+### Added
+- **A command makes the template of a course from the placeholders of its activities**  
+  Given a course whose activities carry `[[coursegen:...]]` markers, `cli/create_template_from_course.php --courseid=N` makes a template with the name of the course. Every activity with placeholders is marked "use as template" and gets one instance right after it, the sections that hold an instance may be modified by the AI and everything else is kept. Running it again for the same course and name replaces the template. It has `--dry-run`, `--json`, `--name`, `--scope`, `--no-replace` and `--allow-empty`, and it refuses with its own exit code when the course does not exist, has no activities or no placeholders, or the template tables are missing.
+
+## [2.0.10] - 2026100224
+
+### Fixed
+- **A site that already ran the plugin upgrades to the template tables without failing**  
+  The template tables were created only by the step 2026072002, so a site that was already past that step when they arrived never got them, and the steps after it failed when they touched a table that did not exist. The creation now runs at the start of the step 2026091504, and it creates only the tables that are missing, so sites that already have them keep them as they are.
+
+## [2.0.10] - 2026100223
+
+### Changed
+- **The space card of the teacher screen is smaller and uses an informative blue**  
+  The card asked for the teacher's file in red, a colour that reads as an error, and its icon, type and button were larger than the rows around it. It is now drawn in the blue of an informative notice, with a smaller icon, text and button and less padding, so it stands out without shouting. The required state keeps a stronger left border and a filled badge, the file state keeps its green, and the remove action is no longer red.
+
+## [2.0.10] - 2026100222
+
+### Changed
+- **The space of the teacher screen is a card that asks for the teacher's file**  
+  It is no longer one more row of the list with a small badge and a grey button. It is a full-width card with a dashed border and a soft tint, in the same place of the same section, with the label "Your contribution", the badge "Required" or "Optional", the administrator's instruction as its main line and a clear "Upload file" button. A required space also says that the file has to be uploaded to generate the course. Once the file is added the card turns green and shows the file name with "Change" and "Remove file", and the button shows "Uploading…" while the file selector loads
+
+## [2.0.10] - 2026100221
+
+### Added
+- **A file resource of the template can be a space for the teacher's file**  
+  In the template editor the action "Space for the teacher" is offered only for a file resource. The teacher sees a card with an "Add" button in the same place of the same section, and it opens the same file selection window as the syllabus. A space can be required, and then the course cannot be generated until the file is added
+- **The new course gets the teacher's file where the template had its own**  
+  The resource is created in the same section and position with the name and description of the template and the teacher's file. Any text of any activity that points at the template's file (a frame, a link, an image, an embedded object) points at a copy of the teacher's file that the activity keeps in its own files. When the teacher adds no file the resource is not created and only the elements that pointed at its file are removed from the texts
+
+### Changed
+- **A space saved on an activity that is not a file resource is read as excluded**  
+  The editor says so on the row and the space cannot be saved for those activities any more
+- **An address of a file resource that carries its revision is understood**  
+  The number between the file area and the file name of a resource address is read as a revision, not as an item id
+
+### Removed
+- **The "Course files" block, the "Add activity" and "Add section" controls of the teacher screen**  
+  The block that asked for a file at each reference marker, its web service, its upload page, the storage of those files and the file token the AI service handed back are gone. The reference marker stays only to make a new image from a file of the template. The files left by the old storage are deleted on upgrade
+
+## [2.0.10] - 2026100220
+
+### Changed
+- **The preview of a generated activity is drawn from its own result and from nothing else**  
+  The result of the run holds, for each activity written from a template, the template's own rows with what the AI wrote laid into the row it came from, and every record the AI wrote says which template record it came from (`source_id`) and which row of the result it is (`record_id`). The preview reads exactly that: it no longer looks up the template activity or matches the written pages, chapters, entries or options to the template's rows by title or by order, so two pages that share a title each show their own content and no `[[coursegen:` marker is shown
+- **A quiz is previewed from the questions its result carries**  
+  The result returns the questions of a quiz as the question bank rows with the AI's texts laid into the row of each question, beside the same questions in the form that creates them. The preview draws the first and no longer rebuilds a question from the form
+- **A generation made before the records carried their ids cannot be previewed, and says so**  
+  The preview of an activity whose result has no template rows, or whose record names a row the result does not hold or an element the result gives no table to read it from, stops with a message that names the activity and asks to generate the course again. Nothing is guessed from the title or the position. Sessions generated before this build need to be generated again to be previewed
+
+### Removed
+- **The title and order matching of the preview**  
+  The row matchers for lesson pages and book chapters, the translation of a kept activity into the shape of a plan, the conversion of a quiz form into engine rows and the per-module methods that laid a draft over the template rows are gone, with their tests
+
+### Fixed
+- **The preview of a glossary entry, a wiki page and the results of a choice no longer stop with a missing class**  
+  The classes that draw them named `stdClass`, `url_select` and `wiki_parser_proxy` without the namespace they live in
+
+## [2.0.10] - 2026100219
+
+### Fixed
+- **Every field of a new activity now receives the files it references, whatever the module**  
+  Once an activity exists, the rows its module declares are read, every text that points at a file is rewritten to the way Moodle stores it and the file is copied into the file area that field is served from, with the author and license it had. It covers the introduction of every module and the text of wiki pages, the questions of a quiz with their answers and feedback, the criteria of a workshop, the final page and the items of a feedback and the entries of a database, which no one had to remember to wire before. A file that cannot be found stops the creation, removes the half made activity and names the activity, the field and the file.
+
+### Changed
+- **The forum, glossary and lesson settings no longer carry their own file handling**  
+  The forum message, the glossary definition and the lesson page used to be prepared one by one so their files reached the new activity, and a field nobody wired lost its files. That preparation is gone, and so is the list of file areas a file of the template had to be in: the files of every field are given afterwards in one step for all modules. A link to a file that belongs to a place other than the one the text is stored in stays a link.
+
+## [2.0.10] - 2026100218
+
+### Added
+- **A text can be read for the files it references, whichever way it names them**  
+  The absolute address of a file of the template or of the teacher, the placeholder of a file the service made and the path of an image the service made are all turned into the one reference Moodle stores, `@@PLUGINFILE@@/name`, and the file they name is found where it comes from. A reference that names no file, or one the user may not copy, stops the creation with the activity, the field and the file in the message. Two different files with the same name stay two files, and the markers the service left unresolved are removed.
+
+## [2.0.10] - 2026100217
+
+### Added
+- **The rows of an activity can be listed with the file areas their module declares for each**  
+  Reading the structure the module itself declares for a backup, every row an activity is made of is listed with the file areas its texts may keep files in and the item they are stored under, so a module added tomorrow is covered without anybody describing it. The questions of a quiz, which a backup keeps apart from the quiz, are found through the question bank: their text, feedback, answers, hints and the options of their type.
+
+## [2.0.10] - 2026100216
+
+### Added
+- **A template can ask for a real video, and the review says when none was found**  
+  An iframe whose `src` is entirely one `[[coursegen:aiprompt: ...]]` marker is now a video slot: when the course is generated a real video that can be embedded is searched for it and only its address is written into the iframe, which keeps the rest of its attributes and styles. The "Markers" section of the template configuration explains the rule and tells it apart from a link to another activity. When no suitable video is found the iframe is left out of the activity and the review shows a small notice on that activity with the video that was asked for.
+
+### Changed
+- **The backup structure of an activity can now be walked by any reader**  
+  What the reader of an activity's backup structure does with each element is no longer fixed: the walk is a method of its own that takes any processor, and a walk can ask for what people filed in the module (posts, entries, records) as well. The tree sent to the AI service is read exactly as before.
+
+## [2.0.10] - 2026100215
+
+### Fixed
+- **The files a forum message references now reach the discussion post**  
+  The message of a discussion created from a template is prepared like any other rich text: the template's own files, the teacher's files and the files the service made are copied into a draft area that the post saves into its own file area, so an image or a document placed above a reference marker in a discussion is no longer left as a broken address.
+
+## [2.0.10] - 2026100214
+
+### Added
+- **The template editor explains the reference marker**  
+  A new collapsed "Markers" section of the template configuration holds a help button that explains how to type `[[coursegen:reference: what the teacher brings]]` above the element that holds a file, what the teacher sees for it, and what happens when they bring nothing.
+
+## [2.0.10] - 2026100213
+
+### Added
+- **The preview of a generated activity shows the file the teacher brought, never a token**  
+  Where a place of the template has a file of the teacher, the preview of the activity that holds it shows that file, served only to the teacher who brought it. A token with no file stops the preview with the name of the activity instead of showing it.
+
+## [2.0.10] - 2026100212
+
+### Added
+- **A "Course files" section on the template screen lets the teacher bring their own files before generating**  
+  Once a template is chosen, a section lists every place of the template that takes a file, labelled with what the marker asks for and the activity it belongs to. Each place has one optional file input that accepts only the kinds of file the place holds, shows the file already brought with a link to remove it, and says what happens with no file: a new one is generated from the reference, or the place is left out when one cannot be generated. Uploading again replaces the file. The section disappears with the template and for templates with no place for a file.
+
+## [2.0.10] - 2026100211
+
+### Added
+- **The template screen can list the places of a template and take the file a teacher brings**  
+  A new web service, local_coursegen_get_template_reference_slots, lists the places of a template that take a file with what each asks for, the activity it belongs to, the kinds of file it accepts and the file the teacher already brought. A new page, reference_file.php, takes the upload itself, a real file in a multipart request, or empties a place. Both check the session key and the capability to create a course from a template, and the page only accepts a place the template really has.
+
+## [2.0.10] - 2026100210
+
+### Added
+- **Files a teacher brings for a course are kept apart from their drafts, checked, and cleaned up**  
+  A file uploaded for a place of a template is kept in a private area of the plugin, in the teacher's own context, one file per place, a new upload replacing the old one. The site's upload limit applies, the name is made safe, and a place only takes the kind of file its element holds; anything the site would serve as a page or run as a script is refused. Only the teacher who brought a file can open it. When a generation starts its files are handed to it and deleted once the course is built; a daily task deletes the ones that waited more than a week, and a teacher's files go with their data when it is erased.
+
+## [2.0.10] - 2026100209
+
+### Added
+- **The places of a template where the teacher may bring a file are found**  
+  The activities saved as a template are searched with the same reference scanner the AI service run uses, so a place is numbered exactly as the run numbers it. Each place is named after its activity and its order, kept apart from the uid the payload gives the activity at each export, and takes the kind of file of the one the template holds: an image place takes images, a video place videos, any other place documents, and nothing the site would serve as a page or run as a script. A marker with no usable element below it stops the search with the name of the marker. Nothing is shown to the teacher yet.
+
+## [2.0.10] - 2026100208
+
+### Added
+- **A template can ask the AI for a new image coherent with the new course, using the image already in the template as the reference**  
+  The new image takes the original's place in every course made from the template; nothing of the original course is left in it. It works in any text of any activity and does not depend on the images switch. The files travel to the AI service and back as files, the review preview shows the new images, and a file of a kind the AI cannot make anything from (a document, a video) is removed together with its block so nothing of the original course leaks. Both services must be released together.
+
+## [2.0.10] - 2026100207
+
+### Added
+- **A template can mark an image to be replaced by a new one made for the new course: the markers are read and the files they point at are sent to the AI service**  
+  Write `[[coursegen:reference: your instruction]]` right above the image (or the block that holds it) in the activity used as template. Before the generation starts, every marker is checked (it needs an element below it holding exactly one file of the template activity) and the images are sent to the AI service as files, except those the teacher provides. A marker that cannot be used is reported before anything is sent.
+
+## [2.0.10] - 2026100206
+
+### Fixed
+- **The preview shows the images of an activity the template keeps, whichever of its texts holds them**  
+  A kept activity that declares several file areas, such as a page with a description area and a content area, had every image of its text pointed at the first area, so the images stored in the other one showed as broken. Each image is now pointed at the area that really stores its file, for any module type and any of its texts. Nothing changes for an activity that declares a single area.
+
+## [2.0.10] - 2026100205
+
+### Fixed
+- **A course made from a template now shows the blocks of the template and its custom field values**  
+  The new course came out with the blocks the site gives every new course instead of the template's: the template's search in forums, upcoming events and recent activity were missing, and the site's rating block took their place. That rating block also stopped the section cards of the grid format from opening their window. The new course now shows the blocks of the template, each with its configuration, its files and its place on the page, and the values the template gives to the course custom fields.
+
+## [2.0.10] - 2026100204
+
+### Fixed
+- **The review card of a course made from a template read as if it were scolding the teacher**  
+  The card explained that the structure could not be changed here. It now simply invites the teacher to review the generated activities, accept the course, or press Adjust to change something. The Spanish texts of that review and its progress messages now address the teacher in the same friendly tone as free creation.
+- **The Spanish review texts no longer use regional forms**  
+  The review form and the instance prompt placeholder asked the teacher to "previsualizá", "ajustá", "ingresá" or "describí" and said "si lo dejás vacío". They now use the neutral forms the rest of the Spanish texts use.
+- **The review of a course made from a template did not look or behave like the review of free creation**  
+  After the course was generated, the review card could be left without a visible Accept button, the send button of the composer turned into a clipped text button, and the status kept spinning while the system was only waiting for the teacher. The review now uses the same decision card as free creation, with Accept and Adjust. Choosing Adjust brings the composer back with the usual round send button and the slim bar that keeps Accept reachable. While the course waits for the review, the spinner gives way to a check in both columns and no working indicator is shown.
+- **The preview of an activity the template keeps now shows its real content**  
+  Opening the preview of a text and media area, a file, a forum, a survey or any other activity the template keeps as it is showed only the banner and a message saying there was nothing to preview. It now shows the activity as the new course will contain it, and says it will be copied unchanged.
+
+## [2.0.10] - 2026100203
+
+### Fixed
+- **A course made from a template now keeps the template's format, its settings and the look of each section**  
+  The new course was created with the site's default format and nothing else of the template: a template in the grid format came out as topics, without the format options, the section options, the summaries of the sections and their files, the pictures of the grid, or the language. Everything the template does not mark now carries over as it is: the format and how it is set up, the language, the course-wide settings (news items, grades and reports display, activity dates, completion conditions, upload size, groups and theme) and, for each section, its summary with its files, its format options and the picture the grid shows it with. The name, short name, description and category still come from the teacher, and the course is visible as a free one is.
+
+## [2.0.10] - 2026100202
+
+### Fixed
+- **The preview of a generated activity shows the name the admin gave the instance in the template editor in its page heading**  
+  The page heading is printed from the course module the preview is built on, which carries the name of the template activity ("Molde - Lección estándar"), while the breadcrumb showed the generated one. The preview now gives that course module the generated name for the request, which is the instance name, so both agree. Nothing is saved.
+
+## [2.0.10] - 2026100201
+
+### Fixed
+- **The preview of a lesson whose page titles carry a marker no longer shows the template's own marker**  
+  A page whose title the template leaves to the AI (for example "Semana" followed by a number) no longer matches any row by title, so its text stayed the template's. A title that matches no row now takes the row no other title reached, in the order the template is walked, as long as those rows are as many as the pages left.
+
+- **The preview of a forum or an assignment no longer fails with a type error**  
+  The helper that formats the description of an activity declared its parameter as `stdClass` without importing it, so PHP looked for a class of the plugin's own namespace and every activity preview that draws a description stopped with an exception.
+
+## [2.0.10] - 2026100200
+
+### Fixed
+- **The preview of a lesson or a book no longer shows the template's own markers on a second page or chapter that shares a title with an earlier one**  
+  The generated texts were laid over the template's rows by title, so two pages of a lesson (or two chapters of a book) with the same title both landed on the first row and the second one was drawn straight from the template. Each now takes its own row, in the order the template is walked.
+
+## [2.0.10] - 2026100107
+
+### Fixed
+- **The left column was empty while a course made from a template was being generated**  
+  Since the plan was removed, the left column only said that the template was being read and the activities were shown as spinners on the right, so the teacher could not tell what was being written. Each activity now appears in the left column as soon as its generation starts, with its name, type and section, in the same list free creation uses, and its spinner becomes a check when it is written. A counter in the heading shows how many are written out of how many there are, and the matching row on the right changes state at the same moment. Asking for changes starts a new list with only the activities named.
+
+## [2.0.10] - 2026100106
+
+### Changed
+- **A course made from a template is generated as soon as the teacher clicks Generate**  
+  The AI no longer writes a plan of every activity first and waits for it to be approved: the generation starts at once, the progress of each activity is shown while it is written, and the teacher then reviews the finished course. The review opens each generated activity in the preview, and offers two answers: approve the course, which goes straight to the name form and builds it from what was already generated with no further AI work, or ask for changes, either for the whole course or for one activity from its own row, which generates again only what was named and returns to the same review. The preview and change buttons of the rows, which the generation view hides, are shown again during the review.
+- **The review answer of a template generation is now called `local_coursegen_template_review_feedback`**  
+  It used to answer the plan review; it now answers the review of the generated course. The preview of an activity and of the course read the generated result only.
+
+### Removed
+- **The plan of every activity, with its lines under each row, its list in the left column and its preview over the template source**  
+  Nothing needs them any more, so their screens, their strings in English and Spanish and their tests are gone.
+
+## [2.0.10] - 2026100105
+
+### Changed
+- **A course made from a template is now named the way a free course is**  
+  When the generation finishes, the teacher is shown the same form used at the end of a free generation, with the course name and short name proposed by the AI, and can change them, and the category, before the course exists. The course is created with what the teacher confirms, and the same final screen is shown, with the buttons to create another course and to open the new one. Before, the course was created as soon as the generation finished and took the name of the template's course. This must be released together with the matching change of the AI service, which proposes the name once the plan is approved and gives it to every generator as the course title, so the generated texts stop using the name of the template's course as the title.
+
+## [2.0.10] - 2026100104
+
+### Fixed
+- **The links of the kept activities pointed at the template's course**  
+  A kept activity is copied as it was written, so a label with buttons to the pages of the template's course sent the students of the new course to the template. Once the new course is built, the address of each activity that has a counterpart in it is changed to that counterpart: a kept activity to its copy, and a template source that produced a single activity to that activity. Labels, pages and lessons are read, and an address of any other activity is left as it is. A label that is generated from a template can now also carry links to other activities.
+- **The activities of a course generated from a template were not in the order of the template**  
+  The generated activities were created first and the copied kept ones were added after them, so the welcome label ended at the bottom of its section and each lesson was no longer followed by its forum. Each section of the new course now follows the order the template shows it in, and an activity the template does not account for stays after the ones it does.
+
+## [2.0.10] - 2026100103
+
+### Added
+- **Links between the activities of a course generated from a template**  
+  The AI service can now write a link to another activity of the course. Once every activity of the new course exists, the generated activities and the kept ones that were copied, each link is replaced by the address of the activity it names, in the content of the generated pages and in the pages of the generated lessons. A link is only replaced when it is the whole value of a link or image address, and any other text between dollar and at signs is left as it is. If a link names an activity that is not in the course, nothing is rewritten, the generation is marked as failed and the error names the activity and the link, so a broken link is never left in the content. This must be released together with the matching change of the AI service.
+
+### Fixed
+- **The virtual activities of a template were missing from the map of created activities**  
+  The activities generated from a template source were not recorded under their identifier when the course was built, so nothing could be traced back to them. They are recorded now.
+
+## [2.0.10] - 2026100102
+
+### Changed
+- The virtual activities of a template source are now sent to the AI service with the action `instance` instead of `modify`, and the course preview and the filter of the generated activities recognize that action. The `modify` action that regenerated a real activity no longer exists: the script of the template editor no longer defaults to it and a stored `modify` row is no longer shown to the professor. This must be released together with the matching change of the AI service.
+
+## [2.0.10] - 2026100101
+
+### Fixed
+- The built script of the generated-course block reload was missing from the repository, so the course creation page could not load its scripts on a clean install; it is now included.
+
+## [2.0.10] - 2026100100
+
+### Added
+- The course creation page opens on a start screen with two cards, free creation and from a template, and each card opens its own workspace. A bar at the top names the chosen path and leads back to the cards until planning starts, when it stays as the name of the path. Only users who can create in both ways see the cards and the bar.
+
+### Removed
+- The switch between free creation and from a template that sat inside the prompt box, which the start screen replaces.
+
+## [2.0.10] - 2026093029
+
+### Changed
+- The preview of a course in the template editor and the configuration form of the editor ask for the capability of what the user is doing: to create a template when it is new and to edit it when it already exists, instead of accepting either one of them.
+
+## [2.0.10] - 2026093028
+
+### Changed
+- The list of activity types the AI service can write content for lives in one small neutral class on the server, next to the other helpers of the plugin, and in one small neutral module in the template editor script, instead of in a constant of an interface and a hand-copied array. A test keeps the two lists equal.
+
+### Removed
+- The interface that only held that list, with no implementation and no user.
+- The check that told whether a module name was one of the installed supported types, which nothing called.
+- The helper and the base number of the old scheme that gave virtual instances a synthetic course module id, which nothing called either.
+
+## [2.0.10] - 2026093026
+
+### Changed
+- The English strings of the space for the teacher say "teacher", the term Moodle uses for the role, instead of "professor": the action in the activity selector, its tip and the labels, descriptions and placeholder of the modal.
+
+## [2.0.10] - 2026093024
+
+### Changed
+- The scope hint and the tooltip of each option of the template picker are computed with two independent conditions instead of conditions nested in one another. The options the picker shows are exactly the same.
+
+## [2.0.10] - 2026093022
+
+### Removed
+- The `regenerate_detailed_item` external function. It was not declared as a web service, called a method of the AI client that no longer exists, and the AI service no longer has the endpoint it used; regenerating a part of the plan goes through the planning feedback.
+- The unused `can_create_course` check of the chat hook. Nothing called it since the button to create a course with AI moved to the My courses page, which has its own check.
+
+## [2.0.10] - 2026093021
+
+### Added
+- One capability per operation, replacing the broad ones. Course templates: `viewtemplates`, `createtemplates`, `edittemplates` and `deletetemplates`. System instructions: `viewsysteminstructions`, `createsysteminstructions`, `editsysteminstructions` and `deletesysteminstructions`. Image generation settings: `viewimagegenerationsettings` and `editimagegenerationsettings`. Creating a course with AI: `createfreecoursewithai` and `createtemplatecoursewithai`, one per mode, plus `uploadcoursesyllabus` and `generatecourseimages`. Creating an activity with AI keeps `createactivitywithai` and gains `generateactivityimages`.
+- On upgrade every new capability copies the permission of the capability it comes from, in every role and every context where that one was set, including prevent and prohibit and the overrides in courses, categories and activities, so no role gains or loses anything. On a new install it starts with the same roles. `managetemplates`, `managesysteminstructions`, `manageimagegeneration` and `createcoursewithai` stay defined only as that source: no code checks them any more, so changing them after this upgrade has no effect, and they can be removed in a later release.
+
+### Changed
+- Every page and web service of those areas checks its own capability. Saving a template needs `createtemplates` for a new one and `edittemplates` for an existing one, nothing more, and the services the editor uses to build a template are open to who can create or edit. The services that create a course are checked by mode, the ones both modes use by either mode, and a user with neither mode gets the permission error on the course creation page.
+- A request that asks for images needs `generatecourseimages` or `generateactivityimages`, and a template generation that carries a syllabus needs `uploadcoursesyllabus`; they are refused with a permission error instead of being ignored.
+- The interface shows only what the user can do: the create, edit and delete controls of the template and system instruction lists, the mode switch (and only the mode the user can use), the syllabus controls, the generate-images controls of the course and activity windows. The image settings page is read-only without the save button for who can view but not change it. The creation page no longer sends the list of templates to a user who cannot use that mode.
+- Creating a course and reading its final settings, answering its plan and resuming a session now check their capability; before, they only checked that the session belonged to the user.
+- Saving the image generation settings keeps requiring the site configuration capability and also requires `editimagegenerationsettings`.
+
+## [2.0.10] - 2026093015
+
+### Changed
+- The list of installed, AI-supported activity types is read straight from the supported list in one pass, instead of intersecting, sorting and re-indexing arrays: the supported list is already alphabetical, so the result is the same without the extra array calls.
+
+### Added
+- PHPUnit coverage that the supported list stays alphabetical, that the installed list has no repeats and that a hidden module is left out.
+
+## [2.0.10] - 2026093014
+
+### Changed
+- The activity catalog of the template editor is sorted with Moodle's own collator instead of a byte comparison of the names, so the order follows the site language and an accented initial sits with the entries of its base letter. The two comparison helpers it needed are gone.
+
+### Added
+- PHPUnit coverage of the catalog the template editor receives: the types it lists, the shape of each entry, that it is a zero-indexed list and that it follows the collation order.
+
+## [2.0.10] - 2026093013
+
+### Changed
+- The token of a section naming pattern that stands for the original section's name is now `{name}` instead of a word of another language, in the presets, the name-only option, the custom-pattern help and the live preview. `{N}` is unchanged and there is no support for both spellings at once. Stored patterns are not rewritten: a pattern saved with the old token keeps it as plain text, shown in the Custom field, and has to be edited by hand.
+- The template editor scripts take the action, behaviour and scope names, the event names, the language string keys they share and the selectors and classes they share from two small constants modules instead of repeating them. The form now tells the script the custom-pattern value and both tokens, so the script holds no copy of them.
+- Every selector the template editor scripts use now lives in one selectors module, and the scripts find their elements only through `data-action`, `data-region` and `data-form` hooks, never through ids or CSS classes. The hooks added with the spaces work and the naming preview are namespaced (`local_coursegen/template/...`); the ones that already existed keep their original attribute. The name and description fields, the extra sections and naming fields of the configuration form, the dropdown wrappers, the type cells and the icons of the rows carry the new hooks, and the modal ids are unique per render.
+- The add menu items of the template editor are told apart by their own `data-action` instead of a value in `data-menu-action`, and the picked-template click no longer chains a promise.
+- The loops of the naming preview, the virtual rows scrape and the rows of the sections review no longer keep a hand-maintained counter: the position comes from the loop itself or from the lists being built.
+- The naming preview box is rendered from its own template instead of being built in the form class.
+- The save payload, the persistence service and the row options no longer fall back to defaults that can never apply, and the action, behaviour, scope and row-kind names are constants of the classes that own them.
+
+### Fixed
+- The live naming preview built its lines as HTML from the section names of the base course, so a section called with markup would have been interpreted as markup in the page of the professor who edits the template. The preview is now rendered from a template that escapes the names, with its label coming from the language pack, and the space rows added in the editor print the activity icon through the template instead of a script extracting its address from markup.
+
+## [2.0.10] - 2026093008
+
+### Changed
+- The rest of the template editor code follows the same code-quality rules as the spaces work: the row scripts, the structure rows for the professor, the row options, the layout ordering, the export and persistence services, the configuration form and the sections review no longer hide calls inside other calls' arguments, array literals or loop iterables, no longer use a ternary or an inline closure, and keep one non-nested loop per function. The layout ordering and the catalog sorting use small named comparison methods instead of inline closures.
+- The tests of the template editor read every inner call into a named variable first and use small helpers instead of inline closures. Every assertion, data provider and fixture value is unchanged.
+- The name validation of the save button collects its result through a named handler instead of a function defined inside another.
+
+### Removed
+- The summary step script of the old configuration wizard. Nothing in the plugin loads it any more.
+
+## [2.0.10] - 2026093007
+
+### Changed
+- The limits step of the template editor (extra sections allowance, section naming pattern, first section number and the live naming preview) and the summary step are rewritten as small module-level functions that share one explicit context, with no function defined inside another and no nested or repeated loop. The functions these steps lost when the "Allowed activity types" block was removed were edited by that change, so they now follow the code-quality rules too. Behaviour is unchanged.
+- The save payload reads the sections into a variable before building the request, and the save endpoint reads its parameter description and its saved name into variables first.
+
+## [2.0.10] - 2026093006
+
+### Changed
+- The template editor scripts no longer define any function inside another function. Event handlers, callbacks, loop callbacks and promise executors are now named module-level functions that receive their state through an explicit context, or are bound to it, instead of closing over local variables. This covers the wizard start-up, the save payload, the row action and section behavior handlers, the add-from-template click and input handlers, the space modal, the space rows and the activity chooser.
+- The callback chain of a row action change (scope modal, unmark confirmation, space modal) is now a flat sequence of named functions driven by a shared context. The action a row falls back to when a modal is cancelled is tracked in that context.
+- Every loop over a list in those scripts is a plain `for...of` inside its own small function, and there is no nested or repeated loop left in any function the spaces work touched.
+- The template layout and its tests build their row lists with a `foreach` instead of an inline closure. No behaviour changes.
+
+## [2.0.10] - 2026093005
+
+### Changed
+- The code of the template editor and of the spaces for the professor now follows the project's code-quality rules that had been skipped: no loop inside another loop, one loop per function, no ternaries, no `switch`, no named function inside another function, no function call inside another call's arguments, an array or a loop's iterable, and no `??` fallback mixed into a larger expression. No behaviour changes.
+- The template wizard state (`init.js`) seeds each section and each activity through their own small functions instead of a loop inside a loop. The rows, events, payload, menu, space modal and activity chooser modules were split the same way; the chooser now keeps its outcome in a small class instead of a function defined inside another.
+- The section review (`sections_config`) reads the saved configuration through one helper per kind of record and builds each section and each real row through its own method, instead of a single method with five loops, one of them nested.
+- The configuration form builds its limits and its naming fields in separate methods, and the pure pieces (extra sections default, naming options, naming defaults) are public and covered by tests.
+- The tests of the editor and of the spaces read their inner calls into named variables first, and the spaces test got small helpers for the section id, the review render and the badge text.
+
+### Fixed
+- A test of the spaces (an activity marked as a space) called the fixture with one argument too few and would have stopped with an error instead of checking anything.
+
+## [2.0.10] - 2026093004
+
+### Fixed
+- The section-naming presets of the template configuration (Unit, Module, Topic, Week) and the default pattern were written in Spanish whatever the site language, so an English site offered "Unidad 1 — …" and named the generated sections that way by default. The words now come from the language pack; the number and section-name tokens stay identical in every language, since they are what the course builder and the preview substitute (the section-name token is now `{name}`). A pattern saved in another language keeps working and is restored through the Custom option.
+- The wizard no longer starts with a hardcoded naming pattern: its initial value comes from the server together with the rest of the page configuration.
+- The placeholder of the custom naming pattern field, and the "Unidad" examples in the English help texts of the naming pattern and start number, are now proper language strings.
+
+## [2.0.10] - 2026093003
+
+### Added
+- Spaces for the professor in the template editor, put back for review after the revert of build 2026093002. A space marks a place where the professor must, or may, provide an activity of their own when creating a course from the template. It is either a new entry (pick the activity type from Moodle's own activity chooser, limited to the types the plugin supports, then say whether it is required or optional and what the professor has to provide), or an existing activity set to the new "Space for the professor" action. A space is never copied into the new course nor written by the AI: it is left out of what is sent to the AI service. Making the professor provide it, and blocking the start while a required one is empty, comes in a later step.
+- New table `local_coursegen_tpl_space` for the entries, and two fields on the template activity (`spacerequired`, `spaceinstruction`) for the marked activities. The upgrade step creates them only when they are missing, so it is safe on databases that already have them from build 2026093001.
+
+### Changed
+- The "+" between rows and the "Add" row at the end of each section open a menu with two options: add an activity from a template (the same list as before, with a Back item) or add a space for an activity.
+- The professor's activity chooser offers every supported and installed activity type for every template.
+
+### Removed
+- The "Allowed activity types" setting of the template editor, with its "Select all" / "Select none" buttons and its summary line. The saved value is no longer read or written; the column stays so no schema change is needed. `save_template` no longer takes the `allowedtypes` parameter.
+
+## [2.0.10] - 2026093002
+
+### Reverted
+- The spaces for the professor in the template editor (build 2026093001) were taken out until they are reviewed: the "add a space" menu and chooser, the "Space for the professor" action, the `local_coursegen_tpl_space` table and the two space fields on the template activity are no longer defined by the plugin, and the "Allowed activity types" setting of the template editor is back. Databases already upgraded to 2026093001 keep the table and the fields untouched; nothing reads them while this build is installed.
+
+## [2.0.10] - 2026093001
+
+### Added
+- Spaces for the professor in the template editor. A space marks a place where the professor must, or may, provide an activity of their own when creating a course from the template. It is either a new entry (pick the activity type from Moodle's own activity chooser, limited to the types the plugin supports, then say whether it is required or optional and what the professor has to provide), or an existing activity set to the new "Space for the professor" action. A space is never copied into the new course nor written by the AI: it is left out of what is sent to the AI service. Making the professor provide it, and blocking the start while a required one is empty, comes in a later step.
+- New table `local_coursegen_tpl_space` for the entries, and two fields on the template activity (`spacerequired`, `spaceinstruction`) for the marked activities. A space and a template-generated activity placed next to each other keep the order they were placed in.
+
+### Changed
+- The "+" between rows and the "Add" row at the end of each section now open a menu with two options: add an activity from a template (the same list as before, with a Back item) or add a space for an activity.
+- The professor's activity chooser offers every supported and installed activity type for every template.
+
+### Removed
+- The "Allowed activity types" setting of the template editor, with its "Select all" / "Select none" buttons and its summary line. The saved value is no longer read or written; the column stays so no schema change is needed. `save_template` no longer takes the `allowedtypes` parameter.
+
+## 2.0.10
+
+**Released on:** 2026-09-30
+
+**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
+
+## Fixed
+
+- **A leftover image marker written with double brackets is now removed too**  
+  When the AI service could not resolve an image, the marker it left behind was only cleaned up if it used the mathematical brackets, so a marker written with plain double brackets showed up as visible text in the generated activity. Both forms are now removed. Only markers that start with the image prefix are touched, so other double-bracket text, such as a wiki link, is left as it is.
+
+## 2.0.9
+
+**Released on:** 2026-09-29
+
+**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
+
+## Added
+
+- **A generated activity's rich text can carry over a file it points at**  
+  A generated database, quiz, wiki, glossary or lesson can reference a file already stored on the site through its plain URL; that file is now copied into the new activity instead of being left as a broken link, provided the current user can manage activities in the course it comes from.
+
+## Fixed
+
+- **A generated course now explicitly opts into completion tracking**  
+  A course created from a planning session left completion tracking at the database's own default rather than the site's default for new courses, so with the site default off, every completion setting on every generated activity was silently ignored.
+
+- **A generated quiz question's tags no longer write before the permission to add them is checked**  
+  Tags were attached to a newly created question one step before the capability check that can still reject adding it to the quiz, so the tag write could persist even when the operation was refused.
+
+## 2.0.8
+
+**Released on:** 2026-09-22
+
+**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
+
+## Added
+
+- **The plan is approved before the course is written**  
+  A course generated from a template used to be read and written in one movement, so by the time the professor saw anything it had already been made. The run now stops once the plan is written and waits. The plan arrives a piece at a time, as each one is finished, and is shown as the text it will become rather than as a description of it, so what is approved is what will be received. The professor approves it or asks for an activity to be planned again. The structure itself is not offered for editing, because that is what the template fixes; what can be changed is the content that goes inside it.
+
+- **Preview of every activity and of the whole course before either exists**  
+  Every planned or kept activity can be opened in a preview, and the preview is drawn by that module's own rendering code, carried into the plugin and fed from the generation's data instead of the database, so a lesson, a book, a quiz or a forum look exactly as they will once created: a lesson is read one page at a time with its menu, a quiz shows its questions through Moodle's own question engine, a folder lists its real files. The whole course opens the same way and is drawn by the course's own format, so a template in grid format previews as a grid and a weekly course keeps its dates. Nothing in either preview can be used or changed, and nothing is created in Moodle to draw them: reviewing a plan is how the professor decides whether it is worth building, so building it first would answer the question by asking it.
+
+## Changed
+
+- **Every element of a generation is named by a uid**  
+  The activities a template generates have no course module until they are created, so until now they travelled under an identifier derived from an internal record, first offset by a constant and then negated so it would not be mistaken for a real one. Each element now carries a uid of its own instead, which is what the preview links use.
+
+- **The sidebar folds away and comes back on hover**  
+  The sidebar's toggle and the way out of the page used to float over the content, one on each side, and the toggle covered the page title once the sidebar was folded. A thin bar across the top now holds both: the toggle at its left, which never moves, and the way back to My courses at its right. Folding the sidebar slides it out and the content over; hovering the toggle while it is folded shows the sidebar on top of the content, without moving anything, and moving away hides it again; a click pins it back. The choice is remembered, and the `[` key toggles it.
+
+- **The way a course starts is chosen in the composer**  
+  Free creation or from a template used to be two tabs at the top of the sidebar, always on show, naming a mode for a course that might not be about to start. The choice now sits inside the composer, next to the "+" menu, as a small two-way switch: it is read where the writing happens, the page never presumes a mode, and once a plan exists the switch is gone because the mode is settled. "New course" simply opens a clean page.
+
+## Fixed
+
+- **Only the activities marked to be rewritten are rewritten**  
+  Which activities a run created was decided from the shape of their identifier rather than from the decision saved for each one, so the result depended on how identifiers happened to be numbered.
+
+## 2.0.7
+
+**Released on:** 2026-09-15
+
+**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
+
+## Changed
+
+- **Live view of a course being generated from a template**  
+  Generating a course from a template previously disabled the button and then asked the service every few seconds whether it had finished, so several minutes could pass with nothing to look at. The generation is now watched as it happens, and it looks exactly like course creation without a template already does: the activities still waiting are shown dimmed, the one being generated spins on its own icon, and each is marked as it lands. Because activities are generated at the same time and finish in whatever order they finish, each one updates its own row rather than the next one in the list. While the run is in progress the structure becomes read-only, the instruction written by the professor is kept on screen, and a single live message names the phase the generation is in.
+
+## 2.0.6
+
+**Released on:** 2026-09-15
+
+**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
+
+## Added
+
+- **Activity molds inside a template**  
+  An activity in a template can now be marked as a mold: it is never copied into the generated course, but its structure is what the AI fills in. Text written between the reserved markers is replaced with real content taken from the reference document, and a marked repeating block is expanded as many times as that document calls for. The mold's own configuration, its page order and each page's navigation buttons are preserved on every activity generated from it.
+
+- **Course generation from a template for the professor**  
+  The professor picks a template, attaches a reference document such as a syllabus, writes a single general instruction and chooses Generate. The plugin then creates the course: activities the template keeps are copied from the base course with their configuration and files intact, activities based on a mold are generated once per instance the template declares, and excluded items are left out. Progress is followed until the finished course is ready to open.
+
+## Changed
+
+- **Clearer names for two template settings**  
+  The section behaviour previously stored as "custom" is now "aimodify", and an instance's anchor is now stored as "aftercmid". Existing templates are migrated automatically.
+
+## Fixed
+
+- **Separator between the last activity and the add-activity row**  
+  In the template editor the add-activity row sat flush against the activity above it, with nothing marking where one ended and the other began.
+
+## 2.0.5
+
+**Released on:** 2026-08-26
+
+**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
+
+## Added
+
+- **Course generation from a template**  
+  Choosing "Generate" in template mode now creates a real course: sections and activities marked to keep are copied from the base course as-is, activities marked to regenerate are rebuilt with AI-generated content using the template's per-activity instructions and any designated reference material, excluded items are left out, and activities the professor added manually are created alongside them. Activity types and section counts are enforced against what the template allows.
+
+## 2.0.4
+
+**Released on:** 2026-08-26
+
+**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
+
+## Added
+
+- **Course template picker on the AI course creation page**  
+  Selecting "Create course from template" now starts with a single native, searchable field to pick the template — no other fields are shown until a template is chosen. Once selected, the template's sections and activities render inline, with locked items clearly marked and support for adding new activities at any point in the list, even next to locked ones.
+
 ## [2.0.15] - 2026-11-10
 
 **Compatibility note:** This version is compatible with **Moodle 4.5** only.
@@ -256,27 +1737,33 @@
 - **Missing Spanish translations added to the course creation assistant**  
   The plan review screen, activity generation progress messages, stop/resume/retry controls, and the activity log were showing in English regardless of the site's language, because their strings had no Spanish translation. All of them are now translated.
 
-## [2.0.3] - 2026-08-24
+## 2.0.3
 
-**Compatibility note:** This version is compatible from **Moodle 4.5** to **Moodle 5.1**.
+**Released on:** 2026-08-24
+
+**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
 
 ## Fixed
 
 - **Spanish translation corrected across the language file**  
   Several activity names and UI strings used incorrect literal translations, inconsistent terminology for the same activity type across different strings, and grammar issues. Activity names are now aligned with the site's installed Spanish language pack.
 
-## [2.0.2] - 2026-08-20
+## 2.0.2
 
-**Compatibility note:** This version is compatible from **Moodle 4.5** to **Moodle 5.1**.
+**Released on:** 2026-08-20
+
+**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
 
 ## Fixed
 
 - **Workshop settings handle the initial phase and AI-generated criteria**  
   Workshop activities generated with AI now correctly set the initial submission phase and apply AI-generated assessment criteria, covered by a new test suite.
 
-## [2.0.1] - 2026-08-19
+## 2.0.1
 
-**Compatibility note:** This version is compatible from **Moodle 4.5** to **Moodle 5.1**.
+**Released on:** 2026-08-19
+
+**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
 
 ## Added
 
@@ -311,9 +1798,11 @@
 - **Version bump**  
   Internal version bumped to **2026081801** and release bumped to **2.0.1**.
 
-## [2.0.0] - 2026-08-14
+## 2.0.0
 
-**Compatibility note:** This version is compatible from **Moodle 4.5** to **Moodle 5.1**.
+**Released on:** 2026-08-14
+
+**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
 
 ## Added
 
@@ -338,9 +1827,11 @@
 - **Silent discard of unhandled module settings**  
   A `mod_settings` payload arriving for a module type with no handler class now emits a debugging warning instead of being silently ignored.
 
-## [1.7.3] - 2026-08-13
+## 1.7.3
 
-**Compatibility note:** This version is compatible from **Moodle 4.5** to **Moodle 5.1**.
+**Released on:** 2026-08-13
+
+**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
 
 ## Fixed
 
@@ -349,9 +1840,11 @@
 - **Version bump**  
   Internal version bumped to **2026081300** and release bumped to **1.7.3**.
 
-## [1.7.2] - 2026-08-12
+## 1.7.2
 
-**Compatibility note:** This version is compatible from **Moodle 4.5** to **Moodle 5.1**.
+**Released on:** 2026-08-12
+
+**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
 
 ## Fixed
 
@@ -360,9 +1853,11 @@
 - **Version bump**  
   Internal version bumped to **2026081202** and release bumped to **1.7.2**.
 
-## [1.7.1] - 2026-08-12
+## 1.7.1
 
-**Compatibility note:** This version is compatible from **Moodle 4.5** to **Moodle 5.1**.
+**Released on:** 2026-08-12
+
+**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
 
 ## Fixed
 
@@ -371,9 +1866,11 @@
 - **Version bump**  
   Internal version bumped to **2026081201** and release bumped to **1.7.1**.
 
-## [1.7.0] - 2026-08-12
+## 1.7.0
 
-**Compatibility note:** This version is compatible from **Moodle 4.5** to **Moodle 5.1**.
+**Released on:** 2026-08-12
+
+**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
 
 ## Changed
 
@@ -382,9 +1879,11 @@
 - **Version bump**  
   Internal version bumped to **2026081200** and release bumped to **1.7.0**.
 
-## [1.6.0] - 2026-06-02
+## 1.6.0
 
-**Compatibility note:** This version is compatible from **Moodle 4.5** to **Moodle 5.1**.
+**Released on:** 2026-06-02
+
+**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
 
 ## Changed
 
@@ -414,9 +1913,11 @@
 - **AI course creation menu entry no longer shown to users who cannot use it**  
   **Site administration > Courses > Create a new course with AI** declared only `local/coursegen:createcoursewithai`, while the page itself requires that capability *and* `moodle/course:create`. Because `admin_externalpage` treats its capability list as OR, a user holding only the plugin capability was shown the entry and then denied access on click. The entry is now registered only when both capabilities are held in the system context.
 
-## [1.5.0] - 2026-06-01
+## 1.5.0
 
-**Compatibility note:** This version is compatible from **Moodle 4.5** to **Moodle 5.1**.
+**Released on:** 2026-06-01
+
+**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
 
 ## Changed
 
@@ -435,9 +1936,11 @@
 - **Version bump**  
   Internal version bumped to **2026060101** and release bumped to **1.5.0**.
 
-## [1.4.0] - 2026-05-14
+## 1.4.0
 
-**Compatibility note:** This version is compatible from **Moodle 4.5** to **Moodle 5.1**.
+**Released on:** 2026-05-14
+
+**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
 
 ## Changed
 
@@ -469,9 +1972,11 @@
 - **Removed floating sidebar toggle**  
   Removed the absolute-positioned toggle button that caused horizontal page scroll. Sidebar remains accessible via navbar trigger only.
 
-## [1.3.3] - 2026-04-10
+## 1.3.3
 
-**Compatibility note:** This version is compatible from **Moodle 4.5** to **Moodle 5.1**.
+**Released on:** 2026-04-10
+
+**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
 
 ## Added
 - **Automated prompt-based course creation service**
@@ -493,9 +1998,11 @@
 - **Language pack consistency cleanup**
   Normalized language files formatting for repository consistency.
 
-## [1.3.2] - 2026-01-26
+## 1.3.2
 
-**Compatibility note:** This version is compatible from **Moodle 4.5** to **Moodle 5.1**.
+**Released on:** 2026-01-26
+
+**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
 
 ## Added
 - **Optional admin settings for DataCurso service URLs**  
@@ -512,9 +2019,11 @@
   Internal version bumped to **2026012300** and release version bumped to **1.3.2**.
 
 
-## [1.3.1] - 2025-12-16
+## 1.3.1
 
-**Compatibility note:** This version is compatible from **Moodle 4.5** to **Moodle 5.1**.
+**Released on:** 2025-12-16
+
+**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
 
 ## Added
 - **AI response language selector on the course form**  
@@ -534,9 +2043,11 @@
 - **Version bump**  
   Internal version bumped to **2025121601** and release version bumped to **1.3.1**.
 
-## [1.3.0] - 2025-12-11
+## 1.3.0
 
-**Compatibility note:** This version is compatible from **Moodle 4.5** to **Moodle 5.1**.
+**Released on:** 2025-12-11
+
+ **Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
 
 ## Added
 - **Optional image generation support for AI course planning**  
@@ -552,9 +2063,11 @@
 - **Version bump**  
   Internal version bumped to **2025121100** and release version bumped to **1.3.0**.
 
-## [1.2.1] - 2025-12-09
+## 1.2.1
 
-**Compatibility note:** This version is compatible from **Moodle 4.5** to **Moodle 5.1**.
+**Released on:** 2025-12-09
+
+  **Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
  
  ## Fixed
  
@@ -562,9 +2075,11 @@
   - The previous logic required an exact path match to `/course/view.php`, which failed on subdirectory installs like `https://mysite.com/mymoodle/`.  
   - Updated the detection to use a substring check with `strpos()` for `/course/view.php`, so URL variations and extra path components are handled correctly.
 
-## [1.2.0] - 2025-12-05
+## 1.2.0
 
-**Compatibility note:** This version is compatible from **Moodle 4.5** to **Moodle 5.1**.
+**Released on:** 2025-12-05
+
+ **Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
 
 ## Added
 - **Optional system instruction support**
@@ -594,9 +2109,11 @@
 - **Privacy provider tests aligned**
   Updated privacy provider tests to reference the renamed system instruction table.
 
-## [1.0.3] - 2025-12-02
+## 1.0.3
 
-**Compatibility note:** This version is compatible from **Moodle 4.5** to **Moodle 5.1**.
+**Released on:** 2025-12-02
+
+ **Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
 
 ## Added
 - **Automated release workflow for the plugin.**  

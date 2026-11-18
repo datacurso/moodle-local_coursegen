@@ -37,7 +37,7 @@ use local_coursegen\local\service\creation_permissions;
  * feature never holds a role with the user-data backup and restore capabilities.
  * It is assignable on categories and courses, never on the whole site: the
  * import needs it on the category of the target courses, and the AI course
- * creator role, assignable site-wide, carries local/coursegen:createcoursewithai.
+ * creator role, assignable site-wide, carries the creation capabilities of the plugin.
  * Names and descriptions come from the plugin strings in the site language at
  * creation time.
  *
@@ -52,6 +52,12 @@ final class role_installer {
     /** @var string Shortname of the AI course creator and importer role. */
     public const IMPORTER_SHORTNAME = 'editingteachercoursegenimportai';
 
+    /** @var string[] Optional features of the creation (syllabus, images): each has its own capability, the roles hold both. */
+    private const OPTIONAL_CAPABILITIES = [
+        'local/coursegen:generatecourseimages',
+        'local/coursegen:uploadcoursesyllabus',
+    ];
+
     /** @var string[] Capabilities the importer role adds on top of the creator set. */
     private const IMPORT_CAPABILITIES = [
         'moodle/backup:userinfo',
@@ -63,6 +69,15 @@ final class role_installer {
 
     /** @var int[] Context levels the importer role is assignable at: never the whole site. */
     public const IMPORTER_CONTEXT_LEVELS = [CONTEXT_COURSECAT, CONTEXT_COURSE];
+
+    /**
+     * The capabilities of the AI course creator role: the creation set and the optional features of the creation.
+     *
+     * @return string[]
+     */
+    public static function creator_capabilities(): array {
+        return array_merge(creation_permissions::EXTRA_CAPABILITIES, self::OPTIONAL_CAPABILITIES);
+    }
 
     /**
      * Create the roles that do not exist yet; the importer role only while the import is enabled.
@@ -79,14 +94,14 @@ final class role_installer {
             self::CREATOR_SHORTNAME => [
                 'name' => 'role_creator_name',
                 'description' => 'role_creator_desc',
-                'capabilities' => creation_permissions::EXTRA_CAPABILITIES,
+                'capabilities' => self::creator_capabilities(),
                 'assignable' => ['teacher', 'student'],
                 'contextlevels' => self::CREATOR_CONTEXT_LEVELS,
             ],
             self::IMPORTER_SHORTNAME => [
                 'name' => 'role_importer_name',
                 'description' => 'role_importer_desc',
-                'capabilities' => array_merge(creation_permissions::EXTRA_CAPABILITIES, self::IMPORT_CAPABILITIES),
+                'capabilities' => array_merge(self::creator_capabilities(), self::IMPORT_CAPABILITIES),
                 'assignable' => ['editingteacher', 'teacher', 'student'],
                 'contextlevels' => self::IMPORTER_CONTEXT_LEVELS,
             ],
@@ -146,8 +161,11 @@ final class role_installer {
      * @return void
      */
     private static function ensure_plugin_capabilities_registered(): void {
-        if (get_capability_info('local/coursegen:createcoursewithai', false) === null) {
-            update_capabilities('local_coursegen');
+        foreach (self::creator_capabilities() as $capability) {
+            if (str_starts_with($capability, 'local/coursegen:') && get_capability_info($capability, false) === null) {
+                update_capabilities('local_coursegen');
+                return;
+            }
         }
     }
 

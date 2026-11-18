@@ -31,10 +31,19 @@ namespace local_coursegen\local\service;
  * @covers     \local_coursegen\local\service\creation_permissions
  */
 final class creation_permissions_test extends \advanced_testcase {
-    /** @var string[] The four capabilities the creation requires, sorted. */
+    /** @var string[] The capabilities a user of the free creation needs, sorted: the mode capability is one of two. */
     private const REQUIRED = [
         'local/coursegen:createactivitywithai',
-        'local/coursegen:createcoursewithai',
+        'local/coursegen:createfreecoursewithai',
+        'moodle/course:create',
+        'moodle/course:view',
+    ];
+
+    /** @var string[] The whole fixed list, sorted: both creation modes, each one enough on its own. */
+    private const FIXED_LIST = [
+        'local/coursegen:createactivitywithai',
+        'local/coursegen:createfreecoursewithai',
+        'local/coursegen:createtemplatecoursewithai',
         'moodle/course:create',
         'moodle/course:view',
     ];
@@ -89,11 +98,14 @@ final class creation_permissions_test extends \advanced_testcase {
     public function test_required_capabilities_are_the_fixed_list(): void {
         $required = creation_permissions::required_capabilities();
 
-        $this->assertSame(self::REQUIRED, $required);
+        $this->assertSame(self::FIXED_LIST, $required);
         foreach ($required as $capability) {
             $this->assertNotNull(get_capability_info($capability), $capability . ' must be installed');
         }
-        $this->assertSame(['local/coursegen:createcoursewithai'], creation_permissions::SYSTEM_CAPABILITIES);
+        $this->assertSame(
+            ['local/coursegen:createfreecoursewithai', 'local/coursegen:createtemplatecoursewithai'],
+            creation_permissions::MODE_CAPABILITIES
+        );
     }
 
     /**
@@ -140,7 +152,7 @@ final class creation_permissions_test extends \advanced_testcase {
      */
     public function test_can_create_in_is_false_for_the_coursecreator_archetype(): void {
         $this->resetAfterTest();
-        $user = $this->create_coursecreator_user(['local/coursegen:createcoursewithai']);
+        $user = $this->create_coursecreator_user(['local/coursegen:createfreecoursewithai']);
         $category = $this->getDataGenerator()->create_category();
 
         $this->assertFalse(creation_permissions::can_create_in((int) $category->id, (int) $user->id));
@@ -180,7 +192,7 @@ final class creation_permissions_test extends \advanced_testcase {
     }
 
     /**
-     * Removing any one of the four required capabilities from the full role denies the creation.
+     * Removing any one of the required capabilities from the full role denies the creation (both modes for a mode).
      *
      * @dataProvider required_capability_provider
      * @param string $missing The one capability removed from the role.
@@ -191,7 +203,13 @@ final class creation_permissions_test extends \advanced_testcase {
         $category = $this->getDataGenerator()->create_category();
         $this->assertTrue(creation_permissions::can_create_in((int) $category->id, (int) $user->id));
 
-        unassign_capability($missing, $roleid, \context_system::instance()->id);
+        // Either creation mode is enough on its own, so a mode capability is only missing once both are.
+        $removed = in_array($missing, creation_permissions::MODE_CAPABILITIES, true)
+            ? creation_permissions::MODE_CAPABILITIES
+            : [$missing];
+        foreach ($removed as $capability) {
+            unassign_capability($capability, $roleid, \context_system::instance()->id);
+        }
 
         $this->assertFalse(creation_permissions::can_create_in((int) $category->id, (int) $user->id), 'Missing ' . $missing);
     }
@@ -229,9 +247,17 @@ final class creation_permissions_test extends \advanced_testcase {
         $userid = (int) $user->id;
 
         foreach (creation_permissions::required_capabilities() as $capability) {
-            assign_capability($capability, CAP_PROHIBIT, $roleid, $systemcontextid, true);
+            // Either creation mode is enough on its own, so a mode capability is only missing once both are.
+            $removed = in_array($capability, creation_permissions::MODE_CAPABILITIES, true)
+                ? creation_permissions::MODE_CAPABILITIES
+                : [$capability];
+            foreach ($removed as $prohibited) {
+                assign_capability($prohibited, CAP_PROHIBIT, $roleid, $systemcontextid, true);
+            }
             $this->assertFalse(creation_permissions::can_create_in($categoryid, $userid), 'Missing ' . $capability);
-            assign_capability($capability, CAP_ALLOW, $roleid, $systemcontextid, true);
+            foreach ($removed as $prohibited) {
+                assign_capability($prohibited, CAP_ALLOW, $roleid, $systemcontextid, true);
+            }
         }
         $this->assertTrue(creation_permissions::can_create_in($categoryid, $userid), 'Full set restored');
     }
@@ -257,7 +283,7 @@ final class creation_permissions_test extends \advanced_testcase {
         $category = $generator->create_category();
         [$user] = $this->create_user_with_full_role(\context_coursecat::instance($category->id));
         $systemrole = $generator->create_role(['shortname' => 'pagegate']);
-        assign_capability('local/coursegen:createcoursewithai', CAP_ALLOW, $systemrole, \context_system::instance()->id, true);
+        assign_capability('local/coursegen:createfreecoursewithai', CAP_ALLOW, $systemrole, \context_system::instance()->id, true);
         role_assign($systemrole, $user->id, \context_system::instance()->id);
 
         $this->assertTrue(creation_permissions::can_create_anywhere((int) $user->id));
@@ -319,7 +345,10 @@ final class creation_permissions_test extends \advanced_testcase {
         [$user, $roleid] = $this->create_user_with_full_role(\context_system::instance());
         $category = $this->getDataGenerator()->create_category();
         $systemcontextid = \context_system::instance()->id;
-        unassign_capability('local/coursegen:createcoursewithai', $roleid, $systemcontextid);
+        // Either creation mode is enough on its own, so the system capability is missing once both are.
+        foreach (creation_permissions::MODE_CAPABILITIES as $capability) {
+            unassign_capability($capability, $roleid, $systemcontextid);
+        }
         // A category capability that sorts before the system one.
         unassign_capability('local/coursegen:createactivitywithai', $roleid, $systemcontextid);
 
@@ -327,7 +356,7 @@ final class creation_permissions_test extends \advanced_testcase {
             creation_permissions::require_for_category((int) $category->id, (int) $user->id);
             $this->fail('A missing capability must be reported.');
         } catch (\required_capability_exception $e) {
-            $this->assertSame(get_capability_string('local/coursegen:createcoursewithai'), $e->a);
+            $this->assertSame(get_capability_string('local/coursegen:createfreecoursewithai'), $e->a);
         }
     }
 
@@ -356,7 +385,7 @@ final class creation_permissions_test extends \advanced_testcase {
             creation_permissions::require_anywhere((int) $user->id);
             $this->fail('A user without the system capability must be refused.');
         } catch (\required_capability_exception $e) {
-            $this->assertSame(get_capability_string('local/coursegen:createcoursewithai'), $e->a);
+            $this->assertSame(get_capability_string('local/coursegen:createfreecoursewithai'), $e->a);
         }
     }
 
@@ -367,7 +396,7 @@ final class creation_permissions_test extends \advanced_testcase {
      */
     public function test_require_anywhere_names_the_first_sorted_missing_capability_of_a_candidate(): void {
         $this->resetAfterTest();
-        $user = $this->create_coursecreator_user(['local/coursegen:createcoursewithai']);
+        $user = $this->create_coursecreator_user(['local/coursegen:createfreecoursewithai']);
         $category = $this->getDataGenerator()->create_category();
         $context = \context_coursecat::instance($category->id);
         $expected = null;
@@ -395,7 +424,7 @@ final class creation_permissions_test extends \advanced_testcase {
         $user = $this->getDataGenerator()->create_user();
         $systemcontext = \context_system::instance();
         $roleid = $this->getDataGenerator()->create_role(['shortname' => 'pageonly']);
-        assign_capability('local/coursegen:createcoursewithai', CAP_ALLOW, $roleid, $systemcontext->id, true);
+        assign_capability('local/coursegen:createfreecoursewithai', CAP_ALLOW, $roleid, $systemcontext->id, true);
         role_assign($roleid, $user->id, $systemcontext->id);
         $this->getDataGenerator()->create_category();
 
@@ -420,7 +449,7 @@ final class creation_permissions_test extends \advanced_testcase {
         $systemcontextid = \context_system::instance()->id;
 
         $pagerole = $generator->create_role(['shortname' => 'pagegate']);
-        assign_capability('local/coursegen:createcoursewithai', CAP_ALLOW, $pagerole, $systemcontextid, true);
+        assign_capability('local/coursegen:createfreecoursewithai', CAP_ALLOW, $pagerole, $systemcontextid, true);
         role_assign($pagerole, $user->id, $systemcontextid);
 
         // First category (in sort order): two capabilities missing.
@@ -450,7 +479,7 @@ final class creation_permissions_test extends \advanced_testcase {
         $category = $this->getDataGenerator()->create_category();
         [$user] = $this->create_user_with_full_role(\context_coursecat::instance($category->id));
         $systemrole = $this->getDataGenerator()->create_role(['shortname' => 'pagegate']);
-        assign_capability('local/coursegen:createcoursewithai', CAP_ALLOW, $systemrole, \context_system::instance()->id, true);
+        assign_capability('local/coursegen:createfreecoursewithai', CAP_ALLOW, $systemrole, \context_system::instance()->id, true);
         role_assign($systemrole, $user->id, \context_system::instance()->id);
 
         creation_permissions::require_anywhere((int) $user->id);

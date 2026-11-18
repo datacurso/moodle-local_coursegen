@@ -5,7 +5,7 @@ Feature: Create course with AI is offered only to users holding the full creatio
   I need the "Create with AI" button and page to follow the full creation permission set
 
   # Ticket #9539. The full set is a fixed list of four capabilities:
-  # moodle/course:create, moodle/course:view, local/coursegen:createcoursewithai
+  # moodle/course:create, moodle/course:view, local/coursegen:createfreecoursewithai
   # and local/coursegen:createactivitywithai. It does not depend on the
   # editingteacher archetype, so the "aionly" role below, with no archetype and
   # only those four, holds the full set; the "partial" role lacks
@@ -25,10 +25,10 @@ Feature: Create course with AI is offered only to users holding the full creatio
       | aionly    | AI creator         |           |
       | partial   | Partial AI creator |           |
     And the following "role capabilities" exist:
-      | role   | moodle/course:create | moodle/course:view | local/coursegen:createcoursewithai | local/coursegen:createactivitywithai |
+      | role   | moodle/course:create | moodle/course:view | local/coursegen:createfreecoursewithai | local/coursegen:createactivitywithai |
       | aionly | allow                | allow              | allow                              | allow                                |
     And the following "role capabilities" exist:
-      | role    | moodle/course:create | local/coursegen:createcoursewithai | local/coursegen:createactivitywithai |
+      | role    | moodle/course:create | local/coursegen:createfreecoursewithai | local/coursegen:createactivitywithai |
       | partial | allow                | allow                              | allow                                |
     And the following "role assigns" exist:
       | user     | role    | contextlevel | reference |

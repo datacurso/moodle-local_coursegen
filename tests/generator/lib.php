@@ -75,7 +75,7 @@ class local_coursegen_generator extends component_generator_base {
         reset_role_capabilities($roleid);
 
         $systemcontext = context_system::instance();
-        foreach (\local_coursegen\local\service\creation_permissions::EXTRA_CAPABILITIES as $capability) {
+        foreach (\local_coursegen\local\role_installer::creator_capabilities() as $capability) {
             assign_capability($capability, CAP_ALLOW, $roleid, $systemcontext->id, true);
         }
 

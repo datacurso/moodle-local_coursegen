@@ -151,6 +151,26 @@ class system_instruction_service {
     }
 
     /**
+     * The active guidelines as the creation page lists them, ordered by name.
+     *
+     * @return array[] Items with id ('si_<id>'), name, category and description.
+     */
+    public static function page_items(): array {
+        $items = [];
+        $records = system_instruction::get_records(['deleted' => 0], 'name', 'ASC');
+        foreach ($records as $record) {
+            $items[] = [
+                'id' => 'si_' . $record->get('id'),
+                'name' => $record->get('name'),
+                // The table has no category field, so every guideline is listed under the default.
+                'category' => 'General',
+                'description' => $record->get('content') ?? '',
+            ];
+        }
+        return $items;
+    }
+
+    /**
      * Validate that a system instruction name is unique (among non deleted records).
      *
      * @param string $name Instruction name

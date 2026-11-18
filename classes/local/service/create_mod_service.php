@@ -16,13 +16,18 @@
 
 namespace local_coursegen\local\service;
 
+use local_coursegen\local\files\activity_file_pass;
+use local_coursegen\local\files\file_copy_exception;
 use local_coursegen\mod_settings\base_settings;
 use local_coursegen\utils\ai_text_sanitiser;
+use local_coursegen\utils\generated_files_scope;
 use local_coursegen\utils\text_editor_parameter_cleaner;
 
 defined('MOODLE_INTERNAL') || die();
 require_once($CFG->dirroot . '/course/externallib.php');
+require_once($CFG->dirroot . '/course/lib.php');
 require_once($CFG->dirroot . '/course/modlib.php');
+require_once($CFG->libdir . '/filelib.php');
 
 /**
  * Class create_mod_service
@@ -39,10 +44,41 @@ class create_mod_service {
      * @param object $course Course object
      * @param int $sectionnum Section number where the module will be created
      * @param int|null $beforemod Before module id where the module will be created
+     * @param int|null $sourcecourseid Course whose files the payload's texts may
+     *     reference by pluginfile URL (the template's base course); null lets any
+     *     course the current user can access through.
      *
      * @return object New course module.
      */
-    public static function create_from_ai_result($resultinfo, $course, $sectionnum, $beforemod = null) {
+    public static function create_from_ai_result(
+        $resultinfo,
+        $course,
+        $sectionnum,
+        $beforemod = null,
+        ?int $sourcecourseid = null
+    ) {
+        $generatedfiles = $resultinfo['generated_files'] ?? [];
+        if (!$generatedfiles) {
+            return self::create_module($resultinfo, $course, $sectionnum, $beforemod, $sourcecourseid);
+        }
+        // The files the AI service made for this activity are in scope while its texts are saved.
+        $creation = static function () use ($resultinfo, $course, $sectionnum, $beforemod, $sourcecourseid) {
+            return self::create_module($resultinfo, $course, $sectionnum, $beforemod, $sourcecourseid);
+        };
+        return generated_files_scope::run($generatedfiles, $creation);
+    }
+
+    /**
+     * Create the module once the files of its result are in scope.
+     *
+     * @param array $resultinfo Result info from response of AI service
+     * @param object $course Course object
+     * @param int $sectionnum Section number where the module will be created
+     * @param int|null $beforemod Before module id where the module will be created
+     * @param int|null $sourcecourseid Course whose files the payload's rich text may reference.
+     * @return object New course module.
+     */
+    private static function create_module($resultinfo, $course, $sectionnum, $beforemod, ?int $sourcecourseid) {
 
         self::validate_resultinfo($resultinfo);
 
@@ -58,15 +94,55 @@ class create_mod_service {
 
         $mform = self::create_mod_form_instance($modname, $data, $cw, $cm, $course);
 
-        $parameters = self::prepare_parameters($modname, $resultinfo['parameters'], $sectionnum, $beforemod, $module->id);
+        $parameters = self::prepare_parameters(
+            $modname,
+            $resultinfo['parameters'],
+            $sectionnum,
+            $beforemod,
+            $module->id
+        );
+
+        $parameters = self::with_defaults_of_the_form($parameters, $mform);
 
         $newcm = add_moduleinfo($parameters, $course, $mform);
 
-        $modsettings = $parameters->mod_settings;
+        $modsettings = $parameters->mod_settings ?? null;
 
         self::apply_mod_settings($modname, $newcm, $modsettings);
 
+        self::give_files($modname, $newcm, (string) ($parameters->name ?? ''), $sourcecourseid);
+
         return $newcm;
+    }
+
+    /**
+     * Give the new activity every file its texts reference.
+     *
+     * Runs once the activity and everything its settings create exist, so the
+     * rows of every text are real whatever the module is. When a file cannot be
+     * given, the activity is removed again and the error is raised.
+     *
+     * @param string $modname Module plugin name.
+     * @param object $newcm Newly created course module.
+     * @param string $name The activity's name, for the error.
+     * @param int|null $sourcecourseid Course whose files the texts may reference.
+     * @return void
+     */
+    private static function give_files(string $modname, $newcm, string $name, ?int $sourcecourseid): void {
+        $activity = (object) [
+            'id' => (int) $newcm->coursemodule,
+            'instance' => (int) $newcm->instance,
+            'modname' => $modname,
+            'course' => (int) $newcm->course,
+        ];
+        $pass = activity_file_pass::for_new_activity($sourcecourseid);
+        try {
+            $pass->run($activity, $name);
+        } catch (file_copy_exception $exception) {
+            // An activity whose files are missing would stay in the course half made.
+            course_delete_module($activity->id);
+            throw $exception;
+        }
     }
 
     /**
@@ -98,12 +174,25 @@ class create_mod_service {
      */
     private static function create_mod_form_instance($modname, $data, $cw, $cm, $course) {
         // This is necessary to void error when load the mod_form.php file.
-        global $CFG;
+        global $CFG, $COURSE, $DB, $PAGE;
         $modmoodleform = self::get_mod_form_file_path($modname);
         require_once($modmoodleform);
 
         $mformclassname = 'mod_' . $modname . '_mod_form';
-        $mform = new $mformclassname($data, $cw->section, $cm, $course);
+        // The form reads the section it is for from the global course, which is the course of the page that is
+        // being served; here it is the course the module is created in. The page sets its theme up the first time
+        // output is used, and when it has no course that setup replaces the global course with the site, so the
+        // form would look for its section in the site course. The setup is done first, the global course is then
+        // given the course of the module, and a fresh record and a cleared modinfo keep any stale copy out.
+        $PAGE->initialise_theme_and_output();
+        $previouscourse = $COURSE;
+        $COURSE = clone $DB->get_record('course', ['id' => $course->id], '*', MUST_EXIST);
+        \course_modinfo::clear_instance_cache($course->id);
+        try {
+            $mform = new $mformclassname($data, (int) $cw->sectionnum, $cm, $COURSE);
+        } finally {
+            $COURSE = $previouscourse;
+        }
 
         return $mform;
     }
@@ -159,7 +248,13 @@ class create_mod_service {
      * @param int $moduleid Module id from 'modules' table.
      * @return object Parameters ready for add_moduleinfo().
      */
-    private static function prepare_parameters($modname, $rawparameters, $sectionnum, $beforemod, $moduleid) {
+    private static function prepare_parameters(
+        $modname,
+        $rawparameters,
+        $sectionnum,
+        $beforemod,
+        $moduleid
+    ) {
         $cleanedparameters = text_editor_parameter_cleaner::clean_text_editor_objects($rawparameters);
         $parameters = (object)$cleanedparameters;
         $parameters->section = $sectionnum;
@@ -168,7 +263,127 @@ class create_mod_service {
 
         $parameters = self::process_mod_parameters($modname, $parameters);
 
+        return self::with_form_defaults($modname, $parameters);
+    }
+
+    /**
+     * Give the properties a module form always posts, and Moodle reads without checking, a neutral value.
+     *
+     * The AI payload does not repeat every field of the module form, and add_moduleinfo() and the module's own
+     * add function read some of them unguarded, so the creation would stop on an undefined property for a
+     * result that is otherwise complete. A value the payload carries is never replaced.
+     *
+     * @param string $modname Module plugin name.
+     * @param object $parameters Parameters object, after the module's own parameters class ran.
+     * @return object The same object with the missing properties defaulted.
+     */
+    private static function with_form_defaults(string $modname, object $parameters): object {
+        if (!property_exists($parameters, 'cmidnumber')) {
+            $parameters->cmidnumber = '';
+        }
+        if ($modname === 'lesson' && !property_exists($parameters, 'mediafile')) {
+            // The lesson saves the draft area of its media file; an empty one stands for no file.
+            $parameters->mediafile = file_get_unused_draft_itemid();
+        }
         return $parameters;
+    }
+
+    /**
+     * Give every field the payload leaves out the value the module form itself starts with.
+     *
+     * The form of each module declares a default for the fields it posts (the grade of a forum, the
+     * availability of a lesson, the opening time of a quiz, and so on), and Moodle's add functions read
+     * those fields unguarded. Seeding the missing ones from the form is what saving it untouched would
+     * send. A value the payload carries is never replaced.
+     *
+     * @param object $parameters Parameters object, after the module's own parameters class ran.
+     * @param \moodleform_mod $mform The form of the module, built for a new activity.
+     * @return object The same object with the missing properties defaulted.
+     */
+    private static function with_defaults_of_the_form(object $parameters, \moodleform_mod $mform): object {
+        $quickform = (new \ReflectionProperty(\moodleform::class, '_form'))->getValue($mform);
+        try {
+            // The visibility of a new activity starts as the one of its section, as the form shows it. The form
+            // was never submitted, so its select has no value to export until it is given this default.
+            $current = $mform->get_current();
+            if (isset($current->visible)) {
+                $quickform->setDefaults(['visible' => $current->visible]);
+            }
+            $defaults = $quickform->exportValues();
+        } catch (\Throwable $exception) {
+            // Defence in depth: the values that were declared are still better than none.
+            debugging('The module form could not export its defaults: ' . $exception->getMessage(), DEBUG_DEVELOPER);
+            $defaults = (new \ReflectionProperty(\HTML_QuickForm::class, '_defaultValues'))->getValue($quickform);
+        }
+        unset($defaults['sesskey']);
+        $defaults = self::complete_editor_values($defaults);
+        $defaults += self::first_options_of_unset_group_selects($quickform, $defaults);
+        foreach ($defaults as $name => $value) {
+            if (!property_exists($parameters, $name)) {
+                $parameters->$name = $value;
+            }
+        }
+        return $parameters;
+    }
+
+    /**
+     * The first option of every select inside a group of the form that exported no value.
+     *
+     * A browser always posts the selected option of a select, which is the first one when none was chosen. The
+     * form exports nothing for such a select inside a group (the grade category of a workshop), and Moodle reads
+     * the field unguarded, so it is given the value the browser would have posted.
+     *
+     * @param \MoodleQuickForm $quickform The form of the module.
+     * @param array $exported What the form exported, by element name.
+     * @return array Value by name for the selects that had none.
+     */
+    private static function first_options_of_unset_group_selects(\MoodleQuickForm $quickform, array $exported): array {
+        $values = [];
+        foreach ($quickform->_elements as $element) {
+            if (!($element instanceof \HTML_QuickForm_group)) {
+                continue;
+            }
+            foreach ($element->getElements() as $member) {
+                $name = $member->getName();
+                if (!($member instanceof \HTML_QuickForm_select) || array_key_exists($name, $exported) || $name === '') {
+                    continue;
+                }
+                $first = reset($member->_options);
+                if ($first !== false && isset($first['attr']['value'])) {
+                    $values[$name] = $first['attr']['value'];
+                }
+            }
+        }
+        return $values;
+    }
+
+    /**
+     * Give every editor-shaped value an exported form left incomplete the parts Moodle reads unguarded.
+     *
+     * A form that was never submitted exports its editors without a text, a format or a draft area, and the
+     * modules read those parts straight away (the feedback of a quiz, the intro of an assignment). The text
+     * becomes empty, the format HTML, and the draft area a new empty one.
+     *
+     * @param array $values Exported values, which may hold editor arrays at any depth.
+     * @return array The same values with each editor array complete.
+     */
+    private static function complete_editor_values(array $values): array {
+        foreach ($values as $key => $value) {
+            if (!is_array($value)) {
+                continue;
+            }
+            if (array_key_exists('text', $value)) {
+                $value['text'] = (string) ($value['text'] ?? '');
+                $value['format'] = (int) ($value['format'] ?? FORMAT_HTML);
+                if (empty($value['itemid'])) {
+                    $value['itemid'] = file_get_unused_draft_itemid();
+                }
+                $values[$key] = $value;
+            } else {
+                $values[$key] = self::complete_editor_values($value);
+            }
+        }
+        return $values;
     }
 
     /**
@@ -261,7 +476,11 @@ class create_mod_service {
      * @param array|null $modsettings Settings to apply.
      * @return void
      */
-    private static function apply_mod_settings(string $modname, $newcm, ?array $modsettings): void {
+    private static function apply_mod_settings(
+        string $modname,
+        $newcm,
+        ?array $modsettings
+    ): void {
         if (empty($modsettings)) {
             return;
         }

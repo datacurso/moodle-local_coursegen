@@ -295,7 +295,7 @@ final class import_permissions_test extends \advanced_testcase {
         $able = $generator->create_user();
         $this->grant($able->id, self::all_capabilities(), \context_system::instance());
         $unable = $generator->create_user();
-        $this->grant($unable->id, ['local/coursegen:createcoursewithai', 'moodle/course:create'], \context_system::instance());
+        $this->grant($unable->id, ['local/coursegen:createfreecoursewithai', 'moodle/course:create'], \context_system::instance());
 
         set_config('enableimportexisting', 0, 'local_coursegen');
         $this->assertFalse(import_permissions::is_offered($admin->id), 'Setting off: never offered');

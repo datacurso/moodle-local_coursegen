@@ -26,6 +26,16 @@ defined('MOODLE_INTERNAL') || die();
 
 $tasks = [
     [
+        // Delete the stored files of the teacher's space once their retention is over.
+        'classname' => 'local_coursegen\\task\\purge_space_files',
+        'blocking' => 0,
+        'minute' => '17',
+        'hour' => '3',
+        'day' => '*',
+        'month' => '*',
+        'dayofweek' => '*',
+    ],
+    [
         // Roll back the imports into an existing course whose process died.
         'classname' => 'local_coursegen\\task\\recover_interrupted_imports',
         'blocking' => 0,

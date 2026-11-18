@@ -21,6 +21,8 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+import {showReviewWarnings, validStartDate} from 'local_coursegen/local/courseai/actions/review-warnings';
+import {creationPercent} from 'local_coursegen/local/courseai/template/creation_progress';
 /** @type {string} AMD module implementing the ajax contract of the target-course autocomplete. */
 const TARGET_COURSE_DATASOURCE = 'local_coursegen/local/courseai/target-course-datasource';
 
@@ -112,6 +114,7 @@ const setupImportControls = (panel, confirmBtn, texts, FormAutocomplete) => {
     const fullnameGroup = document.getElementById('reviewFullnameGroup');
     const shortnameGroup = document.getElementById('reviewShortnameGroup');
     const newCategoryGroup = document.getElementById('reviewCategoryGroup');
+    const startdateGroup = document.getElementById('reviewStartdateGroup');
     if (!modeSelect || !targetFields || !categorySelect || !courseGroup) {
         return null;
     }
@@ -154,6 +157,7 @@ const setupImportControls = (panel, confirmBtn, texts, FormAutocomplete) => {
         if (fullnameGroup) { fullnameGroup.style.display = importing ? 'none' : ''; }
         if (shortnameGroup) { shortnameGroup.style.display = importing ? 'none' : ''; }
         if (newCategoryGroup) { newCategoryGroup.style.display = importing ? 'none' : ''; }
+        if (startdateGroup) { startdateGroup.style.display = importing ? 'none' : ''; }
         syncConfirm();
     };
 
@@ -202,13 +206,18 @@ const setupImportControls = (panel, confirmBtn, texts, FormAutocomplete) => {
  * @param {Object}   texts
  * @param {Function} getCourseSettings
  * @param {Object}   FormAutocomplete  - core/form-autocomplete module
+ * @param {boolean}  allowImport       - Offer the import into an existing course (only the free creation has it)
  * @returns {Promise<Object|null>}
  */
-export const showCourseReviewPanel = async(state, elements, texts, getCourseSettings, FormAutocomplete) => {
+export const showCourseReviewPanel = async(
+    state, elements, texts, getCourseSettings, FormAutocomplete, allowImport = true
+) => {
     const panel = document.getElementById('courseReviewPanel');
     const fullnameInput = document.getElementById('reviewFullname');
     const shortnameInput = document.getElementById('reviewShortname');
     const categorySelect = document.getElementById('reviewCategory');
+    const startdateInput = document.getElementById('reviewStartdate');
+    const warningsList = document.getElementById('reviewWarnings');
     const confirmBtn = document.getElementById('reviewConfirmBtn');
     const cancelBtn = document.getElementById('reviewCancelBtn');
 
@@ -225,6 +234,10 @@ export const showCourseReviewPanel = async(state, elements, texts, getCourseSett
 
     fullnameInput.value = settingsData?.fullname || state.courseTitle || '';
     shortnameInput.value = settingsData?.shortname || '';
+    if (startdateInput) {
+        startdateInput.value = '';
+    }
+    showReviewWarnings(warningsList, settingsData?.warnings);
 
     const defaultCategoryId = settingsData?.category || 0;
     const categories = settingsData?.categories || [];
@@ -251,6 +264,11 @@ export const showCourseReviewPanel = async(state, elements, texts, getCourseSett
         // Same category list as the new-course field: already filtered by moodle/course:create,
         // which is exactly the permission the target's category needs.
         importControls.reset(categories);
+    }
+    // The import belongs to the free creation: a course made from a template is always a new course.
+    const targetModeGroup = document.getElementById('targetModeGroup');
+    if (targetModeGroup) {
+        targetModeGroup.style.display = allowImport ? '' : 'none';
     }
 
     // A new course is never submitted without a category: the one proposed by the AI
@@ -306,6 +324,8 @@ export const showCourseReviewPanel = async(state, elements, texts, getCourseSett
             if (shortname) { overrides.shortname = shortname; }
             const category = parseInt(categorySelect.value, 10);
             if (category > 0) { overrides.category = category; }
+            const startdate = validStartDate(startdateInput ? startdateInput.value : '');
+            if (startdate) { overrides.startdate = startdate; }
             resolve(overrides);
         };
 
@@ -338,11 +358,12 @@ export const showCourseReviewPanel = async(state, elements, texts, getCourseSett
  * @param {Function} showCompletionView
  * @param {Function} showImportProgressView
  * @param {Object|null} overrides
+ * @param {Function|null} onError Called with the error instead of showing it; resolves true to try again.
  * @returns {Promise<Object|null>}
  */
 export const createCourseFromSession = async(
     state, elements, texts, stepsUi, Notification, createCourse, showCompletionView, showImportProgressView,
-    overrides = null
+    overrides = null, onError = null
 ) => {
     if (!state.sessionid) { return; }
 
@@ -351,41 +372,76 @@ export const createCourseFromSession = async(
     let progressInterval = null;
 
     try {
-        if (elements.pcStep) { elements.pcStep.textContent = texts.courseai_state_completed; }
-        if (elements.pcTitle) { elements.pcTitle.textContent = texts.courseai_course_creating; }
-        if (pcSubtitle) { pcSubtitle.textContent = texts.courseai_course_creating_subtitle; }
+        // A creation that reports each step shows the real progress, from zero and with what it is doing; one that
+        // does not (the free creation) keeps the animation up to a point.
+        const reportsProgress = createCourse.reportsProgress === true;
+        if (reportsProgress) {
+            if (elements.pcStep) { elements.pcStep.textContent = texts.courseai_state_saving; }
+            if (elements.pcTitle) { elements.pcTitle.textContent = texts.courseai_course_writing; }
+            if (pcSubtitle) { pcSubtitle.textContent = texts.courseai_course_writing_subtitle; }
+            stepsUi.setProgress(0);
+        } else {
+            if (elements.pcStep) { elements.pcStep.textContent = texts.courseai_state_completed; }
+            if (elements.pcTitle) { elements.pcTitle.textContent = texts.courseai_course_creating; }
+            if (pcSubtitle) { pcSubtitle.textContent = texts.courseai_course_creating_subtitle; }
 
-        // Read current displayed progress from the DOM so we continue smoothly
-        // from wherever the review panel left off, instead of recalculating from stale SSE state.
-        const currentPctText = pcPct ? pcPct.textContent : '';
-        const parsedPct = parseInt(currentPctText, 10);
-        const startProgress = !isNaN(parsedPct) && parsedPct >= 0 ? parsedPct : 92;
-        const targetProgress = 98;
-        const duration = 2000;
-        const intervalMs = 100;
-        const startTime = Date.now();
+            // Read current displayed progress from the DOM so we continue smoothly
+            // from wherever the review panel left off, instead of recalculating from stale SSE state.
+            const currentPctText = pcPct ? pcPct.textContent : '';
+            const parsedPct = parseInt(currentPctText, 10);
+            const startProgress = !isNaN(parsedPct) && parsedPct >= 0 ? parsedPct : 92;
+            const targetProgress = 98;
+            const duration = 2000;
+            const intervalMs = 100;
+            const startTime = Date.now();
 
-        progressInterval = setInterval(() => {
-            const elapsed = Date.now() - startTime;
-            const progress = Math.min(1, elapsed / duration);
-            const eased = 1 - Math.pow(1 - progress, 3); // ease-out
-            const currentProgress = startProgress + (eased * (targetProgress - startProgress));
-            stepsUi.setProgress(Math.round(currentProgress));
-            if (currentProgress >= targetProgress) { clearInterval(progressInterval); }
-        }, intervalMs);
+            progressInterval = setInterval(() => {
+                const elapsed = Date.now() - startTime;
+                const progress = Math.min(1, elapsed / duration);
+                const eased = 1 - Math.pow(1 - progress, 3); // ease-out
+                const currentProgress = startProgress + (eased * (targetProgress - startProgress));
+                stepsUi.setProgress(Math.round(currentProgress));
+                if (currentProgress >= targetProgress) { clearInterval(progressInterval); }
+            }, intervalMs);
+        }
 
         const payload = {recordid: state.sessionid};
         if (overrides) {
             if (overrides.fullname) { payload.fullname = overrides.fullname; }
             if (overrides.shortname) { payload.shortname = overrides.shortname; }
             if (overrides.category) { payload.category = overrides.category; }
+            if (overrides.startdate) { payload.startdate = overrides.startdate; }
             if (overrides.targetmode) { payload.targetmode = overrides.targetmode; }
             if (overrides.targetcourseid) { payload.targetcourseid = overrides.targetcourseid; }
         }
+        // The creation may take minutes; what is not allowed is silence, so the clock starts again at each news.
+        let idleTimer = null;
+        let rejectIdle = null;
+        const armIdleTimer = () => {
+            clearTimeout(idleTimer);
+            idleTimer = setTimeout(() => rejectIdle(new Error(texts.courseai_error_connection)), CREATE_COURSE_TIMEOUT_MS);
+        };
         const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error(texts.courseai_error_connection)), CREATE_COURSE_TIMEOUT_MS);
+            rejectIdle = reject;
+            armIdleTimer();
         });
-        const result = await Promise.race([createCourse(payload), timeoutPromise]);
+        let percent = 0;
+        const onProgress = (news) => {
+            armIdleTimer();
+            if (pcSubtitle && news && news.message) {
+                pcSubtitle.textContent = news.message;
+            }
+            if (reportsProgress && news) {
+                percent = creationPercent(news.step, Number(news.done) || 0, Number(news.total) || 0, percent);
+                stepsUi.setProgress(percent);
+            }
+        };
+        let result;
+        try {
+            result = await Promise.race([createCourse(payload, onProgress), timeoutPromise]);
+        } finally {
+            clearTimeout(idleTimer);
+        }
 
         if (progressInterval) { clearInterval(progressInterval); }
         stepsUi.setProgress(100);
@@ -407,6 +463,15 @@ export const createCourseFromSession = async(
         if (progressInterval) { clearInterval(progressInterval); }
         if (elements.pcStep) { elements.pcStep.textContent = texts.courseai_state_error; }
         if (pcSubtitle) { pcSubtitle.textContent = error?.message || texts.courseai_error_create_course; }
+        if (onError) {
+            if (await onError(error)) {
+                return createCourseFromSession(
+                    state, elements, texts, stepsUi, Notification, createCourse, showCompletionView,
+                    showImportProgressView, overrides, onError
+                );
+            }
+            return null;
+        }
         await Notification.exception(error);
         return null;
     }

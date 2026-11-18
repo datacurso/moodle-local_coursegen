@@ -83,7 +83,7 @@ final class create_course_category_test extends \advanced_testcase {
         $user = $generator->create_user();
         $systemroleid = create_role('AI course creator', 'aicoursecreator', '');
         $systemcontext = \context_system::instance();
-        assign_capability('local/coursegen:createcoursewithai', CAP_ALLOW, $systemroleid, $systemcontext->id, true);
+        assign_capability('local/coursegen:createfreecoursewithai', CAP_ALLOW, $systemroleid, $systemcontext->id, true);
         role_assign($systemroleid, $user->id, $systemcontext->id);
         $categoryroleid = $generator->get_plugin_generator('local_coursegen')->create_course_creator_role();
         role_assign($categoryroleid, $user->id, \context_coursecat::instance($category->id)->id);

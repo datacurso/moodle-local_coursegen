@@ -48,15 +48,17 @@ final class manage_image_generation_permissions_test extends \advanced_testcase 
     }
 
     /**
-     * A user holding the plugin management capability can save the policy.
+     * A user holding the capability to change the image generation settings, and the one to configure the
+     * site, can save the policy.
      */
-    public function test_holder_of_management_capability_can_save(): void {
+    public function test_holder_of_the_edit_and_site_config_capabilities_can_save(): void {
         $this->resetAfterTest();
 
         $user = $this->getDataGenerator()->create_user();
         $context = \context_system::instance();
         $roleid = $this->getDataGenerator()->create_role(['shortname' => 'imgmanager']);
-        assign_capability('local/coursegen:manageimagegeneration', CAP_ALLOW, $roleid, $context->id);
+        assign_capability('local/coursegen:editimagegenerationsettings', CAP_ALLOW, $roleid, $context->id);
+        assign_capability('moodle/site:config', CAP_ALLOW, $roleid, $context->id);
         role_assign($roleid, $user->id, $context->id);
         $this->setUser($user);
 
@@ -70,6 +72,29 @@ final class manage_image_generation_permissions_test extends \advanced_testcase 
 
         $this->assertTrue($result['success']);
         $this->assertSame('manual', get_config('local_coursegen', 'generationmode'));
+    }
+
+    /**
+     * The old management capability is no longer checked: holding it alone is not enough.
+     */
+    public function test_holder_of_the_old_management_capability_alone_is_rejected(): void {
+        $this->resetAfterTest();
+
+        $user = $this->getDataGenerator()->create_user();
+        $context = \context_system::instance();
+        $roleid = $this->getDataGenerator()->create_role(['shortname' => 'imgmanager']);
+        assign_capability('local/coursegen:manageimagegeneration', CAP_ALLOW, $roleid, $context->id);
+        role_assign($roleid, $user->id, $context->id);
+        $this->setUser($user);
+
+        $this->expectException(\required_capability_exception::class);
+        $payload = $this->minimal_payload();
+        manage_image_generation::execute(
+            $payload['overridecourse'],
+            $payload['overrideactivity'],
+            $payload['generationmode'],
+            $payload['activities']
+        );
     }
 
     /**

@@ -19,95 +19,132 @@ namespace local_coursegen\mod_settings;
 defined('MOODLE_INTERNAL') || die();
 
 global $CFG;
-require_once(__DIR__ . '/../fixtures/generated_images_test_trait.php');
 require_once($CFG->dirroot . '/mod/wiki/locallib.php');
 
 /**
- * Tests for wiki_settings: the generated images of the pages.
+ * Unit tests for wiki_settings - how the generated pages become a real wiki.
+ *
+ * The mold path now ships a generated first page of its own, so its content
+ * must survive; the legacy path ships none, and still gets the synthesized
+ * index of wiki links.
  *
  * @package    local_coursegen
- * @copyright  2026 Datacurso
+ * @category   test
+ * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  * @covers \local_coursegen\mod_settings\wiki_settings
  */
 final class wiki_settings_test extends \advanced_testcase {
-    use \local_coursegen\generated_images_test_trait;
-
     /**
-     * Create an HTML wiki and return a cm-like object shaped as create_mod_service passes it.
+     * Create a wiki and return a cm-like object shaped as create_mod_service passes it.
      *
+     * @param string $firstpagetitle The wiki's first page title.
      * @return object Object with ->coursemodule (cmid) and ->instance (wiki id).
      */
-    private function make_wiki_cm(): object {
+    private function make_wiki_cm(string $firstpagetitle): object {
+        // Creating a page needs a logged in user holding mod/wiki:editpage.
+        $this->setAdminUser();
         $course = $this->getDataGenerator()->create_course();
         $wiki = $this->getDataGenerator()->create_module('wiki', [
             'course' => $course->id,
             'wikimode' => 'collaborative',
             'defaultformat' => 'html',
-            'firstpagetitle' => 'Home',
+            'firstpagetitle' => $firstpagetitle,
         ]);
         return (object) ['coursemodule' => $wiki->cmid, 'instance' => $wiki->id];
     }
 
     /**
-     * A page as the parameter cleaner leaves it: content pointing at a draft area with its image.
+     * The current content of one page of a wiki, straight from its versions.
      *
-     * @param string $title
-     * @param string $filename
-     * @return array
+     * @param int $wikiid The wiki instance id.
+     * @param string $title The page title.
+     * @return string The authored text of the page's current version.
      */
-    private function page_with_image(string $title, string $filename): array {
-        return [
-            'title' => $title,
-            'newcontent_editor' => [
-                'text' => '<p>' . $title . '</p><img src="@@PLUGINFILE@@/' . $filename . '" alt="">',
-                'format' => FORMAT_HTML,
-                'itemid' => $this->draft_with_image($filename),
-            ],
-        ];
+    private function page_content(int $wikiid, string $title): string {
+        global $DB;
+
+        $subwikiid = (int) $DB->get_field('wiki_subwikis', 'id', ['wikiid' => $wikiid], MUST_EXIST);
+        $page = wiki_get_page_by_title($subwikiid, $title);
+        $this->assertNotEmpty($page, "The wiki has no page titled '{$title}'.");
+
+        return (string) wiki_get_current_version($page->id)->content;
     }
 
     /**
-     * The images of every page end in the attachments of the subwiki; a later page does not remove
-     * the images of an earlier one, since the area is shared by the pages of the subwiki.
+     * Count the pages of one wiki.
+     *
+     * @param int $wikiid The wiki instance id.
+     * @return int Number of pages across the wiki's subwikis.
      */
-    public function test_images_of_every_page_are_stored_in_the_subwiki(): void {
+    private function count_pages(int $wikiid): int {
         global $DB;
 
-        $this->resetAfterTest();
-        $this->setAdminUser();
-        $cm = $this->make_wiki_cm();
-
-        (new wiki_settings($cm, ['pages' => [
-            $this->page_with_image('Drying', 'img_drying.png'),
-            $this->page_with_image('Storage', 'img_storage.png'),
-        ]]))->add_settings();
-
-        $subwikiid = (int) $DB->get_field('wiki_subwikis', 'id', ['wikiid' => $cm->instance], MUST_EXIST);
-        $context = \context_module::instance($cm->coursemodule);
-        $fs = get_file_storage();
-        $this->assertTrue($fs->file_exists($context->id, 'mod_wiki', 'attachments', $subwikiid, '/', 'img_drying.png'));
-        $this->assertTrue($fs->file_exists($context->id, 'mod_wiki', 'attachments', $subwikiid, '/', 'img_storage.png'));
-
-        $page = wiki_get_page_by_title($subwikiid, 'Drying');
-        $this->assertStringContainsString('@@PLUGINFILE@@/img_drying.png', $page->cachedcontent);
+        return (int) $DB->count_records_sql(
+            'SELECT COUNT(p.id)
+               FROM {wiki_pages} p
+               JOIN {wiki_subwikis} s ON s.id = p.subwikiid
+              WHERE s.wikiid = ?',
+            [$wikiid]
+        );
     }
 
     /**
-     * Pages without a draft area are still created.
+     * A generated page whose title is the wiki's first page title becomes that
+     * first page WITH ITS OWN CONTENT - which is exactly where the mold's
+     * markers were resolved - and is not created a second time.
      */
-    public function test_pages_without_draft_area_are_created(): void {
-        global $DB;
-
+    public function test_generated_first_page_keeps_its_own_content(): void {
         $this->resetAfterTest();
-        $this->setAdminUser();
-        $cm = $this->make_wiki_cm();
 
-        (new wiki_settings($cm, ['pages' => [
-            ['title' => 'Plain', 'newcontent_editor' => ['text' => '<p>Text</p>', 'format' => FORMAT_HTML]],
-        ]]))->add_settings();
+        $cm = $this->make_wiki_cm('Índice del curso');
+        $modsettings = ['pages' => [
+            ['title' => 'Unidad 1', 'newcontent_editor' => ['text' => '<p>Contenido de la unidad 1</p>']],
+            ['title' => 'Índice del curso', 'newcontent_editor' => ['text' => '<p>[[Unidad 1]] y algo más</p>']],
+        ]];
 
-        $subwikiid = (int) $DB->get_field('wiki_subwikis', 'id', ['wikiid' => $cm->instance], MUST_EXIST);
-        $this->assertNotFalse(wiki_get_page_by_title($subwikiid, 'Plain'));
+        (new wiki_settings($cm, $modsettings))->add_settings();
+
+        $this->assertSame('<p>[[Unidad 1]] y algo más</p>', $this->page_content($cm->instance, 'Índice del curso'));
+        $this->assertSame('<p>Contenido de la unidad 1</p>', $this->page_content($cm->instance, 'Unidad 1'));
+        // Created once: mod_wiki_external::new_page throws pageexists otherwise.
+        $this->assertSame(2, $this->count_pages($cm->instance));
+    }
+
+    /**
+     * The legacy path ships no first page, so the index of [[Title]] links is
+     * still synthesized for it.
+     */
+    public function test_without_a_matching_page_the_link_index_is_synthesized(): void {
+        $this->resetAfterTest();
+
+        $cm = $this->make_wiki_cm('Front page');
+        $modsettings = ['pages' => [
+            ['title' => 'Unidad 1', 'newcontent_editor' => ['text' => '<p>Uno</p>']],
+            ['title' => 'Unidad 2', 'newcontent_editor' => ['text' => '<p>Dos</p>']],
+        ]];
+
+        (new wiki_settings($cm, $modsettings))->add_settings();
+
+        $this->assertSame("<p>[[Unidad 1]]</p>\n<p>[[Unidad 2]]</p>\n", $this->page_content($cm->instance, 'Front page'));
+        $this->assertSame(3, $this->count_pages($cm->instance));
+    }
+
+    /**
+     * Two generated pages sharing a title would make new_page throw pageexists,
+     * so the list is still deduplicated by title.
+     */
+    public function test_duplicate_titles_are_still_dropped(): void {
+        $this->resetAfterTest();
+
+        $cm = $this->make_wiki_cm('Front page');
+        $modsettings = ['pages' => [
+            ['title' => 'Unidad 1', 'newcontent_editor' => ['text' => '<p>Uno</p>']],
+            ['title' => 'Unidad 1', 'newcontent_editor' => ['text' => '<p>Uno otra vez</p>']],
+        ]];
+
+        (new wiki_settings($cm, $modsettings))->add_settings();
+
+        $this->assertSame(2, $this->count_pages($cm->instance));
     }
 }

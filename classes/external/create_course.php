@@ -32,6 +32,7 @@ use core_external\external_single_structure;
 use local_coursegen\event\generation_result_applied;
 use local_coursegen\local\service\ai_course_api_service;
 use local_coursegen\local\service\course_import_service;
+use local_coursegen\local\service\course_review_service;
 use local_coursegen\local\service\course_session_service;
 use local_coursegen\local\service\creation_permissions;
 use local_coursegen\local\service\create_course_service;
@@ -42,8 +43,6 @@ use context_system;
 use invalid_parameter_exception;
 
 defined('MOODLE_INTERNAL') || die();
-
-require_once($CFG->libdir . '/externallib.php');
 
 /**
  * External API for creating courses with AI assistance.
@@ -84,6 +83,7 @@ class create_course extends external_api {
                 VALUE_DEFAULT,
                 0
             ),
+            'startdate' => new external_value(PARAM_TEXT, 'Course start day (Y-m-d), empty for the default', VALUE_DEFAULT, ''),
         ]);
     }
 
@@ -99,6 +99,7 @@ class create_course extends external_api {
      * @param int $category Optional override for the course category ID
      * @param string $targetmode One of the TARGETMODE_* constants
      * @param int $targetcourseid Existing course to import into (import mode only)
+     * @param string $startdate Optional course start day (Y-m-d)
      * @return array Result of the course content application
      * @throws moodle_exception
      * @throws \moodle_exception plugindisabled or plugindisabled_admin when the plugin is disabled.
@@ -109,7 +110,8 @@ class create_course extends external_api {
         $shortname = '',
         $category = 0,
         $targetmode = self::TARGETMODE_NEW,
-        $targetcourseid = 0
+        $targetcourseid = 0,
+        $startdate = ''
     ) {
         global $USER;
 
@@ -122,6 +124,7 @@ class create_course extends external_api {
             'category' => $category,
             'targetmode' => $targetmode,
             'targetcourseid' => $targetcourseid,
+            'startdate' => $startdate,
         ]);
         if (!in_array($params['targetmode'], [self::TARGETMODE_NEW, self::TARGETMODE_IMPORT], true)) {
             throw new invalid_parameter_exception('Unknown targetmode: ' . $params['targetmode']);
@@ -130,9 +133,11 @@ class create_course extends external_api {
 
         $context = context_system::instance();
         self::validate_context($context);
-        // The full creation set in at least one category (ticket #9539); the exact
+        // Each creation mode has its own capability (free here); the full creation set,
+        // in at least one category, is required on top of it (ticket #9539). The exact
         // target category is checked again once it is resolved.
-        creation_permissions::require_anywhere();
+        require_capability('local/coursegen:createfreecoursewithai', $context);
+        creation_permissions::require_anywhere(null, [creation_permissions::FREE_CAPABILITY]);
 
         $recordid = (int)$params['recordid'];
 
@@ -153,19 +158,12 @@ class create_course extends external_api {
         $resultdata = $result['result'] ?? [];
 
         // Build overrides from user-provided params (non-empty values only).
-        $overrides = [];
-        $fullname = trim((string)$params['fullname']);
-        if ($fullname !== '') {
-            $overrides['fullname'] = $fullname;
-        }
-        $shortname = trim((string)$params['shortname']);
-        if ($shortname !== '') {
-            $overrides['shortname'] = $shortname;
-        }
-        $category = (int)$params['category'];
-        if ($category > 0) {
-            $overrides['category'] = $category;
-        }
+        $overrides = course_review_service::overrides(
+            (string)$params['fullname'],
+            (string)$params['shortname'],
+            (int)$params['category'],
+            (string)$params['startdate']
+        );
         if ($target !== null) {
             // The staging course always lives next to the target, so the user needs
             // no course creation permission anywhere else.
@@ -173,6 +171,8 @@ class create_course extends external_api {
         }
 
         $outcome = create_course_service::create_course($session, $resultdata, $overrides);
+        // Internal bookkeeping for the template flow; not part of this contract.
+        unset($outcome['generatedcms']);
         $outcome['importqueued'] = false;
         $outcome['targetcourseid'] = 0;
         $outcome['importstate'] = '';

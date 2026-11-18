@@ -16,6 +16,7 @@
 
 namespace local_coursegen\local\service;
 
+use local_coursegen\local\space\space_file_storage;
 use local_coursegen\task\erase_remote_data;
 
 /**
@@ -55,6 +56,10 @@ final class user_data_eraser {
         self::delete_syllabus_files($sessionids);
         $DB->delete_records('local_coursegen_course_sessions', ['userid' => $userid]);
         $DB->delete_records('local_coursegen_module_jobs', ['userid' => $userid]);
+        // The files of the teacher's space live in the user's own context.
+        if ($DB->record_exists('user', ['id' => $userid])) {
+            space_file_storage::delete_user_files($userid);
+        }
 
         self::erase_prompts(['usermodified' => $userid]);
         $DB->set_field('local_coursegen_system_instruction', 'usermodified', 0, ['usermodified' => $userid]);

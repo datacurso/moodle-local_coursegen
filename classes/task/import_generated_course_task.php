@@ -90,7 +90,7 @@ class import_generated_course_task extends adhoc_task {
             course_import_service::fail_without_changes($sessionid, $stagingid, 'error_import_existing_disabled', $userid);
             return;
         }
-        if (!has_capability('local/coursegen:createcoursewithai', \context_system::instance(), $userid)) {
+        if (!has_capability('local/coursegen:createfreecoursewithai', \context_system::instance(), $userid)) {
             mtrace('Import skipped: the user may no longer create courses with AI.');
             course_import_service::fail_without_changes($sessionid, $stagingid, \required_capability_exception::class, $userid);
             return;

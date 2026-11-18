@@ -115,7 +115,7 @@ final class creation_gate_external_test extends \advanced_testcase {
         role_assign($DB->get_field('role', 'id', ['shortname' => 'coursecreator'], MUST_EXIST), $user->id, $systemcontext->id);
         $roleid = $generator->create_role(['shortname' => 'oldgate']);
         assign_capability('moodle/course:create', CAP_ALLOW, $roleid, $systemcontext->id, true);
-        assign_capability('local/coursegen:createcoursewithai', CAP_ALLOW, $roleid, $systemcontext->id, true);
+        assign_capability('local/coursegen:createfreecoursewithai', CAP_ALLOW, $roleid, $systemcontext->id, true);
         role_assign($roleid, $user->id, $systemcontext->id);
         return $user;
     }

@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mockup — Course Selector for Template Wizard</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+<style>
+  body { background: #f4f4f4; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .category-tree { max-height: 500px; overflow-y: auto; }
+  .cat-item { cursor: pointer; transition: background .1s; }
+  .cat-item:hover { background: #f0f0f0; }
+  .cat-item.active { background: #e7f1ff; border-left: 3px solid #0f6cbf; }
+  .cat-toggle { width: 20px; text-align: center; color: #6c757d; }
+  .cat-indent { padding-left: 1.5rem; }
+  .cat-indent-2 { padding-left: 3rem; }
+  .course-item { cursor: pointer; transition: background .1s; }
+  .course-item:hover { background: #f8f9fa; }
+  .course-item.selected { background: #e7f1ff; }
+  .course-count { min-width: 28px; }
+  .search-highlight { background: #fff3cd; padding: 1px 2px; border-radius: 2px; }
+</style>
+</head>
+<body>
+<div class="container-fluid py-4" style="max-width:1200px">
+
+  <!-- Stepper (backup style) -->
+  <div class="border rounded py-2 px-3 mb-3 bg-white">
+    <span class="font-weight-bold">1. Course</span>
+    <span class="text-muted"> &#9658; 2. Preview &#9658; 3. Sections &#9658; 4. Limits &#9658; 5. Save</span>
+  </div>
+
+  <h4>Select base course</h4>
+  <p class="text-muted">Browse the category tree or search to find the course you want to use as a template.</p>
+
+  <!-- Global search bar -->
+  <div class="input-group mb-3">
+    <div class="input-group-prepend">
+      <span class="input-group-text"><i class="fa fa-search"></i></span>
+    </div>
+    <input type="text" class="form-control" id="globalSearch"
+           placeholder="Search courses by name, short name, or category...">
+    <div class="input-group-append">
+      <button class="btn btn-outline-secondary" type="button" onclick="clearSearch()">
+        <i class="fa fa-times"></i>
+      </button>
+    </div>
+  </div>
+
+  <div class="row">
+    <!-- LEFT: Category tree -->
+    <div class="col-md-5 col-lg-4">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center py-2">
+          <strong>Categories</strong>
+          <button class="btn btn-sm btn-link p-0" onclick="toggleAll()" title="Expand/Collapse all">
+            <i class="fa fa-expand-arrows-alt"></i>
+          </button>
+        </div>
+        <div class="card-body p-0 category-tree" id="categoryTree"></div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Course list -->
+    <div class="col-md-7 col-lg-8">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center py-2">
+          <strong id="courseListTitle">Select a category</strong>
+          <span class="text-muted small" id="courseCount"></span>
+        </div>
+        <div class="card-body p-0">
+          <!-- Selected course banner -->
+          <div class="alert alert-success mb-0 rounded-0 d-none" id="selectedBanner">
+            <div class="d-flex align-items-center">
+              <i class="fa fa-check-circle mr-2"></i>
+              <div>
+                <strong id="selectedCourseName"></strong>
+                <span class="text-muted ml-2" id="selectedCourseShort"></span>
+              </div>
+              <button class="btn btn-sm btn-link ml-auto text-danger" onclick="deselectCourse()">
+                <i class="fa fa-times"></i> Change
+              </button>
+            </div>
+          </div>
+
+          <!-- Course list -->
+          <div id="courseList" class="list-group list-group-flush">
+            <div class="text-center text-muted py-4">
+              <i class="fa fa-arrow-left mr-1"></i>
+              Select a category to see its courses
+            </div>
+          </div>
+
+          <!-- Pagination -->
+          <div class="card-footer py-2 d-none" id="pagination">
+            <div class="d-flex align-items-center justify-content-between">
+              <span class="text-muted small" id="paginationInfo"></span>
+              <nav><ul class="pagination pagination-sm mb-0" id="paginationLinks"></ul></nav>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer nav -->
+  <div class="d-flex justify-content-between mt-4 pt-3 border-top">
+    <button class="btn btn-secondary" disabled>
+      <i class="fa fa-chevron-left mr-1"></i> Back
+    </button>
+    <button class="btn btn-primary" id="btnNext" onclick="goNext()">
+      Next <i class="fa fa-chevron-right ml-1"></i>
+    </button>
+  </div>
+</div>
+
+<script>
+// ─── MOCK DATA ──────────────────────────────────────────────
+const CATEGORIES = [
+  { id: 1, name: 'Ventas', parent: 0, children: [
+    { id: 10, name: 'Ventas B2B', parent: 1, children: [
+      { id: 100, name: 'Ventas Enterprise', parent: 10, children: [] },
+    ]},
+    { id: 11, name: 'Ventas B2C', parent: 1, children: [] },
+  ]},
+  { id: 2, name: 'Recursos Humanos', parent: 0, children: [
+    { id: 20, name: 'Inducción', parent: 2, children: [] },
+    { id: 21, name: 'Desarrollo', parent: 2, children: [] },
+  ]},
+  { id: 3, name: 'Tecnología', parent: 0, children: [
+    { id: 30, name: 'Infraestructura', parent: 3, children: [] },
+    { id: 31, name: 'Desarrollo de Software', parent: 3, children: [
+      { id: 310, name: 'Frontend', parent: 31, children: [] },
+      { id: 311, name: 'Backend', parent: 31, children: [] },
+    ]},
+  ]},
+  { id: 4, name: 'Compliance', parent: 0, children: [] },
+  { id: 5, name: 'Marketing Digital', parent: 0, children: [] },
+];
+
+const COURSES = [
+  { id: 1, fullname: 'Ventas 101 — Fundamentos', shortname: 'VEN-101', catId: 1, sections: 4 },
+  { id: 2, fullname: 'Ventas Avanzadas', shortname: 'VEN-201', catId: 1, sections: 6 },
+  { id: 3, fullname: 'CRM y Pipeline Management', shortname: 'CRM-100', catId: 1, sections: 3 },
+  { id: 4, fullname: 'Ventas Enterprise — Estrategia', shortname: 'VEN-E01', catId: 100, sections: 5 },
+  { id: 5, fullname: 'Key Account Management', shortname: 'KAM-100', catId: 100, sections: 4 },
+  { id: 6, fullname: 'Retail Sales Mastery', shortname: 'B2C-101', catId: 11, sections: 3 },
+  { id: 7, fullname: 'Técnicas B2B Avanzadas', shortname: 'B2B-201', catId: 10, sections: 5 },
+  { id: 8, fullname: 'Negociación B2B', shortname: 'B2B-301', catId: 10, sections: 4 },
+  { id: 9, fullname: 'Inducción General 2026', shortname: 'IND-001', catId: 20, sections: 5 },
+  { id: 10, fullname: 'Inducción TI', shortname: 'IND-TI', catId: 20, sections: 3 },
+  { id: 11, fullname: 'Liderazgo y Desarrollo', shortname: 'LID-100', catId: 21, sections: 6 },
+  { id: 12, fullname: 'Plan de Carrera', shortname: 'CAR-100', catId: 21, sections: 4 },
+  { id: 13, fullname: 'Redes y Seguridad', shortname: 'INF-101', catId: 30, sections: 5 },
+  { id: 14, fullname: 'Cloud Computing AWS', shortname: 'INF-201', catId: 30, sections: 7 },
+  { id: 15, fullname: 'React Avanzado', shortname: 'FE-201', catId: 310, sections: 8 },
+  { id: 16, fullname: 'Fundamentos de JavaScript', shortname: 'FE-101', catId: 310, sections: 5 },
+  { id: 17, fullname: 'Node.js y Express', shortname: 'BE-101', catId: 311, sections: 6 },
+  { id: 18, fullname: 'API REST con PHP', shortname: 'BE-201', catId: 311, sections: 4 },
+  { id: 19, fullname: 'Compliance SOX 2026', shortname: 'COMP-001', catId: 4, sections: 4 },
+  { id: 20, fullname: 'GDPR para Equipos', shortname: 'COMP-002', catId: 4, sections: 3 },
+  { id: 21, fullname: 'Anti-Lavado de Activos', shortname: 'COMP-003', catId: 4, sections: 5 },
+  { id: 22, fullname: 'SEO Fundamental', shortname: 'MKT-101', catId: 5, sections: 4 },
+  { id: 23, fullname: 'Google Ads Avanzado', shortname: 'MKT-201', catId: 5, sections: 5 },
+  { id: 24, fullname: 'Analítica Digital', shortname: 'MKT-301', catId: 5, sections: 6 },
+];
+
+// ─── STATE ──────────────────────────────────────────────────
+let selectedCatId = null;
+let selectedCourseId = null;
+let expandedCats = new Set();
+let currentPage = 0;
+const PER_PAGE = 10;
+
+// ─── CATEGORY TREE ──────────────────────────────────────────
+function renderCategoryTree(filter) {
+  const container = document.getElementById('categoryTree');
+  container.innerHTML = buildCatTreeHTML(CATEGORIES, 0, filter);
+  bindCatEvents();
+}
+
+function buildCatTreeHTML(cats, depth, filter) {
+  let html = '';
+  cats.forEach(cat => {
+    const courseCount = countCoursesInCat(cat);
+    const hasChildren = cat.children && cat.children.length > 0;
+    const isExpanded = expandedCats.has(cat.id);
+    const isActive = selectedCatId === cat.id;
+    const indent = 'pl-' + (2 + depth * 3);
+
+    // If filtering, check if this cat or children match.
+    if (filter) {
+      const matches = catMatchesFilter(cat, filter);
+      if (!matches) return;
+    }
+
+    html += `<div class="cat-item d-flex align-items-center py-2 px-2 ${indent} ${isActive ? 'active' : ''} border-bottom"
+                  data-catid="${cat.id}">`;
+
+    if (hasChildren) {
+      html += `<span class="cat-toggle mr-1" data-action="toggle" data-catid="${cat.id}">
+        <i class="fa fa-caret-${isExpanded ? 'down' : 'right'}"></i>
+      </span>`;
+    } else {
+      html += `<span class="cat-toggle mr-1"></span>`;
+    }
+
+    html += `<i class="fa fa-folder${isExpanded ? '-open text-warning' : ' text-muted'} mr-2"></i>`;
+    html += `<span class="flex-grow-1 text-truncate" data-action="select" data-catid="${cat.id}">${cat.name}</span>`;
+    html += `<span class="badge badge-pill badge-light course-count ml-1">${courseCount}</span>`;
+    html += `</div>`;
+
+    if (hasChildren && (isExpanded || filter)) {
+      html += buildCatTreeHTML(cat.children, depth + 1, filter);
+    }
+  });
+  return html;
+}
+
+function countCoursesInCat(cat) {
+  let count = COURSES.filter(c => c.catId === cat.id).length;
+  if (cat.children) {
+    cat.children.forEach(ch => count += countCoursesInCat(ch));
+  }
+  return count;
+}
+
+function catMatchesFilter(cat, filter) {
+  const f = filter.toLowerCase();
+  if (cat.name.toLowerCase().includes(f)) return true;
+  const courses = COURSES.filter(c => c.catId === cat.id);
+  if (courses.some(c => c.fullname.toLowerCase().includes(f) || c.shortname.toLowerCase().includes(f))) return true;
+  if (cat.children) return cat.children.some(ch => catMatchesFilter(ch, f));
+  return false;
+}
+
+function getAllCatIds(cat) {
+  let ids = [cat.id];
+  if (cat.children) cat.children.forEach(ch => ids = ids.concat(getAllCatIds(ch)));
+  return ids;
+}
+
+function findCat(cats, id) {
+  for (const cat of cats) {
+    if (cat.id === id) return cat;
+    if (cat.children) {
+      const found = findCat(cat.children, id);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+function bindCatEvents() {
+  document.querySelectorAll('[data-action="toggle"]').forEach(el => {
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const id = parseInt(el.dataset.catid);
+      if (expandedCats.has(id)) expandedCats.delete(id);
+      else expandedCats.add(id);
+      renderCategoryTree(document.getElementById('globalSearch').value);
+    });
+  });
+
+  document.querySelectorAll('[data-action="select"]').forEach(el => {
+    el.addEventListener('click', () => {
+      const id = parseInt(el.dataset.catid);
+      selectCategory(id);
+    });
+  });
+
+  // Also make the whole row clickable for select.
+  document.querySelectorAll('.cat-item').forEach(el => {
+    el.addEventListener('click', (e) => {
+      if (e.target.closest('[data-action="toggle"]')) return;
+      const id = parseInt(el.dataset.catid);
+      // Expand if has children.
+      const cat = findCat(CATEGORIES, id);
+      if (cat && cat.children && cat.children.length) {
+        expandedCats.add(id);
+      }
+      selectCategory(id);
+    });
+  });
+}
+
+function selectCategory(id) {
+  selectedCatId = id;
+  currentPage = 0;
+
+  const cat = findCat(CATEGORIES, id);
+  // Get all courses in this category AND its subcategories.
+  const allCatIds = cat ? getAllCatIds(cat) : [];
+  const courses = COURSES.filter(c => allCatIds.includes(c.catId));
+
+  document.getElementById('courseListTitle').textContent = cat ? cat.name : 'Courses';
+  renderCourseList(courses);
+  renderCategoryTree(document.getElementById('globalSearch').value);
+}
+
+// ─── COURSE LIST ────────────────────────────────────────────
+function renderCourseList(courses, highlight) {
+  const container = document.getElementById('courseList');
+  const total = courses.length;
+  const totalPages = Math.ceil(total / PER_PAGE);
+  const page = courses.slice(currentPage * PER_PAGE, (currentPage + 1) * PER_PAGE);
+
+  document.getElementById('courseCount').textContent = total + ' course' + (total !== 1 ? 's' : '');
+
+  if (!page.length) {
+    container.innerHTML = '<div class="text-center text-muted py-4">No courses in this category</div>';
+    document.getElementById('pagination').classList.add('d-none');
+    return;
+  }
+
+  let html = '';
+  page.forEach(c => {
+    const sel = selectedCourseId === c.id;
+    const catName = getCatName(c.catId);
+    let fullname = c.fullname;
+    let shortname = c.shortname;
+
+    if (highlight) {
+      fullname = highlightText(fullname, highlight);
+      shortname = highlightText(shortname, highlight);
+    }
+
+    html += `<div class="list-group-item list-group-item-action course-item ${sel ? 'selected' : ''}"
+                  data-action="select-course" data-courseid="${c.id}">
+      <div class="d-flex align-items-center">
+        <div class="custom-control custom-radio mr-3">
+          <input type="radio" class="custom-control-input" name="course" id="c${c.id}"
+                 value="${c.id}" ${sel ? 'checked' : ''}>
+          <label class="custom-control-label" for="c${c.id}"></label>
+        </div>
+        <div class="flex-grow-1 min-width-0">
+          <div class="d-flex align-items-baseline">
+            <strong class="text-truncate">${fullname}</strong>
+            <code class="ml-2 text-muted small text-nowrap">${shortname}</code>
+          </div>
+          <small class="text-muted">
+            <i class="fa fa-folder-open mr-1"></i>${catName}
+            <span class="mx-2">·</span>
+            <i class="fa fa-list mr-1"></i>${c.sections} sections
+          </small>
+        </div>
+      </div>
+    </div>`;
+  });
+
+  container.innerHTML = html;
+
+  // Pagination.
+  const pagEl = document.getElementById('pagination');
+  if (totalPages > 1) {
+    pagEl.classList.remove('d-none');
+    document.getElementById('paginationInfo').textContent =
+      `Showing ${currentPage * PER_PAGE + 1}–${Math.min((currentPage + 1) * PER_PAGE, total)} of ${total}`;
+
+    let links = '';
+    if (currentPage > 0) {
+      links += `<li class="page-item"><a class="page-link" href="#" data-page="${currentPage - 1}">&laquo;</a></li>`;
+    }
+    for (let i = 0; i < totalPages; i++) {
+      links += `<li class="page-item ${i === currentPage ? 'active' : ''}">
+        <a class="page-link" href="#" data-page="${i}">${i + 1}</a></li>`;
+    }
+    if (currentPage < totalPages - 1) {
+      links += `<li class="page-item"><a class="page-link" href="#" data-page="${currentPage + 1}">&raquo;</a></li>`;
+    }
+    document.getElementById('paginationLinks').innerHTML = links;
+    document.querySelectorAll('#paginationLinks [data-page]').forEach(a => {
+      a.addEventListener('click', e => {
+        e.preventDefault();
+        currentPage = parseInt(a.dataset.page);
+        const cat = findCat(CATEGORIES, selectedCatId);
+        const allCatIds = cat ? getAllCatIds(cat) : [];
+        const courses = COURSES.filter(c => allCatIds.includes(c.catId));
+        renderCourseList(courses);
+      });
+    });
+  } else {
+    pagEl.classList.add('d-none');
+  }
+
+  // Bind course selection.
+  container.querySelectorAll('[data-action="select-course"]').forEach(el => {
+    el.addEventListener('click', () => {
+      const id = parseInt(el.dataset.courseid);
+      const course = COURSES.find(c => c.id === id);
+      selectCourse(course);
+    });
+  });
+}
+
+function selectCourse(course) {
+  selectedCourseId = course.id;
+  document.getElementById('selectedBanner').classList.remove('d-none');
+  document.getElementById('selectedCourseName').textContent = course.fullname;
+  document.getElementById('selectedCourseShort').textContent = course.shortname;
+
+  // Update radio and highlight.
+  document.querySelectorAll('.course-item').forEach(el => {
+    const id = parseInt(el.dataset.courseid);
+    el.classList.toggle('selected', id === course.id);
+    const radio = el.querySelector('input[type=radio]');
+    if (radio) radio.checked = id === course.id;
+  });
+}
+
+function deselectCourse() {
+  selectedCourseId = null;
+  document.getElementById('selectedBanner').classList.add('d-none');
+  document.querySelectorAll('.course-item').forEach(el => {
+    el.classList.remove('selected');
+    const radio = el.querySelector('input[type=radio]');
+    if (radio) radio.checked = false;
+  });
+}
+
+function getCatName(catId) {
+  const path = [];
+  function find(cats, id) {
+    for (const cat of cats) {
+      if (cat.id === id) { path.push(cat.name); return true; }
+      if (cat.children && find(cat.children, id)) { path.unshift(cat.name); return true; }
+    }
+    return false;
+  }
+  find(CATEGORIES, catId);
+  return path.join(' / ');
+}
+
+// ─── GLOBAL SEARCH ──────────────────────────────────────────
+document.getElementById('globalSearch').addEventListener('input', function() {
+  const q = this.value.trim();
+  if (q.length < 2) {
+    if (!q) {
+      renderCategoryTree('');
+      if (selectedCatId) selectCategory(selectedCatId);
+      else {
+        document.getElementById('courseList').innerHTML =
+          '<div class="text-center text-muted py-4"><i class="fa fa-arrow-left mr-1"></i>Select a category to see its courses</div>';
+        document.getElementById('courseCount').textContent = '';
+        document.getElementById('courseListTitle').textContent = 'Select a category';
+      }
+    }
+    return;
+  }
+
+  // Expand matching categories.
+  expandMatchingCats(CATEGORIES, q);
+  renderCategoryTree(q);
+
+  // Show ALL matching courses across categories.
+  const f = q.toLowerCase();
+  const matched = COURSES.filter(c =>
+    c.fullname.toLowerCase().includes(f) ||
+    c.shortname.toLowerCase().includes(f) ||
+    getCatName(c.catId).toLowerCase().includes(f)
+  );
+
+  currentPage = 0;
+  document.getElementById('courseListTitle').textContent = 'Search results';
+  renderCourseList(matched, q);
+});
+
+function expandMatchingCats(cats, filter) {
+  cats.forEach(cat => {
+    if (catMatchesFilter(cat, filter)) {
+      expandedCats.add(cat.id);
+      // Expand parents too.
+      if (cat.children) expandMatchingCats(cat.children, filter);
+    }
+  });
+}
+
+function clearSearch() {
+  document.getElementById('globalSearch').value = '';
+  document.getElementById('globalSearch').dispatchEvent(new Event('input'));
+}
+
+function highlightText(text, query) {
+  if (!query) return text;
+  const re = new RegExp('(' + query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+  return text.replace(re, '<span class="search-highlight">$1</span>');
+}
+
+function toggleAll() {
+  const allIds = [];
+  function collect(cats) { cats.forEach(c => { allIds.push(c.id); if (c.children) collect(c.children); }); }
+  collect(CATEGORIES);
+  if (expandedCats.size >= allIds.length) {
+    expandedCats.clear();
+  } else {
+    allIds.forEach(id => expandedCats.add(id));
+  }
+  renderCategoryTree(document.getElementById('globalSearch').value);
+}
+
+function goNext() {
+  if (!selectedCourseId) {
+    alert('Please select a course first');
+    return;
+  }
+  const c = COURSES.find(cc => cc.id === selectedCourseId);
+  alert('Selected: ' + c.fullname + ' (' + c.shortname + ')\nProceeding to step 2...');
+}
+
+// ─── INIT ───────────────────────────────────────────────────
+expandedCats.add(1); // Start with first cat expanded.
+renderCategoryTree('');
+</script>
+</body>
+</html>

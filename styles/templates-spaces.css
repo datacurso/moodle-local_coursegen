@@ -1,0 +1,308 @@
+/* Spaces the professor fills with an activity of their own: a virtual row,
+   or a real activity marked "Space for the professor". */
+.tpl-badge-space {
+    background: #fff3e0;
+    color: #9a4a00;
+}
+
+.tpl-space-tag {
+    border: none;
+    font: inherit;
+    cursor: pointer;
+}
+
+.tpl-row-space {
+    animation: tplFadeIn 0.2s ease;
+    background: #fffaf2;
+    box-shadow: inset 3px 0 0 #e08a1e;
+}
+
+.tpl-space-instruction {
+    margin-top: 0.25rem;
+    white-space: pre-line;
+}
+
+/* The add menu: the same look as the course page's own "+" menu. */
+.tpl-add-menu-icon {
+    display: inline-flex;
+    width: 1.25rem;
+    justify-content: center;
+}
+
+.tpl-add-menu-back {
+    font-size: 0.82rem;
+    color: #6c757d;
+}
+
+/* The activities of a space for the teacher, in two columns so the list fits the modal; one that is ticked takes the
+   whole width, with the field of its instruction under it. */
+.tpl-teacher-space-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 16px;
+}
+
+.tpl-teacher-space-grid .tpl-teacher-space-option:has(input:checked) {
+    grid-column: 1 / -1;
+}
+
+@media (max-width: 575.98px) {
+    .tpl-teacher-space-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+/* The menu of "Add activity or space" is as wide as its longest item: no text runs over its edge. */
+.dropdown-menu:has(> .tpl-add-menu-item) {
+    min-width: max-content;
+}
+
+.tpl-add-menu-item {
+    white-space: nowrap;
+}
+
+/* "Add space for an activity": one activity per row at full width; a selected row opens its instruction right under
+   it. The row keeps its own border when selected: only its box is checked. */
+.tpl-sp-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 0;
+    padding: 10px 0 0;
+    list-style: none;
+}
+
+.tpl-sp-item {
+    border: 1px solid #dee2e6;
+    border-radius: 0.5rem;
+    background: #fff;
+}
+
+.tpl-sp-item:hover {
+    border-color: #b8bfc6;
+}
+
+.tpl-sp-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding-right: 10px;
+}
+
+.tpl-sp-toggle {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    gap: 14px;
+    min-width: 0;
+    padding: 10px 14px;
+    border: 0;
+    border-radius: 0.5rem;
+    background: none;
+    color: inherit;
+    text-align: left;
+}
+
+.tpl-sp-toggle:focus-visible {
+    outline: 0;
+    box-shadow: 0 0 0 0.2rem rgba(15, 108, 191, 0.35);
+}
+
+.tpl-sp-check {
+    flex: none;
+    width: 20px;
+    height: 20px;
+    border: 2px solid #8f959e;
+    border-radius: 4px;
+    background: #fff center / 12px no-repeat;
+}
+
+.tpl-sp-item.is-selected .tpl-sp-check {
+    border-color: #0f6cbf;
+    background-color: #0f6cbf;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%23fff' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round' d='M3.5 8.5l3 3 6-6.5'/%3E%3C/svg%3E");
+}
+
+.tpl-space-picker-modal .tpl-sp .tpl-sp-icon.activityiconcontainer.smaller {
+    display: grid;
+    flex: 0 0 40px;
+    place-items: center;
+    width: 40px;
+    min-width: 40px;
+    max-width: 40px;
+    height: 40px;
+    min-height: 40px;
+    max-height: 40px;
+    margin: 0;
+    padding: 0;
+    border-radius: 8px;
+    background-color: #f5f7fa;
+}
+
+.tpl-space-picker-modal .tpl-sp .tpl-sp-icon.activityiconcontainer.smaller .activityicon,
+.tpl-space-picker-modal .tpl-sp .tpl-sp-icon.activityiconcontainer.smaller .icon,
+.tpl-space-picker-modal .tpl-sp .tpl-sp-icon.activityiconcontainer.smaller img {
+    width: 28px;
+    height: 28px;
+    max-width: 28px;
+    max-height: 28px;
+    margin: 0;
+}
+
+.tpl-sp-text {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.tpl-sp-name {
+    font-weight: 600;
+}
+
+.tpl-sp-desc {
+    overflow: hidden;
+    color: #6a737b;
+    font-size: 0.87rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tpl-sp-info {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: none;
+    color: #6a737b;
+}
+
+.tpl-sp-info:hover {
+    background: #f5f7fa;
+    color: #1d2125;
+}
+
+.tpl-sp-info:focus-visible {
+    outline: 0;
+    box-shadow: 0 0 0 0.2rem rgba(15, 108, 191, 0.35);
+}
+
+.tpl-sp-help {
+    padding: 0 14px 12px 48px;
+    color: #495057;
+    font-size: 0.9rem;
+}
+
+.tpl-sp-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 0 14px 14px 48px;
+}
+
+.tpl-sp-label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.tpl-sp-foot {
+    display: flex;
+    flex: 1;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+}
+
+.tpl-sp-summary {
+    color: #6a737b;
+}
+
+.tpl-sp-actions {
+    display: flex;
+    gap: 8px;
+    margin-left: auto;
+}
+
+.tpl-space-picker-modal .modal-footer {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    background: #fff;
+    border-bottom-left-radius: inherit;
+    border-bottom-right-radius: inherit;
+}
+
+@media (max-width: 575.98px) {
+    .tpl-sp-panel,
+    .tpl-sp-help {
+        padding-left: 14px;
+    }
+
+    .tpl-sp-desc {
+        display: none;
+    }
+}
+
+/* A row selected near the bottom brings its instruction into view above the footer that stays at the bottom. */
+.tpl-sp-item {
+    scroll-margin-bottom: 96px;
+}
+
+.tpl-sp-panel textarea {
+    scroll-margin-bottom: 96px;
+}
+
+/* Whether the space is required: a section under the list, with radio buttons. */
+.tpl-sp-required {
+    margin: 16px 0 0;
+    padding: 16px;
+    border: 1px solid #dee2e6;
+    border-radius: 0.5rem;
+}
+
+.tpl-sp-required-title {
+    float: left;
+    width: 100%;
+    margin-bottom: 10px;
+    padding: 0;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.tpl-sp-required .form-check {
+    clear: both;
+}
+
+/* How many activities are selected, as a badge, next to what the selection makes. */
+.tpl-sp-summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+.tpl-sp-badge {
+    padding: 4px 12px;
+    border-radius: 999px;
+    background: #eef5fc;
+    color: #0f6cbf;
+    font-size: 0.88rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+/* The icon of a space row matches the icons of the other rows: small and in the muted colour of the line icons. */
+.tpl-space-row-icon .icon {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    color: #6a737b;
+    font-size: 14px;
+}

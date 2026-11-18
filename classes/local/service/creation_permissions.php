@@ -23,15 +23,17 @@ use context_system;
 /**
  * Single source of truth for the capabilities creating a complete course with AI needs (ticket #9539).
  *
- * The set is a fixed list of four capabilities: moodle/course:create,
- * moodle/course:view and the two local_coursegen creation capabilities. It
+ * The set is a fixed list: moodle/course:create, moodle/course:view,
+ * local/coursegen:createactivitywithai and the capability of the way the course
+ * is created (free or from a template, one capability each, any of them is
+ * enough for a screen that serves both). It
  * does not depend on the editingteacher archetype, so another plugin adding
  * a capability to that archetype never grows it and never hides the button
  * from roles created earlier. The same set hides the "Create with AI" button,
  * refuses the page and refuses every web service of the creation flow, so a
  * user is only ever offered a creation the server will accept.
  *
- * local/coursegen:createcoursewithai is checked on the system context, as the
+ * The creation-mode capabilities are checked on the system context, as the
  * page always did; every other capability is checked on the target category,
  * which the new course inherits from.
  *
@@ -43,17 +45,29 @@ final class creation_permissions {
     /** @var string Role archetype the plugin's roles are built from (role_installer); not part of the set. */
     public const ARCHETYPE = 'editingteacher';
 
+    /** @var string Capability of the free creation (a course made from a prompt). */
+    public const FREE_CAPABILITY = 'local/coursegen:createfreecoursewithai';
+
+    /** @var string Capability of the creation from a template. */
+    public const TEMPLATE_CAPABILITY = 'local/coursegen:createtemplatecoursewithai';
+
+    /**
+     * @var string[] The creation-mode capabilities, checked on the system context instead of the category.
+     *
+     * A user needs one of them, the one of the mode being used: a screen that serves both modes accepts either.
+     */
+    public const MODE_CAPABILITIES = [
+        self::FREE_CAPABILITY,
+        self::TEMPLATE_CAPABILITY,
+    ];
+
     /** @var string[] The capabilities the creation requires, sorted; the plugin's roles add them on top of the archetype. */
     public const EXTRA_CAPABILITIES = [
         'local/coursegen:createactivitywithai',
-        'local/coursegen:createcoursewithai',
+        self::FREE_CAPABILITY,
+        self::TEMPLATE_CAPABILITY,
         'moodle/course:create',
         'moodle/course:view',
-    ];
-
-    /** @var string[] Capabilities of the set checked on the system context instead of the category. */
-    public const SYSTEM_CAPABILITIES = [
-        'local/coursegen:createcoursewithai',
     ];
 
     /**
@@ -89,14 +103,17 @@ final class creation_permissions {
      *
      * @param int $categoryid Category the course would be created in.
      * @param int|null $userid Acting user, the current user when null.
+     * @param string[] $modes Creation-mode capabilities, one of which is enough.
      * @return void
      * @throws \required_capability_exception Naming the first missing capability.
      */
-    public static function require_for_category(int $categoryid, ?int $userid = null): void {
+    public static function require_for_category(
+        int $categoryid,
+        ?int $userid = null,
+        array $modes = self::MODE_CAPABILITIES
+    ): void {
         $systemcontext = context_system::instance();
-        foreach (self::SYSTEM_CAPABILITIES as $capability) {
-            require_capability($capability, $systemcontext, $userid);
-        }
+        self::require_any_mode($modes, $systemcontext, $userid);
         $categorycontext = context_coursecat::instance($categoryid);
         foreach (self::category_capabilities() as $capability) {
             require_capability($capability, $categorycontext, $userid);
@@ -108,10 +125,15 @@ final class creation_permissions {
      *
      * @param int $categoryid Category the course would be created in.
      * @param int|null $userid Acting user, the current user when null.
+     * @param string[] $modes Creation-mode capabilities, one of which is enough.
      * @return bool
      */
-    public static function can_create_in(int $categoryid, ?int $userid = null): bool {
-        return has_all_capabilities(self::SYSTEM_CAPABILITIES, context_system::instance(), $userid)
+    public static function can_create_in(
+        int $categoryid,
+        ?int $userid = null,
+        array $modes = self::MODE_CAPABILITIES
+    ): bool {
+        return has_any_capability($modes, context_system::instance(), $userid)
             && has_all_capabilities(self::category_capabilities(), context_coursecat::instance($categoryid), $userid);
     }
 
@@ -122,12 +144,13 @@ final class creation_permissions {
      * categories where the user holds moodle/course:create.
      *
      * @param int|null $userid Acting user, the current user when null.
+     * @param string[] $modes Creation-mode capabilities, one of which is enough.
      * @return int Category id, or 0 when there is none.
      */
-    public static function first_allowed_category(?int $userid = null): int {
+    public static function first_allowed_category(?int $userid = null, array $modes = self::MODE_CAPABILITIES): int {
         $userid = self::resolve_userid($userid);
         foreach (self::candidate_categories($userid) as $categoryid) {
-            if (self::can_create_in($categoryid, $userid)) {
+            if (self::can_create_in($categoryid, $userid, $modes)) {
                 return $categoryid;
             }
         }
@@ -144,18 +167,19 @@ final class creation_permissions {
      * requests.
      *
      * @param int|null $userid Acting user, the current user when null.
+     * @param string[] $modes Creation-mode capabilities, one of which is enough.
      * @return bool
      */
-    public static function can_create_anywhere(?int $userid = null): bool {
+    public static function can_create_anywhere(?int $userid = null, array $modes = self::MODE_CAPABILITIES): bool {
         $userid = self::resolve_userid($userid);
         if (is_siteadmin($userid)) {
             return true;
         }
-        if (!has_all_capabilities(self::SYSTEM_CAPABILITIES, context_system::instance(), $userid)) {
+        if (!has_any_capability($modes, context_system::instance(), $userid)) {
             return false;
         }
         foreach (self::candidate_categories($userid) as $categoryid) {
-            if (self::can_create_in($categoryid, $userid)) {
+            if (self::can_create_in($categoryid, $userid, $modes)) {
                 return true;
             }
         }
@@ -166,7 +190,7 @@ final class creation_permissions {
      * Require that the user could create a course with AI in at least one category.
      *
      * The reported capability is chosen deterministically:
-     * 1. a missing system capability, on the system context;
+     * 1. the creation-mode capability (the first of $modes when it holds none), on the system context;
      * 2. moodle/course:create on the system context when the user holds it in no category;
      * 3. otherwise the first missing capability (sorted order) of the candidate
      *    category with the fewest missing capabilities, earliest in sort order
@@ -174,18 +198,17 @@ final class creation_permissions {
      *    let the user create.
      *
      * @param int|null $userid Acting user, the current user when null.
+     * @param string[] $modes Creation-mode capabilities, one of which is enough.
      * @return void
      * @throws \required_capability_exception When the user can create nowhere.
      */
-    public static function require_anywhere(?int $userid = null): void {
+    public static function require_anywhere(?int $userid = null, array $modes = self::MODE_CAPABILITIES): void {
         $userid = self::resolve_userid($userid);
         if (is_siteadmin($userid)) {
             return;
         }
         $systemcontext = context_system::instance();
-        foreach (self::SYSTEM_CAPABILITIES as $capability) {
-            require_capability($capability, $systemcontext, $userid);
-        }
+        self::require_any_mode($modes, $systemcontext, $userid);
 
         $best = null;
         $bestmissing = null;
@@ -211,12 +234,28 @@ final class creation_permissions {
     }
 
     /**
+     * Require one of the creation-mode capabilities on the system context.
+     *
+     * @param string[] $modes Creation-mode capabilities, one of which is enough.
+     * @param context_system $systemcontext System context.
+     * @param int|null $userid Acting user, the current user when null.
+     * @return void
+     * @throws \required_capability_exception Naming the first of them when the user holds none.
+     */
+    private static function require_any_mode(array $modes, context_system $systemcontext, ?int $userid): void {
+        if (has_any_capability($modes, $systemcontext, $userid)) {
+            return;
+        }
+        throw new \required_capability_exception($systemcontext, reset($modes), 'nopermissions', '');
+    }
+
+    /**
      * The capabilities of the set checked on the category context.
      *
      * @return string[]
      */
     private static function category_capabilities(): array {
-        return array_values(array_diff(self::required_capabilities(), self::SYSTEM_CAPABILITIES));
+        return array_values(array_diff(self::required_capabilities(), self::MODE_CAPABILITIES));
     }
 
     /**

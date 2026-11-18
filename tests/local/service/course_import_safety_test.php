@@ -519,7 +519,7 @@ final class course_import_safety_test extends \advanced_testcase {
     /**
      * The queued task does nothing once the user may no longer create courses with AI.
      */
-    public function test_task_refuses_once_createcoursewithai_is_gone(): void {
+    public function test_task_refuses_once_createfreecoursewithai_is_gone(): void {
         $this->require_datacurso_provider();
         $this->resetAfterTest();
         [$target, $staging, $category] = $this->create_course_pair();
@@ -555,7 +555,7 @@ final class course_import_safety_test extends \advanced_testcase {
         set_config('enableimportexisting', 1, 'local_coursegen');
         $user = $this->getDataGenerator()->create_user();
         $roleid = create_role('Creator only', 'testcreator', '');
-        assign_capability('local/coursegen:createcoursewithai', CAP_ALLOW, $roleid, \context_system::instance()->id, true);
+        assign_capability('local/coursegen:createfreecoursewithai', CAP_ALLOW, $roleid, \context_system::instance()->id, true);
         role_assign($roleid, $user->id, \context_system::instance()->id);
         $session = $this->create_session($user->id, $staging->id);
 

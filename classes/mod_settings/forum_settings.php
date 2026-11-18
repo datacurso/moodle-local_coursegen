@@ -45,6 +45,6 @@ class forum_settings extends base_settings {
      * @param object $discussion Discussion data.
      */
     protected function add_discussion(object $discussion) {
-        mod_forum_external::add_discussion($this->cm->instance, $discussion->subject, $discussion->message, -1);
+        mod_forum_external::add_discussion($this->cm->instance, $discussion->subject, $discussion->message);
     }
 }

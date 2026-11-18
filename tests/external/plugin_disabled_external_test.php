@@ -44,6 +44,8 @@ namespace local_coursegen\external;
  * @covers     \local_coursegen\external\get_course_settings
  * @covers     \local_coursegen\external\search_target_courses
  * @covers     \local_coursegen\external\start_course_planning
+ * @covers     \local_coursegen\external\start_template_generation
+ * @covers     \local_coursegen\external\finish_template_generation
  * @runTestsInSeparateProcesses
  */
 final class plugin_disabled_external_test extends \advanced_testcase {
@@ -58,20 +60,30 @@ final class plugin_disabled_external_test extends \advanced_testcase {
         }
     }
 
-    /** @var string[] Web services behind the plugin's own administration pages, available while disabled. */
-    private const ADMIN_FUNCTIONS = ['local_coursegen_manage_image_generation'];
+    /**
+     * @var string[] Web services behind the plugin's own administration pages (image settings and the template
+     *     editor), available while disabled.
+     */
+    private const ADMIN_FUNCTIONS = [
+        'local_coursegen_manage_image_generation',
+        'local_coursegen_get_templates',
+        'local_coursegen_delete_template',
+        'local_coursegen_get_course_structure',
+        'local_coursegen_get_category_tree',
+        'local_coursegen_get_courses_by_category',
+        'local_coursegen_get_template_structure',
+        'local_coursegen_get_course_preview',
+        'local_coursegen_save_template',
+    ];
 
     /**
-     * Log in a user without capabilities, point the service URL nowhere and load the legacy external API.
+     * Log in a user without capabilities, point the service URL nowhere.
      *
      * @return void
      */
     protected function setUp(): void {
-        global $CFG;
-
         parent::setUp();
         $this->resetAfterTest();
-        require_once($CFG->libdir . '/externallib.php');
         set_config('datacurso_service_url', 'https://invalid.invalid', 'local_coursegen');
         $this->setUser($this->getDataGenerator()->create_user());
     }
@@ -145,7 +157,7 @@ final class plugin_disabled_external_test extends \advanced_testcase {
         set_config('plugin_enabled_local_coursegen', '0', 'aiprovider_datacurso');
 
         $classes = $this->declared_classes(false);
-        $this->assertCount(13, $classes);
+        $this->assertCount(22, $classes);
         foreach ($classes as $name => $classname) {
             $this->assertSame('plugindisabled', $this->failure_of($classname), $name);
         }

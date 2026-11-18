@@ -41,9 +41,17 @@ let modalControllerRegistered = false;
  * @param {boolean} isMoodle45 Whether the Moodle version is 4.5.
  * @param {Array} languages Available languages.
  * @param {string} defaultlang Default language code.
+ * @param {boolean} canimages Whether the server allows generating images with the activity.
  * @param {Object<string, string>} bootstrapclasses Bootstrap class names of the running Moodle.
  */
-export const init = async(courseid, isMoodle45 = false, languages = [], defaultlang = 'en', bootstrapclasses = {}) => {
+export const init = async(
+    courseid,
+    isMoodle45 = false,
+    languages = [],
+    defaultlang = 'en',
+    canimages = false,
+    bootstrapclasses = {}
+) => {
     ismoodle45 = Boolean(isMoodle45);
     setClasses(bootstrapclasses);
 
@@ -59,6 +67,7 @@ export const init = async(courseid, isMoodle45 = false, languages = [], defaultl
             ismoodle45,
             languages: languageList,
             defaultlang: resolvedDefaultLang,
+            canimages,
         },
         session: {
             sectionnum: null,

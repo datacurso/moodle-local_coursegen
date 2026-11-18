@@ -1,0 +1,456 @@
+<?php
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+namespace local_coursegen\external;
+
+use local_coursegen\local\models\template;
+use local_coursegen\local\models\template_activity;
+use local_coursegen\local\models\template_instance;
+use local_coursegen\local\models\template_section;
+use local_coursegen\local\models\template_space;
+use local_coursegen\local\service\teacher_space_choices;
+use local_coursegen\local\service\teacher_space_options;
+use local_coursegen\local\service\template_export_uids;
+use local_coursegen\local\service\template_instance_layout;
+use local_coursegen\local\service\template_section_tree;
+use local_coursegen\local\space\activity_spaces;
+use local_coursegen\local\space\space_rules;
+use local_coursegen\local\space\upload_spaces;
+use local_coursegen\output\template_row_options;
+
+/**
+ * Per-activity-row building for get_template_structure, kept apart from the
+ * webservice contract (execute/execute_parameters/execute_returns) only
+ * because together they crossed the 250-line cap.
+ *
+ * @package    local_coursegen
+ * @copyright  2026 Wilber Narvaez <https://datacurso.com>
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+trait get_template_structure_rows {
+    /**
+     * sectionid => saved behavior, for this template.
+     *
+     * @param template $template
+     * @return array
+     */
+    private static function section_settings(template $template): array {
+        $sectionsettings = [];
+        $templateid = $template->get('id');
+        $records = template_section::get_records(['templateid' => $templateid]);
+        foreach ($records as $s) {
+            $sectionid = $s->get('sectionid');
+            $behavior = $s->get('behavior');
+            $sectionsettings[$sectionid] = $behavior;
+        }
+        return $sectionsettings;
+    }
+
+    /**
+     * cmid => saved action and space settings, for this template.
+     *
+     * @param template $template
+     * @return array
+     */
+    private static function activity_settings(template $template): array {
+        $activitysettings = [];
+        $templateid = $template->get('id');
+        $records = template_activity::get_records(['templateid' => $templateid]);
+        foreach ($records as $a) {
+            $cmid = $a->get('cmid');
+            $activitysettings[$cmid] = [
+                'action' => $a->get('action'),
+                'instruction' => (string) $a->get('spaceinstruction'),
+                'required' => (bool) $a->get('spacerequired'),
+            ];
+        }
+        return $activitysettings;
+    }
+
+    /**
+     * sectionid => the virtual instances anchored there.
+     *
+     * @param template $template
+     * @return array
+     */
+    private static function instances_by_section(template $template): array {
+        $instancesbysection = [];
+        $templateid = $template->get('id');
+        // The spaces the teacher fills share the anchors of the instances, so both are placed by the same rule. For now
+        // they are not offered (only a file is, in its own row): see activity_spaces::ENABLED.
+        $records = template_instance::get_records(['templateid' => $templateid]);
+        foreach (template_space::get_records(['templateid' => $templateid]) as $space) {
+            // A space for the teacher (the activities they can add) is always offered; one of the earlier kind (one of
+            // their own activities) only while those are enabled.
+            $isupload = (string) $space->get('modname') === upload_spaces::MODNAME;
+            if ($isupload || teacher_space_options::decode($space->get('options')) || activity_spaces::ENABLED) {
+                $records[] = $space;
+            }
+        }
+        foreach ($records as $instance) {
+            $sectionid = $instance->get('sectionid');
+            $instancesbysection[$sectionid][] = $instance;
+        }
+        return $instancesbysection;
+    }
+
+    /**
+     * Every section's own row, with its activities.
+     *
+     * @param \stdClass $course
+     * @param \course_modinfo $modinfo
+     * @param array $sectionsettings sectionid => behavior.
+     * @param array $activitysettings cmid => [action, instruction, required].
+     * @param array $instancesbysection sectionid => instances.
+     * @param \renderer_base $output
+     * @return array
+     */
+    private static function sections(
+        $course,
+        $modinfo,
+        array $sectionsettings,
+        array $activitysettings,
+        array $instancesbysection,
+        $output
+    ): array {
+        $sections = [];
+        $sectioninfos = $modinfo->get_section_info_all();
+        $tree = template_section_tree::from_modinfo($modinfo);
+        foreach ($sectioninfos as $section) {
+            $behavior = $sectionsettings[$section->id] ?? template_section::BEHAVIOR_AI_MODIFY;
+            if ($behavior === template_section::BEHAVIOR_EXCLUDE) {
+                continue;
+            }
+            $activities = self::section_activities($modinfo, $section, $activitysettings, $instancesbysection, $output);
+            $name = get_section_name($course, $section);
+            $entry = [
+                'id'         => (int) $section->id,
+                'num'        => (int) $section->section,
+                'name'       => $name,
+                'behavior'   => $behavior,
+                'locked'     => ($behavior === template_section::BEHAVIOR_KEEP),
+                'activities' => $activities,
+            ];
+            if ($tree !== null) {
+                // A flexsections course says where each section hangs; any other format adds nothing.
+                $entry['parent'] = $tree->parent_of($entry['num']);
+                $entry['depth'] = $tree->depth_of($entry['num']);
+            }
+            $sections[] = $entry;
+        }
+        return $sections;
+    }
+
+    /**
+     * One section's own activity rows, interleaving real activities and
+     * virtual instances in the plan's own display order.
+     *
+     * Interleave over ALL real cmids - including rows filtered out below
+     * (hidden actions, not uservisible) - so an instance anchored to a
+     * filtered-out row keeps its anchor's slot: once the hidden anchor is
+     * dropped, the instance renders exactly where that anchor would have
+     * been (immediately after the nearest preceding visible row, or at the
+     * section start when there is none). Orphan anchors append at the
+     * section end, the same rule the admin review follows.
+     *
+     * @param \course_modinfo $modinfo
+     * @param \section_info $section
+     * @param array $activitysettings
+     * @param array $instancesbysection
+     * @param \renderer_base $output
+     * @return array
+     */
+    private static function section_activities(
+        $modinfo,
+        $section,
+        array $activitysettings,
+        array $instancesbysection,
+        $output
+    ): array {
+        $sectioncms = $modinfo->sections[$section->section] ?? [];
+        $sectioninstances = $instancesbysection[$section->id] ?? [];
+        $rows = template_instance_layout::ordered_rows($sectioncms, $sectioninstances);
+
+        $activities = [];
+        foreach ($rows as $row) {
+            $activity = self::section_activity_row($row, $modinfo, $activitysettings, $output);
+            if ($activity !== null) {
+                $activities[] = $activity;
+            }
+        }
+        return $activities;
+    }
+
+    /**
+     * One row of a section's plan, as an activity entry - or null when it
+     * does not reach the professor at all.
+     *
+     * @param array $row
+     * @param \course_modinfo $modinfo
+     * @param array $activitysettings
+     * @param \renderer_base $output
+     * @return array|null
+     */
+    private static function section_activity_row(array $row, $modinfo, array $activitysettings, $output): ?array {
+        if ($row['type'] === template_instance_layout::TYPE_INSTANCE) {
+            return self::instance_row($row['record']);
+        }
+        if ($row['type'] === template_instance_layout::TYPE_SPACE) {
+            return self::activity_space_row($row['record'], $output);
+        }
+        $cm = $modinfo->cms[$row['cmid']];
+        if (!$cm->uservisible) {
+            return null;
+        }
+        // Mirror the admin's action mapping: keep (with unset defaulting to
+        // keep) stays visible and locked, and so does a file resource the
+        // teacher brings a file for; reference, template (mold) and exclude
+        // rows never reach the professor at all.
+        $saved = $activitysettings[$cm->id] ?? ['action' => template_activity::ACTION_KEEP];
+        $action = space_rules::effective_action($saved['action'], $cm->modname);
+        $isspace = $action === template_activity::ACTION_SPACE;
+        if ($action !== template_activity::ACTION_KEEP && !$isspace) {
+            return null;
+        }
+        $purpose = self::get_purpose($cm->modname);
+        $name = format_string($cm->name);
+        $iconhtml = $output->image_icon('monologo', $cm->modname, 'mod_' . $cm->modname, ['class' => 'icon activityicon']);
+        return [
+            'id'      => (string) $cm->id,
+            'name'    => $name,
+            'modname' => $cm->modname,
+            'purpose' => $purpose,
+            'typelabel' => '',
+            'iconhtml' => $iconhtml,
+            'locked'  => true,
+            'action'  => $action,
+            'isinstance' => false,
+            'aigenerated' => false,
+            'generationuid' => '',
+        ] + self::space_fields($isspace, $saved);
+    }
+
+    /**
+     * What a row says about being a space for the teacher.
+     *
+     * @param bool $isspace
+     * @param array $saved The row's saved settings: instruction and required.
+     * @return array
+     */
+    private static function space_fields(bool $isspace, array $saved = []): array {
+        $fields = ['isspace' => false, 'spacekind' => '', 'spaceinstruction' => '', 'spacerequired' => false];
+        if (!$isspace) {
+            return $fields;
+        }
+        $instruction = $saved['instruction'] ?? '';
+        $required = $saved['required'] ?? false;
+        $fields['isspace'] = true;
+        $fields['spacekind'] = 'file';
+        $fields['spaceinstruction'] = format_string($instruction);
+        $fields['spacerequired'] = (bool) $required;
+        return $fields;
+    }
+
+    /**
+     * One space of the template the teacher fills with one of their own activities.
+     *
+     * Its id is the space's uid: the activity the teacher picks is sent back under it.
+     *
+     * @param template_space $space
+     * @param \renderer_base $output
+     * @return array
+     */
+    private static function activity_space_row(template_space $space, $output): array {
+        $options = teacher_space_options::decode($space->get('options'));
+        if ($options) {
+            return self::choice_space_row($space, $options, $output);
+        }
+        if ((string) $space->get('modname') === upload_spaces::MODNAME) {
+            return self::upload_space_row($space, $output);
+        }
+        $modname = (string) $space->get('modname');
+        $typelabel = get_string_manager()->string_exists('modulename', 'mod_' . $modname)
+            ? get_string('modulename', 'mod_' . $modname)
+            : $modname;
+        return [
+            'id' => (string) $space->get('uid'),
+            'name' => $typelabel,
+            'modname' => $modname,
+            'purpose' => self::get_purpose($modname),
+            'typelabel' => $typelabel,
+            'iconhtml' => $output->image_icon('monologo', $modname, 'mod_' . $modname, ['class' => 'icon activityicon']),
+            'locked' => true,
+            'action' => '',
+            'isinstance' => false,
+            'aigenerated' => false,
+            'generationuid' => '',
+            'isspace' => true,
+            'spacekind' => 'activity',
+            'spaceinstruction' => format_string((string) $space->get('instruction')),
+            'spacerequired' => (int) $space->get('required') === 1,
+        ];
+    }
+
+    /**
+     * One place where the teacher uploads a file of their own: a File resource with it is created there.
+     *
+     * Its id is the space's uid; the file goes under the placeholder course module id of the space.
+     *
+     * @param template_space $space
+     * @param \renderer_base $output
+     * @return array
+     */
+    private static function upload_space_row(template_space $space, $output): array {
+        $modname = upload_spaces::MODNAME;
+        $typelabel = get_string('modulename', 'mod_' . $modname);
+        return [
+            'id' => (string) $space->get('uid'),
+            'name' => $typelabel,
+            'modname' => $modname,
+            'purpose' => self::get_purpose($modname),
+            'typelabel' => $typelabel,
+            'iconhtml' => $output->image_icon('monologo', $modname, 'mod_' . $modname, ['class' => 'icon activityicon']),
+            'locked' => true,
+            'action' => '',
+            'isinstance' => false,
+            'aigenerated' => false,
+            'generationuid' => '',
+            'isspace' => true,
+            'spacekind' => 'file',
+            'spaceinstruction' => format_string((string) $space->get('instruction')),
+            'spacerequired' => (int) $space->get('required') === 1,
+            'spacecmid' => upload_spaces::cmid_of($space),
+        ];
+    }
+
+    /**
+     * One space where the teacher adds one of the activities the admin allowed, which the AI then writes.
+     *
+     * Its id, and the id its progress answers to, is the space's uid: the activity the teacher chooses is generated
+     * under it.
+     *
+     * @param template_space $space
+     * @param array[] $options Each {modname, instruction, name, mode}.
+     * @param \renderer_base $output
+     * @return array
+     */
+    private static function choice_space_row(template_space $space, array $options, $output): array {
+        $choices = [];
+        foreach ($options as $option) {
+            $modname = $option['modname'];
+            $choices[] = [
+                'modname' => $modname,
+                'title' => get_string('modulename', 'mod_' . $modname),
+                'name' => format_string($option['name']),
+                'mode' => $option['mode'],
+                'instruction' => format_string($option['instruction']),
+                'iconhtml' => $output->image_icon('monologo', $modname, 'mod_' . $modname, ['class' => 'icon activityicon']),
+            ];
+        }
+        $titles = implode(', ', array_column($choices, 'title'));
+        return [
+            'id' => (string) $space->get('uid'),
+            'name' => get_string('courseai_template_choice_space_name', 'local_coursegen'),
+            'modname' => $options[0]['modname'],
+            'purpose' => self::get_purpose($options[0]['modname']),
+            'typelabel' => $titles,
+            // The icon of the first activity it offers, like every other row (the icon of the one chosen replaces it).
+            'iconhtml' => $choices[0]['iconhtml'],
+            'locked' => true,
+            'action' => '',
+            'isinstance' => false,
+            'aigenerated' => true,
+            'generationuid' => (string) $space->get('uid'),
+            'isspace' => true,
+            'spacekind' => 'choice',
+            'spaceinstruction' => get_string('courseai_template_choice_space_hint', 'local_coursegen', $titles),
+            'spacerequired' => (int) $space->get('required') === 1,
+            'spaceoptions' => json_encode($choices, JSON_UNESCAPED_UNICODE),
+            // Where the file goes when the teacher picks the File they upload among the options.
+            'spacecmid' => teacher_space_choices::cmid_of($space),
+        ];
+    }
+
+    /**
+     * Build one virtual-instance activity row ("generate an activity here,
+     * molded on one of the template's model activities").
+     *
+     * Id scheme: the row id IS the instance's stable uid
+     * (template_export_uids::instance_uid()) — the same name it already
+     * answers to as generationuid, so this method asks for it once and uses
+     * it for both. A real activity row's id is that cmid, stringified for
+     * type consistency across the whole activities array; nothing about a
+     * real activity's id changes otherwise.
+     *
+     * Everything renders from the row's own snapshots (name, typelabel,
+     * modname) — sourcecmid is never dereferenced. The icon resolves from
+     * the snapshot modname through the exact same monologo rule as the
+     * admin review (template_row_options::instance_icon_url()), and an
+     * empty snapshot yields an empty iconhtml, not a broken image.
+     *
+     * @param template_instance $instance
+     * @return array
+     */
+    private static function instance_row(template_instance $instance): array {
+        $rawmodname = $instance->get('modname');
+        $modname = (string) $rawmodname;
+        $iconurl = template_row_options::instance_icon_url($rawmodname);
+        $iconhtml = '';
+        if ($iconurl !== '') {
+            $iconhtml = \html_writer::empty_tag('img', ['src' => $iconurl, 'class' => 'icon activityicon', 'alt' => '']);
+        }
+        $uid = template_export_uids::instance_uid($instance);
+        $purpose = MOD_PURPOSE_OTHER;
+        if ($modname !== '') {
+            $purpose = self::get_purpose($modname);
+        }
+        $rawname = $instance->get('name');
+        $name = format_string($rawname);
+        $rawtypelabel = $instance->get('typelabel');
+        $typelabel = format_string($rawtypelabel);
+        return [
+            'id'      => $uid,
+            'name'    => $name,
+            'modname' => $modname,
+            'purpose' => $purpose,
+            'typelabel' => $typelabel,
+            'iconhtml' => $iconhtml,
+            'locked'  => true,
+            'action'  => '',
+            'isinstance' => true,
+            'aigenerated' => true,
+            // The id this row will answer to in the generation's progress
+            // events, so the live view can mark THIS activity when its own
+            // content lands - the same uid the payload sent and the run's
+            // events echo back, never a number invented for this alone.
+            // Kept as a separate field from the row's own id, because it
+            // names a different thing (what the AI's answer calls this row,
+            // not what the tree calls it), even though today they happen to
+            // be the same string.
+            'generationuid' => $uid,
+        ] + self::space_fields(false);
+    }
+
+    /**
+     * Resolve a module's Moodle "purpose" (content, assessment, collaboration...).
+     *
+     * @param string $modname Module name.
+     * @return string
+     */
+    private static function get_purpose(string $modname): string {
+        return plugin_supports('mod', $modname, FEATURE_MOD_PURPOSE, MOD_PURPOSE_OTHER);
+    }
+}

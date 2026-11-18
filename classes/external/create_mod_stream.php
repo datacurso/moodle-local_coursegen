@@ -34,7 +34,6 @@ use local_coursegen\local\service\filetype_catalog_service;
 use local_coursegen\local\service\module_job_service;
 
 defined('MOODLE_INTERNAL') || die();
-require_once($CFG->libdir . '/externallib.php');
 require_once($CFG->dirroot . '/course/externallib.php');
 
 /**
@@ -115,6 +114,9 @@ class create_mod_stream extends external_api {
             // must not be enough to launch jobs that consume service credits.
             require_capability('moodle/course:manageactivities', $context);
             require_capability('local/coursegen:createactivitywithai', $context);
+            if ($generateimages == 1) {
+                require_capability('local/coursegen:generateactivityimages', $context);
+            }
 
             $coursecontext = course_context_service::get_course_context($courseid);
 

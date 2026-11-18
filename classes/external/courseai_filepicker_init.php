@@ -35,7 +35,6 @@ use local_coursegen\local\service\creation_permissions;
 
 defined('MOODLE_INTERNAL') || die();
 
-require_once($CFG->libdir . '/externallib.php');
 require_once($CFG->dirroot . '/repository/lib.php');
 
 /**
@@ -72,8 +71,10 @@ class courseai_filepicker_init extends external_api {
         $context = context_system::instance();
         self::validate_context($context);
 
-        // Check permissions: the full creation set in at least one category (ticket #9539).
+        // Check permissions: the full creation set in at least one category (ticket #9539),
+        // plus the syllabus upload capability.
         creation_permissions::require_anywhere();
+        require_capability('local/coursegen:uploadcoursesyllabus', $context);
 
         $draftitemid = file_get_unused_draft_itemid();
         $clientid = uniqid('local_coursegen_courseai_syllabus_');

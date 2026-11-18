@@ -20,6 +20,7 @@ use core_course_category;
 use local_coursegen\event\generation_failed;
 use local_coursegen\event\generation_result_applied;
 use local_coursegen\local\models\course_session;
+use local_coursegen\local\models\template;
 
 /**
  * Service responsible for creating a course from an AI planning session.
@@ -29,6 +30,31 @@ use local_coursegen\local\models\course_session;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class create_course_service {
+    /** @var callable|null Hears of each activity created: (string $step, int $done, int $total). */
+    private static $progress = null;
+
+    /**
+     * Set who hears of the steps of the creation, or null for nobody.
+     *
+     * @param callable|null $callback Called with (string $step, int $done, int $total).
+     */
+    public static function on_progress(?callable $callback): void {
+        self::$progress = $callback;
+    }
+
+    /**
+     * Tell the one who listens that a step was done.
+     *
+     * @param string $step
+     * @param int $done
+     * @param int $total
+     */
+    private static function report_progress(string $step, int $done, int $total): void {
+        if (self::$progress !== null) {
+            (self::$progress)($step, $done, $total);
+        }
+    }
+
     /**
      * Execute course creation from AI-generated result data.
      *
@@ -37,13 +63,15 @@ class create_course_service {
      * a live API connection.
      *
      * Optional overrides allow the user to modify course identity fields
-     * (fullname, shortname, category) before creation, as set via the review modal.
+     * (fullname, shortname, category, startdate) before creation, as set via the review modal.
      *
      * @param course_session $session Planning session persistent.
      * @param array $resultdata Result data from the Datacurso API (course_configuration, sections, activities).
      * @param array $overrides Optional user overrides for course fields.
-     *     Supported keys: fullname (string), shortname (string), category (int).
-     * @return array Result of the course content application.
+     *     Supported keys: fullname (string), shortname (string), category (int), startdate (int timestamp).
+     * @return array Result of the course content application. On success it also
+     *     carries 'generatedcms' (activity key, see generated_activity_key, => created cmid), which is internal
+     *     and must not be returned through a web service.
      */
     public static function create_course(course_session $session, array $resultdata, array $overrides = []): array {
         global $CFG;
@@ -65,14 +93,27 @@ class create_course_service {
 
             require_once($CFG->dirroot . '/course/lib.php');
 
-            // Keep section 0 as the course's general section.
-            $resultdata = self::move_plan_out_of_general_section($resultdata);
+            // In template mode the new course is the template's course with other content in it,
+            // and the payload's rich text may reference files of that base course; only those may
+            // be copied over.
+            $sourcecourseid = self::template_course_id_of($session);
+
+            // Keep section 0 as the course's general section. A template result keeps the section
+            // numbers of its template, so only a free generation is renumbered.
+            if ($sourcecourseid === null) {
+                $resultdata = self::move_plan_out_of_general_section($resultdata);
+            }
 
             // Build course data entirely from the API response.
             $coursedata = self::build_course_data_from_api($resultdata);
+            $courseconfiguration = $resultdata['course_configuration'] ?? [];
+            // The language chosen in the assistant; a template course then keeps its own settings, language included.
             $lang = self::resolve_course_language($session);
             if ($lang !== '') {
                 $coursedata->lang = $lang;
+            }
+            if ($sourcecourseid !== null) {
+                template_course_settings::apply_to_new_course($coursedata, $courseconfiguration);
             }
 
             // Apply user overrides (from the review modal) on top of AI-generated data.
@@ -86,11 +127,19 @@ class create_course_service {
             // The course goes where the permissions were checked, never to a category
             // proposed by the AI service that this site does not have.
             $coursedata->category = $effectivecategoryid;
+            if (!empty($overrides['startdate'])) {
+                $coursedata->startdate = (int)$overrides['startdate'];
+            }
 
             $coursedata = self::ensure_unique_course_fields($coursedata);
 
             // Create the Moodle course from stored form data.
             $course = create_course($coursedata);
+            if ($sourcecourseid !== null) {
+                template_course_settings::apply_format_options($course, $sourcecourseid);
+                template_course_blocks::copy($course, $sourcecourseid);
+                template_course_custom_fields::copy($course, $sourcecourseid);
+            }
 
             generation_result_applied::create([
                 'context' => \context_course::instance($course->id),
@@ -107,7 +156,16 @@ class create_course_service {
 
             // Process sections if provided in the response.
             if (!empty($resultdata['sections_info'])) {
-                self::process_course_sections($course->id, $resultdata['sections_info']);
+                $sectionsinfo = $resultdata['sections_info'];
+                if ($sourcecourseid !== null) {
+                    $sectionsinfo = self::with_stored_structure($session, $sectionsinfo);
+                }
+                self::process_course_sections($course->id, $sectionsinfo);
+                if ($sourcecourseid !== null) {
+                    template_section_look::apply(get_course($course->id), $sectionsinfo, $sourcecourseid);
+                    // The names the AI gave are the last word on the sections' names, whatever the look touched.
+                    template_section_names::apply((int) $course->id, $sectionsinfo);
+                }
             }
 
             // Index declared subsections (Moodle 4.5 delegated sections) so the
@@ -116,17 +174,25 @@ class create_course_service {
 
             // Process generated activities if provided in the response.
             $activityerrors = [];
+            $generatedcms = [];
             if (!empty($resultdata['generated_activities'])) {
                 $activityerrors = self::process_generated_activities(
                     $course->id,
                     $resultdata['generated_activities'],
-                    $subsections
+                    $subsections,
+                    $generatedcms,
+                    $sourcecourseid
                 );
             }
 
             // Subsections declared without activities materialize at the end of
             // their parent section.
             self::materialize_remaining_subsections($course->id, $subsections, $activityerrors);
+
+            // Hidden activities, completion rules and unit locks the guideline asked for.
+            $generatedactivities = $resultdata['generated_activities'] ?? [];
+            guideline_activity_settings::apply((int) $course->id, $generatedactivities, $generatedcms);
+            guideline_unit_locks::apply((int) $course->id, $resultdata['sections_info'] ?? [], $generatedactivities, $generatedcms);
 
             // Ensure section sequences only contain valid course module ids.
             $removedreferences = self::repair_course_section_sequences($course->id);
@@ -184,6 +250,10 @@ class create_course_service {
                 'haswarnings' => !empty($activityerrors),
                 'warningscount' => count($activityerrors),
                 'activityerrors' => $activityerrors,
+                // Payload cmid => created course module id, for every
+                // generated activity that was built. Internal: strip it
+                // before returning through a web service.
+                'generatedcms' => $generatedcms,
             ];
         } catch (\Throwable $e) {
             // Update session status to failed if session exists.
@@ -285,6 +355,7 @@ class create_course_service {
             $coursedata->fullname = get_string('createwithai', 'local_coursegen');
             $coursedata->shortname = 'courseai-' . time();
             $coursedata->category = $defaultcategoryid;
+            $coursedata->enablecompletion = self::enablecompletion_for(null);
             return $coursedata;
         }
 
@@ -303,6 +374,7 @@ class create_course_service {
         }
 
         $coursedata->category = (int)($config['category'] ?? $defaultcategoryid);
+        $coursedata->enablecompletion = self::enablecompletion_for($config);
 
         $description = trim((string)($config['description'] ?? ''));
         if ($description !== '') {
@@ -311,6 +383,61 @@ class create_course_service {
         }
 
         return $coursedata;
+    }
+
+    /**
+     * Whether the new course tracks activity completion.
+     *
+     * create_course() inserts the record as given, so an unset value falls to
+     * the DB column default (0), NOT to the site's course default the edit
+     * form applies. With completion disabled on the course, add_moduleinfo()
+     * silently ignores every completion setting of every generated activity
+     * (completion_info::is_enabled() is false), so the value must be explicit.
+     * The payload may name it; otherwise the site's default for new courses
+     * applies, as it does when a course is created through the UI.
+     *
+     * @param array|null $config course_configuration from the payload.
+     * @return int 0 or 1.
+     */
+    private static function enablecompletion_for(?array $config): int {
+        global $CFG;
+
+        if (empty($CFG->enablecompletion)) {
+            return 0;
+        }
+        if (is_array($config) && isset($config['enablecompletion'])) {
+            return (int) (bool) $config['enablecompletion'];
+        }
+        return (int) (bool) get_config('moodlecourse', 'enablecompletion');
+    }
+
+    /**
+     * The base course of the template this session was started from, if any.
+     *
+     * Template-mode sessions store their template id in coursedata; a
+     * free-form planning session has none.
+     *
+     * @param course_session $session
+     * @return int|null Base course id, or null when not a template session.
+     */
+    public static function template_course_id_of(course_session $session): ?int {
+        $templateid = self::template_id_of($session);
+        if ($templateid <= 0) {
+            return null;
+        }
+        $template = template::get_record(['id' => $templateid]);
+        return $template ? (int) $template->get('courseid') : null;
+    }
+
+    /**
+     * Which template this session was started from.
+     *
+     * @param course_session $session
+     * @return int 0 when the session is not a template session.
+     */
+    public static function template_id_of(course_session $session): int {
+        $data = json_decode((string) $session->get('coursedata'), true);
+        return (int) ($data['templateid'] ?? 0);
     }
 
     /**
@@ -380,6 +507,24 @@ class create_course_service {
     }
 
     /**
+     * The sections of the result, with the structure of the payload that was sent.
+     *
+     * A flexsections course made with another number of units than the
+     * template's was resized before it was sent; the structure (parents and the
+     * template section each one comes from) lives in the stored payload, not
+     * in what the service answers.
+     *
+     * @param course_session $session
+     * @param array $sectionsinfo The result's sections_info.
+     * @return array
+     */
+    private static function with_stored_structure(course_session $session, array $sectionsinfo): array {
+        $coursedata = json_decode((string) $session->get('coursedata'), true);
+        $sent = $coursedata['payload']['sections_info'] ?? [];
+        return template_unit_resizer::with_structure_of($sectionsinfo, $sent);
+    }
+
+    /**
      * Delete all course sections except section 0 and clear section 0 modules.
      *
      * @param int $courseid Course ID.
@@ -442,7 +587,7 @@ class create_course_service {
 
         foreach ($sectionsinfo as $sectioninfo) {
             $sectionnumber = (int)$sectioninfo['section'];
-            $sectionname = $sectioninfo['name'] ?? '';
+            $sectionname = template_section_names::clean_name((string)($sectioninfo['name'] ?? ''));
             $description = trim((string)($sectioninfo['description'] ?? ''));
             $summary = $description !== '' ? self::description_to_html($description) : '';
 
@@ -703,9 +848,18 @@ class create_course_service {
      * @param int $courseid Course ID.
      * @param array $activities Generated activities from API.
      * @param array $subsections Declared subsections index, mutated as they materialize.
+     * @param array $generatedcms Filled with activity key => created cmid for every activity that was
+     *     created; an activity the AI wrote is known by its uid (see generated_activity_key).
+     * @param int|null $sourcecourseid Course whose files the payload may reference (template base course).
      * @return array Activity creation errors.
      */
-    private static function process_generated_activities(int $courseid, array $activities, array &$subsections = []): array {
+    private static function process_generated_activities(
+        int $courseid,
+        array $activities,
+        array &$subsections = [],
+        array &$generatedcms = [],
+        ?int $sourcecourseid = null
+    ): array {
         global $CFG;
 
         require_once($CFG->dirroot . '/course/modlib.php');
@@ -717,7 +871,11 @@ class create_course_service {
             debugging('local_coursegen: subsections in result but mod_subsection unavailable; flattening into parent sections.');
         }
 
+        $total = count($activities);
+        $done = 0;
         foreach ($activities as $activity) {
+            self::report_progress('activities', $done, $total);
+            $done++;
             $sectionnum = 0;
             if (isset($activity['parameters']) && isset($activity['parameters']['section'])) {
                 $sectionnum = $activity['parameters']['section'];
@@ -747,7 +905,11 @@ class create_course_service {
             }
 
             try {
-                create_mod_service::create_from_ai_result($activity, $course, $sectionnum);
+                $newcm = create_mod_service::create_from_ai_result($activity, $course, $sectionnum, null, $sourcecourseid);
+                $key = generated_activity_key::of($activity);
+                if ($key !== '') {
+                    $generatedcms[$key] = (int) $newcm->coursemodule;
+                }
             } catch (\Throwable $e) {
                 $resource = (string)($activity['resource_type'] ?? 'unknown');
                 $title = (string)($activity['parameters']['name'] ?? $activity['parameters']['title'] ?? '');

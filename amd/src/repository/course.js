@@ -65,6 +65,7 @@ export async function getCourseSettings(recordid) {
  *     fullname?: string,
  *     shortname?: string,
  *     category?: number,
+ *     startdate?: string,
  *     targetmode?: string,
  *     targetcourseid?: number,
  * }} payload - The payload to create the course
@@ -72,11 +73,12 @@ export async function getCourseSettings(recordid) {
  * - fullname: Optional override for course fullname
  * - shortname: Optional override for course shortname
  * - category: Optional override for course category ID
+ * - startdate: Optional course start day (Y-m-d)
  * - targetmode: 'new' (default) or 'import' into an existing course
  * - targetcourseid: The existing course to import into (import mode only)
  * @return {Promise<Object>} response
  */
-export async function createCourse({recordid, fullname, shortname, category, targetmode, targetcourseid}) {
+export async function createCourse({recordid, fullname, shortname, category, startdate, targetmode, targetcourseid}) {
     const args = {
         recordid: Number(recordid) || 0,
     };
@@ -88,6 +90,9 @@ export async function createCourse({recordid, fullname, shortname, category, tar
     }
     if (typeof category === 'number' && category > 0) {
         args.category = category;
+    }
+    if (typeof startdate === 'string' && startdate.trim()) {
+        args.startdate = startdate.trim();
     }
     if (targetmode === 'new' || targetmode === 'import') {
         args.targetmode = targetmode;

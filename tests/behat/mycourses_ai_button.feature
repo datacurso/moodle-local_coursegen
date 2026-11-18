@@ -21,7 +21,7 @@ Feature: Create with AI button on the My courses page
     # The full creation set (ticket #9539) is a fixed list of four capabilities;
     # the stock editingteacher role extended with them holds it.
     And the following "role capabilities" exist:
-      | role           | moodle/course:create | moodle/course:view | local/coursegen:createcoursewithai | local/coursegen:createactivitywithai |
+      | role           | moodle/course:create | moodle/course:view | local/coursegen:createfreecoursewithai | local/coursegen:createactivitywithai |
       | editingteacher | allow                | allow              | allow                              | allow                                |
     And the following "role assigns" exist:
       | user     | role           | contextlevel | reference |
@@ -48,7 +48,7 @@ Feature: Create with AI button on the My courses page
     And "Create with AI" "button" should exist
     And "#local_coursegen_aicourseform" "css_element" should exist
 
-  Scenario: Student without the createcoursewithai capability does not get the button
+  Scenario: Student without the createfreecoursewithai capability does not get the button
     Given I log in as "student1"
     When I visit "/my/courses.php"
     Then "Create with AI" "button" should not exist

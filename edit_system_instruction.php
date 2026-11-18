@@ -35,7 +35,11 @@ $id = optional_param('id', 0, PARAM_INT);
 
 
 $context = context_system::instance();
-require_capability('local/coursegen:managesysteminstructions', $context);
+$capability = 'local/coursegen:createsysteminstructions';
+if ($id > 0) {
+    $capability = 'local/coursegen:editsysteminstructions';
+}
+require_capability($capability, $context);
 
 $PAGE->set_url('/local/coursegen/edit_system_instruction.php', ['id' => $id]);
 $PAGE->set_pagelayout('admin');

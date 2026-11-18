@@ -18,10 +18,11 @@ namespace local_coursegen\mod_settings;
 
 defined('MOODLE_INTERNAL') || die();
 
-require_once(__DIR__ . '/../fixtures/generated_images_test_trait.php');
-
 /**
- * Tests for glossary_settings: the generated images of the entries.
+ * Tests for glossary_settings: the entries of a glossary.
+ *
+ * The generated images of an entry are given to it by activity_file_pass once the activity exists, see
+ * tests/files/activity_file_pass_test.php.
  *
  * @package    local_coursegen
  * @copyright  2026 Datacurso
@@ -29,8 +30,6 @@ require_once(__DIR__ . '/../fixtures/generated_images_test_trait.php');
  * @covers \local_coursegen\mod_settings\glossary_settings
  */
 final class glossary_settings_test extends \advanced_testcase {
-    use \local_coursegen\generated_images_test_trait;
-
     /**
      * Create a glossary and return a cm-like object shaped as create_mod_service passes it.
      *
@@ -40,33 +39,6 @@ final class glossary_settings_test extends \advanced_testcase {
         $course = $this->getDataGenerator()->create_course();
         $glossary = $this->getDataGenerator()->create_module('glossary', ['course' => $course->id]);
         return (object) ['coursemodule' => $glossary->cmid, 'instance' => $glossary->id];
-    }
-
-    /**
-     * The image the cleaner left in the draft area of a definition is stored in the entry.
-     */
-    public function test_definition_image_is_stored_in_the_entry(): void {
-        global $DB;
-
-        $this->resetAfterTest();
-        $this->setAdminUser();
-        $cm = $this->make_glossary_cm();
-        $itemid = $this->draft_with_image('img_entry.png');
-
-        (new glossary_settings($cm, ['entries' => [[
-            'concept' => 'Aerenchyma',
-            'definition_editor' => [
-                'text' => '<p>Air channels.</p><img src="@@PLUGINFILE@@/img_entry.png" alt="Cut">',
-                'format' => FORMAT_HTML,
-                'itemid' => $itemid,
-            ],
-        ]]]))->add_settings();
-
-        $entry = $DB->get_record('glossary_entries', ['glossaryid' => $cm->instance], '*', MUST_EXIST);
-        $this->assertStringContainsString('@@PLUGINFILE@@/img_entry.png', $entry->definition);
-
-        $context = \context_module::instance($cm->coursemodule);
-        $this->assertTrue(get_file_storage()->file_exists($context->id, 'mod_glossary', 'entry', $entry->id, '/', 'img_entry.png'));
     }
 
     /**

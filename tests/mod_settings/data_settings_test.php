@@ -309,6 +309,36 @@ final class data_settings_test extends \advanced_testcase {
     }
 
     /**
+     * A JSON array names each selected option exactly, so a comma inside a label
+     * is not mistaken for a separator - the limitation the previous test documents
+     * for the plain comma-joined shape.
+     */
+    public function test_seed_checkbox_value_as_json_array_keeps_a_comma_in_an_option(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        global $DB;
+
+        $cm = $this->make_data_cm();
+        $modsettings = [
+            'fields' => [
+                ['type' => 'checkbox', 'name' => 'Tags', 'options' => ['A', 'B', 'Si, claro']],
+            ],
+            'example_entries' => [
+                ['values' => [
+                    ['field_name' => 'Tags', 'value' => json_encode(['A', 'Si, claro'])],
+                ]],
+            ],
+        ];
+
+        (new data_settings($cm, $modsettings))->add_settings();
+
+        $field = $DB->get_record('data_fields', ['dataid' => $cm->instance, 'name' => 'Tags']);
+        $contents = $DB->get_records('data_content', ['fieldid' => $field->id]);
+        $this->assertCount(1, $contents);
+        $this->assertSame('A##Si, claro', reset($contents)->content);
+    }
+
+    /**
      * No example entries in the payload -> no records created.
      */
     public function test_no_example_entries_creates_no_records(): void {
@@ -373,6 +403,237 @@ final class data_settings_test extends \advanced_testcase {
         $t = $DB->get_record('data_fields', ['dataid' => $cm->instance, 'name' => 'T']);
         $this->assertSame(0, $DB->count_records('data_content', ['recordid' => $record->id, 'fieldid' => $foto->id]));
         $this->assertSame(1, $DB->count_records('data_content', ['recordid' => $record->id, 'fieldid' => $t->id]));
+    }
+
+    /**
+     * A mold's own field params are written verbatim, heuristics aside.
+     *
+     * The params ARE the field definition, so a mold that ships them must rebuild its own
+     * columns, not the per-type guesses the model-driven path falls back to.
+     */
+    public function test_explicit_field_params_are_used_verbatim(): void {
+        $this->resetAfterTest();
+        global $DB;
+
+        $cm = $this->make_data_cm();
+        $modsettings = ['fields' => [
+            [
+                'type' => 'textarea', 'name' => 'Resumen',
+                'param2' => '20', 'param3' => '5', 'param4' => '0', 'param5' => '10',
+                'param6' => 'six', 'param7' => null, 'param10' => 'ten',
+            ],
+            ['type' => 'url', 'name' => 'Enlace', 'param1' => '0'],
+            ['type' => 'menu', 'name' => 'Genero', 'param1' => "Novela\nEnsayo"],
+        ]];
+
+        (new data_settings($cm, $modsettings))->add_settings();
+
+        $resumen = $DB->get_record('data_fields', ['dataid' => $cm->instance, 'name' => 'Resumen']);
+        // The mold's sizes, not the plugin's 60/35/1/0 defaults.
+        $this->assertSame('20', $resumen->param2);
+        $this->assertSame('5', $resumen->param3);
+        $this->assertSame('0', $resumen->param4);
+        $this->assertSame('10', $resumen->param5);
+        // Function define_field() only reads param1..param5, so the last five are written
+        // straight onto the row - otherwise they would be silently dropped.
+        $this->assertSame('six', $resumen->param6);
+        $this->assertNull($resumen->param7);
+        $this->assertSame('ten', $resumen->param10);
+
+        // Autolink deliberately off in the mold: the '1' default must not override it.
+        $enlace = $DB->get_record('data_fields', ['dataid' => $cm->instance, 'name' => 'Enlace']);
+        $this->assertSame('0', $enlace->param1);
+
+        // Choices taken from param1 itself, no options list needed.
+        $genero = $DB->get_record('data_fields', ['dataid' => $cm->instance, 'name' => 'Genero']);
+        $this->assertSame("Novela\nEnsayo", $genero->param1);
+    }
+
+    /**
+     * Every template column mod_data owns is written, the non-empty ones only.
+     */
+    public function test_sets_every_non_empty_template_column(): void {
+        $this->resetAfterTest();
+        global $DB;
+
+        $cm = $this->make_data_cm();
+        $before = $DB->get_record('data', ['id' => $cm->instance]);
+        $modsettings = [
+            'fields' => [['type' => 'text', 'name' => 'Titulo']],
+            'templates' => [
+                'singletemplate' => '<h2>[[Titulo]]</h2>',
+                'listtemplate' => '<div>[[Titulo]]</div>',
+                'listtemplateheader' => '<table>',
+                'listtemplatefooter' => '</table>',
+                'addtemplate' => '<div>[[Titulo]] ##edit##</div>',
+                'rsstemplate' => '<p>[[Titulo]]</p>',
+                'rsstitletemplate' => '[[Titulo]]',
+                'csstemplate' => '.c { color: red; }',
+                'jstemplate' => 'window.console.log("x");',
+                'asearchtemplate' => '',
+            ],
+        ];
+
+        (new data_settings($cm, $modsettings))->add_settings();
+
+        $data = $DB->get_record('data', ['id' => $cm->instance]);
+        $this->assertSame('<h2>[[Titulo]]</h2>', $data->singletemplate);
+        $this->assertSame('<div>[[Titulo]]</div>', $data->listtemplate);
+        $this->assertSame('<table>', $data->listtemplateheader);
+        $this->assertSame('</table>', $data->listtemplatefooter);
+        $this->assertSame('<div>[[Titulo]] ##edit##</div>', $data->addtemplate);
+        $this->assertSame('<p>[[Titulo]]</p>', $data->rsstemplate);
+        $this->assertSame('[[Titulo]]', $data->rsstitletemplate);
+        $this->assertSame('.c { color: red; }', $data->csstemplate);
+        $this->assertSame('window.console.log("x");', $data->jstemplate);
+        // Empty in the payload -> left to Moodle's lazy default.
+        $this->assertSame($before->asearchtemplate, $data->asearchtemplate);
+    }
+
+    /**
+     * The mold's own sort field wins over the "first sortable field" heuristic.
+     *
+     * The mold ships the NAME of the field it sorts by (its own row id is meaningless
+     * here), so the created field carrying that name is the one to point at.
+     */
+    public function test_default_sort_follows_the_named_field(): void {
+        $this->resetAfterTest();
+        global $DB;
+
+        $cm = $this->make_data_cm();
+        $modsettings = [
+            'fields' => [
+                ['type' => 'text', 'name' => 'Titulo'],
+                ['type' => 'text', 'name' => 'Categoria'],
+            ],
+            'defaultsortfield' => 'Categoria',
+            'defaultsortdir' => 1,
+        ];
+
+        (new data_settings($cm, $modsettings))->add_settings();
+
+        $data = $DB->get_record('data', ['id' => $cm->instance]);
+        $categoria = $DB->get_record('data_fields', ['dataid' => $cm->instance, 'name' => 'Categoria']);
+        $this->assertEquals($categoria->id, $data->defaultsort);
+        $this->assertSame(1, (int) $data->defaultsortdir);
+    }
+
+    /**
+     * A sort field that no created field carries falls back to the old heuristic.
+     */
+    public function test_unknown_default_sort_field_falls_back_to_heuristic(): void {
+        $this->resetAfterTest();
+        global $DB;
+
+        $cm = $this->make_data_cm();
+        $modsettings = [
+            'fields' => [
+                ['type' => 'textarea', 'name' => 'Resumen'],
+                ['type' => 'text', 'name' => 'Titulo'],
+            ],
+            'defaultsortfield' => 'Inexistente',
+            'defaultsortdir' => 1,
+        ];
+
+        (new data_settings($cm, $modsettings))->add_settings();
+
+        $data = $DB->get_record('data', ['id' => $cm->instance]);
+        $titulo = $DB->get_record('data_fields', ['dataid' => $cm->instance, 'name' => 'Titulo']);
+        $this->assertEquals($titulo->id, $data->defaultsort);
+        $this->assertSame(0, (int) $data->defaultsortdir);
+    }
+
+    /**
+     * A url field's link text (value1) is written into data_content.content1, the
+     * column mod_data reads to label the link instead of printing the address.
+     */
+    public function test_seeds_a_url_link_text_into_content1(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $rows = $this->seed_entry(
+            [['type' => 'url', 'name' => 'Enlace']],
+            [['field_name' => 'Enlace', 'value' => 'https://www.prueba.com', 'value1' => 'Texto visible del enlace']]
+        );
+
+        $this->assertSame('https://www.prueba.com', $rows['Enlace']->content);
+        $this->assertSame('Texto visible del enlace', $rows['Enlace']->content1);
+    }
+
+    /**
+     * A payload with no value1 behaves exactly as it did before the key existed:
+     * the address is stored and content1 is left untouched. Every entry produced
+     * by the model-driven path is shaped that way, so it must not shift.
+     */
+    public function test_seed_url_without_link_text_leaves_content1_unset(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $rows = $this->seed_entry(
+            [['type' => 'url', 'name' => 'Enlace']],
+            [['field_name' => 'Enlace', 'value' => 'https://www.prueba.com']]
+        );
+
+        $this->assertSame('https://www.prueba.com', $rows['Enlace']->content);
+        $this->assertNull($rows['Enlace']->content1);
+    }
+
+    /**
+     * The address is cleaned the way mod_data cleans it when a teacher types it.
+     *
+     * Function data_field_url::update_content() runs the address through
+     * PARAM_URL, the link text through PARAM_NOTAGS, and prepends http:// to an
+     * address that carries no scheme and is not a relative path. Storing the
+     * value verbatim instead produced entries mod_data renders as dead links.
+     */
+    public function test_seed_url_content_is_cleaned_like_core(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $rows = $this->seed_entry(
+            [
+                ['type' => 'url', 'name' => 'Sin esquema'],
+                ['type' => 'url', 'name' => 'Relativo'],
+                ['type' => 'url', 'name' => 'Invalido'],
+                ['type' => 'url', 'name' => 'Con etiquetas'],
+            ],
+            [
+                ['field_name' => 'Sin esquema', 'value' => 'www.prueba.com'],
+                ['field_name' => 'Relativo', 'value' => '/local/coursegen/index.php'],
+                ['field_name' => 'Invalido', 'value' => 'not a url'],
+                ['field_name' => 'Con etiquetas', 'value' => 'https://www.prueba.com', 'value1' => '<b>Texto</b> visible'],
+            ]
+        );
+
+        $this->assertSame('http://www.prueba.com', $rows['Sin esquema']->content);
+        $this->assertSame('/local/coursegen/index.php', $rows['Relativo']->content);
+        $this->assertArrayNotHasKey('Invalido', $rows);
+        $this->assertSame('Texto visible', $rows['Con etiquetas']->content1);
+    }
+
+    /**
+     * Seed one entry on a brand new database and read back what was stored.
+     *
+     * @param array $fields The field definitions.
+     * @param array $values The entry's value rows.
+     * @return array<string, \stdClass> The data_content row keyed by field name,
+     *     absent for a field whose value was skipped.
+     */
+    private function seed_entry(array $fields, array $values): array {
+        global $DB;
+
+        $cm = $this->make_data_cm();
+        $modsettings = ['fields' => $fields, 'example_entries' => [['values' => $values]]];
+        (new data_settings($cm, $modsettings))->add_settings();
+
+        $rows = [];
+        foreach ($DB->get_records('data_fields', ['dataid' => $cm->instance]) as $field) {
+            $content = $DB->get_record('data_content', ['fieldid' => $field->id]);
+            if ($content) {
+                $rows[$field->name] = $content;
+            }
+        }
+        return $rows;
     }
 
     /**

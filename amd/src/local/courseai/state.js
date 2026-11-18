@@ -70,6 +70,8 @@ export const createInitialState = ({defaultLang, guidelines, languages}) => {
         imageProgressTotal: 0,
         completionStats: null,
         createdCourseUrl: '',
+        // Where the completion view's "create another course" button leads.
+        createAnotherUrl: 'aicoursecreation.php',
         createdCourseResult: null,
         courseTitle: '',
         isStreaming: false,

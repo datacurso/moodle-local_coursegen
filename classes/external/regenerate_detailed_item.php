@@ -36,8 +36,6 @@ use local_coursegen\local\service\course_session_service;
 
 defined('MOODLE_INTERNAL') || die();
 
-require_once($CFG->libdir . '/externallib.php');
-
 /**
  * External API to regenerate a single section, activity, or image in the detailed plan.
  */
@@ -96,7 +94,7 @@ class regenerate_detailed_item extends external_api {
         // Owning the session is not enough: regenerating consumes paid AI
         // credits, so require the same capabilities as start_course_planning.
         require_capability('moodle/course:create', $context);
-        require_capability('local/coursegen:createcoursewithai', $context);
+        require_capability('local/coursegen:createfreecoursewithai', $context);
 
         $sessionid = $session->get('session_id');
 

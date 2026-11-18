@@ -32,14 +32,13 @@ use core_external\external_function_parameters;
 use core_external\external_single_structure;
 use core_external\external_value;
 use local_coursegen\local\models\course_session;
+use local_coursegen\local\service\access_guard;
 use local_coursegen\local\service\ai_course_api_service;
 use local_coursegen\local\service\course_import_service;
 use local_coursegen\local\service\course_session_service;
 use local_coursegen\local\service\creation_permissions;
 
 defined('MOODLE_INTERNAL') || die();
-
-require_once($CFG->libdir . '/externallib.php');
 
 /**
  * External API to retrieve resumable state for an AI course session.
@@ -78,6 +77,10 @@ class get_course_session_state extends external_api {
 
         $context = context_system::instance();
         self::validate_context($context);
+        access_guard::require_any(
+            ['local/coursegen:createfreecoursewithai', 'local/coursegen:createtemplatecoursewithai'],
+            $context
+        );
 
         $session = course_session_service::get_user_session((int)$params['recordid'], (int)$USER->id);
 

@@ -30,7 +30,6 @@ use local_coursegen\local\service\creation_permissions;
 
 defined('MOODLE_INTERNAL') || die();
 
-require_once($CFG->libdir . '/externallib.php');
 require_once($CFG->libdir . '/filelib.php');
 
 /**
@@ -123,6 +122,7 @@ class courseai_syllabus_upload extends external_api {
         $context = context_system::instance();
         self::validate_context($context);
         creation_permissions::require_anywhere();
+        require_capability('local/coursegen:uploadcoursesyllabus', $context);
 
         try {
             // Get session record.

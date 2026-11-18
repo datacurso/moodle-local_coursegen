@@ -35,7 +35,7 @@ $id = optional_param('id', 0, PARAM_INT);
 $confirm = optional_param('confirm', 0, PARAM_INT);
 
 $context = context_system::instance();
-require_capability('local/coursegen:managesysteminstructions', $context);
+require_capability('local/coursegen:viewsysteminstructions', $context);
 
 $PAGE->set_url('/local/coursegen/manage_system_instructions.php');
 $PAGE->set_title(get_string('managesysteminstructions', 'local_coursegen'));
@@ -43,6 +43,7 @@ $PAGE->set_heading(get_string('managesysteminstructions', 'local_coursegen'));
 
 // Handle delete action.
 if ($action === 'delete' && $id > 0) {
+    require_capability('local/coursegen:deletesysteminstructions', $context);
     if ($confirm && confirm_sesskey()) {
         // Soft delete the system instruction.
         $model = new system_instruction($id);
@@ -82,11 +83,13 @@ if ($action === 'delete' && $id > 0) {
 echo $OUTPUT->header();
 
 // Add system instruction button.
-$addurl = new moodle_url('/local/coursegen/edit_system_instruction.php');
-echo html_writer::div(
-    $OUTPUT->single_button($addurl, get_string('addsysteminstruction', 'local_coursegen'), 'get'),
-    'mb-3'
-);
+if (has_capability('local/coursegen:createsysteminstructions', $context)) {
+    $addurl = new moodle_url('/local/coursegen/edit_system_instruction.php');
+    echo html_writer::div(
+        $OUTPUT->single_button($addurl, get_string('addsysteminstruction', 'local_coursegen'), 'get'),
+        'mb-3'
+    );
+}
 
 // Create table to display system instructions.
 $table = new html_table();
@@ -107,6 +110,8 @@ if (empty($instructions)) {
         'mt-3'
     );
 } else {
+    $canedit = has_capability('local/coursegen:editsysteminstructions', $context);
+    $candelete = has_capability('local/coursegen:deletesysteminstructions', $context);
     foreach ($instructions as $instruction) {
         $editurl = new moodle_url('/local/coursegen/edit_system_instruction.php', ['id' => $instruction->get('id')]);
         $deleteurl = new moodle_url($PAGE->url, ['action' => 'delete', 'id' => $instruction->get('id')]);
@@ -114,8 +119,13 @@ if (empty($instructions)) {
         $editicon = $OUTPUT->pix_icon('t/edit', get_string('edit', 'local_coursegen'));
         $deleteicon = $OUTPUT->pix_icon('t/delete', get_string('delete', 'local_coursegen'));
 
-        $actions = html_writer::link($editurl, $editicon, ['title' => get_string('edit', 'local_coursegen')]);
-        $actions .= html_writer::link($deleteurl, $deleteicon, ['title' => get_string('delete', 'local_coursegen')]);
+        $actions = '';
+        if ($canedit) {
+            $actions .= html_writer::link($editurl, $editicon, ['title' => get_string('edit', 'local_coursegen')]);
+        }
+        if ($candelete) {
+            $actions .= html_writer::link($deleteurl, $deleteicon, ['title' => get_string('delete', 'local_coursegen')]);
+        }
 
         $table->data[] = [
             format_string($instruction->get('name')),

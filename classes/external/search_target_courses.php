@@ -100,7 +100,7 @@ class search_target_courses extends external_api {
 
         $systemcontext = context_system::instance();
         self::validate_context($systemcontext);
-        require_capability('local/coursegen:createcoursewithai', $systemcontext);
+        require_capability('local/coursegen:createfreecoursewithai', $systemcontext);
 
         if (empty(get_config('local_coursegen', 'enableimportexisting'))) {
             throw new moodle_exception('error_import_existing_disabled', 'local_coursegen');

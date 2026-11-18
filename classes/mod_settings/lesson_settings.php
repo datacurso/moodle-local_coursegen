@@ -19,7 +19,6 @@ namespace local_coursegen\mod_settings;
 use context_module;
 use lesson;
 use lesson_page;
-use local_coursegen\utils\text_editor_parameter_cleaner;
 use stdClass;
 
 /**
@@ -41,6 +40,7 @@ class lesson_settings extends base_settings {
     public function add_settings() {
         global $CFG;
 
+        require_once($CFG->libdir . '/filelib.php');
         require_once($CFG->dirroot . '/mod/lesson/locallib.php');
         // The LESSON_PAGE_* constants live in each page type file and are not
         // loaded by locallib until the page type manager runs.
@@ -62,7 +62,6 @@ class lesson_settings extends base_settings {
             if ($properties === null) {
                 continue;
             }
-            $properties->contents_editor = $this->prepare_contents($properties->contents_editor);
 
             $created = lesson_page::create($properties, $lesson, $context, $CFG->maxbytes);
             $previouspageid = $created->id;
@@ -70,25 +69,36 @@ class lesson_settings extends base_settings {
     }
 
     /**
-     * Download the generated images of a page and clean its HTML before lesson_page::create() saves it.
+     * A content page's navigation buttons, each with its own jump.
      *
-     * The page content arrives as plain HTML (content_html), which the parameter cleaner does not
-     * process, so its generated images still point at the AI service. They are downloaded into a
-     * draft area and the content is pointed at @@PLUGINFILE@@; lesson_page::create() then moves the
-     * draft files to the page_contents area of the new page.
+     * A mold page carries its REAL set ("Anterior" → previous page,
+     * "Siguiente" → next, "Fin de la lección" → end): collapsing that to one
+     * forward button, as this used to do, is what left generated lessons
+     * impossible to navigate. Pages that carry no buttons fall back to the
+     * single labelled "next page" button.
      *
-     * The lesson shows its pages without cleaning them (noclean), so the HTML the AI wrote is
-     * cleaned here, the way Moodle cleans text from a person who is not trusted.
-     *
-     * @param array $editor Editor array with 'text', 'format' and 'itemid'.
-     * @return array The same editor with the images rewritten, the HTML cleaned and a draft itemid holding the images.
+     * @param array $page
+     * @return array List of ['text' => string, 'jumpto' => int].
      */
-    protected function prepare_contents(array $editor): array {
-        $itemid = file_get_unused_draft_itemid();
-        $text = text_editor_parameter_cleaner::replace_generated_images_in_text($editor['text'], $itemid);
-        $editor['text'] = clean_text($text, FORMAT_HTML);
-        $editor['itemid'] = $itemid;
-        return $editor;
+    private static function navigation_buttons(array $page): array {
+        $buttons = [];
+        foreach ($page['buttons'] ?? [] as $button) {
+            $text = trim((string) ($button['text'] ?? ''));
+            if ($text === '') {
+                continue;
+            }
+            $jumpto = $button['jumpto'] ?? null;
+            $buttons[] = [
+                'text' => $text,
+                'jumpto' => $jumpto === null ? LESSON_NEXTPAGE : (int) $jumpto,
+            ];
+        }
+        if ($buttons) {
+            return $buttons;
+        }
+
+        $buttontext = trim((string) ($page['button_text'] ?? ''));
+        return $buttontext === '' ? [] : [['text' => $buttontext, 'jumpto' => LESSON_NEXTPAGE]];
     }
 
     /**
@@ -107,24 +117,41 @@ class lesson_settings extends base_settings {
             return null;
         }
 
+        // The page text is saved from an editor draft area by lesson_page::create(),
+        // so it is given an (empty) one; the files the text references are
+        // placed by the pass that runs once the whole activity exists.
+        $draftitemid = file_get_unused_draft_itemid();
+
         $properties = new stdClass();
         $properties->title = $title;
+        // The lesson shows its pages without cleaning them (noclean), so the HTML the AI wrote is
+        // cleaned here, the way Moodle cleans text from a person who is not trusted.
         $properties->contents_editor = [
-            'text' => $contenthtml,
+            'text' => clean_text($contenthtml, FORMAT_HTML),
             'format' => FORMAT_HTML,
-            'itemid' => 0,
+            'itemid' => $draftitemid,
         ];
         $properties->pageid = $previouspageid;
 
         if ($pagetype === 'content') {
-            $buttontext = trim((string) ($page['button_text'] ?? ''));
-            if ($buttontext === '') {
+            $buttons = self::navigation_buttons($page);
+            if (!$buttons) {
                 return null;
             }
             $properties->qtype = LESSON_PAGE_BRANCHTABLE;
-            // Branch table answers are plain strings (button labels).
-            $properties->answer_editor = [$buttontext];
-            $properties->jumpto = [LESSON_NEXTPAGE];
+            // Branch table answers are plain strings (button labels), each
+            // paired with its own jump by position.
+            $properties->answer_editor = array_column($buttons, 'text');
+            $properties->jumpto = array_column($buttons, 'jumpto');
+            // Feeds the lesson's left "Lesson menu" block. mod_lesson's own
+            // branch-table form defaults this to checked (branchtable.php's
+            // setDefault('display', true)); leaving it unset stored 0 and the
+            // menu rendered empty on every generated lesson.
+            $properties->display = 1;
+            // The branch-table form also defaults "Arrange content buttons horizontally" to checked
+            // (branchtable.php's setDefault('layout', true)); unset it stored 0 and the Anterior and
+            // Siguiente buttons stacked one under the other. A page that carries its own layout keeps it.
+            $properties->layout = (int) ($page['layout'] ?? 1);
             return $properties;
         }
 

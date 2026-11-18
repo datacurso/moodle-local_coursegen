@@ -1,0 +1,125 @@
+/* Template wizard styles. No max-width constraint: the form occupies the
+   normal admin-page width (the old 900px cap belonged to the dead 5-step
+   wizard and only ever applied once this stylesheet started loading). */
+
+/* Stepper */
+.tpl-step-circle {
+    width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 600; transition: all 0.2s; flex-shrink: 0;
+}
+.tpl-step-circle.active { background-color: #b5351a; color: #fff; }
+.tpl-step-circle.done { background-color: #28a745; color: #fff; }
+.tpl-step-circle.pending { background-color: #f0f0f0; color: #6c757d; }
+.tpl-step-line { height: 2px; flex: 1; background: #dee2e6; margin: 0 6px; }
+.tpl-step-line.done { background: #28a745; }
+.tpl-step-line.active { background: #b5351a; }
+
+/* Section cards. No overflow:hidden here: it would clip the
+   instance-picker's dropdown-menu, which is a descendant of this card. */
+.tpl-section-card {
+    border: 1px solid #dee2e6;
+    border-radius: 0.5rem;
+    margin-bottom: 1rem;
+    transition: all 0.2s;
+}
+
+.tpl-section-card:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.tpl-section-card.kept {
+    box-shadow: 0 0 0 2px #28a745;
+}
+
+.tpl-section-card.excluded {
+    opacity: 0.6;
+}
+
+.tpl-section-header {
+    background: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem 0.5rem 0 0;
+}
+
+.tpl-section-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+
+.tpl-section-body.open {
+    max-height: 2000px;
+}
+
+/* "Course sections" collapsible header chevron (Bootstrap collapse adds
+   .collapsed on the toggle while its target is closed). */
+.tpl-section-toggle:focus {
+    box-shadow: none;
+}
+
+.tpl-section-toggle .tpl-section-chevron {
+    transition: transform 0.2s ease;
+}
+
+.tpl-section-toggle.collapsed .tpl-section-chevron {
+    transform: rotate(-90deg);
+}
+
+/* "Course sections" activity table: identical fixed column geometry on
+   every section's table, so Name/Type/Actions line up across sections
+   (each section renders its own table). Long activity names wrap cleanly
+   inside the flexible Name column. */
+.tpl-activity-table {
+    table-layout: fixed;
+    width: 100%;
+}
+
+.tpl-activity-table th,
+.tpl-activity-table td {
+    overflow-wrap: break-word;
+}
+
+.tpl-activity-table .tpl-select-col {
+    width: 4%;
+}
+
+.tpl-activity-table .tpl-col-type {
+    width: 16%;
+}
+
+.tpl-activity-table .tpl-col-actions {
+    width: 18%;
+}
+
+.tpl-activity-action,
+.tpl-bulk-select,
+.tpl-section-behavior {
+    width: auto;
+}
+
+/* A row marked as a template mold. */
+.tpl-row-template {
+    background: #fff5f5;
+    box-shadow: inset 3px 0 0 #b5351a;
+}
+
+/* Global bulk action bar: clearly separated from the last section card. */
+.tpl-bulk-bar {
+    margin-top: 2.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid #dee2e6;
+}
+
+/* Activity rows */
+.tpl-activity-row {
+    padding: 0.625rem 0.5rem;
+    border-top: 1px solid #f0f0f0;
+    transition: all 0.2s;
+}
+
+.tpl-activity-row:hover {
+    background: #f8f9fa;
+}
+

@@ -32,13 +32,12 @@ use core_external\external_value;
 use core_external\external_single_structure;
 use local_coursegen\local\service\ai_course_api_service;
 use local_coursegen\local\service\course_session_service;
+use local_coursegen\local\service\course_review_service;
 use local_coursegen\local\service\create_course_service;
 use local_coursegen\local\service\creation_permissions;
 use context_system;
 
 defined('MOODLE_INTERNAL') || die();
-
-require_once($CFG->libdir . '/externallib.php');
 
 /**
  * External API for fetching the AI-generated course settings for final review.
@@ -77,7 +76,8 @@ class get_course_settings extends external_api {
 
         $context = context_system::instance();
         self::validate_context($context);
-        creation_permissions::require_anywhere();
+        require_capability('local/coursegen:createfreecoursewithai', $context);
+        creation_permissions::require_anywhere(null, [creation_permissions::FREE_CAPABILITY]);
 
         $recordid = (int)$params['recordid'];
 
@@ -91,18 +91,8 @@ class get_course_settings extends external_api {
 
         $settings = create_course_service::get_course_settings($session, $resultdata);
 
-        // Offer only the categories where the user holds the full creation set (ticket #9539):
-        // the ones where create_course would accept the request.
-        $categories = [];
-        foreach (\core_course_category::make_categories_list('moodle/course:create') as $id => $pathname) {
-            if (!creation_permissions::can_create_in((int)$id)) {
-                continue;
-            }
-            $categories[] = [
-                'id' => (int)$id,
-                'pathname' => $pathname,
-            ];
-        }
+        // Only the categories where the user holds the full creation set (ticket #9539) are offered.
+        $categories = course_review_service::available_categories();
 
         return $settings + ['categories' => $categories];
     }

@@ -29,8 +29,6 @@ use local_coursegen\local\service\creation_permissions;
 
 defined('MOODLE_INTERNAL') || die();
 
-require_once($CFG->libdir . '/externallib.php');
-
 /**
  * External function to start an AI course planning session.
  *
@@ -91,7 +89,11 @@ class start_course_planning extends external_api {
 
         $context = context_system::instance();
         self::validate_context($context);
-        creation_permissions::require_anywhere();
+        require_capability('local/coursegen:createfreecoursewithai', $context);
+        creation_permissions::require_anywhere(null, [creation_permissions::FREE_CAPABILITY]);
+        if ($params['withimages']) {
+            require_capability('local/coursegen:generatecourseimages', $context);
+        }
 
         try {
             $outcome = course_planning_service::start_course_planning(
