@@ -377,6 +377,7 @@ final class quiz_settings_test extends \advanced_testcase {
 
         $settings->add_settings();
 
+        $this->assertDebuggingCalled('coursegen: could not create calculated question "Rota"', DEBUG_DEVELOPER);
         $this->assertCount(1, $this->slots((int) $quiz->id));
         $this->assertSame(3.0, (float) $DB->get_field('quiz', 'sumgrades', ['id' => $quiz->id]));
     }
@@ -397,6 +398,7 @@ final class quiz_settings_test extends \advanced_testcase {
 
         $settings->add_settings();
 
+        $this->assertDebuggingCalled('coursegen: could not create calculated question "Rota"', DEBUG_DEVELOPER);
         $this->assertCount(0, $this->slots((int) $quiz->id));
         $this->assertSame(0.0, (float) $DB->get_field('quiz', 'sumgrades', ['id' => $quiz->id]));
     }
