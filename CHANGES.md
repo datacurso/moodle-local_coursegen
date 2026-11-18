@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.13] - 2026111714
+
+### Fixed
+- **A link to a text and media area no longer stops the course from being built**  
+  A text and media area has no page of its own, so a generated link to it had no address and the creation of the course failed. Such a link now points to the activity's place in the course page.
+
 ## [2.0.13] - 2026111713
 
 ### Added
