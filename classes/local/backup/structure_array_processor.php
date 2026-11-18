@@ -118,6 +118,10 @@ class structure_array_processor extends backup_vars_processor {
         $attributes = $nested->get_attributes();
         $node = [];
         foreach ($attributes as $attribute) {
+            // An attribute nothing gave a value to is left out, as an unset final element is.
+            if (!$attribute->is_set()) {
+                continue;
+            }
             $name = $attribute->get_name();
             $value = $attribute->get_value();
             $node[$name] = $value;
