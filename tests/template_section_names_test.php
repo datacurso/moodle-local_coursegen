@@ -22,6 +22,10 @@ use local_coursegen\local\service\create_course_service;
 use local_coursegen\local\service\template_export_service;
 use local_coursegen\local\service\template_section_names;
 
+defined('MOODLE_INTERNAL') || die();
+
+require_once(__DIR__ . '/flexsections_required_trait.php');
+
 /**
  * The names the AI gives the sections reach the course made from a template, by section number.
  *
@@ -35,12 +39,15 @@ use local_coursegen\local\service\template_section_names;
  * @runTestsInSeparateProcesses
  */
 final class template_section_names_test extends \advanced_testcase {
+    use flexsections_required_trait;
+
     /**
      * A flexsections template: 1 intro, 2 unit with subsections 3 and 4, 5 closing.
      *
      * @return \stdClass
      */
     private function create_flexsections_template_course(): \stdClass {
+        $this->require_flexsections();
         $course = $this->getDataGenerator()->create_course(['format' => 'flexsections', 'numsections' => 0]);
         $format = course_get_format($course);
         $tree = [1 => [0, 'Intro'], 2 => [0, 'Unit 1'], 3 => [2, 'Resources'], 4 => [2, 'Activities'], 5 => [0, 'Closing']];
@@ -197,10 +204,16 @@ final class template_section_names_test extends \advanced_testcase {
 
         $this->resetAfterTest();
         $course = $this->getDataGenerator()->create_course(['numsections' => 3]);
-        course_update_section($course, $DB->get_record('course_sections', ['course' => $course->id, 'section' => 1]),
-            ['name' => 'Keep me']);
-        course_update_section($course, $DB->get_record('course_sections', ['course' => $course->id, 'section' => 2]),
-            ['name' => 'Old']);
+        course_update_section(
+            $course,
+            $DB->get_record('course_sections', ['course' => $course->id, 'section' => 1]),
+            ['name' => 'Keep me']
+        );
+        course_update_section(
+            $course,
+            $DB->get_record('course_sections', ['course' => $course->id, 'section' => 2]),
+            ['name' => 'Old']
+        );
 
         template_section_names::apply((int) $course->id, [
             ['section' => 1, 'name' => 'Keep me', 'original_name' => 'Template one'],

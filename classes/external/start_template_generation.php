@@ -26,11 +26,11 @@ namespace local_coursegen\external;
 
 use aiprovider_datacurso\local\plugin_settings;
 use context_system;
-use external_api;
-use external_function_parameters;
-use external_multiple_structure;
-use external_single_structure;
-use external_value;
+use core_external\external_api;
+use core_external\external_function_parameters;
+use core_external\external_multiple_structure;
+use core_external\external_single_structure;
+use core_external\external_value;
 use local_coursegen\local\models\course_session;
 use local_coursegen\local\models\template;
 use local_coursegen\local\service\course_session_service;
@@ -45,8 +45,6 @@ use local_coursegen\local\space\activity_spaces;
 use local_coursegen\local\space\space_files_request;
 
 defined('MOODLE_INTERNAL') || die();
-
-require_once($CFG->libdir . '/externallib.php');
 
 /**
  * Exports a template, sends it to the AI service, attaches the syllabus and starts the run.
@@ -368,7 +366,7 @@ class start_template_generation extends external_api {
      * The files of a request, checked against the choices of the teacher: the File the teacher picked to upload in a
      * space must come with its file, and a file of a space where the teacher picked an activity of the AI is dropped.
      *
-     * @param array<int,int> $drafts The draft of each filled space, by cmid.
+     * @param array $drafts The draft of each filled space, by cmid.
      * @param array[] $spacechoices What teacher_space_choices::validated() returned.
      * @return array<int,int>
      * @throws \moodle_exception When the File the teacher picked to upload has no file.

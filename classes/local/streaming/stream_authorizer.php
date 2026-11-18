@@ -92,6 +92,12 @@ class stream_authorizer {
         require_capability('local/coursegen:createtemplatecoursewithai', $context);
     }
 
+    /**
+     * Refuse a user who does not own the activity job or cannot manage activities in its course.
+     *
+     * @param string $threadid External thread identifier of the job.
+     * @throws \required_capability_exception When a capability is missing.
+     */
     private function authorize_activity(string $threadid): void {
         global $USER;
 

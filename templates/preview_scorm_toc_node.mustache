@@ -33,6 +33,28 @@
     * title - string, required when hooklink is true.
     * children - array, required when haschildren is true, each shaped the
                  way this same template expects.
+
+    Example context (json):
+    {
+        "label": "<span>Module 1</span>",
+        "reallink": true,
+        "hooklink": false,
+        "spanwrap": false,
+        "bare": false,
+        "haschildren": true,
+        "url": "https://example.com/mod/scorm/player.php?scoid=1",
+        "scoid": 1,
+        "children": [
+            {
+                "label": "Lesson 1.1",
+                "reallink": false,
+                "hooklink": false,
+                "spanwrap": true,
+                "bare": false,
+                "haschildren": false
+            }
+        ]
+    }
 }}
 <li>
     {{#reallink}}<a href="{{{url}}}" data-scoid="{{scoid}}">{{{label}}}</a>{{/reallink}}

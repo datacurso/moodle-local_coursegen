@@ -76,14 +76,26 @@ trait workshop_submissions_report {
         $output = '';
 
         if (trim($workshop->intro)) {
-            $output .= print_collapsible_region_start('', 'workshop-viewlet-intro', get_string('introduction', 'workshop'),
-                'workshop-viewlet-intro-collapsed', false, true);
+            $output .= print_collapsible_region_start(
+                '',
+                'workshop-viewlet-intro',
+                get_string('introduction', 'workshop'),
+                'workshop-viewlet-intro-collapsed',
+                false,
+                true
+            );
             $output .= $OUTPUT->box($this->format_module_intro(), 'generalbox');
             $output .= print_collapsible_region_end(true);
         }
         if ($workshop->useexamples && has_capability('mod/workshop:manageexamples', $this->context)) {
-            $output .= print_collapsible_region_start('', 'workshop-viewlet-allexamples',
-                get_string('examplesubmissions', 'workshop'), 'workshop-viewlet-allexamples-collapsed', false, true);
+            $output .= print_collapsible_region_start(
+                '',
+                'workshop-viewlet-allexamples',
+                get_string('examplesubmissions', 'workshop'),
+                'workshop-viewlet-allexamples-collapsed',
+                false,
+                true
+            );
             $output .= $OUTPUT->box_start('generalbox examples');
             $output .= $this->examples_box_content();
             $output .= $OUTPUT->box_end();
@@ -127,14 +139,27 @@ trait workshop_submissions_report {
         $output = '';
 
         if (trim($workshop->instructauthors)) {
-            $instructions = file_rewrite_pluginfile_urls($workshop->instructauthors,
-                'pluginfile.php', $this->context->id,
-                'mod_workshop', 'instructauthors', null, workshop::instruction_editors_options($this->context));
-            $output .= print_collapsible_region_start('', 'workshop-viewlet-instructauthors',
+            $instructions = file_rewrite_pluginfile_urls(
+                $workshop->instructauthors,
+                'pluginfile.php',
+                $this->context->id,
+                'mod_workshop',
+                'instructauthors',
+                null,
+                workshop::instruction_editors_options($this->context)
+            );
+            $output .= print_collapsible_region_start(
+                '',
+                'workshop-viewlet-instructauthors',
                 get_string('instructauthors', 'workshop'),
-                'workshop-viewlet-instructauthors-collapsed', false, true);
-            $output .= $OUTPUT->box(format_text($instructions, $workshop->instructauthorsformat, ['overflowdiv' => true]),
-                ['generalbox', 'instructions']);
+                'workshop-viewlet-instructauthors-collapsed',
+                false,
+                true
+            );
+            $output .= $OUTPUT->box(
+                format_text($instructions, $workshop->instructauthorsformat, ['overflowdiv' => true]),
+                ['generalbox', 'instructions']
+            );
             $output .= print_collapsible_region_end(true);
         }
         return $output;
@@ -152,14 +177,28 @@ trait workshop_submissions_report {
         $output = '';
 
         if (trim($workshop->instructreviewers)) {
-            $instructions = file_rewrite_pluginfile_urls($workshop->instructreviewers,
-                'pluginfile.php', $this->context->id,
-                'mod_workshop', 'instructreviewers', null, workshop::instruction_editors_options($this->context));
-            $output .= print_collapsible_region_start('', 'workshop-viewlet-instructreviewers',
+            $instructions = file_rewrite_pluginfile_urls(
+                $workshop->instructreviewers,
+                'pluginfile.php',
+                $this->context->id,
+                'mod_workshop',
+                'instructreviewers',
+                null,
+                workshop::instruction_editors_options($this->context)
+            );
+            $output .= print_collapsible_region_start(
+                '',
+                'workshop-viewlet-instructreviewers',
                 get_string('instructreviewers', 'workshop'),
-                'workshop-viewlet-instructreviewers-collapsed', false, true);
-            $output .= $OUTPUT->box(format_text($instructions, $workshop->instructreviewersformat,
-                ['overflowdiv' => true]), ['generalbox', 'instructions']);
+                'workshop-viewlet-instructreviewers-collapsed',
+                false,
+                true
+            );
+            $output .= $OUTPUT->box(format_text(
+                $instructions,
+                $workshop->instructreviewersformat,
+                ['overflowdiv' => true]
+            ), ['generalbox', 'instructions']);
             $output .= print_collapsible_region_end(true);
         }
         return $output;
@@ -176,13 +215,27 @@ trait workshop_submissions_report {
         $output = '';
 
         if (trim($workshop->conclusion)) {
-            $conclusion = file_rewrite_pluginfile_urls($workshop->conclusion, 'pluginfile.php', $this->context->id,
-                'mod_workshop', 'conclusion', null, workshop::instruction_editors_options($this->context));
-            $output .= print_collapsible_region_start('', 'workshop-viewlet-conclusion',
+            $conclusion = file_rewrite_pluginfile_urls(
+                $workshop->conclusion,
+                'pluginfile.php',
+                $this->context->id,
+                'mod_workshop',
+                'conclusion',
+                null,
+                workshop::instruction_editors_options($this->context)
+            );
+            $output .= print_collapsible_region_start(
+                '',
+                'workshop-viewlet-conclusion',
                 get_string('conclusion', 'workshop'),
-                'workshop-viewlet-conclusion-collapsed', false, true);
-            $output .= $OUTPUT->box(format_text($conclusion, $workshop->conclusionformat, ['overflowdiv' => true]),
-                ['generalbox', 'conclusion']);
+                'workshop-viewlet-conclusion-collapsed',
+                false,
+                true
+            );
+            $output .= $OUTPUT->box(
+                format_text($conclusion, $workshop->conclusionformat, ['overflowdiv' => true]),
+                ['generalbox', 'conclusion']
+            );
             $output .= print_collapsible_region_end(true);
         }
         return $output;

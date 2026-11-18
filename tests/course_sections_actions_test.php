@@ -63,11 +63,11 @@ final class course_sections_actions_test extends \advanced_testcase {
 
         $this->assertStringNotContainsString('data-act-val=', $html);
 
-        // AI-supported type (page): template/keep/reference/exclude, keep preselected; no space.
+        // AI-supported type (page): template/aimodify/keep/reference/exclude, keep preselected; no space.
         $pageselect = $this->extract_action_select($html, (int) $page->cmid);
         $pageoptions = substr_count($pageselect, '<option');
-        $this->assertSame(4, $pageoptions);
-        foreach (['template', 'keep', 'reference', 'exclude'] as $action) {
+        $this->assertSame(5, $pageoptions);
+        foreach (['template', 'aimodify', 'keep', 'reference', 'exclude'] as $action) {
             $this->assertStringContainsString('<option value="' . $action . '"', $pageselect);
         }
         $this->assertStringNotContainsString('<option value="space"', $pageselect);

@@ -46,7 +46,7 @@ class stream_relay {
     private browser_output $output;
 
     /** @var int Seconds of silence after which the relay writes a comment to the browser. */
-    public const KEEPALIVE_SECONDS = 1;
+    public const KEEPALIVE_SECONDS = 3;
 
     /** @var bool Whether the service ended the stream with its done event. */
     private bool $finished = false;

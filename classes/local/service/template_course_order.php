@@ -95,7 +95,7 @@ final class template_course_order {
      * The saved virtual rows of a template, by the number of their section.
      *
      * @param int $templateid
-     * @param array<int,int> $sectionnumbers
+     * @param array $sectionnumbers
      * @return array<int,array> Instances and spaces, by section number.
      */
     private static function instances_by_section(int $templateid, array $sectionnumbers): array {
@@ -118,8 +118,8 @@ final class template_course_order {
      * The wanted order of every section, as the cmids of the new course.
      *
      * @param course_modinfo $basemodinfo
-     * @param array<int,template_instance[]> $instances
-     * @param array<string,int> $createdbyuid
+     * @param array $instances
+     * @param array $createdbyuid
      * @param array $keptcms
      * @param template_section_map|null $sectionmap
      * @return array<int,int[]> Section number of the new course => cmids in the wanted order.
@@ -151,7 +151,7 @@ final class template_course_order {
      * or a generated one that was not created) is left out.
      *
      * @param array $rows From template_instance_layout::ordered_rows().
-     * @param array<string,int> $createdbyuid
+     * @param array $createdbyuid
      * @param array $keptcms
      * @return int[]
      */
@@ -170,7 +170,7 @@ final class template_course_order {
      * The cmid of the new course that one row stands for, or null when there is none.
      *
      * @param array $row
-     * @param array<string,int> $createdbyuid
+     * @param array $createdbyuid
      * @param array $keptcms
      * @return int|null
      */
@@ -190,7 +190,7 @@ final class template_course_order {
      * Store the wanted order of each section of the new course.
      *
      * @param course_modinfo $targetmodinfo
-     * @param array<int,int[]> $orders Section number => cmids in the wanted order.
+     * @param array $orders Section number => cmids in the wanted order.
      */
     private static function store_orders(course_modinfo $targetmodinfo, array $orders): void {
         global $DB;

@@ -36,8 +36,6 @@ use local_coursegen\local\service\course_session_service;
 
 defined('MOODLE_INTERNAL') || die();
 
-require_once($CFG->libdir . '/externallib.php');
-
 /**
  * External API to regenerate a single section, activity, or image in the detailed plan.
  */

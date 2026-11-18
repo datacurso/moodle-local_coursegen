@@ -41,16 +41,36 @@ trait glossary_paging {
      * @param bool $previousandnext
      * @return string
      */
-    public static function glossary_get_paging_bar($totalcount, $page, $perpage, $baseurl, $maxpageallowed = 99999,
-            $maxdisplay = 20, $separator = "&nbsp;", $specialtext = "", $specialvalue = -1, $previousandnext = true) {
+    public static function glossary_get_paging_bar(
+        $totalcount,
+        $page,
+        $perpage,
+        $baseurl,
+        $maxpageallowed = 99999,
+        $maxdisplay = 20,
+        $separator = "&nbsp;",
+        $specialtext = "",
+        $specialvalue = -1,
+        $previousandnext = true
+    ) {
         global $OUTPUT;
 
         if ($totalcount <= $perpage) {
             return '';
         }
 
-        $data = self::glossary_paging_data($totalcount, $page, $perpage, $baseurl, $maxpageallowed, $maxdisplay,
-            $separator, $specialtext, $specialvalue, $previousandnext);
+        $data = self::glossary_paging_data(
+            $totalcount,
+            $page,
+            $perpage,
+            $baseurl,
+            $maxpageallowed,
+            $maxdisplay,
+            $separator,
+            $specialtext,
+            $specialvalue,
+            $previousandnext
+        );
         return $OUTPUT->render_from_template('local_coursegen/preview_glossary_paging', $data);
     }
 
@@ -69,8 +89,18 @@ trait glossary_paging {
      * @param bool $previousandnext
      * @return array
      */
-    protected static function glossary_paging_data($totalcount, $page, $perpage, $baseurl, $maxpageallowed,
-            $maxdisplay, $separator, $specialtext, $specialvalue, $previousandnext): array {
+    protected static function glossary_paging_data(
+        $totalcount,
+        $page,
+        $perpage,
+        $baseurl,
+        $maxpageallowed,
+        $maxdisplay,
+        $separator,
+        $specialtext,
+        $specialvalue,
+        $previousandnext
+    ): array {
         $maxpage = (int) (($totalcount - 1) / $perpage);
 
         // Whether the special entry is the one selected is decided from the

@@ -16,9 +16,9 @@
 
 namespace local_coursegen\external;
 
-use external_multiple_structure;
-use external_single_structure;
-use external_value;
+use core_external\external_multiple_structure;
+use core_external\external_single_structure;
+use core_external\external_value;
 
 /**
  * get_template_structure's return-value contract, kept apart from the rest of
@@ -39,10 +39,16 @@ trait get_template_structure_schema {
             'nolimit' => new external_value(PARAM_BOOL, 'Whether the section limit is disabled'),
             'maxsections' => new external_value(PARAM_INT, 'Maximum total sections allowed'),
             'remainingsections' => new external_value(PARAM_INT, 'Additional sections the professor may still add'),
-            'unitcount' => new external_value(PARAM_INT,
-                'Units of the template; only for a course whose format has them', VALUE_OPTIONAL),
-            'maxunits' => new external_value(PARAM_INT,
-                'Most units the professor may ask for; only for a course whose format has them', VALUE_OPTIONAL),
+            'unitcount' => new external_value(
+                PARAM_INT,
+                'Units of the template; only for a course whose format has them',
+                VALUE_OPTIONAL
+            ),
+            'maxunits' => new external_value(
+                PARAM_INT,
+                'Most units the professor may ask for; only for a course whose format has them',
+                VALUE_OPTIONAL
+            ),
             'sections' => new external_multiple_structure(
                 new external_single_structure([
                     'id'     => new external_value(PARAM_INT, 'Section ID'),
@@ -50,44 +56,77 @@ trait get_template_structure_schema {
                     'name'   => new external_value(PARAM_TEXT, 'Section name'),
                     'behavior' => new external_value(PARAM_ALPHA, 'Admin-configured section behavior (custom/keep)'),
                     'locked' => new external_value(PARAM_BOOL, 'Whether the section is kept as-is from the template'),
-                    'parent' => new external_value(PARAM_INT,
-                        'Number of the parent section; only for a course whose format has subsections', VALUE_OPTIONAL),
-                    'depth' => new external_value(PARAM_INT,
-                        'Levels under the top; only for a course whose format has subsections', VALUE_OPTIONAL),
+                    'parent' => new external_value(
+                        PARAM_INT,
+                        'Number of the parent section; only for a course whose format has subsections',
+                        VALUE_OPTIONAL
+                    ),
+                    'depth' => new external_value(
+                        PARAM_INT,
+                        'Levels under the top; only for a course whose format has subsections',
+                        VALUE_OPTIONAL
+                    ),
                     'activities' => new external_multiple_structure(
                         new external_single_structure([
-                            'id'       => new external_value(PARAM_ALPHANUMEXT,
-                                'Course module ID for a real activity; the instance uid for a virtual instance row'),
+                            'id'       => new external_value(
+                                PARAM_ALPHANUMEXT,
+                                'Course module ID for a real activity; the instance uid for a virtual instance row'
+                            ),
                             'name'     => new external_value(PARAM_TEXT, 'Activity name'),
-                            'modname'  => new external_value(PARAM_ALPHANUMEXT,
-                                'Module type name; may be empty on an instance row with no snapshot'),
+                            'modname'  => new external_value(
+                                PARAM_ALPHANUMEXT,
+                                'Module type name; may be empty on an instance row with no snapshot'
+                            ),
                             'purpose'  => new external_value(PARAM_ALPHA, 'Activity purpose category'),
-                            'typelabel' => new external_value(PARAM_TEXT,
-                                'Snapshotted type label for instance rows; empty for real activities'),
+                            'typelabel' => new external_value(
+                                PARAM_TEXT,
+                                'Snapshotted type label for instance rows; empty for real activities'
+                            ),
                             'iconhtml' => new external_value(PARAM_RAW, 'Rendered module icon HTML; may be empty'),
                             'locked'   => new external_value(PARAM_BOOL, 'Always true — activities from the template are reference-only'),
-                            'action'   => new external_value(PARAM_ALPHA,
-                                'Resolved admin action ("keep"); empty for virtual instance rows'),
+                            'action'   => new external_value(
+                                PARAM_ALPHA,
+                                'Resolved admin action ("keep"); empty for virtual instance rows'
+                            ),
                             'isinstance' => new external_value(PARAM_BOOL, 'Whether this is a virtual instance row'),
-                            'aigenerated' => new external_value(PARAM_BOOL,
-                                'Whether AI will generate this activity in the new course (drives the badge)'),
-                            'generationuid' => new external_value(PARAM_ALPHANUMEXT,
-                                'Id this row answers to in the generation progress events; empty when it is not generated'),
-                            'isspace' => new external_value(PARAM_BOOL,
-                                'Whether this is a space the teacher fills: a file resource or one of their own activities'),
-                            'spacekind' => new external_value(PARAM_ALPHA,
+                            'aigenerated' => new external_value(
+                                PARAM_BOOL,
+                                'Whether AI will generate this activity in the new course (drives the badge)'
+                            ),
+                            'generationuid' => new external_value(
+                                PARAM_ALPHANUMEXT,
+                                'Id this row answers to in the generation progress events; empty when it is not generated'
+                            ),
+                            'isspace' => new external_value(
+                                PARAM_BOOL,
+                                'Whether this is a space the teacher fills: a file resource or one of their own activities'
+                            ),
+                            'spacekind' => new external_value(
+                                PARAM_ALPHA,
                                 'What the teacher brings to the space: "file" or "activity"; empty when not a space',
-                                VALUE_DEFAULT, ''),
-                            'spaceinstruction' => new external_value(PARAM_TEXT,
-                                'What the space asks the teacher for; empty when none or not a space'),
-                            'spacerequired' => new external_value(PARAM_BOOL,
-                                'Whether the teacher must bring the file; false when not a space'),
-                            'spacecmid' => new external_value(PARAM_INT,
+                                VALUE_DEFAULT,
+                                ''
+                            ),
+                            'spaceinstruction' => new external_value(
+                                PARAM_TEXT,
+                                'What the space asks the teacher for; empty when none or not a space'
+                            ),
+                            'spacerequired' => new external_value(
+                                PARAM_BOOL,
+                                'Whether the teacher must bring the file; false when not a space'
+                            ),
+                            'spacecmid' => new external_value(
+                                PARAM_INT,
                                 'The course module id the file of a space goes under; 0 when it is the id of the row',
-                                VALUE_DEFAULT, 0),
-                            'spaceoptions' => new external_value(PARAM_RAW,
+                                VALUE_DEFAULT,
+                                0
+                            ),
+                            'spaceoptions' => new external_value(
+                                PARAM_RAW,
                                 'JSON list of the activities the teacher can add in a space: modname, title, instruction, iconhtml',
-                                VALUE_DEFAULT, ''),
+                                VALUE_DEFAULT,
+                                ''
+                            ),
                         ])
                     ),
                 ])

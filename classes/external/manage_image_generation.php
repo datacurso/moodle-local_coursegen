@@ -26,8 +26,6 @@ use local_coursegen\local\image_generation\activities;
 
 defined('MOODLE_INTERNAL') || die();
 
-require_once($CFG->libdir . '/externallib.php');
-
 /**
  * External function to manage image generation settings.
  *

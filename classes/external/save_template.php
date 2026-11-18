@@ -24,11 +24,11 @@
 
 namespace local_coursegen\external;
 
-use external_api;
-use external_function_parameters;
-use external_multiple_structure;
-use external_single_structure;
-use external_value;
+use core_external\external_api;
+use core_external\external_function_parameters;
+use core_external\external_multiple_structure;
+use core_external\external_single_structure;
+use core_external\external_value;
 use local_coursegen\local\models\template;
 use local_coursegen\local\service\template_persistence_service;
 use local_coursegen\local\text\plain_name;
@@ -36,13 +36,10 @@ use context_system;
 
 defined('MOODLE_INTERNAL') || die();
 
-require_once($CFG->libdir . '/externallib.php');
-
 /**
  * External API for creating or updating a course template with its section/activity config.
  */
 class save_template extends external_api {
-
     /**
      * Returns description of method parameters.
      *
@@ -50,27 +47,27 @@ class save_template extends external_api {
      */
     public static function execute_parameters() {
         return new external_function_parameters([
-            'id'             => new external_value(PARAM_INT,  'Template ID (0 for new)', VALUE_DEFAULT, 0),
+            'id'             => new external_value(PARAM_INT, 'Template ID (0 for new)', VALUE_DEFAULT, 0),
             'name'           => new external_value(PARAM_RAW, 'Template name, cleaned as plain text'),
-            'description'    => new external_value(PARAM_RAW,  'Template description', VALUE_DEFAULT, ''),
-            'courseid'       => new external_value(PARAM_INT,  'Base course ID'),
-            'maxsections'    => new external_value(PARAM_INT,  'Max sections', VALUE_DEFAULT, 0),
+            'description'    => new external_value(PARAM_RAW, 'Template description', VALUE_DEFAULT, ''),
+            'courseid'       => new external_value(PARAM_INT, 'Base course ID'),
+            'maxsections'    => new external_value(PARAM_INT, 'Max sections', VALUE_DEFAULT, 0),
             'nolimit'        => new external_value(PARAM_BOOL, 'No section limit', VALUE_DEFAULT, false),
-            'namingpattern'  => new external_value(PARAM_RAW,  'Section naming pattern', VALUE_DEFAULT, ''),
-            'namingstart'    => new external_value(PARAM_INT,  'Naming start number', VALUE_DEFAULT, 1),
+            'namingpattern'  => new external_value(PARAM_RAW, 'Section naming pattern', VALUE_DEFAULT, ''),
+            'namingstart'    => new external_value(PARAM_INT, 'Naming start number', VALUE_DEFAULT, 1),
             'sections'       => new external_multiple_structure(
                 new external_single_structure([
-                    'sectionid'  => new external_value(PARAM_INT,   'Section ID'),
-                    'sectionnum' => new external_value(PARAM_INT,   'Section number'),
+                    'sectionid'  => new external_value(PARAM_INT, 'Section ID'),
+                    'sectionnum' => new external_value(PARAM_INT, 'Section number'),
                     'behavior'   => new external_value(PARAM_ALPHA, 'Section behavior'),
                     'namingpattern' => new external_value(PARAM_TEXT, 'How the copies are named', VALUE_DEFAULT, ''),
                     'namingstart' => new external_value(PARAM_INT, 'Number of the first copy', VALUE_DEFAULT, 1),
                     'activities' => new external_multiple_structure(
                         new external_single_structure([
-                            'cmid'           => new external_value(PARAM_INT,  'Course module ID'),
+                            'cmid'           => new external_value(PARAM_INT, 'Course module ID'),
                             'action'         => new external_value(PARAM_ALPHA, 'Activity action'),
                             'useasreference' => new external_value(PARAM_BOOL, 'Use as reference'),
-                            'prompt'         => new external_value(PARAM_RAW,  'Activity prompt', VALUE_DEFAULT, ''),
+                            'prompt'         => new external_value(PARAM_RAW, 'Activity prompt', VALUE_DEFAULT, ''),
                             'templatescope'  => new external_value(
                                 PARAM_ALPHA,
                                 'Template scope (course or section); only meaningful when action=template',
@@ -118,7 +115,10 @@ class save_template extends external_api {
                             'required'    => new external_value(PARAM_BOOL, 'Whether the professor must provide it', VALUE_DEFAULT, true),
                             'instruction' => new external_value(PARAM_RAW, 'What the professor has to provide', VALUE_DEFAULT, ''),
                             'options'     => new external_value(
-                                PARAM_RAW, 'JSON list of the activities the teacher can add here: {modname, instruction}', VALUE_DEFAULT, ''
+                                PARAM_RAW,
+                                'JSON list of the activities the teacher can add here: {modname, instruction}',
+                                VALUE_DEFAULT,
+                                ''
                             ),
                             'aftercmid' => new external_value(
                                 PARAM_INT,
@@ -206,13 +206,13 @@ class save_template extends external_api {
             $maxsections = $params['maxsections'];
         }
 
-        $tpl->set('name',          $params['name']);
-        $tpl->set('description',   $params['description']);
-        $tpl->set('courseid',      $params['courseid']);
-        $tpl->set('maxsections',   $maxsections);
-        $tpl->set('nolimit',       (int) $params['nolimit']);
+        $tpl->set('name', $params['name']);
+        $tpl->set('description', $params['description']);
+        $tpl->set('courseid', $params['courseid']);
+        $tpl->set('maxsections', $maxsections);
+        $tpl->set('nolimit', (int) $params['nolimit']);
         $tpl->set('namingpattern', $params['namingpattern']);
-        $tpl->set('namingstart',   $params['namingstart']);
+        $tpl->set('namingstart', $params['namingstart']);
 
         if ($params['id'] > 0) {
             $tpl->update();
@@ -238,7 +238,7 @@ class save_template extends external_api {
      */
     public static function execute_returns() {
         return new external_single_structure([
-            'id'   => new external_value(PARAM_INT,  'Template ID'),
+            'id'   => new external_value(PARAM_INT, 'Template ID'),
             'name' => new external_value(PARAM_TEXT, 'Template name'),
         ]);
     }

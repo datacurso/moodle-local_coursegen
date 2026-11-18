@@ -75,10 +75,19 @@ class assign_preview extends preview_base {
         }
         if ($activity) {
             $context = $this->context();
-            $text = file_rewrite_pluginfile_urls((string) $instance->activity, 'pluginfile.php', $context->id,
-                'mod_assign', 'activity', 0);
-            $description .= format_text($text, (int) ($instance->activityformat ?? FORMAT_HTML),
-                ['context' => $context]);
+            $text = file_rewrite_pluginfile_urls(
+                (string) $instance->activity,
+                'pluginfile.php',
+                $context->id,
+                'mod_assign',
+                'activity',
+                0
+            );
+            $description .= format_text(
+                $text,
+                (int) ($instance->activityformat ?? FORMAT_HTML),
+                ['context' => $context]
+            );
         }
         $description .= $OUTPUT->box_end();
         return $description;

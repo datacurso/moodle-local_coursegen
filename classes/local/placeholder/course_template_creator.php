@@ -144,7 +144,7 @@ final class course_template_creator {
         global $DB;
 
         $course = $DB->get_record('course', ['id' => $courseid]);
-        if (!$course || $courseid === SITEID) {
+        if (!$course || $courseid === (int) SITEID) {
             throw new template_creation_exception(
                 'The course ' . $courseid . ' does not exist.',
                 template_creation_exception::COURSE_NOT_FOUND

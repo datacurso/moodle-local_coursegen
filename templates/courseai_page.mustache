@@ -968,7 +968,9 @@
                   </div>
                   <p class="pop-note">{{#str}}courseai_guidelines_note_one, local_coursegen{{/str}}</p>
                 </div>
-                <ul class="pop-list" id="tplGuidelineList" role="listbox" aria-label="{{#str}}courseai_guidelines_list_label, local_coursegen{{/str}}"></ul>
+                <div class="pop-list-wrap" data-region="guideline-list-template">
+                  <ul class="pop-list" id="tplGuidelineList" role="listbox" aria-label="{{#str}}courseai_guidelines_list_label, local_coursegen{{/str}}"></ul>
+                </div>
               </div>
             </div>
 
@@ -1251,7 +1253,7 @@
             </div>
           </div>
 
-          <ul class="alert alert-warning pl-5" id="reviewWarnings" role="status" hidden></ul>
+          <ul class="alert alert-warning pl-5" id="reviewWarnings" aria-live="polite" hidden></ul>
 
           {{#importexistingenabled}}
           {{! Destination of the generated content: a new course (default) or an existing one (ticket #9539). }}

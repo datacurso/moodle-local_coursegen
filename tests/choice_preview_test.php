@@ -63,6 +63,8 @@ final class choice_preview_test extends \advanced_testcase {
      */
     public function test_every_option_of_the_tree_is_listed(): void {
         $this->resetAfterTest(true);
+        // The options are drawn for a user who may choose, which the preview page always is.
+        $this->setAdminUser();
         $this->prepare_preview_page();
         $parameters = $this->parameters_with_options(['Generated one', 'Generated one', 'Generated two']);
 

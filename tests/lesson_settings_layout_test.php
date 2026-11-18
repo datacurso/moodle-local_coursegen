@@ -47,6 +47,8 @@ final class lesson_settings_layout_test extends \advanced_testcase {
         require_once($CFG->dirroot . '/mod/lesson/pagetypes/truefalse.php');
 
         $this->resetAfterTest();
+        // A draft area for the media file needs a user, as the lesson module does.
+        $this->setAdminUser();
         $settings = new lesson_settings((object) ['id' => 0], []);
         $method = new ReflectionMethod($settings, 'build_page_properties');
         $method->setAccessible(true);

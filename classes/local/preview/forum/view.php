@@ -95,10 +95,12 @@ class view {
         // Columns the entity reads that backup does not carry.
         $record->course = $record->course ?? $this->course->id;
         $record->grade_forum_notify = $record->grade_forum_notify ?? 0;
-        foreach (['assessed', 'assesstimestart', 'assesstimefinish', 'scale', 'grade_forum', 'maxbytes', 'maxattachments',
+        foreach (
+            ['assessed', 'assesstimestart', 'assesstimefinish', 'scale', 'grade_forum', 'maxbytes', 'maxattachments',
             'forcesubscribe', 'trackingtype', 'rsstype', 'rssarticles', 'timemodified', 'warnafter', 'blockafter',
             'blockperiod', 'completiondiscussions', 'completionreplies', 'completionposts', 'displaywordcount',
-            'lockdiscussionafter', 'duedate', 'cutoffdate'] as $column) {
+            'lockdiscussionafter', 'duedate', 'cutoffdate'] as $column
+        ) {
             $record->$column = $record->$column ?? 0;
         }
         $record->type = $record->type ?? 'general';

@@ -217,11 +217,12 @@ final class generated_files_test extends \advanced_testcase {
         $source = new generated_file_source();
         $reference = new file_reference(file_reference::KIND_PLACEHOLDER, '/forum-1a2b3c4d-1.png');
 
-        $found = generated_files_scope::run([$this->entry()], static function () use ($source, $reference) {
-            return $source->find($reference);
+        // The stored copy is removed when the scope ends, so what it holds is read inside the scope.
+        $content = generated_files_scope::run([$this->entry()], static function () use ($source, $reference) {
+            return $source->find($reference)->get_content();
         }, $cache);
 
-        $this->assertSame('PNGDATA', $found->get_content());
+        $this->assertSame('PNGDATA', $content);
     }
 
     /**
@@ -271,11 +272,12 @@ final class generated_files_test extends \advanced_testcase {
         $entry = $this->entry('PNGDATA', 'my pic.png');
         $reference = new file_reference(file_reference::KIND_PLACEHOLDER, '/my%20pic.png');
 
-        $found = generated_files_scope::run([$entry], static function () use ($source, $reference) {
-            return $source->find($reference);
+        // The stored copy is removed when the scope ends, so what it holds is read inside the scope.
+        $content = generated_files_scope::run([$entry], static function () use ($source, $reference) {
+            return $source->find($reference)->get_content();
         }, $cache);
 
-        $this->assertSame('PNGDATA', $found->get_content());
+        $this->assertSame('PNGDATA', $content);
         $this->assertCount(1, $calls);
     }
 }

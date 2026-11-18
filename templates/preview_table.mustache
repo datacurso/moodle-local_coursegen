@@ -23,6 +23,21 @@
     Context variables required for this template:
     * classes - string.
     * rows - array of {first, second}, each a table row's header and value cell.
+
+    Example context (json):
+    {
+        "classes": "generaltable",
+        "rows": [
+            {
+                "first": "Name",
+                "second": "Report"
+            },
+            {
+                "first": "Size",
+                "second": "1.2 MB"
+            }
+        ]
+    }
 }}
 <table class="{{classes}}">
     {{#rows}}

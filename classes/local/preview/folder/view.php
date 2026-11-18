@@ -123,7 +123,7 @@ class view {
             $foldertree->dir['dirname'] = format_string($cm->name, true, ['context' => $context]);
         }
 
-        $data['id'] = 'folder_tree'. ($treecounter++);
+        $data['id'] = 'folder_tree' . ($treecounter++);
         $data['showexpanded'] = !empty($foldertree->folder->showexpanded);
         $data['dir'] = $this->renderable_tree_elements($foldertree, ['files' => [], 'subdirs' => [$foldertree->dir]]);
 
@@ -183,8 +183,15 @@ class view {
             $filename = $file->get_filename();
             $filenamedisplay = clean_filename($filename);
 
-            $url = moodle_url::make_pluginfile_url($file->get_contextid(), $file->get_component(),
-                $file->get_filearea(), $file->get_itemid(), $file->get_filepath(), $filename, false);
+            $url = moodle_url::make_pluginfile_url(
+                $file->get_contextid(),
+                $file->get_component(),
+                $file->get_filearea(),
+                $file->get_itemid(),
+                $file->get_filepath(),
+                $filename,
+                false
+            );
             if (file_extension_in_typegroup($filename, 'web_image')) {
                 $imagesrc = $url->out(false, ['preview' => 'tinyicon', 'oid' => $file->get_timemodified()]);
                 $image = $OUTPUT->render_from_template('local_coursegen/preview_image', ['src' => $imagesrc]);

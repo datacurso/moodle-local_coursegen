@@ -126,7 +126,6 @@ trait workshop_plan_orchestrator {
                     $task->completed = null;
                     $phase->tasks['switchtonextphase'] = $task;
                 }
-
             } else {
                 $action = new stdClass();
                 $action->type = 'switchphase';

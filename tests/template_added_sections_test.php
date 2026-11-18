@@ -14,7 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-
 namespace local_coursegen;
 
 use local_coursegen\local\models\course_session;
@@ -22,6 +21,10 @@ use local_coursegen\local\models\template;
 use local_coursegen\local\service\create_course_service;
 use local_coursegen\local\service\template_export_service;
 use local_coursegen\local\service\template_section_look;
+
+defined('MOODLE_INTERNAL') || die();
+
+require_once(__DIR__ . '/flexsections_required_trait.php');
 
 /**
  * The sections the AI service appends after a template's own ones hang under their parent.
@@ -36,12 +39,15 @@ use local_coursegen\local\service\template_section_look;
  * @runTestsInSeparateProcesses
  */
 final class template_added_sections_test extends \advanced_testcase {
+    use flexsections_required_trait;
+
     /**
      * A flexsections template with an introduction (1) and a closing section (2).
      *
      * @return \stdClass
      */
     private function create_template_course(): \stdClass {
+        $this->require_flexsections();
         $course = $this->getDataGenerator()->create_course(['format' => 'flexsections', 'numsections' => 0]);
         $format = course_get_format($course);
         foreach ([1 => 'Intro', 2 => 'Closing'] as $number => $name) {

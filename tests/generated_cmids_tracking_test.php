@@ -37,6 +37,7 @@ final class generated_cmids_tracking_test extends \advanced_testcase {
      *
      * @param int $payloadcmid
      * @param string $name
+     * @param string $uid The uid the result answers to, empty for none.
      * @return array
      */
     private function label_result(int $payloadcmid, string $name, string $uid = ''): array {

@@ -31,7 +31,6 @@ use stdClass;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 trait wiki_content {
-
     /**
      * mod/wiki/locallib.php wiki_print_page_content(), rendering from the latest version.
      *
@@ -66,7 +65,7 @@ trait wiki_content {
         $cachedcontent = $page->cachedcontent ?? '';
         $cachedcontent = (string) $cachedcontent;
         $html = file_rewrite_pluginfile_urls($cachedcontent, 'pluginfile.php', $context->id, 'mod_wiki', 'attachments', $subwikiid);
-        $html = format_text($html, FORMAT_HTML, array('overflowdiv' => true, 'allowid' => true));
+        $html = format_text($html, FORMAT_HTML, ['overflowdiv' => true, 'allowid' => true]);
         $out .= $OUTPUT->box($html);
 
         // The page's tags are read by id from the site's tag tables; a page
@@ -89,13 +88,13 @@ trait wiki_content {
         }
         $newcontent = $version->content;
 
-        $options = array('swid' => $page->subwikiid, 'pageid' => $page->id);
+        $options = ['swid' => $page->subwikiid, 'pageid' => $page->id];
         $parseroutput = $this->wiki_parse_content($version->contentformat, $newcontent, $options);
         $page = clone $page;
         $page->cachedcontent = $parseroutput['toc'] . $parseroutput['parsed_text'];
         $page->timerendered = time();
 
-        return array('page' => $page, 'sections' => $parseroutput['repeated_sections'], 'version' => $version->version);
+        return ['page' => $page, 'sections' => $parseroutput['repeated_sections'], 'version' => $version->version];
     }
 
     /**
@@ -106,33 +105,33 @@ trait wiki_content {
      * @param array $options
      * @return array
      */
-    protected function wiki_parse_content($markup, $pagecontent, $options = array()) {
+    protected function wiki_parse_content($markup, $pagecontent, $options = []) {
         $subwiki = $this->subwiki();
         $context = $this->context;
 
-        $parser_options = array(
+        $parseroptions = [
             'link_callback' => '/local/coursegen/classes/local/preview/wiki/links.php:local_coursegen_wiki_preview_link',
-            'link_callback_args' => array('swid' => $options['swid']),
+            'link_callback_args' => ['swid' => $options['swid']],
             'table_callback' => '/mod/wiki/locallib.php:wiki_parser_table',
             'real_path_callback' => '/mod/wiki/locallib.php:wiki_parser_real_path',
-            'real_path_callback_args' => array(
+            'real_path_callback_args' => [
                 'context' => $context,
                 'component' => 'mod_wiki',
                 'filearea' => 'attachments',
-                'subwikiid'=> $subwiki->id,
-                'pageid' => $options['pageid']
-            ),
+                'subwikiid' => $subwiki->id,
+                'pageid' => $options['pageid'],
+            ],
             'pageid' => $options['pageid'],
             // The [edit] link beside each section opens the real page's
             // editor; the page is drawn the way mod_wiki's pretty view draws
             // it, without them.
             'pretty_print' => true,
-            'printable' => (isset($options['printable']) && $options['printable'])
-        );
+            'printable' => (isset($options['printable']) && $options['printable']),
+        ];
 
         self::$parsing = $this;
         try {
-            return \wiki_parser_proxy::parse($pagecontent, $markup, $parser_options);
+            return \wiki_parser_proxy::parse($pagecontent, $markup, $parseroptions);
         } finally {
             self::$parsing = null;
         }
@@ -171,8 +170,8 @@ trait wiki_content {
         if (is_object($link)) {
             $title = $link->title;
         }
-        return array('content' => $title, 'url' => '#', 'new' => true,
-            'link_info' => array('link' => $title, 'new' => true, 'pageid' => 0));
+        return ['content' => $title, 'url' => '#', 'new' => true,
+            'link_info' => ['link' => $title, 'new' => true, 'pageid' => 0]];
     }
 
     /**
@@ -186,8 +185,8 @@ trait wiki_content {
         $urls = $view->urls;
         $index = $view->index_of($link);
         $url = $urls($index, [])->out(false);
-        $parsedlink = array('content' => $link->title, 'url' => $url,
-            'new' => false, 'link_info' => array('link' => $link->title, 'pageid' => $link->id, 'new' => false));
+        $parsedlink = ['content' => $link->title, 'url' => $url,
+            'new' => false, 'link_info' => ['link' => $link->title, 'pageid' => $link->id, 'new' => false]];
 
         $version = $view->wiki_get_current_version($link->id);
         if (!$version || $version->version == 0) {
@@ -212,8 +211,8 @@ trait wiki_content {
         $urls = $view->urls;
         $index = $view->index_of($page);
         $url = $urls($index, [])->out(false);
-        $parsedlink = array('content' => $link, 'url' => $url, 'new' => false,
-            'link_info' => array('link' => $link, 'pageid' => $page->id, 'new' => false));
+        $parsedlink = ['content' => $link, 'url' => $url, 'new' => false,
+            'link_info' => ['link' => $link, 'pageid' => $page->id, 'new' => false]];
 
         $version = $view->wiki_get_current_version($page->id);
         if (!$version || $version->version == 0) {
@@ -253,8 +252,8 @@ trait wiki_content {
         $urls = $view->urls;
         $here = $urls($index, []);
         $url = $here->out(false);
-        return array('content' => $link, 'url' => $url, 'new' => true,
-            'link_info' => array('link' => $link, 'new' => true, 'pageid' => 0));
+        return ['content' => $link, 'url' => $url, 'new' => true,
+            'link_info' => ['link' => $link, 'new' => true, 'pageid' => 0]];
     }
 
 

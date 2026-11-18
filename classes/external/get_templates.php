@@ -24,23 +24,20 @@
 
 namespace local_coursegen\external;
 
-use external_api;
-use external_function_parameters;
-use external_multiple_structure;
-use external_single_structure;
-use external_value;
+use core_external\external_api;
+use core_external\external_function_parameters;
+use core_external\external_multiple_structure;
+use core_external\external_single_structure;
+use core_external\external_value;
 use local_coursegen\local\models\template;
 use context_system;
 
 defined('MOODLE_INTERNAL') || die();
 
-require_once($CFG->libdir . '/externallib.php');
-
 /**
  * External API for fetching all course templates.
  */
 class get_templates extends external_api {
-
     /**
      * Returns description of method parameters.
      *
@@ -87,13 +84,13 @@ class get_templates extends external_api {
     public static function execute_returns() {
         return new external_multiple_structure(
             new external_single_structure([
-                'id'             => new external_value(PARAM_INT,  'Template ID'),
+                'id'             => new external_value(PARAM_INT, 'Template ID'),
                 'name'           => new external_value(PARAM_TEXT, 'Template name'),
-                'description'    => new external_value(PARAM_RAW,  'Template description'),
-                'courseid'       => new external_value(PARAM_INT,  'Base course ID'),
+                'description'    => new external_value(PARAM_RAW, 'Template description'),
+                'courseid'       => new external_value(PARAM_INT, 'Base course ID'),
                 'coursefullname' => new external_value(PARAM_TEXT, 'Base course name'),
-                'timecreated'    => new external_value(PARAM_INT,  'Time created'),
-                'timemodified'   => new external_value(PARAM_INT,  'Time modified'),
+                'timecreated'    => new external_value(PARAM_INT, 'Time created'),
+                'timemodified'   => new external_value(PARAM_INT, 'Time modified'),
             ])
         );
     }

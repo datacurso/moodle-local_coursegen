@@ -87,8 +87,15 @@ class view {
      * @param stdClass $user The reader.
      * @param json_file_storage|null $files The package's files, for the page a preview opens.
      */
-    public function __construct(stdClass $scorm, stdClass $cm, context $context, json_store $store, moodle_url $here,
-            stdClass $user, ?json_file_storage $files = null) {
+    public function __construct(
+        stdClass $scorm,
+        stdClass $cm,
+        context $context,
+        json_store $store,
+        moodle_url $here,
+        stdClass $user,
+        ?json_file_storage $files = null
+    ) {
         $this->files = $files;
         $this->scorm = $scorm;
         $this->cm = $cm;
@@ -118,14 +125,16 @@ class view {
         $output = '';
 
         $attemptstatus = '';
-        if ($scorm->displayattemptstatus == SCORM_DISPLAY_ATTEMPTSTATUS_ALL ||
-                 $scorm->displayattemptstatus == SCORM_DISPLAY_ATTEMPTSTATUS_ENTRY) {
+        if (
+            $scorm->displayattemptstatus == SCORM_DISPLAY_ATTEMPTSTATUS_ALL ||
+                 $scorm->displayattemptstatus == SCORM_DISPLAY_ATTEMPTSTATUS_ENTRY
+        ) {
             $attemptstatus = $this->scorm_get_attempt_status();
         }
         $output .= $OUTPUT->box($this->format_module_intro(), '', 'intro');
 
         // Check if SCORM available. No need to display warnings because activity dates are displayed at the top of the page.
-        list($available, $warnings) = scorm_get_availability_status($scorm);
+        [$available, $warnings] = scorm_get_availability_status($scorm);
         if ($available) {
             $output .= $this->scorm_print_launch();
         }

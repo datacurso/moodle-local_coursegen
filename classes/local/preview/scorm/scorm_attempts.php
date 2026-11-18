@@ -55,7 +55,7 @@ trait scorm_attempts {
         $calculatedgrade = $this->scorm_grade_user();
         if ($scorm->grademethod !== GRADESCOES && !empty($scorm->maxgrade)) {
             $calculatedgrade = $calculatedgrade / $scorm->maxgrade;
-            $calculatedgrade = number_format($calculatedgrade * 100, 0) .'%';
+            $calculatedgrade = number_format($calculatedgrade * 100, 0) . '%';
         }
 
         $gradereported = get_string('none');
@@ -127,8 +127,11 @@ trait scorm_attempts {
      * @return array|int
      */
     protected function scorm_get_attempt_count(bool $returnobjects = false) {
-        $attempts = $this->store->get_records('scorm_attempt',
-            ['userid' => $this->user->id, 'scormid' => $this->scorm->id], 'attempt');
+        $attempts = $this->store->get_records(
+            'scorm_attempt',
+            ['userid' => $this->user->id, 'scormid' => $this->scorm->id],
+            'attempt'
+        );
         if ($returnobjects) {
             $found = [];
             foreach ($attempts as $attempt) {

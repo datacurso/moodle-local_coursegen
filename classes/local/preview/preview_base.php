@@ -256,5 +256,4 @@ abstract class preview_base extends activity_preview {
         global $DB;
         return $DB->get_record($table, $conditions);
     }
-
 }

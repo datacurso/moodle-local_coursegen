@@ -83,6 +83,8 @@ final class service_result_previews_test extends \advanced_testcase {
      */
     public function test_each_option_of_the_choice_is_shown(): void {
         $this->resetAfterTest(true);
+        // The options are drawn for a user who may choose, which the preview page always is.
+        $this->setAdminUser();
         $this->prepare_preview_page();
         $parameters = $this->service_activity('choice')['parameters'];
 

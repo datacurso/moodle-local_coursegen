@@ -161,25 +161,33 @@ class view {
         $pivotkey = 'concept';
         [$allentries, $count] = $this->glossary_get_entries_by_letter($hook, $offset, $entriesbypage);
 
-        /// printing the entries
+        // printing the entries
         $entriesshown = 0;
         $currentpivot = '';
         $paging = null;
         $fmtoptions = ['context' => $this->context];
 
         if ($allentries) {
-
-            //Decide if we must show the ALL link in the pagebar
+            // Decide if we must show the ALL link in the pagebar
             $specialtext = '';
             if ($this->glossary->showall) {
                 $specialtext = get_string('allentries', 'glossary');
             }
 
-            //Build paging bar
+            // Build paging bar
             $baseurl = $this->url(['mode' => $mode, 'hook' => $hook, 'sortkey' => $sortkey, 'sortorder' => $sortorder,
                 'fullsearch' => 0]);
-            $paging = self::glossary_get_paging_bar($count, $page, $entriesbypage, $baseurl . '&amp;',
-                9999, 10, '&nbsp;&nbsp;', $specialtext, -1);
+            $paging = self::glossary_get_paging_bar(
+                $count,
+                $page,
+                $entriesbypage,
+                $baseurl . '&amp;',
+                9999,
+                10,
+                '&nbsp;&nbsp;',
+                $specialtext,
+                -1
+            );
 
             $out .= $OUTPUT->render_from_template('local_coursegen/preview_container', [
                 'classes' => 'paging',
@@ -187,7 +195,6 @@ class view {
             ]);
 
             foreach ($allentries as $entry) {
-
                 // Setting the pivot for the current entry
                 if ($printpivot) {
                     $pivot = $entry->{$pivotkey};
@@ -213,7 +220,7 @@ class view {
                     }
                 }
 
-                /// and finally print the entry.
+                // and finally print the entry.
                 $out .= $this->glossary_print_entry($entry, $mode, $hook, 1, $this->glossary->displayformat);
                 $entriesshown++;
             }

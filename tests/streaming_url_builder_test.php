@@ -132,6 +132,6 @@ final class streaming_url_builder_test extends \basic_testcase {
     public function test_relay_url_rejects_an_unknown_stream_type(): void {
         $this->expectException(\coding_exception::class);
 
-        streaming_url_builder::relay('template', 'thread-1');
+        streaming_url_builder::relay('notastream', 'thread-1');
     }
 }

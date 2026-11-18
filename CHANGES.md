@@ -14,6 +14,57 @@ All notable changes to this project will be documented in this file. Each change
 - **The progress of a course made from a template is shown again**  
   The request that follows a template generation did not say which plugin sends it and its build, so the service answered that the plugin needs an update and the page lost the connection. It now identifies the plugin like every other call.
 
+## [2.0.16] - 2026111721
+
+### Fixed
+- **Links in the texts are resolved all-or-nothing without relying on a database rollback**  
+  Every text is now resolved in memory first and stored only when none of its links failed, so a link that cannot be resolved leaves
+  every text as it was whatever the database or the transaction nesting in use.
+
+## [2.0.16] - 2026111720
+
+### Fixed
+- **Activities are created whatever the page that asks for them**  
+  The module form is now built for the course of the new activity even when the page that runs the creation belongs to the site, so the section it needs is found.
+- **Quizzes, assignments, feedback and workshops are created from an incomplete AI result**  
+  The editor fields a module form leaves unset (the feedback texts of a quiz, the intro of an assignment) now start empty with the HTML format and an empty draft area, the grade category of a workshop starts with its first option as the form shows it, and a feedback question is saved as a new item.
+- **The teacher's file frame keeps working in the text of a page**  
+  A frame whose address is the placeholder of the activity's own files is no longer removed when the text of the AI result is cleaned; a frame that climbs out of those files still is.
+- **A file that is already stored no longer needs the AI service**  
+  The files generated for an activity are read from the stored copy without opening a connection to the AI service, which is only reached when a file has to be downloaded.
+
+## [2.0.16] - 2026111719
+
+### Fixed
+- **Creating an activity no longer stops while its module form is built**  
+  The form of each module is now built for the section it belongs to, and its default values are read without exporting a form that was never submitted, so activities of every module type are created again.
+- **The template structure screen works without the removed legacy library file**  
+  The structure of a template is described with the core_external classes instead of the global names that lib/externallib.php used to provide, so the screen loads on a site that no longer includes that file.
+
+## [2.0.16] - 2026111718
+
+### Fixed
+- **A template from a site without the grid format no longer fails**  
+  Reading the section pictures of a template queried the table of the grid format even when the site does not have it. It now looks for that table first, so a template of any course format is read.
+- **New activities are created with the defaults of their module form**  
+  A module made from an AI result now takes every field the payload leaves out from the form of its module, as saving the form untouched would, so forums, lessons, glossaries, quizzes and workshops no longer stop on a missing field. A feedback label question is also saved with its editor context.
+- **Blocks of a template keep their files, and the teacher's file frame is kept**  
+  The files of a copied block (the images of an HTML block, for one) are copied into the new block, and the frame that shows the file the teacher brings in a template page is no longer removed when the text of the AI result is cleaned.
+- **The choice and lesson previews open with incomplete data**  
+  The previews take the default of the showing options and of the page layout when the exported activity does not carry them.
+
+## [2.0.16] - 2026111717
+
+### Fixed
+- **The guideline list of "Create from template" is shown again**  
+  The popover of the guidelines in the template mode opened empty after the lines were merged, because it gave the shared list handlers the bare list instead of the region they render into. It now has its own region, and choosing and previewing a guideline work as in free mode.
+- **The creation tests run on a plain Moodle site**  
+  The tests that need the Datacurso AI provider or the flexsections format skip themselves when it is not installed, the web services use the core_external classes instead of lib/externallib.php, and the stale tests and strings left over from the merge of both lines were aligned with the code that is current.
+- **Fewer failures on MariaDB and on modules without every field**  
+  The site course is recognised whatever the type its id has, a module created from an AI result gets the form fields Moodle reads unguarded, and a lesson, a feedback question, a space and a generated file take the paths the module code expects.
+- **The coding style and documentation checks pass**  
+  The Moodle coding style fixes, the phpdoc parameter lists and the example context of every template were completed, and the HTML the template lint reported was corrected.
+
 ## [2.0.16] - 2026111716
 
 ### Added

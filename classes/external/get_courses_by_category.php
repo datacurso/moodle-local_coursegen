@@ -26,20 +26,17 @@ namespace local_coursegen\external;
 
 defined('MOODLE_INTERNAL') || die();
 
-require_once($CFG->libdir . '/externallib.php');
-
-use external_api;
-use external_function_parameters;
-use external_multiple_structure;
-use external_single_structure;
-use external_value;
+use core_external\external_api;
+use core_external\external_function_parameters;
+use core_external\external_multiple_structure;
+use core_external\external_single_structure;
+use core_external\external_value;
 use local_coursegen\local\service\access_guard;
 
 /**
  * External function to get courses by category.
  */
 class get_courses_by_category extends external_api {
-
     /**
      * Parameter definition.
      *
@@ -92,7 +89,7 @@ class get_courses_by_category extends external_api {
             }
         }
 
-        list($insql, $inparams) = $DB->get_in_or_equal($catids, SQL_PARAMS_NAMED);
+        [$insql, $inparams] = $DB->get_in_or_equal($catids, SQL_PARAMS_NAMED);
         $sql = "SELECT c.id, c.fullname, c.shortname, c.category
                   FROM {course} c
                  WHERE c.category {$insql} AND c.id != :siteid";

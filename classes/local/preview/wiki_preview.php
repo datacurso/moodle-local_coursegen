@@ -138,7 +138,7 @@ class wiki_preview extends preview_base {
             'inputname' => 'searchstring',
             'query' => '',
             'searchstring' => $searchstring,
-            'extraclasses' => 'mt-2'
+            'extraclasses' => 'mt-2',
         ];
         return $OUTPUT->render_from_template('core/search_input', $data);
     }

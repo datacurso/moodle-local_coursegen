@@ -37,6 +37,7 @@ final class activity_preview_cm_name_test extends \advanced_testcase {
      */
     public function test_the_course_module_carries_the_generated_name(string $modname, string $name): void {
         $this->resetAfterTest(true);
+        $this->setAdminUser();
         $cm = $this->template_cm($modname);
         $this->assertSame('Molde - Lección estándar', $cm->name);
 
@@ -66,6 +67,7 @@ final class activity_preview_cm_name_test extends \advanced_testcase {
      */
     public function test_an_unnamed_activity_leaves_the_course_module_name(): void {
         $this->resetAfterTest(true);
+        $this->setAdminUser();
         $cm = $this->template_cm('page');
 
         $preview = preview_factory::for_activity('page', []);

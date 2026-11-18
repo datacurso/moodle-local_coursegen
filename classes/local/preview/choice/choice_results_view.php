@@ -54,9 +54,11 @@ trait choice_results_view {
             }
         }
 
-        if ($choice->showresults == self::CHOICE_SHOWRESULTS_ALWAYS or
-           ($choice->showresults == self::CHOICE_SHOWRESULTS_AFTER_ANSWER and !empty($current)) or
-           ($choice->showresults == self::CHOICE_SHOWRESULTS_AFTER_CLOSE and !$choiceopen)) {
+        if (
+            $choice->showresults == self::CHOICE_SHOWRESULTS_ALWAYS ||
+            ($choice->showresults == self::CHOICE_SHOWRESULTS_AFTER_ANSWER && !empty($current)) ||
+            ($choice->showresults == self::CHOICE_SHOWRESULTS_AFTER_CLOSE && !$choiceopen)
+        ) {
             return true;
         }
         return false;
@@ -83,13 +85,16 @@ trait choice_results_view {
             $choice->maxanswers[0] = 0;
         }
 
-        //overwrite options value;
-        $display->options = array();
+        // overwrite options value;
+        $display->options = [];
         $allusers = [];
         foreach ($choice->option as $optionid => $optiontext) {
-            $display->options[$optionid] = new stdClass;
-            $display->options[$optionid]->text = format_string($optiontext, true,
-                ['context' => $this->context]);
+            $display->options[$optionid] = new stdClass();
+            $display->options[$optionid]->text = format_string(
+                $optiontext,
+                true,
+                ['context' => $this->context]
+            );
             $display->options[$optionid]->maxanswer = $choice->maxanswers[$optionid];
 
             if (array_key_exists($optionid, $allresponses)) {
@@ -105,7 +110,7 @@ trait choice_results_view {
         $display->numberofuser = count($uniqueusers);
         $context = $this->context;
         $display->viewresponsecapability = has_capability('mod/choice:readresponses', $context);
-        $display->deleterepsonsecapability = has_capability('mod/choice:deleteresponses',$context);
+        $display->deleterepsonsecapability = has_capability('mod/choice:deleteresponses', $context);
         $display->fullnamecapability = has_capability('moodle/site:viewfullnames', $context);
 
         if (empty($allresponses)) {
@@ -125,13 +130,15 @@ trait choice_results_view {
      * @return string
      */
     protected function display_result($choices, $forcepublish = false) {
-        if (empty($forcepublish)) { //allow the publish setting to be overridden
+        // Allow the publish setting to be overridden.
+        if (empty($forcepublish)) {
             $forcepublish = $choices->publish;
         }
 
         $displaylayout = $choices->display;
 
-        if ($forcepublish) {  //CHOICE_PUBLISH_NAMES
+        // CHOICE_PUBLISH_NAMES.
+        if ($forcepublish) {
             return $this->display_publish_name_vertical($choices);
         } else {
             return $this->display_publish_anonymous($choices, $displaylayout);
@@ -155,7 +162,7 @@ trait choice_results_view {
             if (!empty($option->user)) {
                 $numberofuser = count($option->user);
             }
-            if($choices->numberofuser > 0) {
+            if ($choices->numberofuser > 0) {
                 $percentageamount = ((float)$numberofuser / (float)$choices->numberofuser) * 100.0;
             }
             $data['labels'][$count] = $option->text;

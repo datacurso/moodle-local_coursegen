@@ -32,7 +32,6 @@ require_once($CFG->libdir . '/formslib.php');
  * Form for filtering courses in the template wizard.
  */
 class course_filter_form extends \moodleform {
-
     /**
      * Form definition.
      */

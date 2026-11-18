@@ -23,6 +23,19 @@
     Context variables required for this template:
     * classes - string.
     * paragraphs - array of {text}.
+
+    Example context (json):
+    {
+        "classes": "urlworkaround",
+        "paragraphs": [
+            {
+                "text": "First paragraph."
+            },
+            {
+                "text": "Second paragraph."
+            }
+        ]
+    }
 }}
 {{#paragraphs}}
 <p class="{{classes}}">{{{text}}}</p>

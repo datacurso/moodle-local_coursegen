@@ -38,11 +38,9 @@ export default {
         menuFromTemplate: '[data-action="local_coursegen/template/menu-from-template"]',
         menuBack: '[data-action="local_coursegen/template/menu-back"]',
         menuAddSpace: '[data-action="local_coursegen/template/menu-add-space"]',
-        menuTeacherSpace: '[data-action="local_coursegen/template/menu-teacher-space"]',
         menuAny: '[data-action="local_coursegen/template/menu-from-template"], ' +
             '[data-action="local_coursegen/template/menu-back"], ' +
-            '[data-action="local_coursegen/template/menu-add-space"], ' +
-            '[data-action="local_coursegen/template/menu-teacher-space"]',
+            '[data-action="local_coursegen/template/menu-add-space"]',
         pickTemplateSource: '[data-action="local_coursegen/template/pick-template-source"][data-source-cmid]',
         spaceEdit: '[data-action="local_coursegen/template/space-edit"]',
         spaceRemove: '[data-action="local_coursegen/template/space-remove"]',

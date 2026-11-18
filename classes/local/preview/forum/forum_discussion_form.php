@@ -46,7 +46,7 @@ trait forum_discussion_form {
         $post = (object) [
             'course' => $forum->get_course_id(),
             'forum' => $forum->get_id(),
-            'discussion' => 0,           // Ie discussion # not defined yet.
+            'discussion' => 0, // Ie discussion # not defined yet.
             'parent' => 0,
             'subject' => '',
             'userid' => $user->id,
@@ -57,36 +57,40 @@ trait forum_discussion_form {
         ];
         $thresholdwarning = forum_check_throttling($forumrecord, $cm);
 
-        $formparams = array(
+        $formparams = [
             'course' => $forum->get_course_record(),
             'cm' => $cm,
             'coursecontext' => $coursecontext,
             'modcontext' => $modcontext,
             'forum' => $forumrecord,
             'post' => $post,
-            'subscribe' => \mod_forum\subscriptions::is_subscribed($user->id, $forumrecord,
-                null, $cm),
+            'subscribe' => \mod_forum\subscriptions::is_subscribed(
+                $user->id,
+                $forumrecord,
+                null,
+                $cm
+            ),
             'thresholdwarning' => $thresholdwarning,
             'inpagereply' => true,
-            'edit' => 0
-        );
+            'edit' => 0,
+        ];
         $posturl = new moodle_url($this->here);
-        $mformpost = new \mod_forum_post_form($posturl, $formparams, 'post', '', array('id' => 'mformforum'));
+        $mformpost = new \mod_forum_post_form($posturl, $formparams, 'post', '', ['id' => 'mformforum']);
         $discussionsubscribe = \mod_forum\subscriptions::get_user_default_subscription($forumrecord, $coursecontext, $cm, null);
 
-        $groupidparam = array();
+        $groupidparam = [];
         if (isset($post->groupid)) {
-            $groupidparam = array('groupid' => $post->groupid);
+            $groupidparam = ['groupid' => $post->groupid];
         }
-        $params = array('reply' => 0, 'forum' => $forumrecord->id, 'edit' => 0) +
+        $params = ['reply' => 0, 'forum' => $forumrecord->id, 'edit' => 0] +
             $groupidparam +
-            array(
+            [
                 'userid' => $post->userid,
                 'parent' => $post->parent,
                 'discussion' => $post->discussion,
                 'course' => $forum->get_course_id(),
-                'discussionsubscribe' => $discussionsubscribe
-            );
+                'discussionsubscribe' => $discussionsubscribe,
+            ];
         $mformpost->set_data($params);
 
         return $mformpost->render();

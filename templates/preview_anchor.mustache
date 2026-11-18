@@ -20,7 +20,13 @@
     An empty named jump target.
 
     Context variables required for this template:
-    * name - string, used as both the name and the id.
+    * name - string, used as the id.
     * title - string.
+
+    Example context (json):
+    {
+        "name": "section-1",
+        "title": "Section 1"
+    }
 }}
-<a name="{{name}}" id="{{name}}" title="{{title}}"></a>
+<a id="{{name}}" title="{{title}}"></a>

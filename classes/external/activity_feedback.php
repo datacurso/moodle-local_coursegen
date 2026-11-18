@@ -37,8 +37,6 @@ use local_coursegen\local\service\module_job_service;
 
 defined('MOODLE_INTERNAL') || die();
 
-require_once($CFG->libdir . '/externallib.php');
-
 /**
  * External API to send human feedback for AI activity generation jobs.
  */

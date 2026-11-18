@@ -26,10 +26,10 @@ namespace local_coursegen\external;
 
 use aiprovider_datacurso\local\plugin_settings;
 use context_system;
-use external_api;
-use external_function_parameters;
-use external_single_structure;
-use external_value;
+use core_external\external_api;
+use core_external\external_function_parameters;
+use core_external\external_single_structure;
+use core_external\external_value;
 use local_coursegen\local\models\course_session;
 use local_coursegen\local\service\activity_link_resolver;
 use local_coursegen\local\service\course_creation_guard;
@@ -58,8 +58,6 @@ use local_coursegen\local\space\space_selection;
 use local_coursegen\local\space\upload_spaces;
 
 defined('MOODLE_INTERNAL') || die();
-
-require_once($CFG->libdir . '/externallib.php');
 
 /**
  * Turns one finished generation into a real course.
@@ -108,8 +106,11 @@ class finish_template_generation extends external_api {
             return self::build_course($sessionid, $fullname, $shortname, $category, null, $startdate);
         } catch (\Throwable $e) {
             // The person sees a short message; the cause is kept in the log of the server.
-            error_log('local_coursegen: creating the course of session ' . (int) $sessionid . ' failed: ' . get_class($e) . ': '
-                . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
+            debugging(
+                'local_coursegen: creating the course of session ' . (int) $sessionid . ' failed: ' . get_class($e) . ': '
+                    . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine(),
+                DEBUG_DEVELOPER
+            );
             throw $e;
         }
     }

@@ -25,5 +25,11 @@
 
     Context variables optional for this template:
     * title - string.
+
+    Example context (json):
+    {
+        "title": "Description",
+        "value": "<p>Written by the AI.</p>"
+    }
 }}
 {{#title}}<h4>{{{title}}}</h4>{{/title}}{{{value}}}

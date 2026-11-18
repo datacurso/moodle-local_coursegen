@@ -98,6 +98,7 @@ final class template_course_order_test extends \advanced_testcase {
      */
     public function test_instances_follow_their_anchor_and_kept_activities_keep_their_place(): void {
         $this->resetAfterTest();
+        $this->setAdminUser();
         $generator = $this->getDataGenerator();
         $base = $generator->create_course(['numsections' => 1]);
         $hub = $generator->create_module('label', ['course' => $base->id, 'section' => 1]);
@@ -131,6 +132,7 @@ final class template_course_order_test extends \advanced_testcase {
      */
     public function test_instances_sharing_an_anchor_follow_their_sort_order(): void {
         $this->resetAfterTest();
+        $this->setAdminUser();
         $generator = $this->getDataGenerator();
         $base = $generator->create_course(['numsections' => 1]);
         $anchor = $generator->create_module('lesson', ['course' => $base->id, 'section' => 1]);
@@ -159,6 +161,7 @@ final class template_course_order_test extends \advanced_testcase {
      */
     public function test_an_activity_without_a_row_stays_after_the_ordered_ones(): void {
         $this->resetAfterTest();
+        $this->setAdminUser();
         $generator = $this->getDataGenerator();
         $base = $generator->create_course(['numsections' => 1]);
         $anchor = $generator->create_module('lesson', ['course' => $base->id, 'section' => 1]);
@@ -186,6 +189,7 @@ final class template_course_order_test extends \advanced_testcase {
      */
     public function test_each_section_is_ordered_on_its_own(): void {
         $this->resetAfterTest();
+        $this->setAdminUser();
         $generator = $this->getDataGenerator();
         $base = $generator->create_course(['numsections' => 2]);
         $firstanchor = $generator->create_module('lesson', ['course' => $base->id, 'section' => 1]);
@@ -219,6 +223,7 @@ final class template_course_order_test extends \advanced_testcase {
     public function test_missing_template_or_base_course_changes_nothing(): void {
         global $DB;
         $this->resetAfterTest();
+        $this->setAdminUser();
         $generator = $this->getDataGenerator();
         $base = $generator->create_course();
         $target = $generator->create_course(['numsections' => 1]);

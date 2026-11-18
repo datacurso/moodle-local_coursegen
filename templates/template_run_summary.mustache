@@ -38,8 +38,8 @@
     }
 }}
 <div class="cg-log-entry cg-log-entry--user cg-log-entry--turn-user cg-run-summary" role="status">
-    <span class="cg-log-body">
-        <span class="cg-run-summary-body">
+    <div class="cg-log-body">
+        <div class="cg-run-summary-body">
             <span class="sr-only">{{#str}} courseai_template_summary_title, local_coursegen {{/str}}</span>
             <dl class="cg-run-summary-list">
                 <dt>{{#str}} courseai_template_summary_template, local_coursegen {{/str}}</dt>
@@ -53,6 +53,6 @@
                 <dt>{{#str}} courseai_template_summary_instruction, local_coursegen {{/str}}</dt>
                 <dd>{{#instruction}}{{.}}{{/instruction}}{{^instruction}}<span class="cg-run-summary-none">{{#str}} courseai_template_summary_noinstruction, local_coursegen {{/str}}</span>{{/instruction}}</dd>
             </dl>
-        </span>
-    </span>
+        </div>
+    </div>
 </div>

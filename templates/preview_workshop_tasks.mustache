@@ -24,6 +24,26 @@
 
     Context variables required for this template:
     * tasks - array of {classes, accessibilitytext, link, title, details}.
+
+    Example context (json):
+    {
+        "tasks": [
+            {
+                "classes": "completed",
+                "accessibilitytext": "Completed",
+                "link": "https://example.com/mod/workshop/view.php?id=7",
+                "title": "Provide instructions",
+                "details": "Done"
+            },
+            {
+                "classes": "info",
+                "accessibilitytext": "Info",
+                "link": "",
+                "title": "Submit work",
+                "details": "Open until Friday"
+            }
+        ]
+    }
 }}
 <ul class="tasks">
     {{#tasks}}

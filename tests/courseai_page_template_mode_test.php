@@ -89,7 +89,8 @@ final class courseai_page_template_mode_test extends \advanced_testcase {
         $inputbarpos = strpos($html, 'data-region="tpl-input-bar"');
         $this->assertNotFalse($inputbarpos);
 
-        foreach ([
+        foreach (
+            [
                 'id="tplBtnGuidelines"',
                 'id="tplGuidelinesPopover"',
                 'id="tplGuidelinesPopoverClose"',
@@ -99,12 +100,18 @@ final class courseai_page_template_mode_test extends \advanced_testcase {
                 'id="tplChipGuidelineName"',
                 'id="tplChipGuidelineView"',
                 'id="tplChipGuidelineRemove"',
-            ] as $needle) {
+            ] as $needle
+        ) {
             $this->assertSame(1, substr_count($html, $needle), "{$needle} must render exactly once");
             $this->assertGreaterThan($inputbarpos, strpos($html, $needle), "{$needle} must be inside the input bar");
         }
         $this->assertSame(1, substr_count($html, 'class="chip chip-guideline hidden" id="tplChipGuideline"'));
         $this->assertStringContainsString('aria-controls="tplGuidelinesPopover"', $html);
+        // The shared guideline handlers render the list into this wrapper region, so it must wrap the list.
+        $this->assertMatchesRegularExpression(
+            '/data-region="guideline-list-template">\s*<ul class="pop-list" id="tplGuidelineList"/',
+            $html
+        );
     }
 
     /**
@@ -170,7 +177,8 @@ final class courseai_page_template_mode_test extends \advanced_testcase {
         $inputbarpos = strpos($html, 'data-region="tpl-input-bar"');
         $this->assertNotFalse($inputbarpos, 'Input bar region missing');
 
-        foreach ([
+        foreach (
+            [
                 'id="tplPromptInput"',
                 'id="tplBtnSyllabus"',
                 'id="tplWithImages"',
@@ -178,7 +186,8 @@ final class courseai_page_template_mode_test extends \advanced_testcase {
                 'id="tplLangSelect"',
                 'id="tplModeGenerate"',
                 'id="tplChipSyllabus"',
-            ] as $needle) {
+            ] as $needle
+        ) {
             $pos = strpos($html, $needle);
             $this->assertNotFalse($pos, "Control {$needle} missing");
             $this->assertGreaterThan($inputbarpos, $pos, "Control {$needle} must render inside the input bar");
@@ -378,7 +387,10 @@ final class courseai_page_template_mode_test extends \advanced_testcase {
 
         $html = $this->render_page(false);
 
-        $this->assertStringNotContainsString('id="courseaiChecklist"', $html);
+        // Free mode keeps its own planned-structure checklist under the same id, so the pill is what is checked.
+        $this->assertStringNotContainsString('data-region="tpl-top-activities"', $html);
+        $this->assertStringNotContainsString('id="tplTopActivitiesToggle"', $html);
+        $this->assertStringNotContainsString('id="tplTopActivitiesPanel"', $html);
     }
 
     /**

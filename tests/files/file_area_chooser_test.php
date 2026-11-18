@@ -136,12 +136,12 @@ final class file_area_chooser_test extends \advanced_testcase {
         $label = $this->getDataGenerator()->create_module('label', ['course' => $course->id]);
         $context = \context_module::instance($label->cmid);
         $source = get_file_storage()->create_file_from_string([
-            'contextid' => $context->id, 'component' => 'mod_x', 'filearea' => 'second', 'itemid' => 0,
+            'contextid' => $context->id, 'component' => 'mod_label', 'filearea' => 'second', 'itemid' => 0,
             'filepath' => '/', 'filename' => 'a.png',
         ], 'A');
         $carrier = new text_carrier('x', 1, [
-            new file_area(5, 'mod_x', 'first', 0),
-            new file_area(5, 'mod_x', 'second', 0),
+            new file_area(5, 'mod_label', 'first', 0),
+            new file_area(5, 'mod_label', 'second', 0),
         ]);
 
         $this->assertSame('second', $this->chosen($carrier, 'body', $source));

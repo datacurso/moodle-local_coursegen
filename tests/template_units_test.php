@@ -22,6 +22,10 @@ use local_coursegen\local\models\template;
 use local_coursegen\local\service\template_unit_resizer;
 use local_coursegen\local\service\template_units;
 
+defined('MOODLE_INTERNAL') || die();
+
+require_once(__DIR__ . '/flexsections_required_trait.php');
+
 /**
  * The number of units the professor asks for, from the field of the form to the payload.
  *
@@ -36,12 +40,15 @@ use local_coursegen\local\service\template_units;
  * @runTestsInSeparateProcesses
  */
 final class template_units_test extends \advanced_testcase {
+    use flexsections_required_trait;
+
     /**
      * A flexsections template: Intro, then units 2 and 5 with two children each, Closing.
      *
      * @return int The template id.
      */
     private function flexsections_template(): int {
+        $this->require_flexsections();
         $course = $this->getDataGenerator()->create_course(['format' => 'flexsections', 'numsections' => 0]);
         $format = course_get_format($course);
         $tree = [
@@ -66,7 +73,15 @@ final class template_units_test extends \advanced_testcase {
      * @return int The template id.
      */
     private function plain_template(string $format): int {
-        $course = $this->getDataGenerator()->create_course(['format' => $format, 'numsections' => 3]);
+        if ($format === 'flexsections') {
+            // Without the format the generator falls back to topics and reports it as a debugging message.
+            $this->require_flexsections();
+        }
+        $course = $this->getDataGenerator()->create_course([
+            'format' => $format,
+            'numsections' => 3,
+            'shortname' => 'units_' . $format . '_' . uniqid(),
+        ]);
         return $this->template_for($course->id);
     }
 

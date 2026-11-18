@@ -159,9 +159,9 @@ class view {
                 );
                 $beginbutton = new \action_link(
                     $url,
-                        get_string('beginassignment', 'assign'),
-                        $confirmation,
-                        ['class' => 'btn btn-primary']
+                    get_string('beginassignment', 'assign'),
+                    $confirmation,
+                    ['class' => 'btn btn-primary']
                 );
                 $data['edit']['button'] = $beginbutton->export_for_template($OUTPUT);
                 $data['edit']['begin'] = true;

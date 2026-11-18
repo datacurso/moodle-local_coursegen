@@ -35,7 +35,6 @@ require_once($CFG->libdir . '/formslib.php');
  * Form wrapping the category/course autocomplete pair used to pick a base course.
  */
 class course_picker_form extends \moodleform {
-
     /**
      * Form definition.
      */

@@ -25,5 +25,11 @@
     Context variables required for this template:
     * url - string.
     * name - string, already format_string()-safe.
+
+    Example context (json):
+    {
+        "url": "https://example.com/mod/page/view.php?id=7",
+        "name": "Welcome page"
+    }
 }}
 <a class="aalink" href="{{{url}}}"><span class="instancename">{{{name}}}</span></a>

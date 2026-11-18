@@ -28,7 +28,6 @@ namespace local_coursegen\local\preview\glossary;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 trait glossary_tab_tools {
-
     /**
      * standard_action_bar::get_additional_tools().
      *
@@ -117,5 +116,4 @@ trait glossary_tab_tools {
 
         return null;
     }
-
 }

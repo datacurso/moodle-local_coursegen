@@ -27,5 +27,12 @@
     Context variables optional for this template:
     * onclick - string, inline JS for a workaround link the real page opens
                 as a popup or new tab.
+
+    Example context (json):
+    {
+        "url": "https://example.com/mod/url/view.php?id=7",
+        "text": "Open the link",
+        "onclick": ""
+    }
 }}
 <a href="{{{url}}}"{{#onclick}} onclick="{{{onclick}}}"{{/onclick}}>{{{text}}}</a>

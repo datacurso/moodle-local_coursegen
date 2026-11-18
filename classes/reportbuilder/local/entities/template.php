@@ -34,7 +34,6 @@ use lang_string;
  * Template entity.
  */
 class template extends base {
-
     /**
      * Database tables this entity uses.
      *
@@ -99,7 +98,9 @@ class template extends base {
             ->set_callback([\core_reportbuilder\local\helpers\format::class, 'boolean_as_text']);
 
         $columns[] = (new column(
-            'timecreated', new lang_string('timecreated', 'core_reportbuilder'), $this->get_entity_name()
+            'timecreated',
+            new lang_string('timecreated', 'core_reportbuilder'),
+            $this->get_entity_name()
         ))
             ->add_joins($this->get_joins())
             ->set_type(column::TYPE_TIMESTAMP)
@@ -108,7 +109,9 @@ class template extends base {
             ->set_callback([\core_reportbuilder\local\helpers\format::class, 'userdate']);
 
         $columns[] = (new column(
-            'timemodified', new lang_string('timemodified', 'core_reportbuilder'), $this->get_entity_name()
+            'timemodified',
+            new lang_string('timemodified', 'core_reportbuilder'),
+            $this->get_entity_name()
         ))
             ->add_joins($this->get_joins())
             ->set_type(column::TYPE_TIMESTAMP)

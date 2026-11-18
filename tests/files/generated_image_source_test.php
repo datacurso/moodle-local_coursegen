@@ -86,7 +86,7 @@ final class generated_image_source_test extends \advanced_testcase {
         $this->assertSame('IMAGE', $first->get_content());
         $this->assertSame('chart.png', $first->get_filename());
         $this->assertSame(generated_image_source::FILEAREA, $first->get_filearea());
-        $this->assertSame($first->get_id(), $second->get_id());
+        $this->assertEquals($first->get_id(), $second->get_id());
         $this->assertSame(['/data/generated_images/chart.png'], $calls);
     }
 

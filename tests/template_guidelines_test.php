@@ -14,7 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-
 namespace local_coursegen;
 
 use local_coursegen\external\start_template_generation;
@@ -85,7 +84,12 @@ final class template_guidelines_test extends \advanced_testcase {
         $instruction = system_instruction_service::create('Tone', 'Always be formal.');
 
         $payload = start_template_generation::payload_for(
-            $templateid, '', '', false, null, (int) $instruction->get('id')
+            $templateid,
+            '',
+            '',
+            false,
+            null,
+            (int) $instruction->get('id')
         );
         $this->assertSame('Always be formal.', $payload['instructions']);
     }

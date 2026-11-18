@@ -36,7 +36,7 @@ final class h5p_package_images_test extends \advanced_testcase {
     /**
      * Write a zip with the given entries to a request directory.
      *
-     * @param array<string, string> $entries Archive path => bytes.
+     * @param array $entries Archive path => bytes.
      * @return string Full path of the zip.
      */
     private function zip_with(array $entries): string {

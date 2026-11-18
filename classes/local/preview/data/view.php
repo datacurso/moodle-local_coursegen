@@ -105,7 +105,7 @@ class view {
             return $this->render_database_zero_state();
         }
 
-        list($showactivity, $warnings) = data_get_time_availability_status($data, $canmanageentries, $context);
+        [$showactivity, $warnings] = data_get_time_availability_status($data, $canmanageentries, $context);
 
         if ($showactivity) {
             // Nobody has added an entry to a database that is being previewed.

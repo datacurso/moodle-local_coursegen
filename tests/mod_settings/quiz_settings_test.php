@@ -377,6 +377,7 @@ final class quiz_settings_test extends \advanced_testcase {
 
         $settings->add_settings();
 
+        $this->assert_calculated_question_was_rejected('Rota');
         $this->assertCount(1, $this->slots((int) $quiz->id));
         $this->assertSame(3.0, (float) $DB->get_field('quiz', 'sumgrades', ['id' => $quiz->id]));
     }
@@ -397,7 +398,23 @@ final class quiz_settings_test extends \advanced_testcase {
 
         $settings->add_settings();
 
+        $this->assert_calculated_question_was_rejected('Rota');
         $this->assertCount(0, $this->slots((int) $quiz->id));
         $this->assertSame(0.0, (float) $DB->get_field('quiz', 'sumgrades', ['id' => $quiz->id]));
+    }
+
+    /**
+     * The one debugging message of a calculated question that could not be created, whatever its cause says.
+     *
+     * Moodle's own error for a malformed question follows the fixed start of the message and changes with the
+     * version, so only the start is compared.
+     *
+     * @param string $name The name of the question.
+     */
+    private function assert_calculated_question_was_rejected(string $name): void {
+        $messages = $this->getDebuggingMessages();
+        $this->resetDebugging();
+        $this->assertCount(1, $messages);
+        $this->assertStringStartsWith('coursegen: could not create calculated question "' . $name . '"', $messages[0]->message);
     }
 }

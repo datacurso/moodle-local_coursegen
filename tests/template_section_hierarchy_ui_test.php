@@ -14,12 +14,15 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-
 namespace local_coursegen;
 
 use local_coursegen\external\get_template_structure;
 use local_coursegen\local\models\template;
 use local_coursegen\output\sections_config;
+
+defined('MOODLE_INTERNAL') || die();
+
+require_once(__DIR__ . '/flexsections_required_trait.php');
 
 /**
  * The screens that list a template's sections show the subsections of a flexsections course under their unit.
@@ -34,12 +37,15 @@ use local_coursegen\output\sections_config;
  * @runTestsInSeparateProcesses
  */
 final class template_section_hierarchy_ui_test extends \advanced_testcase {
+    use flexsections_required_trait;
+
     /**
      * A flexsections course: 1 is a unit with children 2 and 3 (3 has a child, 4), 5 is a top section.
      *
      * @return \stdClass
      */
     private function create_flexsections_course(): \stdClass {
+        $this->require_flexsections();
         $course = $this->getDataGenerator()->create_course(['format' => 'flexsections', 'numsections' => 0]);
         $format = course_get_format($course);
         foreach ([1 => 0, 2 => 1, 3 => 1, 4 => 3, 5 => 0] as $number => $parent) {
