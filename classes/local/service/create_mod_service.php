@@ -102,6 +102,8 @@ class create_mod_service {
             $module->id
         );
 
+        $parameters = self::with_defaults_of_the_form($parameters, $mform);
+
         $newcm = add_moduleinfo($parameters, $course, $mform);
 
         $modsettings = $parameters->mod_settings ?? null;
@@ -172,17 +174,19 @@ class create_mod_service {
      */
     private static function create_mod_form_instance($modname, $data, $cw, $cm, $course) {
         // This is necessary to void error when load the mod_form.php file.
-        global $CFG, $COURSE;
+        global $CFG, $COURSE, $DB;
         $modmoodleform = self::get_mod_form_file_path($modname);
         require_once($modmoodleform);
 
         $mformclassname = 'mod_' . $modname . '_mod_form';
         // The form reads the section it is for from the global course, which is the course of the
-        // page that is being served; here it is the course the module is created in.
+        // page that is being served; here it is the course the module is created in. A fresh record
+        // and a cleared modinfo make that read independent of any stale copy of the course.
         $previouscourse = $COURSE;
-        $COURSE = $course;
+        $COURSE = clone $DB->get_record('course', ['id' => $course->id], '*', MUST_EXIST);
+        \course_modinfo::clear_instance_cache($course->id);
         try {
-            $mform = new $mformclassname($data, $cw->section, $cm, $course);
+            $mform = new $mformclassname($data, (int) $cw->section, $cm, $COURSE);
         } finally {
             $COURSE = $previouscourse;
         }
@@ -277,6 +281,30 @@ class create_mod_service {
         if ($modname === 'lesson' && !property_exists($parameters, 'mediafile')) {
             // The lesson saves the draft area of its media file; an empty one stands for no file.
             $parameters->mediafile = file_get_unused_draft_itemid();
+        }
+        return $parameters;
+    }
+
+    /**
+     * Give every field the payload leaves out the value the module form itself starts with.
+     *
+     * The form of each module declares a default for the fields it posts (the grade of a forum, the
+     * availability of a lesson, the opening time of a quiz, and so on), and Moodle's add functions read
+     * those fields unguarded. Seeding the missing ones from the form is what saving it untouched would
+     * send. A value the payload carries is never replaced.
+     *
+     * @param object $parameters Parameters object, after the module's own parameters class ran.
+     * @param \moodleform_mod $mform The form of the module, built for a new activity.
+     * @return object The same object with the missing properties defaulted.
+     */
+    private static function with_defaults_of_the_form(object $parameters, \moodleform_mod $mform): object {
+        $quickform = (new \ReflectionProperty(\moodleform::class, '_form'))->getValue($mform);
+        $defaults = $quickform->exportValues();
+        unset($defaults['sesskey']);
+        foreach ($defaults as $name => $value) {
+            if (!property_exists($parameters, $name)) {
+                $parameters->$name = $value;
+            }
         }
         return $parameters;
     }
