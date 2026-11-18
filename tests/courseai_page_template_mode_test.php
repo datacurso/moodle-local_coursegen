@@ -105,6 +105,11 @@ final class courseai_page_template_mode_test extends \advanced_testcase {
         }
         $this->assertSame(1, substr_count($html, 'class="chip chip-guideline hidden" id="tplChipGuideline"'));
         $this->assertStringContainsString('aria-controls="tplGuidelinesPopover"', $html);
+        // The shared guideline handlers render the list into this wrapper region, so it must wrap the list.
+        $this->assertMatchesRegularExpression(
+            '/data-region="guideline-list-template">\s*<ul class="pop-list" id="tplGuidelineList"/',
+            $html
+        );
     }
 
     /**

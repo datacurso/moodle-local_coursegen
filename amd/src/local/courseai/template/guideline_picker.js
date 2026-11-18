@@ -68,7 +68,7 @@ export const wireGuidelinePicker = (tplState, state) => {
     const button = document.getElementById('tplBtnGuidelines');
     const popover = document.getElementById('tplGuidelinesPopover');
     const search = document.getElementById('tplGuidelineSearch');
-    const list = document.getElementById('tplGuidelineList');
+    const listWrap = popover ? popover.querySelector('[data-region="guideline-list-template"]') : null;
     if (!button || !popover) {
         return;
     }
@@ -95,7 +95,7 @@ export const wireGuidelinePicker = (tplState, state) => {
             const texts = await loadCourseaiStrings();
             handlers = createGuidelineHandlers({
                 state: adapter,
-                elements: {guidelineList: list},
+                elements: {guidelineListWrap: listWrap},
                 texts,
                 refreshGuidelineChip: () => refreshChip(tplState, guidelines),
                 refreshChipsRow,
