@@ -98,6 +98,7 @@ final class text_carrier_collector_test extends \advanced_testcase {
     public function test_a_lesson_page_keeps_its_files_under_its_own_id(): void {
         global $DB;
         $this->resetAfterTest();
+        $this->setAdminUser();
         $course = $this->getDataGenerator()->create_course();
         $lesson = $this->getDataGenerator()->create_module('lesson', ['course' => $course->id]);
         $this->getDataGenerator()->get_plugin_generator('mod_lesson')->create_content($lesson);
@@ -115,6 +116,7 @@ final class text_carrier_collector_test extends \advanced_testcase {
     public function test_a_lesson_answer_declares_its_answer_and_response_areas(): void {
         global $DB;
         $this->resetAfterTest();
+        $this->setAdminUser();
         $course = $this->getDataGenerator()->create_course();
         $lesson = $this->getDataGenerator()->create_module('lesson', ['course' => $course->id]);
         $this->getDataGenerator()->get_plugin_generator('mod_lesson')->create_question_truefalse($lesson);

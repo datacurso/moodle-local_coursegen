@@ -63,6 +63,7 @@ final class kept_link_rewriter_test extends \advanced_testcase {
     public function test_a_link_to_a_kept_activity_points_at_its_copy(): void {
         global $DB;
         $this->resetAfterTest();
+        $this->setAdminUser();
         $course = $this->getDataGenerator()->create_course();
         $copy = $this->getDataGenerator()->create_module('resource', ['course' => $course->id]);
         $label = $this->getDataGenerator()->create_module('label', [
@@ -148,6 +149,7 @@ final class kept_link_rewriter_test extends \advanced_testcase {
     public function test_links_in_the_texts_of_generated_activities_are_rewritten(): void {
         global $DB;
         $this->resetAfterTest();
+        $this->setAdminUser();
         $course = $this->getDataGenerator()->create_course();
         $copy = $this->getDataGenerator()->create_module('resource', ['course' => $course->id]);
         $intro = '<a href="' . $this->url('resource', 9326) . '">Support</a>';
@@ -187,6 +189,7 @@ final class kept_link_rewriter_test extends \advanced_testcase {
     public function test_kept_pages_are_rewritten_in_content_and_intro(): void {
         global $DB;
         $this->resetAfterTest();
+        $this->setAdminUser();
         $course = $this->getDataGenerator()->create_course();
         $copy = $this->getDataGenerator()->create_module('resource', ['course' => $course->id]);
         $text = '<a href="' . $this->url('resource', 9326) . '">Support</a>';

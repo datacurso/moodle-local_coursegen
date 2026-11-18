@@ -123,6 +123,7 @@ final class activity_link_resolver_test extends \advanced_testcase {
     public function test_replaces_tokens_in_every_lesson_page(): void {
         global $DB;
         $this->resetAfterTest();
+        $this->setAdminUser();
         $course = $this->getDataGenerator()->create_course();
         $target = $this->getDataGenerator()->create_module('page', ['course' => $course->id]);
         $lesson = $this->getDataGenerator()->create_module('lesson', ['course' => $course->id]);

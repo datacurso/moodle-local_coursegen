@@ -100,6 +100,7 @@ final class template_syllabus_linker_test extends \advanced_testcase {
     public function test_each_lesson_page_keeps_its_copy(): void {
         global $DB;
         $this->resetAfterTest();
+        $this->setAdminUser();
         $course = $this->getDataGenerator()->create_course();
         $lesson = $this->getDataGenerator()->create_module('lesson', ['course' => $course->id]);
         $generator = $this->getDataGenerator()->get_plugin_generator('mod_lesson');
@@ -175,6 +176,7 @@ final class template_syllabus_linker_test extends \advanced_testcase {
      */
     public function test_the_session_keeps_its_syllabus(): void {
         $this->resetAfterTest();
+        $this->setAdminUser();
 
         $this->assertNull(course_session_service::syllabus_file(77));
         course_session_service::keep_syllabus(77, $this->syllabus('primera.pdf'));
