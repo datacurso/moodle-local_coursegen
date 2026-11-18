@@ -89,10 +89,55 @@ final class ai_text_sanitiser {
     /**
      * Clean one string the AI wrote.
      *
+     * A text of a template run that matches one of the template's molds is rebuilt from it (see template_molds);
+     * any other is cleaned whole.
+     *
      * @param string $text
      * @return string
      */
     public static function sanitise_string(string $text): string {
+        $rebuilt = template_molds::rebuild($text, [self::class, 'clean_untrusted']);
+        if ($rebuilt !== null) {
+            return $rebuilt;
+        }
+        return self::clean_untrusted($text);
+    }
+
+    /**
+     * Clean HTML the AI wrote the way Moodle cleans HTML from a person it does not trust.
+     *
+     * The second cleaning some activity settings apply before storing a text: a text of a template run that
+     * matches one of the template's molds is rebuilt from it (see template_molds), any other is passed to
+     * clean_text() as it is.
+     *
+     * @param string $text
+     * @return string
+     */
+    public static function clean_html(string $text): string {
+        $rebuilt = template_molds::rebuild($text, [self::class, 'clean_html_text']);
+        if ($rebuilt !== null) {
+            return $rebuilt;
+        }
+        return self::clean_html_text($text);
+    }
+
+    /**
+     * Clean HTML with clean_text() and the HTML format.
+     *
+     * @param string $text
+     * @return string
+     */
+    public static function clean_html_text(string $text): string {
+        return clean_text($text, FORMAT_HTML);
+    }
+
+    /**
+     * Clean one string the AI wrote, with no template mold.
+     *
+     * @param string $text
+     * @return string
+     */
+    public static function clean_untrusted(string $text): string {
         $text = self::neutralise_script_url($text);
         if (!preg_match(self::MARKUP, $text)) {
             return $text;

@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.16] - 2026111804
+
+### Fixed
+- **The interactive pages of a template keep working in the courses made from it**  
+  The cleaning of the AI texts took out the answer boxes, the "Send" button, the hidden messages, the ids and the script a template author built into a page, so those pages arrived broken. While an activity of a template run is created, a text that is one of the template's own texts filled in is now rebuilt from the copy of that text this site holds: the author's parts come from the template, never from the AI answer, and every part the AI wrote is still cleaned (inside an attribute it is kept only when it cannot leave its value). A text that is not a template text filled in is cleaned whole, as before.
+
 ## [2.0.16] - 2026111802
 
 ### Fixed

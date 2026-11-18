@@ -127,7 +127,7 @@ class lesson_settings extends base_settings {
         // The lesson shows its pages without cleaning them (noclean), so the HTML the AI wrote is
         // cleaned here, the way Moodle cleans text from a person who is not trusted.
         $properties->contents_editor = [
-            'text' => clean_text($contenthtml, FORMAT_HTML),
+            'text' => \local_coursegen\utils\ai_text_sanitiser::clean_html($contenthtml),
             'format' => FORMAT_HTML,
             'itemid' => $draftitemid,
         ];
@@ -182,11 +182,11 @@ class lesson_settings extends base_settings {
 
             // The lesson shows answers and feedback without cleaning them (noclean).
             $properties->answer_editor[] = [
-                'text' => clean_text($text, FORMAT_HTML),
+                'text' => \local_coursegen\utils\ai_text_sanitiser::clean_html($text),
                 'format' => FORMAT_HTML,
             ];
             $properties->response_editor[] = [
-                'text' => clean_text(trim((string) ($option['feedback'] ?? '')), FORMAT_HTML),
+                'text' => \local_coursegen\utils\ai_text_sanitiser::clean_html(trim((string) ($option['feedback'] ?? ''))),
                 'format' => FORMAT_HTML,
             ];
             $properties->jumpto[] = $correct ? LESSON_NEXTPAGE : LESSON_THISPAGE;

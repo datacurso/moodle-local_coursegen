@@ -21,6 +21,7 @@ use local_coursegen\local\files\file_copy_exception;
 use local_coursegen\mod_settings\base_settings;
 use local_coursegen\utils\ai_text_sanitiser;
 use local_coursegen\utils\generated_files_scope;
+use local_coursegen\utils\template_molds;
 use local_coursegen\utils\text_editor_parameter_cleaner;
 
 defined('MOODLE_INTERNAL') || die();
@@ -84,6 +85,8 @@ class create_mod_service {
 
         // The single point where the text the AI wrote is made safe, before Moodle or any activity
         // settings class stores it (Mindfree, observation 1).
+        // A text of a template run that matches one of the template's own texts is rebuilt from it instead.
+        template_molds::use_course($sourcecourseid);
         $resultinfo['parameters'] = ai_text_sanitiser::sanitise($resultinfo['parameters']);
 
         $modname = $resultinfo['resource_type'];
