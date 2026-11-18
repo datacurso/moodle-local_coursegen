@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
-## [2.0.16] - 2026111714
+## [2.0.16] - 2026111716
 
 ### Added
 - **Course structure defined by the guideline**  
@@ -11,6 +11,18 @@ All notable changes to this project will be documented in this file. Each change
 ### Changed
 - **The dev line is brought together with MOODLE_405_STABLE**  
   This release carries the template work of the dev branch (template sections, embedded H5P, section names and the structure shown while the run is on) together with every fix that was released on MOODLE_405_STABLE up to 2.0.15, so both lines continue from one branch.
+
+## [2.0.13] - 2026111715
+
+### Fixed
+- **Each copy of a template section has the order of the template**  
+  The template section itself was ordered from the template, but its copies kept the order the activities were created in, so the H5P activities of a lesson ended at the bottom of the section. Each copy now follows the order of the first one.
+
+## [2.0.13] - 2026111714
+
+### Fixed
+- **A link to a text and media area no longer stops the course from being built**  
+  A text and media area has no page of its own, so a generated link to it had no address and the creation of the course failed. Such a link now points to the activity's place in the course page.
 
 ## [2.0.13] - 2026111713
 

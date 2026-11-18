@@ -94,10 +94,8 @@ final class activity_link_resolver {
         $urlbyuid = [];
         foreach ($cmidbyuid as $uid => $cmid) {
             $cm = $modinfo->get_cm($cmid);
-            $url = $cm->get_url();
-            if ($url === null) {
-                continue;
-            }
+            // An activity with no page of its own (a text and media area) is reached at its place in the course.
+            $url = $cm->get_url() ?? new \moodle_url('/course/view.php', ['id' => $cm->course], 'module-' . $cm->id);
             $urlbyuid[(string) $uid] = $url->out(false);
         }
         return $urlbyuid;
