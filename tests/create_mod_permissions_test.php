@@ -21,6 +21,10 @@ use local_coursegen\local\api_client_factory;
 use local_coursegen\local\service\ai_course_api_service;
 use local_coursegen\local\service\module_job_service;
 
+defined('MOODLE_INTERNAL') || die();
+
+require_once(__DIR__ . '/fixtures/aiprovider_datacurso_stub.php');
+
 /**
  * Permission tests for creating the H5P activity through the generator.
  *
@@ -43,8 +47,15 @@ final class create_mod_permissions_test extends \advanced_testcase {
      */
     protected function setUp(): void {
         parent::setUp();
+        // Load fixtures and enable the DB reset before the skip: tearDown() touches the fixtures.
+        $this->resetAfterTest();
         require_once(__DIR__ . '/fixtures/testable_create_mod.php');
         require_once(__DIR__ . '/fixtures/h5p_package_fixture.php');
+        // The CI pipeline does not install declared dependencies: without the Datacurso AI provider
+        // these tests cannot run.
+        if (!class_exists(\aiprovider_datacurso\local\plugin_settings::class)) {
+            $this->markTestSkipped('aiprovider_datacurso is not installed.');
+        }
 
         // Note: external_api::validate_context() resets the page to the site course,
         // so the module edit form resolves section info against the front page.

@@ -24,6 +24,7 @@
 
 namespace local_coursegen\external;
 
+use aiprovider_datacurso\local\plugin_settings;
 use context_system;
 use external_api;
 use external_function_parameters;
@@ -64,6 +65,8 @@ class get_template_course_settings extends external_api {
      * @return array Course settings (fullname, shortname, category, categories, warnings).
      */
     public static function execute($recordid) {
+        plugin_settings::require_enabled('local_coursegen');
+
         global $USER;
 
         $params = self::validate_parameters(self::execute_parameters(), ['recordid' => $recordid]);

@@ -16,6 +16,11 @@
 
 namespace local_coursegen\mod_settings;
 
+defined('MOODLE_INTERNAL') || die();
+
+global $CFG;
+require_once($CFG->libdir . '/questionlib.php');
+
 /**
  * Class quiz_settings
  *
@@ -74,10 +79,28 @@ class quiz_settings extends base_settings {
         $quizobj->get_structure()->check_can_be_edited();
         return (object) [
             'context' => $context,
-            'categoryinfo' => question_make_default_categories([$context]),
+            'categoryinfo' => $this->get_default_question_category($context),
             'quiz' => $quiz,
             'quizobj' => $quizobj,
         ];
+    }
+
+    /**
+     * Resolve (creating it when missing) the default question category of a module context.
+     *
+     * Moodle 5.0 moved default-category creation into question_get_default_category()
+     * and deprecated question_make_default_categories(); Moodle 4.5 only offers the latter.
+     *
+     * @param \context $context The quiz module context.
+     * @return \stdClass The default question category record.
+     */
+    private function get_default_question_category(\context $context): \stdClass {
+        global $CFG;
+
+        if ($CFG->branch >= 500) {
+            return question_get_default_category($context->id, true);
+        }
+        return question_make_default_categories([$context]);
     }
 
     /**
@@ -378,9 +401,9 @@ class quiz_settings extends base_settings {
             $question->category = $categoryinfo->id;
             $question->qtype = $aiquestiondata['qtype'];
             $question->name = $aiquestiondata['name'];
-            $question->questiontext = $aiquestiondata['questiontext']['text'] ?? '';
+            $question->questiontext = clean_text((string) ($aiquestiondata['questiontext']['text'] ?? ''), FORMAT_HTML);
             $question->questiontextformat = $aiquestiondata['questiontext']['format'] ?? FORMAT_HTML;
-            $question->generalfeedback = $aiquestiondata['generalfeedback']['text'] ?? '';
+            $question->generalfeedback = clean_text((string) ($aiquestiondata['generalfeedback']['text'] ?? ''), FORMAT_HTML);
             $question->generalfeedbackformat = $aiquestiondata['generalfeedback']['format'] ?? FORMAT_HTML;
             $question->defaultmark = $aiquestiondata['defaultmark'] ?? 1;
             $question->penalty = $aiquestiondata['penalty'] ?? 0.3333333;

@@ -63,7 +63,7 @@ class book_settings extends base_settings {
             $contenteditor = ['text' => (string)$contenteditor];
         }
 
-        $contenteditor['text'] = (string)($contenteditor['text'] ?? '');
+        $contenteditor['text'] = clean_text((string)($contenteditor['text'] ?? ''), FORMAT_HTML);
         $contenteditor['format'] = (int)($contenteditor['format'] ?? FORMAT_HTML);
 
         $contentitemid = (int)($contenteditor['itemid'] ?? 0);

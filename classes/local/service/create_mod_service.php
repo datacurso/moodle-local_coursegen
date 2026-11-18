@@ -19,6 +19,7 @@ namespace local_coursegen\local\service;
 use local_coursegen\local\files\activity_file_pass;
 use local_coursegen\local\files\file_copy_exception;
 use local_coursegen\mod_settings\base_settings;
+use local_coursegen\utils\ai_text_sanitiser;
 use local_coursegen\utils\generated_files_scope;
 use local_coursegen\utils\text_editor_parameter_cleaner;
 
@@ -79,6 +80,10 @@ class create_mod_service {
     private static function create_module($resultinfo, $course, $sectionnum, $beforemod, ?int $sourcecourseid) {
 
         self::validate_resultinfo($resultinfo);
+
+        // The single point where the text the AI wrote is made safe, before Moodle or any activity
+        // settings class stores it (Mindfree, observation 1).
+        $resultinfo['parameters'] = ai_text_sanitiser::sanitise($resultinfo['parameters']);
 
         $modname = $resultinfo['resource_type'];
 

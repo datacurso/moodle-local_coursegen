@@ -1,0 +1,321 @@
+<?php
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+namespace local_coursegen\local\service;
+
+use context_coursecat;
+use context_helper;
+use context_system;
+
+/**
+ * Single source of truth for the capabilities creating a complete course with AI needs (ticket #9539).
+ *
+ * The set is a fixed list: moodle/course:create, moodle/course:view,
+ * local/coursegen:createactivitywithai and the capability of the way the course
+ * is created (free or from a template, one capability each, any of them is
+ * enough for a screen that serves both). It
+ * does not depend on the editingteacher archetype, so another plugin adding
+ * a capability to that archetype never grows it and never hides the button
+ * from roles created earlier. The same set hides the "Create with AI" button,
+ * refuses the page and refuses every web service of the creation flow, so a
+ * user is only ever offered a creation the server will accept.
+ *
+ * The creation-mode capabilities are checked on the system context, as the
+ * page always did; every other capability is checked on the target category,
+ * which the new course inherits from.
+ *
+ * @package    local_coursegen
+ * @copyright  2026 Josue Condori <https://datacurso.com>
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+final class creation_permissions {
+    /** @var string Role archetype the plugin's roles are built from (role_installer); not part of the set. */
+    public const ARCHETYPE = 'editingteacher';
+
+    /** @var string Capability of the free creation (a course made from a prompt). */
+    public const FREE_CAPABILITY = 'local/coursegen:createfreecoursewithai';
+
+    /** @var string Capability of the creation from a template. */
+    public const TEMPLATE_CAPABILITY = 'local/coursegen:createtemplatecoursewithai';
+
+    /**
+     * @var string[] The creation-mode capabilities, checked on the system context instead of the category.
+     *
+     * A user needs one of them, the one of the mode being used: a screen that serves both modes accepts either.
+     */
+    public const MODE_CAPABILITIES = [
+        self::FREE_CAPABILITY,
+        self::TEMPLATE_CAPABILITY,
+    ];
+
+    /** @var string[] The capabilities the creation requires, sorted; the plugin's roles add them on top of the archetype. */
+    public const EXTRA_CAPABILITIES = [
+        'local/coursegen:createactivitywithai',
+        self::FREE_CAPABILITY,
+        self::TEMPLATE_CAPABILITY,
+        'moodle/course:create',
+        'moodle/course:view',
+    ];
+
+    /**
+     * @var int Largest number of candidate categories can_create_anywhere() and require_anywhere() inspect.
+     *
+     * Candidates are the categories where the user holds moodle/course:create,
+     * in category sort order. A user holding it in more categories than this
+     * without the full set in any of them is treated as unable to create; the
+     * per-category check still decides the real request.
+     */
+    public const CANDIDATE_LIMIT = 200;
+
+    /**
+     * The sorted list of capabilities the creation needs.
+     *
+     * Exactly EXTRA_CAPABILITIES: a fixed list, never derived from a role
+     * archetype or from the installed plugins.
+     *
+     * @return string[]
+     */
+    public static function required_capabilities(): array {
+        $capabilities = self::EXTRA_CAPABILITIES;
+        sort($capabilities, SORT_STRING);
+        return $capabilities;
+    }
+
+    /**
+     * Require every capability of the set: the system ones on the system context, then the rest on the category.
+     *
+     * The order is deterministic (system capabilities first, then the sorted
+     * list) so the exception always names the same capability for the same
+     * role definition.
+     *
+     * @param int $categoryid Category the course would be created in.
+     * @param int|null $userid Acting user, the current user when null.
+     * @param string[] $modes Creation-mode capabilities, one of which is enough.
+     * @return void
+     * @throws \required_capability_exception Naming the first missing capability.
+     */
+    public static function require_for_category(
+        int $categoryid,
+        ?int $userid = null,
+        array $modes = self::MODE_CAPABILITIES
+    ): void {
+        $systemcontext = context_system::instance();
+        self::require_any_mode($modes, $systemcontext, $userid);
+        $categorycontext = context_coursecat::instance($categoryid);
+        foreach (self::category_capabilities() as $capability) {
+            require_capability($capability, $categorycontext, $userid);
+        }
+    }
+
+    /**
+     * Whether the user holds the full set for the given category.
+     *
+     * @param int $categoryid Category the course would be created in.
+     * @param int|null $userid Acting user, the current user when null.
+     * @param string[] $modes Creation-mode capabilities, one of which is enough.
+     * @return bool
+     */
+    public static function can_create_in(
+        int $categoryid,
+        ?int $userid = null,
+        array $modes = self::MODE_CAPABILITIES
+    ): bool {
+        return has_any_capability($modes, context_system::instance(), $userid)
+            && has_all_capabilities(self::category_capabilities(), context_coursecat::instance($categoryid), $userid);
+    }
+
+    /**
+     * The first category, in category sort order, where the user holds the full creation set.
+     *
+     * Looks at the same candidates as can_create_anywhere(): at most CANDIDATE_LIMIT
+     * categories where the user holds moodle/course:create.
+     *
+     * @param int|null $userid Acting user, the current user when null.
+     * @param string[] $modes Creation-mode capabilities, one of which is enough.
+     * @return int Category id, or 0 when there is none.
+     */
+    public static function first_allowed_category(?int $userid = null, array $modes = self::MODE_CAPABILITIES): int {
+        $userid = self::resolve_userid($userid);
+        foreach (self::candidate_categories($userid) as $categoryid) {
+            if (self::can_create_in($categoryid, $userid, $modes)) {
+                return $categoryid;
+            }
+        }
+        return 0;
+    }
+
+    /**
+     * Whether there is at least one category the user could create a course with AI in.
+     *
+     * Candidates are the categories where the user holds moodle/course:create,
+     * in category sort order, at most CANDIDATE_LIMIT of them; the first one
+     * holding the full set answers. Cost: three in-memory capability lookups
+     * per candidate once the access cache is loaded. Nothing is cached across
+     * requests.
+     *
+     * @param int|null $userid Acting user, the current user when null.
+     * @param string[] $modes Creation-mode capabilities, one of which is enough.
+     * @return bool
+     */
+    public static function can_create_anywhere(?int $userid = null, array $modes = self::MODE_CAPABILITIES): bool {
+        $userid = self::resolve_userid($userid);
+        if (is_siteadmin($userid)) {
+            return true;
+        }
+        if (!has_any_capability($modes, context_system::instance(), $userid)) {
+            return false;
+        }
+        foreach (self::candidate_categories($userid) as $categoryid) {
+            if (self::can_create_in($categoryid, $userid, $modes)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Require that the user could create a course with AI in at least one category.
+     *
+     * The reported capability is chosen deterministically:
+     * 1. the creation-mode capability (the first of $modes when it holds none), on the system context;
+     * 2. moodle/course:create on the system context when the user holds it in no category;
+     * 3. otherwise the first missing capability (sorted order) of the candidate
+     *    category with the fewest missing capabilities, earliest in sort order
+     *    on ties, on that category's context: the smallest change that would
+     *    let the user create.
+     *
+     * @param int|null $userid Acting user, the current user when null.
+     * @param string[] $modes Creation-mode capabilities, one of which is enough.
+     * @return void
+     * @throws \required_capability_exception When the user can create nowhere.
+     */
+    public static function require_anywhere(?int $userid = null, array $modes = self::MODE_CAPABILITIES): void {
+        $userid = self::resolve_userid($userid);
+        if (is_siteadmin($userid)) {
+            return;
+        }
+        $systemcontext = context_system::instance();
+        self::require_any_mode($modes, $systemcontext, $userid);
+
+        $best = null;
+        $bestmissing = null;
+        foreach (self::candidate_categories($userid) as $categoryid) {
+            $missing = self::missing_in_category($categoryid, $userid);
+            if (!$missing) {
+                return;
+            }
+            if ($bestmissing === null || count($missing) < count($bestmissing)) {
+                $best = $categoryid;
+                $bestmissing = $missing;
+            }
+        }
+        if ($best === null) {
+            throw new \required_capability_exception($systemcontext, 'moodle/course:create', 'nopermissions', '');
+        }
+        throw new \required_capability_exception(
+            context_coursecat::instance($best),
+            $bestmissing[0],
+            'nopermissions',
+            ''
+        );
+    }
+
+    /**
+     * Require one of the creation-mode capabilities on the system context.
+     *
+     * @param string[] $modes Creation-mode capabilities, one of which is enough.
+     * @param context_system $systemcontext System context.
+     * @param int|null $userid Acting user, the current user when null.
+     * @return void
+     * @throws \required_capability_exception Naming the first of them when the user holds none.
+     */
+    private static function require_any_mode(array $modes, context_system $systemcontext, ?int $userid): void {
+        if (has_any_capability($modes, $systemcontext, $userid)) {
+            return;
+        }
+        throw new \required_capability_exception($systemcontext, reset($modes), 'nopermissions', '');
+    }
+
+    /**
+     * The capabilities of the set checked on the category context.
+     *
+     * @return string[]
+     */
+    private static function category_capabilities(): array {
+        return array_values(array_diff(self::required_capabilities(), self::MODE_CAPABILITIES));
+    }
+
+    /**
+     * The required capabilities the user lacks on the category, in sorted order.
+     *
+     * @param int $categoryid Category id.
+     * @param int $userid User id.
+     * @return string[]
+     */
+    private static function missing_in_category(int $categoryid, int $userid): array {
+        $context = context_coursecat::instance($categoryid);
+        $missing = [];
+        foreach (self::category_capabilities() as $capability) {
+            if (!has_capability($capability, $context, $userid)) {
+                $missing[] = $capability;
+            }
+        }
+        return $missing;
+    }
+
+    /**
+     * Ids of the categories where the user holds moodle/course:create, in sort order, up to CANDIDATE_LIMIT.
+     *
+     * core_course_category::make_categories_list() only evaluates the current
+     * user, so the categories are read directly with their contexts preloaded.
+     *
+     * @param int $userid User id.
+     * @return int[]
+     */
+    private static function candidate_categories(int $userid): array {
+        global $DB;
+
+        $ctxselect = context_helper::get_preload_record_columns_sql('ctx');
+        $sql = "SELECT cc.id, cc.sortorder, $ctxselect
+                  FROM {course_categories} cc
+                  JOIN {context} ctx ON ctx.instanceid = cc.id AND ctx.contextlevel = :contextlevel
+              ORDER BY cc.sortorder, cc.id";
+        $records = $DB->get_recordset_sql($sql, ['contextlevel' => CONTEXT_COURSECAT]);
+        $candidates = [];
+        foreach ($records as $record) {
+            context_helper::preload_from_record($record);
+            if (has_capability('moodle/course:create', context_coursecat::instance($record->id), $userid)) {
+                $candidates[] = (int) $record->id;
+                if (count($candidates) >= self::CANDIDATE_LIMIT) {
+                    break;
+                }
+            }
+        }
+        $records->close();
+        return $candidates;
+    }
+
+    /**
+     * The user id to check: the given one, or the current user.
+     *
+     * @param int|null $userid Given user id or null.
+     * @return int
+     */
+    private static function resolve_userid(?int $userid): int {
+        global $USER;
+        return $userid ?? (int) $USER->id;
+    }
+}

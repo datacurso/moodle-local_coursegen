@@ -17,11 +17,11 @@
 namespace local_coursegen\external;
 
 use context_system;
-use external_api;
-use external_function_parameters;
-use external_single_structure;
-use external_multiple_structure;
-use external_value;
+use core_external\external_api;
+use core_external\external_function_parameters;
+use core_external\external_single_structure;
+use core_external\external_multiple_structure;
+use core_external\external_value;
 use local_coursegen\local\image_generation\activities;
 
 defined('MOODLE_INTERNAL') || die();
@@ -30,6 +30,11 @@ require_once($CFG->libdir . '/externallib.php');
 
 /**
  * External function to manage image generation settings.
+ *
+ * No plugin audit event is emitted: every write here goes through set_config(),
+ * which already records the old and new value in {config_log} and triggers
+ * \core\event\config_log_created. A second, coarser plugin event would only
+ * duplicate that trail.
  *
  * @package    local_coursegen
  * @category   external

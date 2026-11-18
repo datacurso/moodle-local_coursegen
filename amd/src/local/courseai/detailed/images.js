@@ -89,11 +89,13 @@ export const createImagesDetail = (ctx, {imageSuggestions}) => {
 
         const placement = document.createElement('p');
         placement.className = 'dp-image-placement';
-        placement.textContent = item.placement || texts.courseai_activity_default;
+        // The service names the target part in `part` and the image in `prompt`;
+        // `placement` / `description` are kept for older payloads.
+        placement.textContent = item.part || item.placement || texts.courseai_activity_default;
 
         const description = document.createElement('p');
         description.className = 'dp-image-description';
-        description.textContent = item.description || '';
+        description.textContent = item.prompt || item.description || '';
 
         const body = document.createElement('div');
         body.className = 'dp-image-body';

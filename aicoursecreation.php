@@ -22,18 +22,21 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-use local_coursegen\local\service\access_guard;
+use aiprovider_datacurso\local\plugin_settings;
 
 require('../../config.php');
 require_once($CFG->libdir . '/filelib.php');
 
 require_login();
+plugin_settings::require_enabled('local_coursegen');
 
-// Check permissions.
+// Check permissions: the full creation set (a fixed list of four capabilities)
+// in at least one category, the same gate as the button and the web services
+// of the flow (ticket #9539).
 $systemcontext = context_system::instance();
-require_capability('moodle/course:create', $systemcontext);
-$creationmodes = ['local/coursegen:createfreecoursewithai', 'local/coursegen:createtemplatecoursewithai'];
-access_guard::require_any($creationmodes, $systemcontext);
+// Each creation mode has its own capability: the page needs one of them, and the full creation set
+// (a fixed list of four capabilities, see creation_permissions) in at least one category (ticket #9539).
+\local_coursegen\local\service\creation_permissions::require_anywhere();
 
 // Set up the page.
 $url = new moodle_url('/local/coursegen/aicoursecreation.php');
@@ -243,6 +246,14 @@ $templatepickerformhtml = ob_get_clean();
 $templateemptystatehtml = $OUTPUT->notification(
     get_string('courseai_template_empty_state', 'local_coursegen'), 'info', false);
 
+// Import-into-existing-course controls render only when the site opted in and the user holds the
+// full import capability set on at least one course (ticket #9539).
+$importexistingenabled = \local_coursegen\local\service\import_permissions::is_offered($USER->id);
+
+// The import help describes the configured content mode: append for "add", replace otherwise.
+$importcontentmodeadd = \local_coursegen\local\service\course_import_service::get_content_mode()
+    === \local_coursegen\local\service\course_import_service::CONTENT_MODE_ADD;
+
 // Prepare template context.
 $templatecontext = [
     'guidelines' => json_encode($systeminstructions),
@@ -269,6 +280,16 @@ $templatecontext = [
     'subsectionsenabled' => $subsectionsenabled,
     'closeurl' => (new moodle_url('/my/courses.php'))->out(false),
     'sidebarclosed' => !$sidebarpinned,
+    'importexistingenabled' => $importexistingenabled,
+    'importcontentmodeadd' => $importcontentmodeadd,
+    // Initial (empty) guideline listboxes; JavaScript re-renders them from the same templates.
+    'guidelinelist' => [
+        'listlabel' => get_string('courseai_guidelines_list_label', 'local_coursegen'),
+        'emptytext' => get_string('courseai_no_results', 'local_coursegen'),
+        'hasitems' => false,
+        'items' => [],
+    ],
+    'bs' => \local_coursegen\local\bootstrap_classes::get(),
 ];
 
 echo $OUTPUT->header();

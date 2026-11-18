@@ -66,6 +66,15 @@ final class courseai_page_template_mode_test extends \advanced_testcase {
             'freemodeactive' => !$templatemode,
             'subsectionsenabled' => false,
             'closeurl' => (new \moodle_url('/my/courses.php'))->out(false),
+            'canuploadsyllabus' => true,
+            'cangeneratecourseimages' => true,
+            'guidelinelist' => [
+                'listlabel' => 'Guidelines',
+                'emptytext' => 'No results',
+                'hasitems' => false,
+                'items' => [],
+            ],
+            'bs' => \local_coursegen\local\bootstrap_classes::get(),
         ]);
     }
 

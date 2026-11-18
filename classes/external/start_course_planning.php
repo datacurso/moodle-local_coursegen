@@ -16,12 +16,16 @@
 
 namespace local_coursegen\external;
 
+use aiprovider_datacurso\local\plugin_settings;
 use context_system;
-use external_api;
-use external_function_parameters;
-use external_single_structure;
-use external_value;
+use core_external\external_api;
+use core_external\external_function_parameters;
+use core_external\external_single_structure;
+use core_external\external_value;
+use local_coursegen\event\generation_failed;
+use local_coursegen\event\generation_job_started;
 use local_coursegen\local\service\course_planning_service;
+use local_coursegen\local\service\creation_permissions;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -64,6 +68,7 @@ class start_course_planning extends external_api {
      * @param int $systeminstructionid System instruction ID.
      * @param bool $withsubsections Organise sections into subsections.
      * @return array
+     * @throws \moodle_exception plugindisabled or plugindisabled_admin when the plugin is disabled.
      */
     public static function execute(
         string $prompt,
@@ -73,6 +78,8 @@ class start_course_planning extends external_api {
         bool $withsubsections = false
     ): array {
         global $USER;
+
+        plugin_settings::require_enabled('local_coursegen');
 
         $params = self::validate_parameters(self::execute_parameters(), [
             'prompt' => $prompt,
@@ -84,14 +91,14 @@ class start_course_planning extends external_api {
 
         $context = context_system::instance();
         self::validate_context($context);
-        require_capability('moodle/course:create', $context);
         require_capability('local/coursegen:createfreecoursewithai', $context);
+        creation_permissions::require_anywhere(null, [creation_permissions::FREE_CAPABILITY]);
         if ($params['withimages']) {
             require_capability('local/coursegen:generatecourseimages', $context);
         }
 
         try {
-            return course_planning_service::start_course_planning(
+            $outcome = course_planning_service::start_course_planning(
                 $params['prompt'],
                 $params['lang'],
                 (bool)$params['withimages'],
@@ -99,13 +106,35 @@ class start_course_planning extends external_api {
                 (int)$USER->id,
                 (bool)$params['withsubsections']
             );
+
+            // Audit the started job. The prompt is personal content and never
+            // travels in the event payload.
+            if (!empty($outcome['success'])) {
+                generation_job_started::create([
+                    'context' => $context,
+                    'other' => [
+                        'job_id' => (string)($outcome['threadid'] ?? ''),
+                        'session_id' => (int)($outcome['sessionid'] ?? 0),
+                        'generate_images' => (int)$params['withimages'],
+                    ],
+                ])->trigger();
+            }
+
+            return $outcome;
         } catch (\Exception $e) {
+            // Keep the technical detail in developer debugging only: the client
+            // receives a localized message without internal information.
+            debugging('Unexpected error while starting course planning: ' . $e->getMessage());
+            generation_failed::create([
+                'context' => $context,
+                'other' => ['reason' => get_class($e)],
+            ])->trigger();
             return [
                 'success' => false,
                 'sessionid' => 0,
                 'threadid' => '',
                 'streamingurl' => '',
-                'message' => $e->getMessage(),
+                'message' => get_string('error_starting_course_planning', 'local_coursegen'),
             ];
         }
     }

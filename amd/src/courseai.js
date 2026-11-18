@@ -316,6 +316,7 @@ export const init = async(params) => {
             replayThread,
             emitLog,
             texts,
+            openCourseReview: createCourseFromSession,
         });
 
         await attemptResume(resumeSessionId, resumeFromSnapshot, elements, setResumeBootLoading);

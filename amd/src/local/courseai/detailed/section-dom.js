@@ -27,6 +27,7 @@
 
 import {createActionControl} from './controls';
 import {iaSparklesSvg, getCoreIconUrl} from './icons';
+import {formatActivityCount} from './badges';
 
 /**
  * Build the chevron toggle anchor (Boost icons-collapse-expand) for a section.
@@ -76,7 +77,7 @@ export const buildSectionRowSkeleton = (ctx, sectionId, renderIndex, sectionName
     // desynced across the streaming vs reconcile paths and showed nonsense like "2/0".
     const metaEl = document.createElement('span');
     metaEl.className = 'cg-section-meta badge bg-light text-muted';
-    metaEl.textContent = (totalActivities || 0) + ' ' + (texts.courseai_activities_count || 'activities');
+    metaEl.textContent = formatActivityCount(texts, totalActivities);
 
     const imagesBadgeEl = document.createElement('span');
     imagesBadgeEl.className = 'cg-image-pill badge bg-light text-muted ms-2';

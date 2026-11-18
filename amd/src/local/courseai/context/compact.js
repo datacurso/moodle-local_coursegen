@@ -65,7 +65,8 @@ export const wireCompactControls = ({
     const btnCompactDirectrices = document.getElementById('btnCompactDirectrices');
     const compactGuidelinesPopover = document.getElementById('guidelinesPopoverCompact');
     const compactGuidelineSearch = document.getElementById('guidelineSearchCompact');
-    const compactGuidelineList = document.getElementById('guidelineListCompact');
+    // The <ul> is replaced on every render; delegate on the wrapper region instead.
+    const compactGuidelineListWrap = elements.guidelineListCompactWrap;
 
     if (btnCompactDirectrices && compactGuidelinesPopover) {
         btnCompactDirectrices.addEventListener('click', (e) => {
@@ -90,8 +91,8 @@ export const wireCompactControls = ({
         });
     }
 
-    if (compactGuidelineList) {
-        compactGuidelineList.addEventListener('click', (e) => {
+    if (compactGuidelineListWrap) {
+        compactGuidelineListWrap.addEventListener('click', (e) => {
             const item = e.target.closest('.pop-item');
             if (!item) {
                 return;

@@ -69,7 +69,7 @@ class stream_authorizer {
 
         $context = \context_system::instance();
         require_capability('moodle/course:create', $context);
-        require_capability('local/coursegen:createcoursewithai', $context);
+        require_capability('local/coursegen:createfreecoursewithai', $context);
     }
 
     /**

@@ -25,11 +25,13 @@
 
 namespace local_coursegen\external;
 
+use aiprovider_datacurso\local\plugin_settings;
 use context_system;
-use external_api;
-use external_function_parameters;
-use external_single_structure;
-use external_value;
+use core_external\external_api;
+use core_external\external_function_parameters;
+use core_external\external_single_structure;
+use core_external\external_value;
+use local_coursegen\event\generation_job_started;
 use local_coursegen\local\service\ai_course_api_service;
 use local_coursegen\local\service\module_job_service;
 
@@ -63,9 +65,12 @@ class activity_feedback extends external_api {
      * @param string $approvalstatus Approval status (accept|adjust)
      * @param string $instruction Optional feedback text
      * @return array
+     * @throws \moodle_exception plugindisabled or plugindisabled_admin when the plugin is disabled.
      */
     public static function execute(int $courseid, string $jobid, string $approvalstatus, string $instruction = ''): array {
         global $USER;
+
+        plugin_settings::require_enabled('local_coursegen');
 
         $params = self::validate_parameters(self::execute_parameters(), [
             'courseid' => $courseid,
@@ -101,10 +106,24 @@ class activity_feedback extends external_api {
         try {
             $result = $apiservice->send_activity_feedback($threadid, $approvalstatus, $instruction);
         } catch (\moodle_exception $e) {
-            throw new \moodle_exception('error_sending_feedback', 'local_coursegen', '', $e->getMessage());
+            // Keep the technical detail in developer debugging only: the client
+            // receives a localized message without internal information.
+            debugging('Unexpected error while sending activity feedback: ' . $e->getMessage());
+            throw new \moodle_exception('error_sending_feedback', 'local_coursegen');
         }
 
         $action = $result['action'] ?? null;
+
+        // Accepting or adjusting an activity starts a new AI generation turn on
+        // the thread, so it is audited like any other generation start. The
+        // free-text instruction is deliberately left out of the payload.
+        generation_job_started::create([
+            'context' => $context,
+            'other' => [
+                'job_id' => $threadid,
+                'approval_status' => $approvalstatus,
+            ],
+        ])->trigger();
 
         return [
             'success' => true,

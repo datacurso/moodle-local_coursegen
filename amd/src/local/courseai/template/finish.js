@@ -87,7 +87,7 @@ export const reviewAndCreate = async(host, state, tplState, sessionId) => {
 
     showFinishView();
     actions.showReviewState();
-    const overrides = await actions.showCourseReviewPanel(getTemplateCourseSettings);
+    const overrides = await actions.showCourseReviewPanel(getTemplateCourseSettings, false);
     if (overrides === null) {
         return null;
     }

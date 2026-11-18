@@ -24,6 +24,7 @@
 
 namespace local_coursegen\external;
 
+use aiprovider_datacurso\local\plugin_settings;
 use context_system;
 use external_api;
 use external_function_parameters;
@@ -63,6 +64,8 @@ class stop_template_generation extends external_api {
      * @return array
      */
     public static function execute($sessionid) {
+        plugin_settings::require_enabled('local_coursegen');
+
         global $USER;
 
         $params = self::validate_parameters(self::execute_parameters(), ['sessionid' => $sessionid]);

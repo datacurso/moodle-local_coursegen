@@ -16,9 +16,10 @@
 
 namespace local_coursegen\local\service;
 
-use local_coursegen\local\image_generation\image_policy_builder;
+use local_coursegen\event\generation_job_started;
 use local_coursegen\local\h5p_core_api;
 use local_coursegen\local\image_generation\activities;
+use local_coursegen\local\image_generation\image_policy_builder;
 use local_coursegen\local\models\course_session;
 
 /**
@@ -90,8 +91,14 @@ class course_planning_service {
             'subsections_available' => $available,
         ];
 
+        // A disabled (or never configured) policy is left out: sent with the teacher's
+        // toggle on, it would make the service drop every image the teacher asked for.
+        // The activity flow does the same (create_mod_stream).
         if ($withimages) {
-            $payload['image_policy'] = image_policy_builder::build();
+            $imagepolicy = image_policy_builder::build();
+            if (($imagepolicy['mode'] ?? '') !== activities::MODE_DISABLED) {
+                $payload['image_policy'] = $imagepolicy;
+            }
         }
 
         // Site file-type group catalog, so activities generated in the course flow
@@ -138,6 +145,14 @@ class course_planning_service {
             'local_coursegen_select_system_instruction' => $systeminstructionid,
         ]));
         $session->create();
+
+        generation_job_started::create([
+            'context' => \context_system::instance(),
+            'other' => [
+                'session_id' => (int)$session->get('id'),
+                'generate_images' => $withimages ? 1 : 0,
+            ],
+        ])->trigger();
 
         return [
             'success' => true,

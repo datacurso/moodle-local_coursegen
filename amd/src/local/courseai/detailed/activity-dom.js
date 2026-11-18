@@ -59,7 +59,7 @@ export const buildActivityItem = (ctx, activityType, activityTitle) => {
     grid.innerHTML =
         `<div class="activity-icon activityiconcontainer smaller ${escapeHtml(purpose)} courseicon ` +
         'align-self-start me-2">' +
-        `<img src="${iconUrl}" class="activityicon" alt="" data-region="activity-icon" ` +
+        `<img src="${escapeHtml(iconUrl)}" class="activityicon" alt="" data-region="activity-icon" ` +
         `onerror="this.style.display='none'"></div>` +
         '<div class="activity-name-area activity-instance d-flex flex-column me-2">' +
         `<div class="activitytitle modtype_${safeType} position-relative align-self-start">` +

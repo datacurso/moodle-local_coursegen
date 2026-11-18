@@ -24,6 +24,7 @@
 
 namespace local_coursegen\external;
 
+use aiprovider_datacurso\local\plugin_settings;
 use context_system;
 use external_api;
 use external_function_parameters;
@@ -101,6 +102,8 @@ class finish_template_generation extends external_api {
      * @return array
      */
     public static function execute($sessionid, $fullname = '', $shortname = '', $category = 0, $startdate = '') {
+        plugin_settings::require_enabled('local_coursegen');
+
         try {
             return self::build_course($sessionid, $fullname, $shortname, $category, null, $startdate);
         } catch (\Throwable $e) {

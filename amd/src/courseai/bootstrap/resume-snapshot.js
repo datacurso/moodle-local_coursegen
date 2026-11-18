@@ -48,6 +48,7 @@ import {rebuildTranscriptFromPlan} from 'local_coursegen/local/courseai/ui/plan-
  * @param {Function} params.replayThread - replay the service thread (preferred path)
  * @param {Function} params.emitLog
  * @param {Object} params.texts - localized strings (for reconstructed AI milestones)
+ * @param {Function} [params.openCourseReview] - reopen the course review panel of a generated course
  * @returns {Function} async resumeFromSnapshot function
  */
 export const makeResumeFromSnapshot = ({
@@ -71,6 +72,7 @@ export const makeResumeFromSnapshot = ({
     replayThread,
     emitLog,
     texts,
+    openCourseReview,
 }) => {
     /**
      * Read the distinct user turns out of a snapshot, in checkpoint order.
@@ -309,8 +311,13 @@ export const makeResumeFromSnapshot = ({
         const hasCreatedStatus = sessionStatus === 3;
         const hasCreatedCourse = Number(resume?.courseid || 0) > 0;
         const isCreated = Boolean(resume?.iscreated) || hasCreatedStatus || hasCreatedCourse;
+        // Import into an existing course (ticket #9539): status 5 means the adhoc import
+        // is pending; importstate carries queued|running|done|failed once it ran.
+        const importState = String(resume?.importstate || '');
+        const isImportDone = importState === 'done';
+        const isImporting = sessionStatus === 5 || (importState !== '' && !isImportDone);
 
-        if (isCreated) {
+        if (isCreated || isImporting) {
             stepsUi.transitionToPlanning();
             setPlanningStreamVisible();
             applyCourseTitleToHeader();
@@ -322,11 +329,32 @@ export const makeResumeFromSnapshot = ({
                 detailedUi.enableAllActionControls();
             }
 
-            actions.showCompletionView({
+            const generatedCourse = {
                 success: true,
+                recordid: Number(resume?.recordid || resumeSessionId || 0),
                 courseid: Number(resume?.courseid || 0),
                 courseurl: buildCourseUrlFromResume(resume),
-            });
+            };
+            if (isImporting) {
+                // Queued/running keeps polling; failed renders the error right away.
+                actions.showImportProgressView({
+                    ...generatedCourse,
+                    importstate: importState,
+                    importmessage: String(resume?.importmessage || ''),
+                });
+                return true;
+            }
+            if (isImportDone) {
+                // The copy is the course the user asked for; the staging course is gone.
+                actions.showCompletionView({
+                    success: true,
+                    importcompleted: true,
+                    courseid: Number(resume?.copycourseid || 0),
+                    courseurl: String(resume?.copycourseurl || '') || generatedCourse.courseurl,
+                });
+                return true;
+            }
+            actions.showCompletionView(generatedCourse);
             return true;
         }
 
@@ -422,9 +450,10 @@ export const makeResumeFromSnapshot = ({
         }
 
         if (status === 'COMPLETED') {
-            // Course already created → no composer (it cannot be edited from here).
-            // The body class hides it via CSS regardless of the showReviewActions
-            // call below (which would otherwise re-enable the composer).
+            // Generation finished but the course was never created in Moodle (the created
+            // case returned above): reload, cancel or a closed tab must not strand it.
+            // No composer (the plan cannot be edited from here); the body class hides it via
+            // CSS regardless of any later review-actions call.
             state.planApproved = true;
             document.body.classList.add('cg-plan-approved');
             stepsUi.transitionToPlanning();
@@ -437,12 +466,17 @@ export const makeResumeFromSnapshot = ({
             if (typeof detailedUi.enableAllActionControls === 'function') {
                 detailedUi.enableAllActionControls();
             }
-            planningUi.showReviewActions('detailed');
             stepsUi.setStepState('planning', 'done');
             stepsUi.setStepState('generating', 'done');
             state.currentStage = 'completed';
-            stepsUi.setProgress(100);
             stepsUi.updateFlowNav();
+            // Reopen the course review panel, the step the session was left on.
+            if (typeof openCourseReview === 'function') {
+                await openCourseReview();
+            } else {
+                planningUi.showReviewActions('detailed');
+                stepsUi.setProgress(100);
+            }
             return true;
         }
 

@@ -48,12 +48,18 @@ class course_review_service {
     /**
      * The categories the teacher can place the new course in, with their full path.
      *
+     * Only the categories where the user holds the full creation set (ticket #9539) are offered:
+     * the ones where creating the course would be accepted, in either way of creating it.
+     *
      * @return array[] Each entry holds 'id' and 'pathname'.
      */
     public static function available_categories(): array {
         $categories = [];
-        $list = core_course_category::make_categories_list('moodle/category:manage');
+        $list = core_course_category::make_categories_list('moodle/course:create');
         foreach ($list as $id => $pathname) {
+            if (!creation_permissions::can_create_in((int) $id)) {
+                continue;
+            }
             $categories[] = [
                 'id' => (int) $id,
                 'pathname' => $pathname,

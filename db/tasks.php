@@ -1,5 +1,5 @@
 <?php
-// This file is part of Moodle - http://moodle.org/
+// This file is part of Moodle - https://moodle.org/
 //
 // Moodle is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -12,13 +12,13 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
 /**
  * Scheduled tasks of local_coursegen.
  *
  * @package    local_coursegen
- * @copyright  2026 Wilber Narvaez <https://datacurso.com>
+ * @copyright  2026 Datacurso
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
@@ -26,10 +26,21 @@ defined('MOODLE_INTERNAL') || die();
 
 $tasks = [
     [
-        'classname' => 'local_coursegen\task\purge_space_files',
+        // Delete the stored files of the teacher's space once their retention is over.
+        'classname' => 'local_coursegen\\task\\purge_space_files',
         'blocking' => 0,
         'minute' => '17',
         'hour' => '3',
+        'day' => '*',
+        'month' => '*',
+        'dayofweek' => '*',
+    ],
+    [
+        // Roll back the imports into an existing course whose process died.
+        'classname' => 'local_coursegen\\task\\recover_interrupted_imports',
+        'blocking' => 0,
+        'minute' => '*/15',
+        'hour' => '*',
         'day' => '*',
         'month' => '*',
         'dayofweek' => '*',

@@ -22,6 +22,7 @@
  */
 
 import {createLog} from 'local_coursegen/local/courseai/ui/log';
+import {renderMarkdown} from 'local_coursegen/local/courseai/ui/markdown';
 
 /**
  * Create the decision-log emitter.
@@ -81,14 +82,16 @@ export const makeEmitLog = (state) => {
  * Create the plan-markdown renderer.
  *
  * @param {Object} params
- * @param {Object} params.markedParser
  * @param {Object} params.state
  * @param {Object} params.elements
  * @returns {Function}
  */
-export const makeRenderPlanMarkdown = ({markedParser, state, elements}) => {
+export const makeRenderPlanMarkdown = ({state, elements}) => {
     /**
      * Re-render the plan markdown buffer into the DOM.
+     *
+     * Rendered through the central markdown module so the buffer is sanitized
+     * with the shared DOMPurify allow-list before it reaches innerHTML.
      *
      * @returns {void}
      */
@@ -96,8 +99,7 @@ export const makeRenderPlanMarkdown = ({markedParser, state, elements}) => {
         if (!elements.planMarkdown) {
             return;
         }
-        const html = markedParser.parse ? markedParser.parse(state.planBuffer || '') : '';
-        elements.planMarkdown.innerHTML = html;
+        elements.planMarkdown.innerHTML = renderMarkdown(state.planBuffer || '');
         if (elements.pcDetailsPanel && state.planDetailsOpen) {
             elements.pcDetailsPanel.scrollTop = elements.pcDetailsPanel.scrollHeight;
         }

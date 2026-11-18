@@ -17,6 +17,7 @@
 namespace local_coursegen\local\service;
 
 use aiprovider_datacurso\httpclient\ai_course_api;
+use local_coursegen\local\api_client_factory;
 use local_coursegen\local\streaming\stream_type;
 use stored_file;
 
@@ -54,7 +55,7 @@ class template_ai_api_service {
         if (!$baseurleu) {
             $baseurleu = null;
         }
-        $this->client = new ai_course_api(null, $baseurl, $baseurleu);
+        $this->client = api_client_factory::ai_course_api($baseurl, $baseurleu);
     }
 
     /**

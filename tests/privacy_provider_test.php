@@ -16,12 +16,16 @@
 
 namespace local_coursegen;
 
+use aiprovider_datacurso\httpclient\ai_course_api;
+use context_course;
 use context_system;
 use context_user;
+use core_privacy\local\metadata\collection;
 use core_privacy\local\request\approved_contextlist;
 use core_privacy\local\request\userlist;
 use core_privacy\local\request\writer;
 use core_privacy\tests\provider_testcase;
+use local_coursegen\local\api_client_factory;
 use local_coursegen\privacy\provider;
 use stdClass;
 
@@ -41,10 +45,95 @@ final class privacy_provider_test extends provider_testcase {
         parent::setUp();
         $this->resetAfterTest();
         $this->setAdminUser();
+
+        // The course service holds nothing for these users: exports and deletions here are about
+        // the plugin tables (privacy_remote_data_test covers the service).
+        $client = $this->getMockBuilder(ai_course_api::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods(['request'])
+            ->getMock();
+        $client->method('request')->willReturn(['threads' => [], 'deleted' => 0]);
+        api_client_factory::set_test_client($client);
     }
 
     /**
-     * Check that a user context is returned if there is any user data for this user.
+     * Tests tear down.
+     */
+    public function tearDown(): void {
+        api_client_factory::set_test_client(null);
+        parent::tearDown();
+    }
+
+    /**
+     * The metadata declares the four plugin tables, the coursedata field and the external service link.
+     *
+     * @covers \local_coursegen\privacy\provider::get_metadata
+     */
+    public function test_get_metadata(): void {
+        $collection = provider::get_metadata(new collection('local_coursegen'));
+        $items = $collection->get_collection();
+
+        $tables = [];
+        $links = [];
+        foreach ($items as $item) {
+            if ($item instanceof \core_privacy\local\metadata\types\database_table) {
+                $tables[$item->get_name()] = $item;
+            } else if ($item instanceof \core_privacy\local\metadata\types\external_location) {
+                $links[$item->get_name()] = $item;
+            }
+        }
+
+        $this->assertArrayHasKey('local_coursegen_system_instruction', $tables);
+        $this->assertArrayHasKey('local_coursegen_course_context', $tables);
+        $this->assertArrayHasKey('local_coursegen_course_sessions', $tables);
+        $this->assertArrayHasKey('local_coursegen_module_jobs', $tables);
+
+        // The free-form prompt stored in the session must be declared.
+        $sessionfields = $tables['local_coursegen_course_sessions']->get_privacy_fields();
+        $this->assertArrayHasKey('coursedata', $sessionfields);
+
+        // The external Datacurso course service link must declare the data actually sent.
+        $this->assertArrayHasKey('datacurso_course_service', $links);
+        $linkfields = $links['datacurso_course_service']->get_privacy_fields();
+        $expected = [
+            'approval_status',
+            'context_type',
+            'file',
+            'filename',
+            'filetype_groups',
+            'h5p_core_api',
+            'image_policy',
+            'instruction',
+            'instructions',
+            'lang',
+            'mimetype',
+            'pending_action',
+            'prompt',
+            'site_id',
+            'site_url',
+            'subsections_available',
+            'syllabus_file',
+            'thread_id',
+            'timezone',
+            'userid',
+            'with_images',
+            'with_subsections',
+        ];
+        foreach ($expected as $field) {
+            $this->assertArrayHasKey($field, $linkfields);
+        }
+
+        // Every declared field must resolve to a real language string.
+        foreach ($linkfields as $field => $stringid) {
+            $this->assertTrue(
+                get_string_manager()->string_exists($stringid, 'local_coursegen'),
+                "Missing language string {$stringid} for declared field {$field}."
+            );
+        }
+    }
+
+    /**
+     * Check that user and course contexts are returned if there is any user data for this user.
      *
      * @covers \local_coursegen\privacy\provider::get_contexts_for_userid
      */
@@ -53,13 +142,150 @@ final class privacy_provider_test extends provider_testcase {
         $this->assertEmpty(provider::get_contexts_for_userid($user->id));
 
         // Create user records.
-        $this->create_userdata($user->id);
+        $records = $this->create_userdata($user->id);
 
         $contextlist = provider::get_contexts_for_userid($user->id);
-        $this->assertCount(1, $contextlist);
+        $this->assertCount(2, $contextlist);
 
         $usercontext = context_user::instance($user->id);
-        $this->assertEquals($usercontext->id, $contextlist->get_contextids()[0]);
+        $coursecontext = context_course::instance($records['local_coursegen_course_sessions']->courseid);
+        $this->assertContainsEquals($usercontext->id, $contextlist->get_contextids());
+        $this->assertContainsEquals($coursecontext->id, $contextlist->get_contextids());
+
+        // Without a stored syllabus file the user has nothing at system context.
+        $this->assertNotContainsEquals(context_system::instance()->id, $contextlist->get_contextids());
+    }
+
+    /**
+     * Syllabus files are stored at system context, so a user who has one must
+     * get the system context in their context list.
+     *
+     * @covers \local_coursegen\privacy\provider::get_contexts_for_userid
+     */
+    public function test_get_contexts_for_userid_includes_system_context_for_syllabus_files(): void {
+        $user = $this->getDataGenerator()->create_user();
+        $records = $this->create_userdata($user->id);
+        $this->create_syllabus_file((int)$records['local_coursegen_course_sessions']->id);
+
+        $contextlist = provider::get_contexts_for_userid($user->id);
+
+        $this->assertCount(3, $contextlist);
+        $this->assertContainsEquals(context_system::instance()->id, $contextlist->get_contextids());
+    }
+
+    /**
+     * A system-context request finds the owners of the stored syllabus files.
+     *
+     * @covers \local_coursegen\privacy\provider::get_users_in_context
+     */
+    public function test_get_users_in_context_for_system_context(): void {
+        $component = 'local_coursegen';
+        $withfile = $this->getDataGenerator()->create_user();
+        $withoutfile = $this->getDataGenerator()->create_user();
+
+        $records = $this->create_userdata($withfile->id);
+        $this->create_syllabus_file((int)$records['local_coursegen_course_sessions']->id);
+        $this->create_userdata($withoutfile->id);
+
+        $userlist = new userlist(context_system::instance(), $component);
+        provider::get_users_in_context($userlist);
+
+        $this->assertEquals([$withfile->id], $userlist->get_userids());
+    }
+
+    /**
+     * Deleting everything at system context removes the syllabus files of every
+     * user, and nothing else stored at system context.
+     *
+     * @covers \local_coursegen\privacy\provider::delete_data_for_all_users_in_context
+     */
+    public function test_delete_data_for_all_users_in_system_context(): void {
+        global $DB;
+
+        $user1 = $this->getDataGenerator()->create_user();
+        $records1 = $this->create_userdata($user1->id);
+        $session1 = (int)$records1['local_coursegen_course_sessions']->id;
+        $this->create_syllabus_file($session1);
+
+        $user2 = $this->getDataGenerator()->create_user();
+        $records2 = $this->create_userdata($user2->id);
+        $session2 = (int)$records2['local_coursegen_course_sessions']->id;
+        $this->create_syllabus_file($session2);
+
+        $foreign = $this->create_foreign_system_file();
+
+        provider::delete_data_for_all_users_in_context(context_system::instance());
+
+        $fs = get_file_storage();
+        $syscontextid = context_system::instance()->id;
+        $this->assertEmpty($fs->get_area_files($syscontextid, 'local_coursegen', 'syllabus', $session1, 'id', false));
+        $this->assertEmpty($fs->get_area_files($syscontextid, 'local_coursegen', 'syllabus', $session2, 'id', false));
+
+        // Files belonging to other components at system context are untouched.
+        $this->assertTrue($fs->get_file_by_id($foreign->get_id()) !== false);
+
+        // The system context holds the files only: the session rows stay put.
+        $this->assertCount(1, $DB->get_records('local_coursegen_course_sessions', ['userid' => $user1->id]));
+        $this->assertCount(1, $DB->get_records('local_coursegen_course_sessions', ['userid' => $user2->id]));
+    }
+
+    /**
+     * Deleting one user's data at system context removes only their syllabus files.
+     *
+     * @covers \local_coursegen\privacy\provider::delete_data_for_user
+     */
+    public function test_delete_data_for_user_in_system_context(): void {
+        global $DB;
+
+        $user1 = $this->getDataGenerator()->create_user();
+        $records1 = $this->create_userdata($user1->id);
+        $session1 = (int)$records1['local_coursegen_course_sessions']->id;
+        $this->create_syllabus_file($session1);
+
+        $user2 = $this->getDataGenerator()->create_user();
+        $records2 = $this->create_userdata($user2->id);
+        $session2 = (int)$records2['local_coursegen_course_sessions']->id;
+        $this->create_syllabus_file($session2);
+
+        $systemcontext = context_system::instance();
+        $approvedlist = new approved_contextlist($user1, 'local_coursegen', [$systemcontext->id]);
+        provider::delete_data_for_user($approvedlist);
+
+        $fs = get_file_storage();
+        $this->assertEmpty($fs->get_area_files($systemcontext->id, 'local_coursegen', 'syllabus', $session1, 'id', false));
+        $this->assertNotEmpty($fs->get_area_files($systemcontext->id, 'local_coursegen', 'syllabus', $session2, 'id', false));
+
+        // Rows live in the user and course contexts, not here.
+        $this->assertCount(1, $DB->get_records('local_coursegen_course_sessions', ['userid' => $user1->id]));
+    }
+
+    /**
+     * Deleting approved users at system context removes only their syllabus files.
+     *
+     * @covers \local_coursegen\privacy\provider::delete_data_for_users
+     */
+    public function test_delete_data_for_users_in_system_context(): void {
+        $user1 = $this->getDataGenerator()->create_user();
+        $records1 = $this->create_userdata($user1->id);
+        $session1 = (int)$records1['local_coursegen_course_sessions']->id;
+        $this->create_syllabus_file($session1);
+
+        $user2 = $this->getDataGenerator()->create_user();
+        $records2 = $this->create_userdata($user2->id);
+        $session2 = (int)$records2['local_coursegen_course_sessions']->id;
+        $this->create_syllabus_file($session2);
+
+        $systemcontext = context_system::instance();
+        $approvedlist = new \core_privacy\local\request\approved_userlist(
+            $systemcontext,
+            'local_coursegen',
+            [$user1->id]
+        );
+        provider::delete_data_for_users($approvedlist);
+
+        $fs = get_file_storage();
+        $this->assertEmpty($fs->get_area_files($systemcontext->id, 'local_coursegen', 'syllabus', $session1, 'id', false));
+        $this->assertNotEmpty($fs->get_area_files($systemcontext->id, 'local_coursegen', 'syllabus', $session2, 'id', false));
     }
 
     /**
@@ -85,7 +311,8 @@ final class privacy_provider_test extends provider_testcase {
         $actual = $userlist->get_userids();
         $this->assertEquals($expected, $actual);
 
-        // The list of users for system context should not return any users.
+        // The system context only holds the stored syllabus files, and this user
+        // has none, so a system-context request must not list them.
         $userlist = new userlist(context_system::instance(), $component);
         provider::get_users_in_context($userlist);
         $this->assertCount(0, $userlist);
@@ -149,10 +376,27 @@ final class privacy_provider_test extends provider_testcase {
 
         provider::delete_data_for_all_users_in_context($user1context);
 
-        $this->assertCount(0, $DB->get_records('local_coursegen_system_instruction', ['usermodified' => $user1->id]));
-        $this->assertCount(0, $DB->get_records('local_coursegen_course_context', ['usermodified' => $user1->id]));
+        // Personal rows are really deleted.
         $this->assertCount(0, $DB->get_records('local_coursegen_course_sessions', ['userid' => $user1->id]));
         $this->assertCount(0, $DB->get_records('local_coursegen_module_jobs', ['userid' => $user1->id]));
+
+        // Shared configuration rows persist but are anonymized (usermodified reset).
+        $this->assertCount(0, $DB->get_records('local_coursegen_system_instruction', ['usermodified' => $user1->id]));
+        $this->assertCount(0, $DB->get_records('local_coursegen_course_context', ['usermodified' => $user1->id]));
+        $instruction = $DB->get_record(
+            'local_coursegen_system_instruction',
+            ['id' => $records1['local_coursegen_system_instruction']->id],
+            '*',
+            MUST_EXIST
+        );
+        $this->assertEquals(0, $instruction->usermodified);
+        $coursecontext = $DB->get_record(
+            'local_coursegen_course_context',
+            ['id' => $records1['local_coursegen_course_context']->id],
+            '*',
+            MUST_EXIST
+        );
+        $this->assertEquals(0, $coursecontext->usermodified);
 
         // Ensure records for user2 remain intact (one per table for user2).
         foreach (array_keys($records1) as $table) {
@@ -192,10 +436,27 @@ final class privacy_provider_test extends provider_testcase {
         $approvedlist = new approved_contextlist($user1, 'local_coursegen', [$user1context->id]);
         provider::delete_data_for_user($approvedlist);
 
-        $this->assertCount(0, $DB->get_records('local_coursegen_system_instruction', ['usermodified' => $user1->id]));
-        $this->assertCount(0, $DB->get_records('local_coursegen_course_context', ['usermodified' => $user1->id]));
+        // Personal rows are really deleted.
         $this->assertCount(0, $DB->get_records('local_coursegen_course_sessions', ['userid' => $user1->id]));
         $this->assertCount(0, $DB->get_records('local_coursegen_module_jobs', ['userid' => $user1->id]));
+
+        // Shared configuration rows persist but are anonymized (usermodified reset).
+        $this->assertCount(0, $DB->get_records('local_coursegen_system_instruction', ['usermodified' => $user1->id]));
+        $this->assertCount(0, $DB->get_records('local_coursegen_course_context', ['usermodified' => $user1->id]));
+        $instruction = $DB->get_record(
+            'local_coursegen_system_instruction',
+            ['id' => $records1['local_coursegen_system_instruction']->id],
+            '*',
+            MUST_EXIST
+        );
+        $this->assertEquals(0, $instruction->usermodified);
+        $coursecontext = $DB->get_record(
+            'local_coursegen_course_context',
+            ['id' => $records1['local_coursegen_course_context']->id],
+            '*',
+            MUST_EXIST
+        );
+        $this->assertEquals(0, $coursecontext->usermodified);
 
         // Ensure records for user2 remain intact (one per table for user2).
         foreach (array_keys($records1) as $table) {
@@ -250,6 +511,188 @@ final class privacy_provider_test extends provider_testcase {
         $userlist2 = new userlist($usercontext2, $component);
         provider::get_users_in_context($userlist2);
         $this->assertCount(1, $userlist2);
+    }
+
+    /**
+     * Users with sessions or jobs in a course are listed for that course context.
+     *
+     * @covers \local_coursegen\privacy\provider::get_users_in_context
+     */
+    public function test_get_users_in_context_for_course_context(): void {
+        $component = 'local_coursegen';
+        $user = $this->getDataGenerator()->create_user();
+        $other = $this->getDataGenerator()->create_user();
+        $records = $this->create_userdata($user->id);
+        $coursecontext = context_course::instance($records['local_coursegen_course_sessions']->courseid);
+
+        $userlist = new userlist($coursecontext, $component);
+        provider::get_users_in_context($userlist);
+        $this->assertEquals([$user->id], $userlist->get_userids());
+
+        // A user without rows in the course is not listed.
+        $this->assertNotContains((int)$other->id, $userlist->get_userids());
+    }
+
+    /**
+     * The export includes the syllabus files stored for the user's planning
+     * sessions, under the system context where those files actually live.
+     *
+     * @covers \local_coursegen\privacy\provider::export_user_data
+     */
+    public function test_export_user_data_includes_syllabus_files(): void {
+        $user = $this->getDataGenerator()->create_user();
+        $records = $this->create_userdata($user->id);
+        $sessionid = (int)$records['local_coursegen_course_sessions']->id;
+        $this->create_syllabus_file($sessionid);
+
+        $systemcontext = context_system::instance();
+        $approvedlist = new approved_contextlist($user, 'local_coursegen', [$systemcontext->id]);
+        provider::export_user_data($approvedlist);
+
+        $writer = writer::with_context($systemcontext);
+        $files = $writer->get_files([
+            get_string('privacy:metadata:local_coursegen', 'local_coursegen'),
+            get_string('privacy:metadata:local_coursegen_course_sessions', 'local_coursegen'),
+        ]);
+        $this->assertArrayHasKey('syllabus.pdf', $files);
+    }
+
+    /**
+     * One user's syllabus files are never exported with another user's request.
+     *
+     * @covers \local_coursegen\privacy\provider::export_user_data
+     */
+    public function test_export_user_data_at_system_context_is_scoped_to_the_user(): void {
+        $owner = $this->getDataGenerator()->create_user();
+        $ownerrecords = $this->create_userdata($owner->id);
+        $this->create_syllabus_file((int)$ownerrecords['local_coursegen_course_sessions']->id, 'owner.pdf');
+
+        $other = $this->getDataGenerator()->create_user();
+        $otherrecords = $this->create_userdata($other->id);
+        $this->create_syllabus_file((int)$otherrecords['local_coursegen_course_sessions']->id, 'other.pdf');
+
+        $systemcontext = context_system::instance();
+        $approvedlist = new approved_contextlist($owner, 'local_coursegen', [$systemcontext->id]);
+        provider::export_user_data($approvedlist);
+
+        $files = writer::with_context($systemcontext)->get_files([
+            get_string('privacy:metadata:local_coursegen', 'local_coursegen'),
+            get_string('privacy:metadata:local_coursegen_course_sessions', 'local_coursegen'),
+        ]);
+        $this->assertArrayHasKey('owner.pdf', $files);
+        $this->assertArrayNotHasKey('other.pdf', $files);
+    }
+
+    /**
+     * Session and job rows of a course are exported under that course context.
+     *
+     * @covers \local_coursegen\privacy\provider::export_user_data
+     */
+    public function test_export_user_data_for_course_context(): void {
+        $user = $this->getDataGenerator()->create_user();
+        $records = $this->create_userdata($user->id);
+        $coursecontext = context_course::instance($records['local_coursegen_course_sessions']->courseid);
+
+        $approvedlist = new approved_contextlist($user, 'local_coursegen', [$coursecontext->id]);
+        provider::export_user_data($approvedlist);
+
+        $writer = writer::with_context($coursecontext);
+        $this->assertTrue($writer->has_any_data());
+    }
+
+    /**
+     * Deleting user data also removes the stored syllabus files of their sessions.
+     *
+     * @covers \local_coursegen\privacy\provider::delete_data_for_all_users_in_context
+     */
+    public function test_delete_user_data_removes_syllabus_files(): void {
+        $user = $this->getDataGenerator()->create_user();
+        $records = $this->create_userdata($user->id);
+        $sessionid = (int)$records['local_coursegen_course_sessions']->id;
+        $this->create_syllabus_file($sessionid);
+
+        $fs = get_file_storage();
+        $syscontextid = context_system::instance()->id;
+        $this->assertNotEmpty($fs->get_area_files($syscontextid, 'local_coursegen', 'syllabus', $sessionid, 'id', false));
+
+        provider::delete_data_for_all_users_in_context(context_user::instance($user->id));
+
+        $this->assertEmpty($fs->get_area_files($syscontextid, 'local_coursegen', 'syllabus', $sessionid, 'id', false));
+    }
+
+    /**
+     * Deleting a whole course context removes sessions and jobs of every user for that course only.
+     *
+     * @covers \local_coursegen\privacy\provider::delete_data_for_all_users_in_context
+     */
+    public function test_delete_data_for_all_users_in_course_context(): void {
+        global $DB;
+
+        $user1 = $this->getDataGenerator()->create_user();
+        $records1 = $this->create_userdata($user1->id);
+        $courseid = (int)$records1['local_coursegen_course_sessions']->courseid;
+
+        // Second user with rows in the same course.
+        $user2 = $this->getDataGenerator()->create_user();
+        $session2 = $this->create_course_session($courseid, $user2->id);
+        $this->create_syllabus_file((int)$session2->id);
+        $this->create_module_job($courseid, $user2->id);
+
+        // A third user with data in another course must not be affected.
+        $user3 = $this->getDataGenerator()->create_user();
+        $records3 = $this->create_userdata($user3->id);
+
+        provider::delete_data_for_all_users_in_context(context_course::instance($courseid));
+
+        $this->assertCount(0, $DB->get_records('local_coursegen_course_sessions', ['courseid' => $courseid]));
+        $this->assertCount(0, $DB->get_records('local_coursegen_module_jobs', ['courseid' => $courseid]));
+
+        // The syllabus file of the deleted session is gone.
+        $fs = get_file_storage();
+        $syscontextid = context_system::instance()->id;
+        $this->assertEmpty(
+            $fs->get_area_files($syscontextid, 'local_coursegen', 'syllabus', (int)$session2->id, 'id', false)
+        );
+
+        // Shared configuration for the course persists, anonymized.
+        $coursecontextrow = $DB->get_record(
+            'local_coursegen_course_context',
+            ['id' => $records1['local_coursegen_course_context']->id],
+            '*',
+            MUST_EXIST
+        );
+        $this->assertEquals(0, $coursecontextrow->usermodified);
+
+        // The other course keeps its data.
+        $othercourseid = (int)$records3['local_coursegen_course_sessions']->courseid;
+        $this->assertCount(1, $DB->get_records('local_coursegen_course_sessions', ['courseid' => $othercourseid]));
+        $this->assertCount(1, $DB->get_records('local_coursegen_module_jobs', ['courseid' => $othercourseid]));
+    }
+
+    /**
+     * Deleting approved users in a course context removes only those users' rows in that course.
+     *
+     * @covers \local_coursegen\privacy\provider::delete_data_for_users
+     */
+    public function test_delete_data_for_users_in_course_context(): void {
+        global $DB;
+
+        $user1 = $this->getDataGenerator()->create_user();
+        $records1 = $this->create_userdata($user1->id);
+        $courseid = (int)$records1['local_coursegen_course_sessions']->courseid;
+
+        $user2 = $this->getDataGenerator()->create_user();
+        $this->create_course_session($courseid, $user2->id);
+        $this->create_module_job($courseid, $user2->id);
+
+        $coursecontext = context_course::instance($courseid);
+        $approvedlist = new \core_privacy\local\request\approved_userlist($coursecontext, 'local_coursegen', [$user1->id]);
+        provider::delete_data_for_users($approvedlist);
+
+        $this->assertCount(0, $DB->get_records('local_coursegen_course_sessions', ['userid' => $user1->id]));
+        $this->assertCount(0, $DB->get_records('local_coursegen_module_jobs', ['userid' => $user1->id]));
+        $this->assertCount(1, $DB->get_records('local_coursegen_course_sessions', ['userid' => $user2->id]));
+        $this->assertCount(1, $DB->get_records('local_coursegen_module_jobs', ['userid' => $user2->id]));
     }
 
     /**
@@ -345,10 +788,47 @@ final class privacy_provider_test extends provider_testcase {
         $record->userid = $userid;
         $record->session_id = 'sess_' . bin2hex(random_bytes(4));
         $record->status = 1;
+        $record->coursedata = json_encode(['local_coursegen_custom_prompt' => 'Create a course about privacy']);
         $record->timecreated = time();
         $record->timemodified = time();
         $record->id = $DB->insert_record('local_coursegen_course_sessions', $record);
         return $record;
+    }
+
+    /**
+     * Store a syllabus file in the system context for a planning session.
+     *
+     * @param int $sessionid Session id used as file item id.
+     * @param string $filename File name.
+     * @return \stored_file
+     */
+    private function create_syllabus_file(int $sessionid, string $filename = 'syllabus.pdf'): \stored_file {
+        $fs = get_file_storage();
+        return $fs->create_file_from_string((object) [
+            'contextid' => context_system::instance()->id,
+            'component' => 'local_coursegen',
+            'filearea' => 'syllabus',
+            'itemid' => $sessionid,
+            'filepath' => '/',
+            'filename' => $filename,
+        ], '%PDF-1.4 test syllabus');
+    }
+
+    /**
+     * Store a file of another component at system context, used to prove the
+     * system-context deletion stays inside this plugin's syllabus file area.
+     *
+     * @return \stored_file
+     */
+    private function create_foreign_system_file(): \stored_file {
+        return get_file_storage()->create_file_from_string((object) [
+            'contextid' => context_system::instance()->id,
+            'component' => 'core_admin',
+            'filearea' => 'logo',
+            'itemid' => 0,
+            'filepath' => '/',
+            'filename' => 'logo.png',
+        ], 'not a real logo');
     }
 
     /**

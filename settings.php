@@ -23,6 +23,8 @@
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+use aiprovider_datacurso\local\plugin_settings;
+
 defined('MOODLE_INTERNAL') || die();
 
 if ($hassiteconfig) {
@@ -32,7 +34,14 @@ if ($hassiteconfig) {
     // entry to users the page then rejected.
     $creationmodes = ['local/coursegen:createfreecoursewithai', 'local/coursegen:createtemplatecoursewithai'];
     $systemcontext = context_system::instance();
-    if (has_capability('moodle/course:create', $systemcontext) && has_any_capability($creationmodes, $systemcontext)) {
+    // The entry is hidden while the plugin is disabled in the Datacurso AI provider, or the provider is missing
+    // (the admin tree is also built while installing a site, before the dependency can be checked).
+    if (
+        class_exists(plugin_settings::class)
+        && plugin_settings::is_enabled('local_coursegen')
+        && has_capability('moodle/course:create', $systemcontext)
+        && has_any_capability($creationmodes, $systemcontext)
+    ) {
         $ADMIN->add('courses', new admin_externalpage(
             'local_coursegen_addnewcourseai',
             get_string('courseai_admin_addnewcourse', 'local_coursegen'),
@@ -55,6 +64,48 @@ if ($hassiteconfig) {
         0
     ));
 
+    // Off by default: importing into an existing course copies and replaces
+    // the target, so the site must opt in explicitly (ticket #9539).
+    $enableimportexisting = new admin_setting_configcheckbox(
+        'local_coursegen/enableimportexisting',
+        get_string('setting_enableimportexisting', 'local_coursegen'),
+        get_string('setting_enableimportexisting_desc', 'local_coursegen'),
+        0
+    );
+    // The importer role is only created once the feature is enabled.
+    $enableimportexisting->set_updatedcallback('local_coursegen\\local\\role_installer::install_missing_roles');
+    $settings->add($enableimportexisting);
+
+    // Only meaningful while the import is enabled: "replace" deletes the copy
+    // content before importing the generated course, "add" keeps the existing
+    // sections and activities and merges the generated ones on top.
+    $settings->add(new admin_setting_configselect(
+        'local_coursegen/importcontentmode',
+        get_string('setting_importcontentmode', 'local_coursegen'),
+        get_string('setting_importcontentmode_desc', 'local_coursegen'),
+        'replace',
+        [
+            'replace' => get_string('importcontentmode_replace', 'local_coursegen'),
+            'add' => get_string('importcontentmode_add', 'local_coursegen'),
+        ]
+    ));
+    $settings->hide_if('local_coursegen/importcontentmode', 'local_coursegen/enableimportexisting', 'notchecked');
+
+    // Only meaningful while the import is enabled: "adhoc" queues a cron task
+    // and the page polls until it ends, "sync" runs the copy and the import
+    // inside the create_course request.
+    $settings->add(new admin_setting_configselect(
+        'local_coursegen/importexecution',
+        get_string('setting_importexecution', 'local_coursegen'),
+        get_string('setting_importexecution_desc', 'local_coursegen'),
+        'adhoc',
+        [
+            'adhoc' => get_string('importexecution_adhoc', 'local_coursegen'),
+            'sync' => get_string('importexecution_sync', 'local_coursegen'),
+        ]
+    ));
+    $settings->hide_if('local_coursegen/importexecution', 'local_coursegen/enableimportexisting', 'notchecked');
+
     $ADMIN->add($pluginname, $settings);
 
     // Development settings page: service URL overrides for dev/staging
@@ -70,7 +121,9 @@ if ($hassiteconfig) {
         get_string('devsettings_desc', 'local_coursegen')
     ));
 
-    $devsettings->add(new admin_setting_configtext(
+    // HTTPS is enforced: the overrides carry prompts and syllabus files, so
+    // plain HTTP is only accepted for localhost under developer debugging.
+    $devsettings->add(new \local_coursegen\admin\setting_https_url(
         'local_coursegen/datacurso_service_url',
         get_string('datacurso_service_url', 'local_coursegen'),
         get_string('datacurso_service_url_desc', 'local_coursegen'),
@@ -78,7 +131,7 @@ if ($hassiteconfig) {
         PARAM_URL
     ));
 
-    $devsettings->add(new admin_setting_configtext(
+    $devsettings->add(new \local_coursegen\admin\setting_https_url(
         'local_coursegen/datacurso_service_url_eu',
         get_string('datacurso_service_url_eu', 'local_coursegen'),
         get_string('datacurso_service_url_eu_desc', 'local_coursegen'),
@@ -131,5 +184,14 @@ if ($hassiteconfig) {
         new moodle_url('/local/coursegen/edit_system_instruction.php'),
         ['local/coursegen:createsysteminstructions', 'local/coursegen:editsysteminstructions'],
         true
+    ));
+} else if (has_capability('local/coursegen:viewimagegenerationsettings', context_system::instance())) {
+    // Users who can view the image generation settings without being site administrators still need
+    // the page in the admin tree: admin_externalpage_setup() only opens registered pages.
+    $ADMIN->add('localplugins', new admin_externalpage(
+        'local_coursegen_manage_image_generation',
+        get_string('manage_image_generation', 'local_coursegen'),
+        new moodle_url('/local/coursegen/manage_image_generation.php'),
+        'local/coursegen:viewimagegenerationsettings'
     ));
 }

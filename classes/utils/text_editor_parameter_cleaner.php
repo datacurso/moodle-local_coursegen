@@ -116,6 +116,7 @@ class text_editor_parameter_cleaner {
         }
 
         $text = self::normalize_escaped_html_quotes((string)($editorobject['text'] ?? ''));
+        $text = clean_text($text, FORMAT_HTML);
 
         return [
             'text' => $text,
