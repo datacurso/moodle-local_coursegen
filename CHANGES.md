@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.16] - 2026111721
+
+### Fixed
+- **Links in the texts are resolved all-or-nothing without relying on a database rollback**  
+  Every text is now resolved in memory first and stored only when none of its links failed, so a link that cannot be resolved leaves
+  every text as it was whatever the database or the transaction nesting in use.
+
 ## [2.0.16] - 2026111720
 
 ### Fixed
