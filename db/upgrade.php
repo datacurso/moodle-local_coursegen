@@ -450,6 +450,15 @@ function xmldb_local_coursegen_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026102000, 'local', 'coursegen');
     }
 
+    if ($oldversion < 2026111713) {
+        // A site that came from the MOODLE_405_STABLE line never had the template tables, and the steps that create
+        // them are numbered below the versions that line installed, so it skipped them. Every step from here on that
+        // alters those tables would fail with a missing table, so the missing ones are created first, as install.xml
+        // defines them; the ones that exist are left as they are. This is a precondition, not a step: it has no
+        // savepoint of its own, because the versions the following steps record are lower than any number chosen here.
+        local_coursegen_upgrade_install_missing_template_tables($dbman);
+    }
+
     if ($oldversion < 2026102637) {
         // A template can be hidden from the creation of a course without being deleted.
         $table = new xmldb_table('local_coursegen_template');
