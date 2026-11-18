@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.16] - 2026111801
+
+### Fixed
+- **The pictures of the course are made when images are turned on during the run**  
+  A run that started without images and turned them on with the answer to the images question never sent the pictures of the course the template asks for (its banner, its cover), so they kept the ones of the template. They now go with every run, and the service makes them only while the run makes images.
+
+## [2.0.16] - 2026111800
+
+### Fixed
+- **The progress of a course made from a template is shown again**  
+  The request that follows a template generation did not say which plugin sends it and its build, so the service answered that the plugin needs an update and the page lost the connection. It now identifies the plugin like every other call.
+
 ## [2.0.16] - 2026111721
 
 ### Fixed
