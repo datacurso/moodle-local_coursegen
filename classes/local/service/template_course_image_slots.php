@@ -48,6 +48,29 @@ final class template_course_image_slots {
     private const REFERENCE_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
 
     /**
+     * The slots a run receives, whether or not it starts with images.
+     *
+     * Images can be turned on during the run (the answer to the images question), so the slots always go with it and
+     * the AI service makes them only while the run makes images. A run that starts without images is not refused for
+     * a misplaced marker: it gets no slot instead, as it did before.
+     *
+     * @param \stdClass $course The template's course.
+     * @param bool $withimages Whether the run starts with images.
+     * @return array[] The slots, as {@see for_course()} returns them.
+     * @throws \moodle_exception A marker is misplaced and the run starts with images.
+     */
+    public static function for_run(\stdClass $course, bool $withimages): array {
+        if ($withimages) {
+            return self::for_course($course);
+        }
+        try {
+            return self::for_course($course);
+        } catch (\moodle_exception $e) {
+            return [];
+        }
+    }
+
+    /**
      * Every slot of a template's course.
      *
      * @param \stdClass $course The template's course.

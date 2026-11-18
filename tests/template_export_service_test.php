@@ -453,9 +453,9 @@ final class template_export_service_test extends \advanced_testcase {
     }
 
     /**
-     * A reference marker in the template asks for a picture only when the person chose to have images.
+     * The pictures of the course go with the run even without images, since the run can turn them on later.
      */
-    public function test_pictures_of_the_course_are_asked_only_when_images_are_on(): void {
+    public function test_pictures_of_the_course_go_with_the_run_whether_or_not_images_are_on(): void {
         $this->resetAfterTest(true);
         $this->setAdminUser();
 
@@ -465,7 +465,7 @@ final class template_export_service_test extends \advanced_testcase {
         $templateid = $this->create_template($course->id)->get('id');
 
         $without = template_export_service::build_init_payload($templateid, '', '', false);
-        $this->assertSame([], $without['image_slots']);
+        $this->assertCount(1, $without['image_slots']);
 
         $with = template_export_service::build_init_payload($templateid, '', '', true);
         $this->assertCount(1, $with['image_slots']);
