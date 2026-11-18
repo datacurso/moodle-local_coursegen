@@ -98,6 +98,8 @@ final class course_placeholder_reading_test extends \advanced_testcase {
      * A type that cannot be a mold keeps its place and is reported.
      */
     public function test_a_type_that_cannot_be_a_mold_is_kept_and_reported(): void {
+        // The chat is disabled on a fresh site, and a disabled module is left out of the course.
+        \core\plugininfo\mod::enable_plugin('chat', 1);
         $generator = $this->getDataGenerator();
         $course = $generator->create_course();
         $marker = self::marker_text();
