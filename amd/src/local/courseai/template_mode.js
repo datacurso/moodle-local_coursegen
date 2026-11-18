@@ -27,7 +27,7 @@
  */
 
 import Notification from 'core/notification';
-import {getString, getStrings} from 'core/str';
+import {getString} from 'core/str';
 import {getTemplateStructure} from './template/repository';
 import {reopenGeneration, runGeneration} from './template/run_generation';
 import {wireInputBar} from './template/input_bar';
@@ -333,7 +333,6 @@ const reopenRun = async(reopened, page) => {
 const loadTemplateStructure = async(templateId, tplState, container, state, requestTracker, requestId) => {
     const detailsEl = document.getElementById('tplModeDetails');
     const limitsEl = document.getElementById('tplModeLimits');
-    const limitsBadge = document.getElementById('tplModeLimitsBadge');
     const genBtn = document.getElementById('tplModeGenerate');
     if (!container) {
         return;
@@ -356,7 +355,7 @@ const loadTemplateStructure = async(templateId, tplState, container, state, requ
         await renderStructure(container, tplState);
         refreshPreviewLinks();
         updateStats(tplState, statsTemplate);
-        await renderLimitsBanner(limitsEl, limitsBadge, tplState);
+        showTopBarStats(limitsEl);
 
         // A required space keeps the button off until its file is picked.
         refreshGenerateState(tplState, genBtn);
@@ -367,7 +366,7 @@ const loadTemplateStructure = async(templateId, tplState, container, state, requ
             // handler already owns the UI, so this stale failure stays silent.
             return;
         }
-        // Reset the structure panel, limits badge and Generate button so the
+        // Reset the structure panel, top bar stats and Generate button so the
         // professor doesn't see a mix of the failed template's name with the
         // previous template's structure still on screen.
         clearStructure(tplState, container, state);
@@ -376,29 +375,14 @@ const loadTemplateStructure = async(templateId, tplState, container, state, requ
 };
 
 /**
- * Render the section limits banner text (the badge markup itself is static,
- * see courseai_page.mustache#tplModeLimits — this only toggles it and sets text).
+ * Show the stats of the structure and the preview link in the top bar, once a template is loaded.
  *
  * @param {HTMLElement} limitsEl
- * @param {HTMLElement} limitsBadge
- * @param {Object} tplState
  */
-const renderLimitsBanner = async(limitsEl, limitsBadge, tplState) => {
-    if (!limitsEl || !limitsBadge) {
-        return;
+const showTopBarStats = (limitsEl) => {
+    if (limitsEl) {
+        limitsEl.style.display = '';
     }
-    if (tplState.nolimit) {
-        const [nolimitStr] = await getStrings([
-            {key: 'courseai_template_limits_nolimit', component: 'local_coursegen'},
-        ]);
-        limitsBadge.textContent = nolimitStr;
-    } else {
-        const [remainingStr] = await getStrings([
-            {key: 'courseai_template_limits_remaining', component: 'local_coursegen'},
-        ]);
-        limitsBadge.textContent = remainingStr.replace('{$a}', tplState.remainingSections);
-    }
-    limitsEl.style.display = '';
 };
 
 /**
@@ -425,12 +409,8 @@ const clearStructure = (tplState, container, state) => {
         workspace.classList.remove('tpl-active');
     }
     const limitsEl = document.getElementById('tplModeLimits');
-    const limitsBadge = document.getElementById('tplModeLimitsBadge');
     if (limitsEl) {
         limitsEl.style.display = 'none';
-    }
-    if (limitsBadge) {
-        limitsBadge.textContent = '';
     }
     const genBtn = document.getElementById('tplModeGenerate');
     if (genBtn) {
