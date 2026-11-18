@@ -11,6 +11,8 @@ All notable changes to this project will be documented in this file. Each change
 ### Changed
 - **The top bar of a template no longer shows how many sections remain**  
   The "Quedan N secciones" badge beside the structure stats is gone; the stats and the preview link stay.
+- **The long lines about each picture are gone from the progress of a template run**  
+  The phase line and the working box no longer list every picture with its technical name and template file, nor count only the pictures of the course; the images pill counts and lists every picture with readable names.
 
 ## [2.0.16] - 2026111804
 

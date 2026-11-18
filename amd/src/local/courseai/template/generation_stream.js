@@ -513,7 +513,7 @@ const runPasses = async(streamUrl, buildCourse, sessionId, control, reopened = f
                 showGeneratingHeader((await getLabels()).title);
                 // The run goes on where it was: it is not told as a new one, and the count of pictures stays.
                 await paintStage('resuming');
-                resetStatus(true);
+                resetStatus();
                 control.begin();
                 continue;
             }
@@ -528,7 +528,7 @@ const runPasses = async(streamUrl, buildCourse, sessionId, control, reopened = f
             document.body.classList.remove(PAUSED_CLASS);
             showGeneratingHeader((await getLabels()).title);
             await paintStage('resuming');
-            resetStatus(true);
+            resetStatus();
             try {
                 await retryTemplateGeneration(sessionId);
             } catch (retryError) {

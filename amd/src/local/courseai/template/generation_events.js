@@ -37,7 +37,7 @@ import {
 } from 'local_coursegen/local/courseai/template/generation_checklist';
 import {showWorkingIndicator} from 'local_coursegen/local/courseai/ui/feedback-progress';
 import {createRepeatTracker} from 'local_coursegen/local/courseai/template/repeat_progress';
-import {resetStatus, showNotice, showPicture} from 'local_coursegen/local/courseai/template/generation_status';
+import {resetStatus, showNotice} from 'local_coursegen/local/courseai/template/generation_status';
 import {onPicture} from 'local_coursegen/local/courseai/template/images_panel';
 
 const repeats = createRepeatTracker();
@@ -135,8 +135,8 @@ const EVENT_HANDLERS = {
         return '';
     },
     template_image: (data) => {
+        // The pictures are counted and listed by the images pill only, with readable names.
         onPicture(data);
-        showPicture(data).then((text) => text && showWorkingIndicator({}, text)).catch(() => undefined);
         return '';
     },
     // What the guideline added after the template's own sections joins the structure on the right, and so the list.
