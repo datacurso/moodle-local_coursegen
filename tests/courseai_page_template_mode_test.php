@@ -383,7 +383,10 @@ final class courseai_page_template_mode_test extends \advanced_testcase {
 
         $html = $this->render_page(false);
 
-        $this->assertStringNotContainsString('id="courseaiChecklist"', $html);
+        // Free mode keeps its own planned-structure checklist under the same id, so the pill is what is checked.
+        $this->assertStringNotContainsString('data-region="tpl-top-activities"', $html);
+        $this->assertStringNotContainsString('id="tplTopActivitiesToggle"', $html);
+        $this->assertStringNotContainsString('id="tplTopActivitiesPanel"', $html);
     }
 
     /**
