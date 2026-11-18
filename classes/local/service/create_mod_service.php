@@ -174,14 +174,17 @@ class create_mod_service {
      */
     private static function create_mod_form_instance($modname, $data, $cw, $cm, $course) {
         // This is necessary to void error when load the mod_form.php file.
-        global $CFG, $COURSE, $DB;
+        global $CFG, $COURSE, $DB, $PAGE;
         $modmoodleform = self::get_mod_form_file_path($modname);
         require_once($modmoodleform);
 
         $mformclassname = 'mod_' . $modname . '_mod_form';
-        // The form reads the section it is for from the global course, which is the course of the
-        // page that is being served; here it is the course the module is created in. A fresh record
-        // and a cleared modinfo make that read independent of any stale copy of the course.
+        // The form reads the section it is for from the global course, which is the course of the page that is
+        // being served; here it is the course the module is created in. The page sets its theme up the first time
+        // output is used, and when it has no course that setup replaces the global course with the site, so the
+        // form would look for its section in the site course. The setup is done first, the global course is then
+        // given the course of the module, and a fresh record and a cleared modinfo keep any stale copy out.
+        $PAGE->initialise_theme_and_output();
         $previouscourse = $COURSE;
         $COURSE = clone $DB->get_record('course', ['id' => $course->id], '*', MUST_EXIST);
         \course_modinfo::clear_instance_cache($course->id);
@@ -313,12 +316,42 @@ class create_mod_service {
             $defaults = (new \ReflectionProperty(\HTML_QuickForm::class, '_defaultValues'))->getValue($quickform);
         }
         unset($defaults['sesskey']);
+        $defaults = self::complete_editor_values($defaults);
         foreach ($defaults as $name => $value) {
             if (!property_exists($parameters, $name)) {
                 $parameters->$name = $value;
             }
         }
         return $parameters;
+    }
+
+    /**
+     * Give every editor-shaped value an exported form left incomplete the parts Moodle reads unguarded.
+     *
+     * A form that was never submitted exports its editors without a text, a format or a draft area, and the
+     * modules read those parts straight away (the feedback of a quiz, the intro of an assignment). The text
+     * becomes empty, the format HTML, and the draft area a new empty one.
+     *
+     * @param array $values Exported values, which may hold editor arrays at any depth.
+     * @return array The same values with each editor array complete.
+     */
+    private static function complete_editor_values(array $values): array {
+        foreach ($values as $key => $value) {
+            if (!is_array($value)) {
+                continue;
+            }
+            if (array_key_exists('text', $value)) {
+                $value['text'] = (string) ($value['text'] ?? '');
+                $value['format'] = (int) ($value['format'] ?? FORMAT_HTML);
+                if (empty($value['itemid'])) {
+                    $value['itemid'] = file_get_unused_draft_itemid();
+                }
+                $values[$key] = $value;
+            } else {
+                $values[$key] = self::complete_editor_values($value);
+            }
+        }
+        return $values;
     }
 
     /**

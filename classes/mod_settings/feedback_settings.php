@@ -69,7 +69,7 @@ class feedback_settings extends base_settings {
             // the page that edits an item does before saving it.
             $cm = get_coursemodule_from_id('feedback', $this->cm->coursemodule, 0, false, MUST_EXIST);
             $feedback = $DB->get_record('feedback', ['id' => $this->cm->instance], '*', MUST_EXIST);
-            $itemobj->build_editform((object) ['id' => '', 'position' => $position, 'typ' => $type, 'options' => '',
+            $itemobj->build_editform((object) ['id' => null, 'position' => $position, 'typ' => $type, 'options' => '',
                 'required' => 0], $feedback, $cm);
         }
 

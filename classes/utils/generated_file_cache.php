@@ -43,8 +43,11 @@ class generated_file_cache {
      */
     public function __construct(?callable $downloader = null) {
         if ($downloader === null) {
-            $api = new template_ai_api_service();
-            $downloader = [$api, 'download_generated_file'];
+            // The service is built when a file really has to be downloaded: a file that is already stored
+            // needs no connection to the AI service (nor its license check).
+            $downloader = static function (...$arguments) {
+                return (new template_ai_api_service())->download_generated_file(...$arguments);
+            };
         }
         $this->downloader = $downloader;
     }
