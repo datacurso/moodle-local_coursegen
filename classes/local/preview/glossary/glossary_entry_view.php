@@ -197,8 +197,14 @@ trait glossary_entry_view {
      * @param bool $printseparator
      * @return string
      */
-    protected function glossary_print_entry_lower_section($entry, $mode, $hook, $printicons, $aliases = true,
-            $printseparator = true) {
+    protected function glossary_print_entry_lower_section(
+        $entry,
+        $mode,
+        $hook,
+        $printicons,
+        $aliases = true,
+        $printseparator = true
+    ) {
         global $OUTPUT;
 
         $aliaseshtml = '';
@@ -218,5 +224,4 @@ trait glossary_entry_view {
             'printseparator' => $printseparator,
         ]);
     }
-
 }

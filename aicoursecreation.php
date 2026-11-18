@@ -98,8 +98,10 @@ if ($resumesessionid > 0) {
         $templatesession = ['id' => (int) $opened->id, 'created' => false];
         $openedrecord = new course_session((int) $opened->id);
         $createdcourseid = (int) ($openedrecord->get('courseid') ?? 0);
-        if ((int) $openedrecord->get('status') === course_session::STATUS_CREATED && $createdcourseid > 0
-                && $DB->record_exists('course', ['id' => $createdcourseid])) {
+        if (
+            (int) $openedrecord->get('status') === course_session::STATUS_CREATED && $createdcourseid > 0
+                && $DB->record_exists('course', ['id' => $createdcourseid])
+        ) {
             // What the finished course holds, counted in the course itself: every section, the general one too, as
             // the live run counts the sections of the template.
             $modinfo = get_fast_modinfo($createdcourseid, -1);
@@ -236,7 +238,12 @@ $sidebarpinned = (bool) get_user_preferences('local_coursegen_sidebar_pinned', t
 
 // Native Moodle form (single autocomplete field) for the template-mode picker.
 $templatepickerform = new \local_coursegen\form\course_template_picker_form(
-    null, ['templates' => $coursetemplates], 'post', '', ['id' => 'tpl-select-form']);
+    null,
+    ['templates' => $coursetemplates],
+    'post',
+    '',
+    ['id' => 'tpl-select-form']
+);
 ob_start();
 $templatepickerform->display();
 $templatepickerformhtml = ob_get_clean();
@@ -244,7 +251,10 @@ $templatepickerformhtml = ob_get_clean();
 // Native Moodle "info" notification (same alert-info markup report builder
 // uses for "Nothing to display") shown until a template is picked.
 $templateemptystatehtml = $OUTPUT->notification(
-    get_string('courseai_template_empty_state', 'local_coursegen'), 'info', false);
+    get_string('courseai_template_empty_state', 'local_coursegen'),
+    'info',
+    false
+);
 
 // Import-into-existing-course controls render only when the site opted in and the user holds the
 // full import capability set on at least one course (ticket #9539).

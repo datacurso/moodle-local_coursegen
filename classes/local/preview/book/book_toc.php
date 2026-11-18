@@ -174,9 +174,9 @@ trait book_toc {
         int &$nch,
         int &$ns
     ): array {
-        $formatted = format_string($ch->title, true, array('context' => $context));
+        $formatted = format_string($ch->title, true, ['context' => $context]);
         $title = trim($formatted);
-        $formattedunescaped = format_string($ch->title, true, array('context' => $context, 'escape' => false));
+        $formattedunescaped = format_string($ch->title, true, ['context' => $context, 'escape' => false]);
         $titleunescaped = trim($formattedunescaped);
 
         if (!$ch->subchapter) {

@@ -38,8 +38,8 @@ trait resource_links {
         global $CFG, $OUTPUT;
 
         $filename = $file->get_filename();
-        $path = '/'.$file->get_contextid().'/mod_resource/content/'.$revision.$file->get_filepath().$file->get_filename();
-        $fullurl = file_encode_url($CFG->wwwroot.'/pluginfile.php', $path, false);
+        $path = '/' . $file->get_contextid() . '/mod_resource/content/' . $revision . $file->get_filepath() . $file->get_filename();
+        $fullurl = file_encode_url($CFG->wwwroot . '/pluginfile.php', $path, false);
 
         $link = $OUTPUT->render_from_template('local_coursegen/preview_link', [
             'url' => $fullurl,
@@ -60,8 +60,8 @@ trait resource_links {
         global $CFG, $OUTPUT;
 
         $filename = $file->get_filename();
-        $path = '/'.$file->get_contextid().'/mod_resource/content/'.$revision.$file->get_filepath().$file->get_filename();
-        $fullurl = file_encode_url($CFG->wwwroot.'/pluginfile.php', $path, true);
+        $path = '/' . $file->get_contextid() . '/mod_resource/content/' . $revision . $file->get_filepath() . $file->get_filename();
+        $fullurl = file_encode_url($CFG->wwwroot . '/pluginfile.php', $path, true);
 
         $link = $OUTPUT->render_from_template('local_coursegen/preview_link', [
             'url' => $fullurl,

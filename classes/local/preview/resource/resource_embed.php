@@ -43,8 +43,14 @@ trait resource_embed {
         $clicktoopen = $this->resource_get_clicktoopen($file, $resource->revision);
 
         $context = $this->context;
-        $moodleurl = moodle_url::make_pluginfile_url($context->id, 'mod_resource', 'content', $resource->revision,
-                $file->get_filepath(), $file->get_filename());
+        $moodleurl = moodle_url::make_pluginfile_url(
+            $context->id,
+            'mod_resource',
+            'content',
+            $resource->revision,
+            $file->get_filepath(),
+            $file->get_filename()
+        );
 
         $mimetype = $file->get_mimetype();
         $title    = $resource->name;
@@ -52,22 +58,19 @@ trait resource_embed {
         $extension = resourcelib_get_extension($file->get_filename());
 
         $mediamanager = core_media_manager::instance($PAGE);
-        $embedoptions = array(
+        $embedoptions = [
             core_media_manager::OPTION_TRUSTED => true,
             core_media_manager::OPTION_BLOCK => true,
-        );
+        ];
 
         if (file_mimetype_in_typegroup($mimetype, 'web_image')) {  // It's an image
             $code = resourcelib_embed_image($moodleurl->out(), $title);
-
         } else if ($mimetype === 'application/pdf') {
             // PDF document
             $code = resourcelib_embed_pdf($moodleurl->out(), $title, $clicktoopen);
-
         } else if ($mediamanager->can_embed_url($moodleurl, $embedoptions)) {
             // Media (audio/video) file.
             $code = $mediamanager->embed_url($moodleurl, $title, 0, 0, $embedoptions);
-
         } else {
             // We need a way to discover if we are loading remote docs inside an iframe.
             $moodleurl->param('embed', 1);

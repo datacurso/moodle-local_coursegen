@@ -175,8 +175,14 @@ trait choice_results_table {
             }
         }
         $chooseactiontext = get_string('chooseaction', 'choice');
-        $select = new single_select($actionurl, 'action', $actionoptions, null, ['' => $chooseactiontext],
-            'attemptsform');
+        $select = new single_select(
+            $actionurl,
+            'action',
+            $actionoptions,
+            null,
+            ['' => $chooseactiontext],
+            'attemptsform'
+        );
         $withselectedtext = get_string('withselected', 'choice');
         $select->set_label($withselectedtext);
         $select->disabled = true;

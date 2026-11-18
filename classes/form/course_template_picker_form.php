@@ -33,7 +33,6 @@ require_once($CFG->libdir . '/formslib.php');
  * Form wrapping a single autocomplete element to pick a course template.
  */
 class course_template_picker_form extends \moodleform {
-
     /**
      * Form definition.
      */
@@ -51,7 +50,9 @@ class course_template_picker_form extends \moodleform {
             $choices[$template['id']] = $template['name'];
         }
 
-        $mform->addElement('autocomplete', 'templateid',
+        $mform->addElement(
+            'autocomplete',
+            'templateid',
             get_string('courseai_template_picker', 'local_coursegen'),
             $choices,
             [

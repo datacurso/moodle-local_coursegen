@@ -89,7 +89,8 @@ final class courseai_page_template_mode_test extends \advanced_testcase {
         $inputbarpos = strpos($html, 'data-region="tpl-input-bar"');
         $this->assertNotFalse($inputbarpos);
 
-        foreach ([
+        foreach (
+            [
                 'id="tplBtnGuidelines"',
                 'id="tplGuidelinesPopover"',
                 'id="tplGuidelinesPopoverClose"',
@@ -99,7 +100,8 @@ final class courseai_page_template_mode_test extends \advanced_testcase {
                 'id="tplChipGuidelineName"',
                 'id="tplChipGuidelineView"',
                 'id="tplChipGuidelineRemove"',
-            ] as $needle) {
+            ] as $needle
+        ) {
             $this->assertSame(1, substr_count($html, $needle), "{$needle} must render exactly once");
             $this->assertGreaterThan($inputbarpos, strpos($html, $needle), "{$needle} must be inside the input bar");
         }
@@ -175,7 +177,8 @@ final class courseai_page_template_mode_test extends \advanced_testcase {
         $inputbarpos = strpos($html, 'data-region="tpl-input-bar"');
         $this->assertNotFalse($inputbarpos, 'Input bar region missing');
 
-        foreach ([
+        foreach (
+            [
                 'id="tplPromptInput"',
                 'id="tplBtnSyllabus"',
                 'id="tplWithImages"',
@@ -183,7 +186,8 @@ final class courseai_page_template_mode_test extends \advanced_testcase {
                 'id="tplLangSelect"',
                 'id="tplModeGenerate"',
                 'id="tplChipSyllabus"',
-            ] as $needle) {
+            ] as $needle
+        ) {
             $pos = strpos($html, $needle);
             $this->assertNotFalse($pos, "Control {$needle} missing");
             $this->assertGreaterThan($inputbarpos, $pos, "Control {$needle} must render inside the input bar");

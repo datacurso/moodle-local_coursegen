@@ -40,8 +40,12 @@ trait quiz_page_buttons {
         $content = '';
 
         if ($viewobj->buttontext) {
-            $attemptbtn = $this->start_attempt_button($viewobj->buttontext,
-                    $viewobj->startattempturl, $viewobj->popuprequired, $viewobj->popupoptions);
+            $attemptbtn = $this->start_attempt_button(
+                $viewobj->buttontext,
+                $viewobj->startattempturl,
+                $viewobj->popuprequired,
+                $viewobj->popupoptions
+            );
             $content .= $attemptbtn;
         }
 

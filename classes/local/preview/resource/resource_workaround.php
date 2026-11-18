@@ -72,8 +72,8 @@ trait resource_workaround {
      * @return string
      */
     protected function workaround_popup($resource, $file): string {
-        $path = '/'.$file->get_contextid().'/mod_resource/content/'.$resource->revision.$file->get_filepath().$file->get_filename();
-        $fullurl = file_encode_url($this->wwwroot().'/pluginfile.php', $path, false);
+        $path = '/' . $file->get_contextid() . '/mod_resource/content/' . $resource->revision . $file->get_filepath() . $file->get_filename();
+        $fullurl = file_encode_url($this->wwwroot() . '/pluginfile.php', $path, false);
         $options = [];
         if (!empty($resource->displayoptions)) {
             $options = (array) unserialize_array($resource->displayoptions);

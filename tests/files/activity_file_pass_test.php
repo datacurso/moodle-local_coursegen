@@ -220,7 +220,12 @@ final class activity_file_pass_test extends \advanced_testcase {
                 'author' => 'Template Author', 'license' => 'cc',
             ], 'CONTENT-' . $label);
             $address = \moodle_url::make_pluginfile_url(
-                $context->id, $slot['component'], $slot['area'], $this->item_of($slot['item'], $row), '/', $names[$label]
+                $context->id,
+                $slot['component'],
+                $slot['area'],
+                $this->item_of($slot['item'], $row),
+                '/',
+                $names[$label]
             );
             $texts[$label] = '<p><img src="' . $address->out(false) . '" alt="a"></p>';
         }
@@ -312,7 +317,12 @@ final class activity_file_pass_test extends \advanced_testcase {
                 continue;
             }
             $file = get_file_storage()->get_file(
-                $context->id, $slot['component'], $slot['area'], $this->item_of($slot['item'], $row), '/', $names[$label]
+                $context->id,
+                $slot['component'],
+                $slot['area'],
+                $this->item_of($slot['item'], $row),
+                '/',
+                $names[$label]
             );
             $this->assertNotFalse($file, "$label: the file is in {$slot['component']}/{$slot['area']}");
             $this->assertSame('CONTENT-' . $label, $file->get_content(), "$label: same content");

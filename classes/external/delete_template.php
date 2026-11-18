@@ -40,7 +40,6 @@ defined('MOODLE_INTERNAL') || die();
  * External API for deleting a course template and all its child records.
  */
 class delete_template extends external_api {
-
     /**
      * Returns description of method parameters.
      *

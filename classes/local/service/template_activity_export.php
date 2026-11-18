@@ -164,7 +164,9 @@ class template_activity_export {
         }
         return $DB->get_record_sql(
             'SELECT * FROM {question_versions} WHERE questionbankentryid = :entry ORDER BY version DESC',
-            ['entry' => $reference->questionbankentryid], IGNORE_MULTIPLE);
+            ['entry' => $reference->questionbankentryid],
+            IGNORE_MULTIPLE
+        );
     }
 
     /**
@@ -191,7 +193,12 @@ class template_activity_export {
         }
         $filestorage = get_file_storage();
         $stored = $filestorage->get_area_files(
-            $context->id, $component, $areas, false, 'filearea, itemid, filepath, filename', true
+            $context->id,
+            $component,
+            $areas,
+            false,
+            'filearea, itemid, filepath, filename',
+            true
         );
         $files = [];
         foreach ($stored as $file) {
@@ -230,7 +237,13 @@ class template_activity_export {
         if (!$isdir) {
             $mimetype = $file->get_mimetype();
             $fileurl = \moodle_url::make_pluginfile_url(
-                $contextid, $component, $filearea, $itemid, $filepath, $filename);
+                $contextid,
+                $component,
+                $filearea,
+                $itemid,
+                $filepath,
+                $filename
+            );
             $url = $fileurl->out(false);
         }
 

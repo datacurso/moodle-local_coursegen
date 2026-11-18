@@ -204,10 +204,16 @@ final class template_section_names_test extends \advanced_testcase {
 
         $this->resetAfterTest();
         $course = $this->getDataGenerator()->create_course(['numsections' => 3]);
-        course_update_section($course, $DB->get_record('course_sections', ['course' => $course->id, 'section' => 1]),
-            ['name' => 'Keep me']);
-        course_update_section($course, $DB->get_record('course_sections', ['course' => $course->id, 'section' => 2]),
-            ['name' => 'Old']);
+        course_update_section(
+            $course,
+            $DB->get_record('course_sections', ['course' => $course->id, 'section' => 1]),
+            ['name' => 'Keep me']
+        );
+        course_update_section(
+            $course,
+            $DB->get_record('course_sections', ['course' => $course->id, 'section' => 2]),
+            ['name' => 'Old']
+        );
 
         template_section_names::apply((int) $course->id, [
             ['section' => 1, 'name' => 'Keep me', 'original_name' => 'Template one'],

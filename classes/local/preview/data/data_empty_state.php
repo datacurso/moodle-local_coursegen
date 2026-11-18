@@ -33,7 +33,6 @@ use stdClass;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 trait data_empty_state {
-
     /**
      * mod_data_renderer::render_empty_database().
      *
@@ -99,10 +98,8 @@ trait data_empty_state {
 
         if (has_capability('mod/data:manageentries', $context)) {
             // no entry limits apply if user can manage
-
         } else if (!has_capability('mod/data:writeentry', $context)) {
             return false;
-
         } else if (data_in_readonly_period($data)) {
             // Check whether we're in a read-only period
             return false;
@@ -116,8 +113,8 @@ trait data_empty_state {
         if ($currentgroup) {
             return groups_is_member($currentgroup);
         } else {
-            //else it might be group 0 in visible mode
-            if ($groupmode == VISIBLEGROUPS){
+            // else it might be group 0 in visible mode
+            if ($groupmode == VISIBLEGROUPS) {
                 return true;
             } else {
                 return false;

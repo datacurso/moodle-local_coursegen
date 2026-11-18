@@ -54,7 +54,7 @@ class lesson_page_type_branchtable extends lesson_page {
     public function display($renderer, $attempt) {
         global $PAGE, $OUTPUT;
 
-        $options = new \stdClass;
+        $options = new \stdClass();
         $options->para = false;
         $options->noclean = true;
 

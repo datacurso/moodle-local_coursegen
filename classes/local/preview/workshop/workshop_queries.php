@@ -56,12 +56,16 @@ trait workshop_queries {
         if (workshop::EXAMPLES_VOLUNTARY == $this->workshop->examplesmode) {
             return true;
         }
-        if (workshop::EXAMPLES_BEFORE_SUBMISSION == $this->workshop->examplesmode
-                && workshop::PHASE_SUBMISSION == $this->workshop->phase) {
+        if (
+            workshop::EXAMPLES_BEFORE_SUBMISSION == $this->workshop->examplesmode
+                && workshop::PHASE_SUBMISSION == $this->workshop->phase
+        ) {
             return true;
         }
-        if (workshop::EXAMPLES_BEFORE_ASSESSMENT == $this->workshop->examplesmode
-                && workshop::PHASE_ASSESSMENT == $this->workshop->phase) {
+        if (
+            workshop::EXAMPLES_BEFORE_ASSESSMENT == $this->workshop->examplesmode
+                && workshop::PHASE_ASSESSMENT == $this->workshop->phase
+        ) {
             return true;
         }
         return false;
@@ -87,7 +91,6 @@ trait workshop_queries {
                 return false;
             }
             return true;
-
         } else {
             if ($this->workshop->phase != workshop::PHASE_SUBMISSION) {
                 // Submissions are allowed during the submission phase only.
@@ -97,7 +100,7 @@ trait workshop_queries {
                 // If enabled, submitting is not allowed before the date/time defined in the mod_form.
                 return false;
             }
-            if (!$ignoredeadlines && !empty($this->workshop->submissionend) && $now > $this->workshop->submissionend ) {
+            if (!$ignoredeadlines && !empty($this->workshop->submissionend) && $now > $this->workshop->submissionend) {
                 // If enabled, submitting is not allowed after the date/time defined in the mod_form
                 // unless late submission is allowed.
                 return false;
@@ -113,8 +116,10 @@ trait workshop_queries {
      * @return \stdClass|false
      */
     protected function get_submission_by_author(int $authorid) {
-        return $this->store->get_record('workshop_submissions',
-            ['workshopid' => $this->workshop->id, 'example' => 0, 'authorid' => $authorid]);
+        return $this->store->get_record(
+            'workshop_submissions',
+            ['workshopid' => $this->workshop->id, 'example' => 0, 'authorid' => $authorid]
+        );
     }
 
     /**
@@ -147,8 +152,10 @@ trait workshop_queries {
      * @return mixed
      */
     protected function example_grade(int $exampleid) {
-        $assessment = $this->store->get_record('workshop_assessments',
-            ['submissionid' => $exampleid, 'reviewerid' => $this->userid, 'weight' => 0]);
+        $assessment = $this->store->get_record(
+            'workshop_assessments',
+            ['submissionid' => $exampleid, 'reviewerid' => $this->userid, 'weight' => 0]
+        );
         if (!$assessment) {
             return null;
         }
@@ -165,8 +172,10 @@ trait workshop_queries {
     protected function get_assessments_by_reviewer(int $reviewerid): array {
         $assessments = [];
         foreach ($this->store->get_records('workshop_assessments', ['reviewerid' => $reviewerid]) as $assessment) {
-            $submission = $this->store->get_record('workshop_submissions',
-                ['id' => $assessment->submissionid, 'workshopid' => $this->workshop->id, 'example' => 0]);
+            $submission = $this->store->get_record(
+                'workshop_submissions',
+                ['id' => $assessment->submissionid, 'workshopid' => $this->workshop->id, 'example' => 0]
+            );
             if (!$submission) {
                 continue;
             }

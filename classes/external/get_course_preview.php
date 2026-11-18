@@ -36,7 +36,6 @@ use local_coursegen\output\sections_config;
  * External function to render the sections review for a course.
  */
 class get_course_preview extends external_api {
-
     /**
      * Parameter definition.
      *

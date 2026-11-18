@@ -93,7 +93,7 @@ trait forum_discussion_list {
             'settings' => [
                 'excludetext' => true,
                 'togglemoreicon' => true,
-                'excludesubscription' => true
+                'excludesubscription' => true,
             ],
             'totaldiscussioncount' => 0,
             'userid' => $user->id,

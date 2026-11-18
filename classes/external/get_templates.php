@@ -38,7 +38,6 @@ defined('MOODLE_INTERNAL') || die();
  * External API for fetching all course templates.
  */
 class get_templates extends external_api {
-
     /**
      * Returns description of method parameters.
      *
@@ -85,13 +84,13 @@ class get_templates extends external_api {
     public static function execute_returns() {
         return new external_multiple_structure(
             new external_single_structure([
-                'id'             => new external_value(PARAM_INT,  'Template ID'),
+                'id'             => new external_value(PARAM_INT, 'Template ID'),
                 'name'           => new external_value(PARAM_TEXT, 'Template name'),
-                'description'    => new external_value(PARAM_RAW,  'Template description'),
-                'courseid'       => new external_value(PARAM_INT,  'Base course ID'),
+                'description'    => new external_value(PARAM_RAW, 'Template description'),
+                'courseid'       => new external_value(PARAM_INT, 'Base course ID'),
                 'coursefullname' => new external_value(PARAM_TEXT, 'Base course name'),
-                'timecreated'    => new external_value(PARAM_INT,  'Time created'),
-                'timemodified'   => new external_value(PARAM_INT,  'Time modified'),
+                'timecreated'    => new external_value(PARAM_INT, 'Time created'),
+                'timemodified'   => new external_value(PARAM_INT, 'Time modified'),
             ])
         );
     }

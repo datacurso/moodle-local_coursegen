@@ -46,8 +46,16 @@ trait scorm_toc_build {
 
         $scoes = $this->scorm_get_toc_object($currentorg, '', 'normal', $attempt, false, $organizationsco);
 
-        $treeview = $this->scorm_format_toc_for_treeview($scoes['scoes'][0]->children ?? [], $scoes['usertracks'],
-            $toclink, $currentorg, $attempt, false, $organizationsco, false);
+        $treeview = $this->scorm_format_toc_for_treeview(
+            $scoes['scoes'][0]->children ?? [],
+            $scoes['usertracks'],
+            $toclink,
+            $currentorg,
+            $attempt,
+            false,
+            $organizationsco,
+            false
+        );
 
         $result->toc = $treeview->toc;
 
@@ -85,15 +93,21 @@ trait scorm_toc_build {
      * @param stdClass|null $organizationsco
      * @return array
      */
-    protected function scorm_get_toc_object(string $currentorg = '', $scoid = '', string $mode = 'normal', $attempt = '',
-            bool $play = false, ?stdClass $organizationsco = null): array {
+    protected function scorm_get_toc_object(
+        string $currentorg = '',
+        $scoid = '',
+        string $mode = 'normal',
+        $attempt = '',
+        bool $play = false,
+        ?stdClass $organizationsco = null
+    ): array {
         global $OUTPUT;
         $scorm = $this->scorm;
 
         // Always pass the mode even if empty as that is what is done elsewhere and the urls have to match.
         $modestr = '&mode=';
         if ($mode != 'normal') {
-            $modestr = '&mode='.$mode;
+            $modestr = '&mode=' . $mode;
         }
 
         $result = [];
@@ -132,7 +146,7 @@ trait scorm_toc_build {
                     $sco->statusicon = $statusicon;
                 }
 
-                $sco->url = 'a='.$scorm->id.'&scoid='.$sco->id.'&currentorg='.$currentorg.$modestr.'&attempt='.$attempt;
+                $sco->url = 'a=' . $scorm->id . '&scoid=' . $sco->id . '&currentorg=' . $currentorg . $modestr . '&attempt=' . $attempt;
                 $sco->incomplete = $incomplete;
 
                 if (!in_array($sco->id, array_keys($result))) {

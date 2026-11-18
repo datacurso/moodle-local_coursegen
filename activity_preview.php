@@ -233,8 +233,10 @@ if ($templatecmid > 0 && isset($modinfo->cms[$templatecmid]) && $courseformat->u
     }
 }
 $PAGE->navbar->ignore_active(true);
-$PAGE->set_url('/local/coursegen/activity_preview.php',
-    ['sessionid' => $sessionid, 'uid' => $uid, 'page' => $page]);
+$PAGE->set_url(
+    '/local/coursegen/activity_preview.php',
+    ['sessionid' => $sessionid, 'uid' => $uid, 'page' => $page]
+);
 $PAGE->set_pagelayout('incourse');
 // The width the module reads its own page at, and the kind of page it is,
 // which is where a module's own styles are hung. Without them the activity is

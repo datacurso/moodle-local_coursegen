@@ -109,9 +109,11 @@ trait workshop_plan_early {
             }
             $phase->tasks['instructreviewers'] = $task;
         }
-        if ($workshop->useexamples && $workshop->examplesmode == workshop::EXAMPLES_BEFORE_SUBMISSION
+        if (
+            $workshop->useexamples && $workshop->examplesmode == workshop::EXAMPLES_BEFORE_SUBMISSION
                 && has_capability('mod/workshop:submit', $this->context, $userid, false)
-                    && !has_capability('mod/workshop:manageexamples', $this->context, $userid)) {
+                    && !has_capability('mod/workshop:manageexamples', $this->context, $userid)
+        ) {
             $task = new stdClass();
             $task->title = get_string('exampleassesstask', 'workshop');
             $examples = $this->get_examples();
@@ -130,8 +132,12 @@ trait workshop_plan_early {
             $task = new stdClass();
             $task->title = get_string('tasksubmit', 'workshop');
             $task->link = $this->submission_url();
-            if ($this->store->record_exists('workshop_submissions',
-                    ['workshopid' => $workshop->id, 'example' => 0, 'authorid' => $userid])) {
+            if (
+                $this->store->record_exists(
+                    'workshop_submissions',
+                    ['workshopid' => $workshop->id, 'example' => 0, 'authorid' => $userid]
+                )
+            ) {
                 $task->completed = true;
             } else if ($workshop->phase >= workshop::PHASE_ASSESSMENT) {
                 $task->completed = false;
@@ -146,8 +152,10 @@ trait workshop_plan_early {
             $task->title = get_string('allocate', 'workshop');
             $task->link = $this->allocation_url();
             $numofauthors = $this->count_potential_authors(false);
-            $numofsubmissions = $this->store->count_records('workshop_submissions',
-                ['workshopid' => $workshop->id, 'example' => 0]);
+            $numofsubmissions = $this->store->count_records(
+                'workshop_submissions',
+                ['workshopid' => $workshop->id, 'example' => 0]
+            );
             $numnonallocated = 0;
             foreach ($this->store->get_records('workshop_submissions', ['workshopid' => $workshop->id, 'example' => 0]) as $s) {
                 if (!$this->store->record_exists('workshop_assessments', ['submissionid' => $s->id])) {
@@ -180,23 +188,31 @@ trait workshop_plan_early {
         }
         if ($workshop->submissionstart) {
             $task = new stdClass();
-            $task->title = get_string('submissionstartdatetime', 'workshop',
-                workshop::timestamp_formats($workshop->submissionstart));
+            $task->title = get_string(
+                'submissionstartdatetime',
+                'workshop',
+                workshop::timestamp_formats($workshop->submissionstart)
+            );
             $task->completed = 'info';
             $phase->tasks['submissionstartdatetime'] = $task;
         }
         if ($workshop->submissionend) {
             $task = new stdClass();
-            $task->title = get_string('submissionenddatetime', 'workshop',
-                workshop::timestamp_formats($workshop->submissionend));
+            $task->title = get_string(
+                'submissionenddatetime',
+                'workshop',
+                workshop::timestamp_formats($workshop->submissionend)
+            );
             $task->completed = 'info';
             $phase->tasks['submissionenddatetime'] = $task;
         }
         if (($workshop->submissionstart < time()) && $workshop->latesubmissions) {
             // If submission deadline has passed and late submissions are allowed, only display 'latesubmissionsallowed' text to
             // users (students) who have not submitted and users (teachers, admins) who can switch phase.
-            if (has_capability('mod/workshop:switchphase', $this->context, $userid) ||
-                    (!$this->get_submission_by_author($userid) && $workshop->submissionend < time())) {
+            if (
+                has_capability('mod/workshop:switchphase', $this->context, $userid) ||
+                    (!$this->get_submission_by_author($userid) && $workshop->submissionend < time())
+            ) {
                 $task = new stdClass();
                 $task->title = get_string('latesubmissionsallowed', 'workshop');
                 $task->completed = 'info';

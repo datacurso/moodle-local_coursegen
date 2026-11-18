@@ -46,7 +46,7 @@ trait url_display {
 
         // detect links to local moodle pages
         if (strpos($url->externalurl, $CFG->wwwroot) === 0) {
-            if (strpos($url->externalurl, 'file.php') === false and strpos($url->externalurl, '.php') !== false ) {
+            if (strpos($url->externalurl, 'file.php') === false and strpos($url->externalurl, '.php') !== false) {
                 // most probably our moodle page with navigation
                 return RESOURCELIB_DISPLAY_OPEN;
             }
@@ -55,11 +55,11 @@ trait url_display {
         // Binaries and other formats that are known to cause trouble for external links.
         static $download = ['application/zip', 'application/x-tar', 'application/g-zip',
                             'application/pdf', 'text/html', 'document/unknown'];
-        static $embed    = array('image/gif', 'image/jpeg', 'image/png', 'image/svg+xml',         // images
+        static $embed    = ['image/gif', 'image/jpeg', 'image/png', 'image/svg+xml', // images
                                  'application/x-shockwave-flash', 'video/x-flv', 'video/x-ms-wm', // video formats
                                  'video/quicktime', 'video/mpeg', 'video/mp4',
-                                 'audio/mp3', 'audio/x-realaudio-plugin', 'x-realaudio-plugin',   // audio formats,
-                                );
+                                 'audio/mp3', 'audio/x-realaudio-plugin', 'x-realaudio-plugin', // audio formats,
+                                ];
 
         $mimetype = resourcelib_guess_url_mimetype($url->externalurl);
 
@@ -138,10 +138,8 @@ trait url_display {
             }
             $wh = "width=$width,height=$height,toolbar=no,location=no,menubar=no,copyhistory=no,status=no,directories=no,scrollbars=yes,resizable=yes";
             $attributes = ['onclick' => "window.open('$jsfullurl', '', '$wh'); return false;"];
-
         } else if ($display == RESOURCELIB_DISPLAY_NEW) {
             $attributes = ['onclick' => "this.target='_blank';"];
-
         } else {
             $attributes = [];
         }
@@ -187,18 +185,16 @@ trait url_display {
         $extension = resourcelib_get_extension($url->externalurl);
 
         $mediamanager = core_media_manager::instance($PAGE);
-        $embedoptions = array(
+        $embedoptions = [
             core_media_manager::OPTION_TRUSTED => true,
-            core_media_manager::OPTION_BLOCK => true
-        );
+            core_media_manager::OPTION_BLOCK => true,
+        ];
 
-        if (in_array($mimetype, array('image/gif','image/jpeg','image/png'))) {  // It's an image
+        if (in_array($mimetype, ['image/gif', 'image/jpeg', 'image/png'])) {  // It's an image
             $code = resourcelib_embed_image($fullurl, $title);
-
         } else if ($mediamanager->can_embed_url($moodleurl, $embedoptions)) {
             // Media (audio/video) file.
             $code = $mediamanager->embed_url($moodleurl, $title, 0, 0, $embedoptions);
-
         } else {
             // anything else - just try object tag enlarged as much as possible
             $code = resourcelib_embed_general($fullurl, $title, $clicktoopen, $mimetype);

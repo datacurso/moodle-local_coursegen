@@ -110,11 +110,20 @@ abstract class lesson_page extends lesson_base {
             // The files a page refers to belong to the module the payload
             // describes, so they are addressed by the context it names.
             $contextid = $this->lesson->get_contextid() ?? $context->id;
-            $contents = file_rewrite_pluginfile_urls($this->properties->contents, 'pluginfile.php', $contextid, 'mod_lesson',
-                                                     'page_contents', $this->properties->id);  // Must do this BEFORE format_text()!
-            return format_text($contents, $this->properties->contentsformat,
-                               ['context' => $context, 'noclean' => true,
-                                'overflowdiv' => true]);  // Page edit is marked with XSS, we want all content here.
+            $contents = file_rewrite_pluginfile_urls(
+                $this->properties->contents,
+                'pluginfile.php',
+                $contextid,
+                'mod_lesson',
+                'page_contents',
+                $this->properties->id
+            );  // Must do this BEFORE format_text()!
+            return format_text(
+                $contents,
+                $this->properties->contentsformat,
+                ['context' => $context, 'noclean' => true,
+                'overflowdiv' => true]
+            );  // Page edit is marked with XSS, we want all content here.
         } else {
             return '';
         }

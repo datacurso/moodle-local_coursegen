@@ -37,7 +37,6 @@ use local_coursegen\local\service\access_guard;
  * External function to get the category tree.
  */
 class get_category_tree extends external_api {
-
     /**
      * Parameter definition.
      *

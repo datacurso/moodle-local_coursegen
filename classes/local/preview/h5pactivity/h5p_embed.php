@@ -40,8 +40,14 @@ trait h5p_embed {
      * @param array $extraactions
      * @return string
      */
-    protected function display(string $url, stdClass $config, bool $preventredirect = true, string $component = '',
-            bool $displayedit = false, array $extraactions = []): string {
+    protected function display(
+        string $url,
+        stdClass $config,
+        bool $preventredirect = true,
+        string $component = '',
+        bool $displayedit = false,
+        array $extraactions = []
+    ): string {
         global $OUTPUT;
         $params = [
                 'url' => $url,

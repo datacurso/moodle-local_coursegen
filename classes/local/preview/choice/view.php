@@ -154,8 +154,7 @@ class view {
             $choiceopen = false;
         }
 
-        if ( (!$current or $choice->allowupdate) and $choiceopen and $this->can_choose()) {
-
+        if ((!$current or $choice->allowupdate) and $choiceopen and $this->can_choose()) {
             // Show information on how the results will be published to students.
             $publishinfo = $this->publish_info($choice);
 

@@ -35,7 +35,6 @@ use pix_icon;
  * System report for course templates.
  */
 class templates extends system_report {
-
     /**
      * Initialise the report.
      */

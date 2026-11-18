@@ -188,7 +188,10 @@ class structure_array_processor extends backup_vars_processor {
         }
         $contextid = (int) $this->get_var(\backup::VAR_CONTEXTID);
         $finished['node'] = structure_node_resolver::with_file_addresses(
-            $finished['node'], $finished['files'], $contextid);
+            $finished['node'],
+            $finished['files'],
+            $contextid
+        );
 
         if (!$this->stack) {
             $this->result = $finished['node'];

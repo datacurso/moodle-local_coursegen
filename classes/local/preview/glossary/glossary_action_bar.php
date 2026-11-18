@@ -31,7 +31,6 @@ use stdClass;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 trait glossary_action_bar {
-
     /**
      * mod/glossary/classes/output/standard_action_bar.php export_for_template().
      *
@@ -138,5 +137,4 @@ trait glossary_action_bar {
 
         return $showtabs;
     }
-
 }

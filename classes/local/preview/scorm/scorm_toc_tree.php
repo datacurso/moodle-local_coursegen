@@ -40,9 +40,16 @@ trait scorm_toc_tree {
      * @param bool $children
      * @return stdClass
      */
-    protected function scorm_format_toc_for_treeview(array $scoes, array $usertracks, int $toclink = TOCJSLINK,
-            string $currentorg = '', $attempt = '', bool $play = false, ?stdClass $organizationsco = null,
-            bool $children = false): stdClass {
+    protected function scorm_format_toc_for_treeview(
+        array $scoes,
+        array $usertracks,
+        int $toclink = TOCJSLINK,
+        string $currentorg = '',
+        $attempt = '',
+        bool $play = false,
+        ?stdClass $organizationsco = null,
+        bool $children = false
+    ): stdClass {
         global $OUTPUT;
         $scorm = $this->scorm;
         $result = new stdClass();
@@ -73,8 +80,16 @@ trait scorm_toc_tree {
                 $node = $this->scorm_toc_node($sco, $prevsco, $toclink, $play);
 
                 if (!empty($sco->children)) {
-                    $childresult = $this->scorm_format_toc_for_treeview($sco->children, $usertracks, $toclink, $currentorg,
-                        $attempt, $play, $organizationsco, true);
+                    $childresult = $this->scorm_format_toc_for_treeview(
+                        $sco->children,
+                        $usertracks,
+                        $toclink,
+                        $currentorg,
+                        $attempt,
+                        $play,
+                        $organizationsco,
+                        true
+                    );
                     // Is any of the children incomplete?
                     $sco->incomplete = $childresult->incomplete;
                     $node['haschildren'] = !empty($childresult->nodes);
