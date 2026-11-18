@@ -64,6 +64,15 @@ class feedback_settings extends base_settings {
         $question['cmid'] = $this->cm->coursemodule;
         $question['feedback'] = $this->cm->instance;
 
+        if (property_exists($itemobj, 'context')) {
+            // An item type that keeps the context of its editor texts only gets it when its form is built, as
+            // the page that edits an item does before saving it.
+            $cm = get_coursemodule_from_id('feedback', $this->cm->coursemodule, 0, false, MUST_EXIST);
+            $feedback = $DB->get_record('feedback', ['id' => $this->cm->instance], '*', MUST_EXIST);
+            $itemobj->build_editform((object) ['id' => '', 'position' => $position, 'typ' => $type, 'options' => '',
+                'required' => 0], $feedback, $cm);
+        }
+
         $itemobj->set_data((object) $question);
         return $itemobj->save_item();
     }
