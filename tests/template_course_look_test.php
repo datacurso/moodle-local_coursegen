@@ -213,6 +213,8 @@ final class template_course_look_test extends \advanced_testcase {
     public function test_free_course_does_not_take_the_format_or_settings(): void {
         $this->resetAfterTest();
         $this->setAdminUser();
+        // The site default must differ from the template's format whatever formats the site has installed.
+        set_config('format', 'weeks', 'moodlecourse');
         $template = $this->create_template($this->create_template_course()->id);
 
         $result = create_course_service::create_course(

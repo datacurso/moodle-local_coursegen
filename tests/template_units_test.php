@@ -73,7 +73,15 @@ final class template_units_test extends \advanced_testcase {
      * @return int The template id.
      */
     private function plain_template(string $format): int {
-        $course = $this->getDataGenerator()->create_course(['format' => $format, 'numsections' => 3]);
+        if ($format === 'flexsections') {
+            // Without the format the generator falls back to topics and reports it as a debugging message.
+            $this->require_flexsections();
+        }
+        $course = $this->getDataGenerator()->create_course([
+            'format' => $format,
+            'numsections' => 3,
+            'shortname' => 'units_' . $format . '_' . uniqid(),
+        ]);
         return $this->template_for($course->id);
     }
 
