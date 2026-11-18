@@ -172,12 +172,20 @@ class create_mod_service {
      */
     private static function create_mod_form_instance($modname, $data, $cw, $cm, $course) {
         // This is necessary to void error when load the mod_form.php file.
-        global $CFG;
+        global $CFG, $COURSE;
         $modmoodleform = self::get_mod_form_file_path($modname);
         require_once($modmoodleform);
 
         $mformclassname = 'mod_' . $modname . '_mod_form';
-        $mform = new $mformclassname($data, $cw->section, $cm, $course);
+        // The form reads the section it is for from the global course, which is the course of the
+        // page that is being served; here it is the course the module is created in.
+        $previouscourse = $COURSE;
+        $COURSE = $course;
+        try {
+            $mform = new $mformclassname($data, $cw->section, $cm, $course);
+        } finally {
+            $COURSE = $previouscourse;
+        }
 
         return $mform;
     }
