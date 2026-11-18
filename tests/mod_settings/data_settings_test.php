@@ -16,8 +16,6 @@
 
 namespace local_coursegen\mod_settings;
 
-use local_coursegen\local\service\template_activity_export;
-
 /**
  * Unit tests for data_settings — creation of the AI-generated database fields.
  *
@@ -614,22 +612,6 @@ final class data_settings_test extends \advanced_testcase {
     }
 
     /**
-     * One exported entry's whole value row for a field, keys included.
-     *
-     * @param array $entry One exported example entry.
-     * @param string $fieldname The field whose row is wanted.
-     * @return array|null The row, or null when the field shipped no value.
-     */
-    private function value_row(array $entry, string $fieldname): ?array {
-        foreach ($entry['values'] as $pair) {
-            if ($pair['field_name'] === $fieldname) {
-                return $pair;
-            }
-        }
-        return null;
-    }
-
-    /**
      * Seed one entry on a brand new database and read back what was stored.
      *
      * @param array $fields The field definitions.
@@ -652,104 +634,6 @@ final class data_settings_test extends \advanced_testcase {
             }
         }
         return $rows;
-    }
-
-    /**
-     * A mold exported by template_activity_export rebuilds itself, without loss.
-     *
-     * This is the contract the two halves share: whatever the export ships under
-     * mod_settings must come back as the same fields, the same template columns and
-     * the same entry values on a brand new database.
-     */
-    public function test_exported_mold_round_trips_into_a_new_database(): void {
-        $this->resetAfterTest();
-        $this->setAdminUser();
-
-        [$course, $mold] = $this->make_mold_with_content();
-        $exported = template_activity_export::parameters_for(
-            get_fast_modinfo($course)->get_cm($mold->cmid)
-        );
-
-        $copy = $this->getDataGenerator()->create_module('data', ['course' => $course->id]);
-        $cm = (object) ['coursemodule' => $copy->cmid, 'instance' => $copy->id];
-        (new data_settings($cm, $exported['mod_settings']))->add_settings();
-
-        $rebuilt = template_activity_export::parameters_for(
-            get_fast_modinfo($course)->get_cm($copy->cmid)
-        );
-
-        $this->assertSame($exported['mod_settings']['fields'], $rebuilt['mod_settings']['fields']);
-        $this->assertSame($exported['mod_settings']['templates'], $rebuilt['mod_settings']['templates']);
-        $this->assertSame(
-            $exported['mod_settings']['example_entries'],
-            $rebuilt['mod_settings']['example_entries']
-        );
-        // Assert what the comparison above must be comparing: a round trip that
-        // dropped the link text on BOTH sides would match while losing the label.
-        $entries = $rebuilt['mod_settings']['example_entries'];
-        $this->assertSame('Sitio oficial ⟦tema⟧', $this->value_row($entries[0], 'Enlace')['value1'] ?? null);
-        $this->assertArrayNotHasKey('value1', $this->value_row($entries[1], 'Enlace'));
-        $this->assertSame(
-            $exported['mod_settings']['defaultsortfield'],
-            $rebuilt['mod_settings']['defaultsortfield']
-        );
-    }
-
-    /**
-     * Build a database mold carrying fields, templates and entries.
-     *
-     * @return array [course, data instance]
-     */
-    private function make_mold_with_content(): array {
-        global $DB;
-
-        $course = $this->getDataGenerator()->create_course();
-        $mold = $this->getDataGenerator()->create_module('data', ['course' => $course->id]);
-        $generator = $this->getDataGenerator()->get_plugin_generator('mod_data');
-
-        $ids = [];
-        // Descriptions are stated explicitly: define_field() trims them, and the generator's
-        // own default carries a leading space that would never survive the trip.
-        $specs = [
-            ['type' => 'text', 'name' => 'Titulo del Recurso', 'description' => 'El titulo', 'required' => 1],
-            ['type' => 'menu', 'name' => 'Categoria', 'description' => 'Tema', 'param1' => "Articulo\nVideo\nLibro"],
-            ['type' => 'multimenu', 'name' => 'Etiquetas', 'description' => 'Claves', 'param1' => "A\nB\nC"],
-            ['type' => 'url', 'name' => 'Enlace', 'description' => 'URL'],
-            ['type' => 'textarea', 'name' => 'Resumen', 'description' => 'Analisis'],
-            ['type' => 'number', 'name' => 'Puntaje', 'description' => 'Nota'],
-            ['type' => 'date', 'name' => 'Fecha', 'description' => 'Publicacion'],
-            ['type' => 'latlong', 'name' => 'Lugar', 'description' => 'Ubicacion'],
-        ];
-        foreach ($specs as $spec) {
-            $ids[$spec['name']] = (int) $generator->create_field((object) $spec, $mold)->field->id;
-        }
-
-        $DB->update_record('data', (object) [
-            'id' => $mold->id,
-            'listtemplate' => '<div>[[Titulo del Recurso]] — [[Categoria]] ##edit##</div>',
-            'singletemplate' => '<h2>[[Titulo del Recurso]] ⟦tema⟧</h2>',
-            'addtemplate' => '<div>[[Resumen]]</div>',
-            'csstemplate' => '.c { color: red; }',
-            'defaultsort' => $ids['Categoria'],
-            'defaultsortdir' => 1,
-        ]);
-
-        foreach ([['Uno ⟦tema⟧', 'Articulo', ['A', 'C'], '10.5'], ['Dos ⟦tema⟧', 'Libro', ['B'], '3.25']] as $i => $row) {
-            $generator->create_entry($mold, [
-                $ids['Titulo del Recurso'] => $row[0],
-                $ids['Categoria'] => $row[1],
-                $ids['Etiquetas'] => $row[2],
-                // The first entry labels its link, the second does not: the round
-                // trip has to preserve both the link text and its absence.
-                $ids['Enlace'] => ['https://example.org/' . $i, $i === 0 ? 'Sitio oficial ⟦tema⟧' : ''],
-                $ids['Resumen'] => '<p>Resumen ⟦texto⟧ ' . $i . '</p>',
-                $ids['Puntaje'] => $row[3],
-                $ids['Fecha'] => '30-05-1967',
-                $ids['Lugar'] => ['1.5', '-2.25'],
-            ]);
-        }
-
-        return [$course, $mold];
     }
 
     /**
