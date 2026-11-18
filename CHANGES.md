@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.16] - 2026111800
+
+### Fixed
+- **The progress of a course made from a template is shown again**  
+  The request that follows a template generation did not say which plugin sends it and its build, so the service answered that the plugin needs an update and the page lost the connection. It now identifies the plugin like every other call.
+
 ## [2.0.16] - 2026111716
 
 ### Added

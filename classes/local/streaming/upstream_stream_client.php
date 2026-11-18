@@ -16,6 +16,9 @@
 
 namespace local_coursegen\local\streaming;
 
+use aiprovider_datacurso\httpclient\plugin_identity;
+use local_coursegen\local\api_client_factory;
+
 /**
  * Reads a server-sent events stream of the AI service.
  *
@@ -71,14 +74,27 @@ class upstream_stream_client {
         require_once($CFG->libdir . '/filelib.php');
 
         $curl = new \curl();
-        $curl->setHeader([
-            'Accept: text/event-stream',
-            'Cache-Control: no-cache',
-            $licenseheader,
-        ]);
+        $curl->setHeader($this->request_headers($licenseheader));
         $curl->get($url, [], $this->options());
 
         $this->check_outcome($curl);
+    }
+
+    /**
+     * Header lines of the stream request: the event stream, the license and the plugin that asks.
+     *
+     * The service refuses a request that does not say which plugin sends it and its build, as it does with every
+     * other call of this plugin (see api_client_factory).
+     *
+     * @param string $licenseheader License-Key header line.
+     * @return string[] Header lines.
+     */
+    public function request_headers(string $licenseheader): array {
+        $identity = new plugin_identity(api_client_factory::COMPONENT);
+        return array_merge(
+            ['Accept: text/event-stream', 'Cache-Control: no-cache', $licenseheader],
+            $identity->get_headers()
+        );
     }
 
     /**
