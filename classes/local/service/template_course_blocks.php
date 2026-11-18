@@ -108,11 +108,21 @@ class template_course_blocks {
      * @param \stdClass $instance
      */
     private static function copy_files(\stdClass $sourceinstance, \stdClass $instance): void {
+        global $DB;
+
         $fs = get_file_storage();
         $sourcecontextid = \context_block::instance($sourceinstance->id)->id;
         $contextid = \context_block::instance($instance->id)->id;
         $component = 'block_' . $sourceinstance->blockname;
-        $files = $fs->get_area_files($sourcecontextid, $component, false, false, 'id', false);
+        // The file storage has no "every area" mode: the areas the block owns are named one by one.
+        $areas = $DB->get_fieldset_sql(
+            'SELECT DISTINCT filearea FROM {files} WHERE contextid = :contextid AND component = :component',
+            ['contextid' => $sourcecontextid, 'component' => $component]
+        );
+        if (!$areas) {
+            return;
+        }
+        $files = $fs->get_area_files($sourcecontextid, $component, $areas, false, 'id', false);
         foreach ($files as $file) {
             $fs->create_file_from_storedfile(['contextid' => $contextid], $file);
         }
