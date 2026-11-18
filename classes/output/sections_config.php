@@ -207,6 +207,12 @@ class sections_config {
         return $namings;
     }
 
+    /**
+     * The saved settings of every activity of a template, each one keyed by course module id.
+     *
+     * @param int $templateid The template.
+     * @return array {actions, scopes, spaces, prompts}
+     */
     private static function saved_activity_settings(int $templateid): array {
         $records = template_activity::get_records(['templateid' => $templateid]);
         $actions = [];

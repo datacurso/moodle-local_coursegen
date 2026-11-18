@@ -106,8 +106,11 @@ class finish_template_generation extends external_api {
             return self::build_course($sessionid, $fullname, $shortname, $category, null, $startdate);
         } catch (\Throwable $e) {
             // The person sees a short message; the cause is kept in the log of the server.
-            error_log('local_coursegen: creating the course of session ' . (int) $sessionid . ' failed: ' . get_class($e) . ': '
-                . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
+            debugging(
+                'local_coursegen: creating the course of session ' . (int) $sessionid . ' failed: ' . get_class($e) . ': '
+                    . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine(),
+                DEBUG_DEVELOPER
+            );
             throw $e;
         }
     }

@@ -70,8 +70,11 @@ class finish_stream {
             }, $startdate);
             $this->output->send(sse_formatter::event('result', json_encode($result)));
         } catch (\Throwable $e) {
-            error_log('local_coursegen: creating the course of session ' . $sessionid . ' failed: ' . get_class($e) . ': '
-                . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
+            debugging(
+                'local_coursegen: creating the course of session ' . $sessionid . ' failed: ' . get_class($e) . ': '
+                    . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine(),
+                DEBUG_DEVELOPER
+            );
             $code = $e instanceof \moodle_exception ? (string) $e->errorcode : 'failed';
             $this->output->send(sse_formatter::event('failed', json_encode([
                 'errorcode' => $code,

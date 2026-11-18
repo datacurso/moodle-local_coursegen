@@ -30,9 +30,15 @@ namespace local_coursegen\local\service;
  * treats that 0 as "nothing to attach the template's kept activities to" and
  * quietly reports the run as completed, discarding the real reason in
  * message and leaving the professor with no course and no error.
+ *
+ * @package    local_coursegen
+ * @copyright  2026 Wilber Narvaez <https://datacurso.com>
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class course_creation_guard {
     /**
+     * Throw the real failure reason when the course creation did not succeed.
+     *
      * @param array $result Whatever create_course_service::create_course() returned.
      * @throws \moodle_exception When the result reports failure.
      */
