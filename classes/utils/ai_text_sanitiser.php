@@ -83,7 +83,68 @@ final class ai_text_sanitiser {
         // The service may send JSON-escaped quotes inside the markup; they are restored first, so
         // that the cleaning sees the attributes as a browser would.
         $text = str_replace(['\\"', "\\'"], ['"', "'"], $text);
-        return clean_text($text, FORMAT_HTML);
+        $frames = [];
+        $text = self::set_aside_site_file_frames($text, $frames);
+        return strtr(clean_text($text, FORMAT_HTML), $frames);
+    }
+
+    /**
+     * Take out the frames that show a file of this site, which the cleaning would remove, and give each a token.
+     *
+     * Moodle's cleaning never lets an iframe through, but a template may show the file the teacher brings in a
+     * frame that points at the file's address on this site. Such a frame is rebuilt from the few attributes a
+     * frame needs, so nothing else it carried (events, styles, other sources) survives, and put back after the
+     * cleaning. A frame that points anywhere else is left to the cleaning, which removes it.
+     *
+     * @param string $text
+     * @param string[] $frames Filled with the rebuilt frame of each token.
+     * @return string The text, with a token where each of those frames was.
+     */
+    private static function set_aside_site_file_frames(string $text, array &$frames): string {
+        global $CFG;
+
+        if (stripos($text, '<iframe') === false) {
+            return $text;
+        }
+        $prefix = $CFG->wwwroot . '/pluginfile.php/';
+        $salt = bin2hex(random_bytes(4));
+        $callback = static function (array $matches) use (&$frames, $prefix, $salt): string {
+            $frame = self::site_file_frame($matches[1], $prefix);
+            if ($frame === null) {
+                return $matches[0];
+            }
+            $token = 'coursegenframe' . $salt . count($frames) . 'x';
+            $frames[$token] = $frame;
+            return $token;
+        };
+        return preg_replace_callback('~<iframe\b([^>]*)>\s*</iframe\s*>~iu', $callback, $text) ?? $text;
+    }
+
+    /**
+     * The frame of a file of this site, written again with only the attributes a frame needs.
+     *
+     * @param string $attributes What the opening tag holds.
+     * @param string $prefix The start of the address of every file of this site.
+     * @return string|null Null when the frame does not point at a file of this site.
+     */
+    private static function site_file_frame(string $attributes, string $prefix): ?string {
+        preg_match_all('~\b([a-z-]+)\s*=\s*(["\'])(.*?)\2~isu', $attributes, $found, PREG_SET_ORDER);
+        $kept = [];
+        $source = '';
+        foreach ($found as $attribute) {
+            $name = strtolower($attribute[1]);
+            $value = $attribute[3];
+            if ($name === 'src') {
+                $source = html_entity_decode($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+                $kept[] = 'src="' . s($source) . '"';
+            } else if (($name === 'width' || $name === 'height') && preg_match('~^\d+(?:\.\d+)?(?:%|px)?$~', $value)) {
+                $kept[] = $name . '="' . $value . '"';
+            }
+        }
+        if (!str_starts_with($source, $prefix) || preg_match('~[\x00-\x20]~', $source)) {
+            return null;
+        }
+        return '<iframe ' . implode(' ', $kept) . '></iframe>';
     }
 
     /**
