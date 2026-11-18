@@ -44,6 +44,7 @@ final class template_keep_copier_test extends \advanced_testcase {
      */
     public function test_copies_a_kept_activity_into_the_target_course(): void {
         $this->resetAfterTest(true);
+        $this->setAdminUser();
 
         $sourcecourse = $this->getDataGenerator()->create_course(['numsections' => 2]);
         $targetcourse = $this->getDataGenerator()->create_course(['numsections' => 2]);
@@ -64,6 +65,7 @@ final class template_keep_copier_test extends \advanced_testcase {
      */
     public function test_missing_template_record_returns_empty(): void {
         $this->resetAfterTest(true);
+        $this->setAdminUser();
 
         $targetcourse = $this->getDataGenerator()->create_course();
 
@@ -81,6 +83,7 @@ final class template_keep_copier_test extends \advanced_testcase {
     public function test_deleted_source_course_returns_empty_without_crashing(): void {
         global $DB;
         $this->resetAfterTest(true);
+        $this->setAdminUser();
 
         $sourcecourse = $this->getDataGenerator()->create_course();
         $targetcourse = $this->getDataGenerator()->create_course();
@@ -101,6 +104,7 @@ final class template_keep_copier_test extends \advanced_testcase {
      */
     public function test_deleted_kept_activity_is_skipped_without_failing_the_rest(): void {
         $this->resetAfterTest(true);
+        $this->setAdminUser();
 
         $sourcecourse = $this->getDataGenerator()->create_course(['numsections' => 2]);
         $targetcourse = $this->getDataGenerator()->create_course(['numsections' => 2]);
@@ -123,6 +127,7 @@ final class template_keep_copier_test extends \advanced_testcase {
      */
     public function test_unresolvable_target_section_is_reported_as_a_failure(): void {
         $this->resetAfterTest(true);
+        $this->setAdminUser();
 
         $sourcecourse = $this->getDataGenerator()->create_course(['numsections' => 3]);
         $targetcourse = $this->getDataGenerator()->create_course(['numsections' => 1]);
@@ -141,6 +146,7 @@ final class template_keep_copier_test extends \advanced_testcase {
      */
     public function test_reports_the_created_cmid_of_every_kept_activity(): void {
         $this->resetAfterTest(true);
+        $this->setAdminUser();
 
         $sourcecourse = $this->getDataGenerator()->create_course(['numsections' => 2]);
         $targetcourse = $this->getDataGenerator()->create_course(['numsections' => 2]);
@@ -167,6 +173,7 @@ final class template_keep_copier_test extends \advanced_testcase {
      */
     public function test_failed_copy_has_no_created_cmid(): void {
         $this->resetAfterTest(true);
+        $this->setAdminUser();
 
         $sourcecourse = $this->getDataGenerator()->create_course(['numsections' => 3]);
         $targetcourse = $this->getDataGenerator()->create_course(['numsections' => 1]);
@@ -187,6 +194,7 @@ final class template_keep_copier_test extends \advanced_testcase {
      */
     public function test_a_kept_activity_keeps_the_files_of_its_texts(): void {
         $this->resetAfterTest(true);
+        $this->setAdminUser();
 
         $sourcecourse = $this->getDataGenerator()->create_course(['numsections' => 2]);
         $targetcourse = $this->getDataGenerator()->create_course(['numsections' => 2]);
@@ -217,6 +225,7 @@ final class template_keep_copier_test extends \advanced_testcase {
      */
     public function test_a_space_is_copied_only_when_asked_for(): void {
         $this->resetAfterTest(true);
+        $this->setAdminUser();
 
         $sourcecourse = $this->getDataGenerator()->create_course(['numsections' => 2]);
         $targetcourse = $this->getDataGenerator()->create_course(['numsections' => 2]);
