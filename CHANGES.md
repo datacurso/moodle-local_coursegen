@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.16] - 2026111719
+
+### Fixed
+- **Creating an activity no longer stops while its module form is built**  
+  The form of each module is now built for the section it belongs to, and its default values are read without exporting a form that was never submitted, so activities of every module type are created again.
+- **The template structure screen works without the removed legacy library file**  
+  The structure of a template is described with the core_external classes instead of the global names that lib/externallib.php used to provide, so the screen loads on a site that no longer includes that file.
+
 ## [2.0.16] - 2026111718
 
 ### Fixed
