@@ -204,8 +204,8 @@ trait resource_details {
     /**
      * mod/resource/locallib.php resource_get_intro().
      *
-     * @param stdClass $resource
-     * @param stdClass $cm
+     * @param object $resource
+     * @param object $cm
      * @param bool $ignoresettings
      * @return string
      */
