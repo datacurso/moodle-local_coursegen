@@ -273,7 +273,7 @@ class create_course_service {
                 'courseid' => 0,
                 'shortname' => '',
                 'fullname' => '',
-                'message' => get_string('error_course_creation_failed', 'local_coursegen'),
+                'message' => license_failure::message($e) ?? get_string('error_course_creation_failed', 'local_coursegen'),
                 'partial' => false,
                 'haswarnings' => false,
                 'warningscount' => 0,

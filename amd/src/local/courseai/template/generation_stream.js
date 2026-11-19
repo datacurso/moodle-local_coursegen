@@ -535,7 +535,8 @@ const runPasses = async(streamUrl, buildCourse, sessionId, control, reopened = f
                 // The retry itself failed: the same offer is made again, with the page stopped as before.
                 document.body.classList.add(PAUSED_CLASS);
                 await paintStage('paused');
-                const again = await askToRetry('connection');
+                // A refusal because of the license says why (no credits left...); anything else reads as a lost connection.
+                const again = await askToRetry(retryError?.errorcode || 'connection', retryError?.message || '');
                 if (!again) {
                     closeView(retryError.message);
                     throw new GenerationStopped(retryError.message);

@@ -28,26 +28,71 @@ import {noticeFeed} from 'local_coursegen/local/courseai/template/thread_feed';
 const CARD_ID = 'cgRetryCard';
 // The failure of a run whose activities have a mold with nothing for the AI to fill: trying again cannot mend it.
 export const UNFILLABLE = 'template_source_invalid';
+// A refusal because of the license (see classes/local/service/license_failure.php): no credits left, a license not
+// valid or not allowed here, a consumption limit. Waiting does not mend it: the person is told why and where to fix it.
+export const NO_CREDITS = 'notenoughtokens';
+export const LICENSE_CODES = [NO_CREDITS, 'license_not_allowed', 'invalidlicensekey', 'forbidden', 'error_ratelimit_exceeded'];
+const MANAGE_CREDITS_URL = 'https://shop.datacurso.com/index.php?m=tokens_manager';
 const STRINGS = [
     'courseai_template_error_title',
     'courseai_template_error_text',
     'courseai_template_error_high_demand',
     'courseai_template_retry',
     'courseai_template_retry_close',
+    'courseai_license_no_credits_title',
+    'courseai_license_no_credits',
+    'courseai_license_title',
+    'courseai_license_manage',
 ];
+
+/**
+ * The text of a message that may carry markup, read without running anything in it.
+ *
+ * @param {string} html
+ * @returns {string}
+ */
+const plainText = (html) => new DOMParser().parseFromString(html || '', 'text/html').body.textContent.trim();
+
+/**
+ * The title and the text of the card: why it stopped, in the words that fit the failure.
+ *
+ * @param {string} code
+ * @param {string} detail
+ * @param {Object} texts The strings of the card, by key.
+ * @returns {{title: string, text: string}}
+ */
+const wordsFor = (code, detail, texts) => {
+    if (code === NO_CREDITS) {
+        return {title: texts.courseai_license_no_credits_title, text: texts.courseai_license_no_credits};
+    }
+    if (LICENSE_CODES.includes(code)) {
+        return {title: texts.courseai_license_title, text: plainText(detail) || texts.courseai_template_error_text};
+    }
+    if (code === 'high_demand') {
+        return {title: texts.courseai_template_error_title, text: texts.courseai_template_error_high_demand};
+    }
+    if (code === UNFILLABLE) {
+        return {title: texts.courseai_template_error_title, text: texts.courseai_template_error_unfillable};
+    }
+    return {title: texts.courseai_template_error_title, text: texts.courseai_template_error_text};
+};
 
 /**
  * Ask whether to try again.
  *
  * @param {string} code The code the service gave to the failure.
- * @param {string} detail What the service said about it: for a mold with nothing to fill, the names of the activities.
+ * @param {string} detail What the service said about it: for a mold with nothing to fill, the names of the activities;
+ *     for a refusal because of the license, its message.
  * @returns {Promise<boolean>} True to try again, false to close.
  */
 export const askToRetry = async(code, detail = '') => {
-    const [title, text, busy, retry, close, unfillable] = await getStrings([
+    const keys = [...STRINGS, 'courseai_template_error_unfillable'];
+    const values = await getStrings([
         ...STRINGS.map((key) => ({key, component: 'local_coursegen'})),
         {key: 'courseai_template_error_unfillable', component: 'local_coursegen', param: detail},
     ]);
+    const texts = Object.fromEntries(keys.map((key, index) => [key, values[index]]));
+    const {title, text} = wordsFor(code, detail, texts);
     document.getElementById(CARD_ID)?.remove();
 
     // The same markup as any other turn of the thread (see ui/log.js), so the failure reads as one more message of
@@ -68,18 +113,27 @@ export const askToRetry = async(code, detail = '') => {
     heading.textContent = title;
     const body = document.createElement('span');
     body.className = 'd-block mb-2';
-    body.textContent = code === 'high_demand' ? busy : (code === UNFILLABLE ? unfillable : text);
+    body.textContent = text;
     const buttons = document.createElement('span');
     buttons.className = 'cg-card-actions';
     const retryButton = document.createElement('button');
     retryButton.type = 'button';
     retryButton.className = 'cg-card-button cg-card-button--primary';
-    retryButton.textContent = retry;
+    retryButton.textContent = texts.courseai_template_retry;
     const closeButton = document.createElement('button');
     closeButton.type = 'button';
     closeButton.className = 'cg-card-button';
-    closeButton.textContent = close;
+    closeButton.textContent = texts.courseai_template_retry_close;
     buttons.append(retryButton, closeButton);
+    if (LICENSE_CODES.includes(code)) {
+        const manage = document.createElement('a');
+        manage.className = 'cg-card-button';
+        manage.href = MANAGE_CREDITS_URL;
+        manage.target = '_blank';
+        manage.rel = 'noopener';
+        manage.textContent = texts.courseai_license_manage;
+        buttons.append(manage);
+    }
     message.append(heading, body, buttons);
     content.append(message);
     card.append(bar, content);

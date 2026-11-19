@@ -3347,6 +3347,10 @@ body.cg-execution-stopped .btn-compact-regenerate { display: none; }
   border-color: var(--primary);
   color: var(--primary);
 }
+a.cg-card-button,
+a.cg-card-button:hover {
+  text-decoration: none;
+}
 .cg-card-button--primary {
   background: var(--primary);
   border-color: var(--primary);

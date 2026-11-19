@@ -17,6 +17,7 @@
 namespace local_coursegen\local\streaming;
 
 use local_coursegen\external\finish_template_generation;
+use local_coursegen\local\service\license_failure;
 
 /**
  * The creation of the course of a finished generation, told to the browser as it goes.
@@ -79,7 +80,7 @@ class finish_stream {
             $this->output->send(sse_formatter::event('failed', json_encode([
                 'errorcode' => $code,
                 'retryable' => self::is_retryable($e),
-                'message' => get_string('error_course_creation_failed', 'local_coursegen'),
+                'message' => license_failure::message($e) ?? get_string('error_course_creation_failed', 'local_coursegen'),
             ])));
         }
         $this->output->send(sse_formatter::event('done', '{}'));
