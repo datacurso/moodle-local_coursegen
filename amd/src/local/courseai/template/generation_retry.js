@@ -23,7 +23,6 @@
  */
 
 import {getStrings} from 'core/str';
-import Notification from 'core/notification';
 import {noticeFeed} from 'local_coursegen/local/courseai/template/thread_feed';
 
 const CARD_ID = 'cgRetryCard';
@@ -79,25 +78,48 @@ const wordsFor = (code, detail, texts) => {
 };
 
 /**
- * Ask whether to try again.
+ * A button of a card of the thread.
  *
- * @param {string} code The code the service gave to the failure.
- * @param {string} detail What the service said about it: for a mold with nothing to fill, the names of the activities;
- *     for a refusal because of the license, its message.
- * @returns {Promise<boolean>} True to try again, false to close.
+ * @param {string} label
+ * @param {boolean} primary Whether it is the main action of the card.
+ * @returns {HTMLButtonElement}
  */
-export const askToRetry = async(code, detail = '') => {
-    const keys = [...STRINGS, 'courseai_template_error_unfillable'];
-    const values = await getStrings([
-        ...STRINGS.map((key) => ({key, component: 'local_coursegen'})),
-        {key: 'courseai_template_error_unfillable', component: 'local_coursegen', param: detail},
-    ]);
-    const texts = Object.fromEntries(keys.map((key, index) => [key, values[index]]));
-    const {title, text} = wordsFor(code, detail, texts);
-    document.getElementById(CARD_ID)?.remove();
+const cardButton = (label, primary = false) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = primary ? 'cg-card-button cg-card-button--primary' : 'cg-card-button';
+    button.textContent = label;
+    return button;
+};
 
-    // The same markup as any other turn of the thread (see ui/log.js), so the failure reads as one more message of
-    // the left column and not as a banner over the page.
+/**
+ * The link of a card that opens the management of the credits of the license in another tab.
+ *
+ * @param {string} label
+ * @param {boolean} primary Whether it is the main action of the card.
+ * @returns {HTMLAnchorElement}
+ */
+const manageCreditsLink = (label, primary = false) => {
+    const link = document.createElement('a');
+    link.className = primary ? 'cg-card-button cg-card-button--primary' : 'cg-card-button';
+    link.href = MANAGE_CREDITS_URL;
+    link.target = '_blank';
+    link.rel = 'noopener';
+    link.textContent = label;
+    return link;
+};
+
+/**
+ * Put a failure in the thread of the left column, as one more message of it and not as a banner or a dialog over the
+ * page: the same markup as any other turn of the thread (see ui/log.js).
+ *
+ * @param {string} title
+ * @param {string} text
+ * @param {HTMLElement[]} actions The buttons and links of the card.
+ * @returns {HTMLElement} The card.
+ */
+const threadCard = (title, text, actions) => {
+    document.getElementById(CARD_ID)?.remove();
     const card = document.createElement('div');
     card.id = CARD_ID;
     card.className = 'cg-log-entry cg-log-entry--danger cg-log-entry--turn-ai';
@@ -117,32 +139,39 @@ export const askToRetry = async(code, detail = '') => {
     body.textContent = text;
     const buttons = document.createElement('span');
     buttons.className = 'cg-card-actions';
-    const retryButton = document.createElement('button');
-    retryButton.type = 'button';
-    retryButton.className = 'cg-card-button cg-card-button--primary';
-    retryButton.textContent = texts.courseai_template_retry;
-    const closeButton = document.createElement('button');
-    closeButton.type = 'button';
-    closeButton.className = 'cg-card-button';
-    closeButton.textContent = texts.courseai_template_retry_close;
-    buttons.append(retryButton, closeButton);
-    if (LICENSE_CODES.includes(code)) {
-        const manage = document.createElement('a');
-        manage.className = 'cg-card-button';
-        manage.href = MANAGE_CREDITS_URL;
-        manage.target = '_blank';
-        manage.rel = 'noopener';
-        manage.textContent = texts.courseai_license_manage;
-        buttons.append(manage);
-    }
+    buttons.append(...actions);
     message.append(heading, body, buttons);
     content.append(message);
     card.append(bar, content);
-
     const host = noticeFeed() || document.getElementById('courseaiChatScroll') || document.body;
     host.append(card);
     card.scrollIntoView({block: 'nearest'});
+    return card;
+};
 
+/**
+ * Ask whether to try again.
+ *
+ * @param {string} code The code the service gave to the failure.
+ * @param {string} detail What the service said about it: for a mold with nothing to fill, the names of the activities;
+ *     for a refusal because of the license, its message.
+ * @returns {Promise<boolean>} True to try again, false to close.
+ */
+export const askToRetry = async(code, detail = '') => {
+    const keys = [...STRINGS, 'courseai_template_error_unfillable'];
+    const values = await getStrings([
+        ...STRINGS.map((key) => ({key, component: 'local_coursegen'})),
+        {key: 'courseai_template_error_unfillable', component: 'local_coursegen', param: detail},
+    ]);
+    const texts = Object.fromEntries(keys.map((key, index) => [key, values[index]]));
+    const {title, text} = wordsFor(code, detail, texts);
+    const retryButton = cardButton(texts.courseai_template_retry, true);
+    const closeButton = cardButton(texts.courseai_template_retry_close);
+    const actions = [retryButton, closeButton];
+    if (LICENSE_CODES.includes(code)) {
+        actions.push(manageCreditsLink(texts.courseai_license_manage));
+    }
+    const card = threadCard(title, text, actions);
     return new Promise((resolve) => {
         retryButton.addEventListener('click', () => {
             card.remove();
@@ -156,8 +185,8 @@ export const askToRetry = async(code, detail = '') => {
 };
 
 /**
- * Tell a refusal because of the license that stops a run before it starts (no credits left...), in plain words with
- * the way to manage the credits, instead of the raw error of the service.
+ * Tell in the thread a refusal because of the license that stops a run before it starts (no credits left...), in
+ * plain words with the way to manage the credits, instead of the raw error of the service.
  *
  * @param {Object} error The error a request gave: {errorcode, message}.
  * @returns {Promise<boolean>} True when it was a refusal because of the license and it was told.
@@ -174,16 +203,12 @@ export const tellLicenseRefusal = async(error) => {
         'courseai_license_manage',
         'courseai_template_retry_close',
     ].map((key) => ({key, component: 'local_coursegen'})));
-    const body = document.createElement('div');
-    const text = document.createElement('p');
-    text.textContent = code === NO_CREDITS ? noCredits : plainText(error.message);
-    const link = document.createElement('a');
-    link.className = 'btn btn-primary';
-    link.href = MANAGE_CREDITS_URL;
-    link.target = '_blank';
-    link.rel = 'noopener';
-    link.textContent = manage;
-    body.append(text, link);
-    await Notification.alert(code === NO_CREDITS ? noCreditsTitle : licenseTitle, body.innerHTML, close);
+    const closeButton = cardButton(close);
+    const card = threadCard(
+        code === NO_CREDITS ? noCreditsTitle : licenseTitle,
+        code === NO_CREDITS ? noCredits : plainText(error.message),
+        [manageCreditsLink(manage, true), closeButton]
+    );
+    closeButton.addEventListener('click', () => card.remove());
     return true;
 };
