@@ -189,6 +189,7 @@ $string['courseai_chip_view_guideline'] = 'Ver directriz';
 $string['courseai_close_view'] = 'Cerrar y volver a Mis cursos';
 $string['courseai_license_manage'] = 'Gestionar créditos';
 $string['courseai_license_no_credits'] = 'Tu licencia se quedó sin créditos de IA. Lo que ya se hizo se conserva: asigna o compra más créditos en Gestionar créditos de la Tienda Datacurso y luego pulsa Intentar de nuevo.';
+$string['courseai_license_no_credits_start'] = 'Tu licencia no tiene créditos de IA para generar el curso. Asigna o compra más créditos en Gestionar créditos de la Tienda Datacurso y vuelve a generar.';
 $string['courseai_license_no_credits_title'] = 'Te quedaste sin créditos de IA';
 $string['courseai_license_title'] = 'La licencia no permite continuar';
 $string['courseai_template_choice_space_add'] = 'Agregar la actividad';

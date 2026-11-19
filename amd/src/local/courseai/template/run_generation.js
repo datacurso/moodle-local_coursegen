@@ -29,6 +29,7 @@ import {GenerationStopped, abortGenerationView, beginGenerationView, runGenerati
 import {usePreviewSession} from './preview';
 import {resetImages, useImagesSession} from './images_panel';
 import {reviewAndCreate} from './finish';
+import {tellLicenseRefusal} from './generation_retry';
 
 /**
  * The visible text of a select's chosen option.
@@ -106,7 +107,10 @@ export const runGeneration = async(tplState, tplSelect, genBtn, state, host) => 
             if (opened) {
                 abortGenerationView('');
             }
-            Notification.exception(e);
+            // A license with no credits left is said plainly; anything else keeps the error of the request.
+            if (!await tellLicenseRefusal(e)) {
+                Notification.exception(e);
+            }
         }
     }
 };
@@ -148,7 +152,9 @@ export const reopenGeneration = async(tplState, genBtn, state, host, session) =>
         }
         if (!(e instanceof GenerationStopped)) {
             abortGenerationView('');
-            Notification.exception(e);
+            if (!await tellLicenseRefusal(e)) {
+                Notification.exception(e);
+            }
         }
     }
 };

@@ -196,6 +196,7 @@ $string['courseai_chip_view_guideline'] = 'View guideline';
 $string['courseai_close_view'] = 'Close and return to My courses';
 $string['courseai_license_manage'] = 'Manage credits';
 $string['courseai_license_no_credits'] = 'Your license has run out of AI credits. What was already made is kept: allocate or buy more credits in Manage credits in the Datacurso Shop, then press Try again.';
+$string['courseai_license_no_credits_start'] = 'Your license has no AI credits left to generate the course. Allocate or buy more credits in Manage credits in the Datacurso Shop, then generate again.';
 $string['courseai_license_no_credits_title'] = 'No AI credits left';
 $string['courseai_license_title'] = 'The license does not allow continuing';
 $string['courseai_template_choice_space_add'] = 'Add the activity';

@@ -23,6 +23,7 @@
  */
 
 import {getStrings} from 'core/str';
+import Notification from 'core/notification';
 import {noticeFeed} from 'local_coursegen/local/courseai/template/thread_feed';
 
 const CARD_ID = 'cgRetryCard';
@@ -152,4 +153,37 @@ export const askToRetry = async(code, detail = '') => {
             resolve(false);
         });
     });
+};
+
+/**
+ * Tell a refusal because of the license that stops a run before it starts (no credits left...), in plain words with
+ * the way to manage the credits, instead of the raw error of the service.
+ *
+ * @param {Object} error The error a request gave: {errorcode, message}.
+ * @returns {Promise<boolean>} True when it was a refusal because of the license and it was told.
+ */
+export const tellLicenseRefusal = async(error) => {
+    const code = error?.errorcode || error?.code || '';
+    if (!LICENSE_CODES.includes(code)) {
+        return false;
+    }
+    const [noCreditsTitle, noCredits, licenseTitle, manage, close] = await getStrings([
+        'courseai_license_no_credits_title',
+        'courseai_license_no_credits_start',
+        'courseai_license_title',
+        'courseai_license_manage',
+        'courseai_template_retry_close',
+    ].map((key) => ({key, component: 'local_coursegen'})));
+    const body = document.createElement('div');
+    const text = document.createElement('p');
+    text.textContent = code === NO_CREDITS ? noCredits : plainText(error.message);
+    const link = document.createElement('a');
+    link.className = 'btn btn-primary';
+    link.href = MANAGE_CREDITS_URL;
+    link.target = '_blank';
+    link.rel = 'noopener';
+    link.textContent = manage;
+    body.append(text, link);
+    await Notification.alert(code === NO_CREDITS ? noCreditsTitle : licenseTitle, body.innerHTML, close);
+    return true;
 };
