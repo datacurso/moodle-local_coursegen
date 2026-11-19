@@ -403,7 +403,8 @@ let aiInSeries = false;
  * @param {number} sessionId
  * @param {Function} next Counts one more failure in a row and returns the count.
  * @param {Function} count Returns the failures in a row.
- * @returns {Promise<boolean>} True when the run was opened again; false when the person has to decide.
+ * @returns {Promise<true|Error>} True when the run was opened again; otherwise what stopped it last, for the person to
+ *     decide on: the first failure, or a refusal of the retry itself (a license with no credits left is not retried).
  */
 const retryByItself = async(error, sessionId, next, count) => {
     let reason = error;
@@ -430,11 +431,12 @@ const retryByItself = async(error, sessionId, next, count) => {
             await retryTemplateGeneration(sessionId);
             return true;
         } catch (retryError) {
-            // The service did not take the retry: the next one comes later still.
-            reason = Object.assign(retryError, {code: retryError.code || 'connection'});
+            // The service did not take the retry: the next one comes later still. A refusal keeps its own code (no credits
+            // left...), which waiting does not mend, so the retries stop and the person reads why.
+            reason = Object.assign(retryError, {code: retryError.code || retryError.errorcode || 'connection'});
         }
     }
-    return false;
+    return reason;
 };
 
 /**
@@ -508,7 +510,8 @@ const runPasses = async(streamUrl, buildCourse, sessionId, control, reopened = f
                 run.failures = 0;
                 run.moved = false;
             }
-            if (await retryByItself(error, sessionId, () => ++run.failures, () => run.failures)) {
+            const outcome = await retryByItself(error, sessionId, () => ++run.failures, () => run.failures);
+            if (outcome === true) {
                 document.body.classList.remove(PAUSED_CLASS);
                 showGeneratingHeader((await getLabels()).title);
                 // The run goes on where it was: it is not told as a new one, and the count of pictures stays.
@@ -521,9 +524,10 @@ const runPasses = async(streamUrl, buildCourse, sessionId, control, reopened = f
             // The retries ran out, or the failure is not one that waiting mends: only now it reads as stopped, and the
             // person decides. While it retries by itself the title does not say it is stopped, the card says it retries.
             await paintStage('paused');
-            if (!await askToRetry(error.code, error.message)) {
-                closeView(error.message);
-                throw new GenerationStopped(error.message);
+            const why = outcome || error;
+            if (!await askToRetry(why.code, why.message)) {
+                closeView(why.message);
+                throw new GenerationStopped(why.message);
             }
             document.body.classList.remove(PAUSED_CLASS);
             showGeneratingHeader((await getLabels()).title);
