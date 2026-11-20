@@ -58,8 +58,14 @@ class json_file_storage {
      * @param bool $includedirs
      * @return json_file[] Keyed by pathname hash, as the file storage keys them.
      */
-    public function get_area_files($contextid, $component, $filearea = false, $itemid = false,
-            $sort = "itemid, filepath, filename", $includedirs = true): array {
+    public function get_area_files(
+        $contextid,
+        $component,
+        $filearea = false,
+        $itemid = false,
+        $sort = "itemid, filepath, filename",
+        $includedirs = true
+    ): array {
         $found = $this->matching_files((int) $contextid, (string) $component, $filearea, $itemid, $includedirs);
         $this->order($found, (string) $sort);
         return $this->keyed_by_pathnamehash($found);
@@ -119,7 +125,7 @@ class json_file_storage {
      * @return array
      */
     public function get_area_tree($contextid, $component, $filearea, $itemid): array {
-        $result = array('dirname'=>'', 'dirfile'=>null, 'subdirs'=>array(), 'files'=>array());
+        $result = ['dirname' => '', 'dirfile' => null, 'subdirs' => [], 'files' => []];
         $files = $this->get_area_files($contextid, $component, $filearea, $itemid, '', true);
         $result = $this->place_directories($result, $files);
         $result = $this->place_files($result, $files);
@@ -137,7 +143,7 @@ class json_file_storage {
      */
     protected function place_directories(array $result, array &$files): array {
         // first create directory structure
-        foreach ($files as $hash=>$dir) {
+        foreach ($files as $hash => $dir) {
             if (!$dir->is_directory()) {
                 continue;
             }
@@ -162,7 +168,7 @@ class json_file_storage {
      * @return array
      */
     protected function place_files(array $result, array $files): array {
-        foreach ($files as $hash=>$file) {
+        foreach ($files as $hash => $file) {
             $filepath = $file->get_filepath();
             $node = &$this->tree_node_for($result, $filepath);
             $filename = $file->get_filename();
@@ -190,7 +196,7 @@ class json_file_storage {
             }
             // A file whose directory was never listed still has a place.
             if (!isset($pointer['subdirs'][$part])) {
-                $pointer['subdirs'][$part] = array('dirname'=>$part, 'dirfile'=>null, 'subdirs'=>array(), 'files'=>array());
+                $pointer['subdirs'][$part] = ['dirname' => $part, 'dirfile' => null, 'subdirs' => [], 'files' => []];
             }
             $pointer = &$pointer['subdirs'][$part];
         }

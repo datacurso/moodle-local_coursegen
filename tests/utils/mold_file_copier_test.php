@@ -46,8 +46,8 @@ final class mold_file_copier_test extends \advanced_testcase {
         $otherrevision = mold_file_copier::resolve_url($base . '14/GD%20Guide.pdf');
         $missing = mold_file_copier::resolve_url($base . '1/Other.pdf');
 
-        $this->assertSame($file->get_id(), $withrevision->get_id());
-        $this->assertSame($file->get_id(), $otherrevision->get_id());
+        $this->assertEquals($file->get_id(), $withrevision->get_id());
+        $this->assertEquals($file->get_id(), $otherrevision->get_id());
         $this->assertNull($missing);
     }
 

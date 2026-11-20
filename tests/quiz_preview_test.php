@@ -50,7 +50,8 @@ final class quiz_preview_test extends \advanced_testcase {
             $this->assertStringNotContainsString('[[coursegen:', $html);
         }
         $this->assertStringContainsString($parameters['questions'][0]['question']['options']['answers'][array_key_first(
-            $parameters['questions'][0]['question']['options']['answers'])]['answer'], $html);
+            $parameters['questions'][0]['question']['options']['answers']
+        )]['answer'], $html);
     }
 
     /**

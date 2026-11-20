@@ -19,12 +19,31 @@
 
     TODO describe template add_activity_ai_button
 
+    Context variable bs: Bootstrap class names for the running Moodle,
+    from \local_coursegen\local\bootstrap_classes::get().
+
     Example context (json):
     {
         "ismoodle45": true,
         "sectionnum": 2,
         "beforemod": 193,
-        "arialabel": "Insert an activity or resource before 'Q &amp;amp; A Forum for Students'"
+        "arialabel": "Insert an activity or resource before 'Q &amp;amp; A Forum for Students'",
+        "bs": {
+            "visuallyhidden": "visually-hidden",
+            "iconspacing1": "me-1",
+            "iconspacing2": "me-2",
+            "iconspacing3": "me-3",
+            "startspacing2": "ms-2",
+            "endpadding1": "pe-1",
+            "textend": "text-end",
+            "fontbold": "fw-bold",
+            "switchwrapper": "form-check form-switch",
+            "checkboxwrapper": "form-check",
+            "radiowrapper": "form-check",
+            "checkinput": "form-check-input",
+            "checklabel": "form-check-label",
+            "selectsmall": "form-select form-select-sm"
+        }
     }
 }}
 <div>
@@ -55,7 +74,7 @@
             <span class="local_coursegen-sparkles-icon white">
                 {{#pix}} sparkles-white, local_coursegen {{/pix}}
             </span>
-            <span class="activity-add-text pr-1">{{#str}}addactivitywithia, local_coursegen{{/str}}</span>
+            <span class="activity-add-text {{bs.endpadding1}}">{{#str}}addactivitywithia, local_coursegen{{/str}}</span>
         </div>
         {{/showfulltext}}
         {{^showfulltext}}

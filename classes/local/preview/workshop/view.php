@@ -92,8 +92,15 @@ class view {
      * @param moodle_url $here The preview page, which every link stays on.
      * @param int $userid The reader.
      */
-    public function __construct(stdClass $workshop, stdClass $cm, stdClass $course, context $context,
-            json_store $store, moodle_url $here, int $userid) {
+    public function __construct(
+        stdClass $workshop,
+        stdClass $cm,
+        stdClass $course,
+        context $context,
+        json_store $store,
+        moodle_url $here,
+        int $userid
+    ) {
         $this->workshop = $workshop;
         $this->cm = $cm;
         $this->course = $course;
@@ -103,10 +110,12 @@ class view {
         $this->userid = $userid;
         // The backup structure leaves out what is not the workshop's setup;
         // the plan reads these as columns, so they are given their defaults.
-        foreach (['phaseswitchassessment' => 0, 'intro' => '', 'instructauthors' => '', 'instructreviewers' => '',
+        foreach (
+            ['phaseswitchassessment' => 0, 'intro' => '', 'instructauthors' => '', 'instructreviewers' => '',
                 'conclusion' => '', 'useexamples' => 0, 'examplesmode' => 0, 'submissionstart' => 0,
                 'submissionend' => 0, 'assessmentstart' => 0, 'assessmentend' => 0, 'latesubmissions' => 0,
-                'useselfassessment' => 0, 'phase' => workshop::PHASE_SETUP] as $field => $default) {
+                'useselfassessment' => 0, 'phase' => workshop::PHASE_SETUP] as $field => $default
+        ) {
             if (!isset($this->workshop->{$field})) {
                 $this->workshop->{$field} = $default;
             }

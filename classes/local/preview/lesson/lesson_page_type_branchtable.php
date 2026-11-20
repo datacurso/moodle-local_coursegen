@@ -54,7 +54,7 @@ class lesson_page_type_branchtable extends lesson_page {
     public function display($renderer, $attempt) {
         global $PAGE, $OUTPUT;
 
-        $options = new \stdClass;
+        $options = new \stdClass();
         $options->para = false;
         $options->noclean = true;
 
@@ -77,9 +77,9 @@ class lesson_page_type_branchtable extends lesson_page {
             $label = strip_tags($label);
             $buttons[] = $renderer->single_button($url, $label);
         }
-        // Set the orientation.
+        // Set the orientation. A page without the column is laid out as the creation stores it (horizontal).
         $orientation = 'vertical';
-        if ($this->properties->layout) {
+        if ($this->properties->layout ?? 1) {
             $orientation = 'horizontal';
         }
         $buttonshtml = implode("\n", $buttons);

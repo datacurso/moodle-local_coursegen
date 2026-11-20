@@ -176,7 +176,7 @@ class view {
         if (file_mimetype_in_typegroup($mimetype, 'archive')) {
             return RESOURCELIB_DISPLAY_DOWNLOAD;
         }
-        if (file_mimetype_in_typegroup($mimetype, array('web_image', '.htm', 'web_video', 'web_audio'))) {
+        if (file_mimetype_in_typegroup($mimetype, ['web_image', '.htm', 'web_video', 'web_audio'])) {
             return RESOURCELIB_DISPLAY_EMBED;
         }
 

@@ -33,6 +33,34 @@
     * lasturl, lastlabel - string, required when showlastpage is true.
     * specialurl, specialtext - string, required when showspecial is true.
     * pages - array of {url, label, current}.
+
+    Example context (json):
+    {
+        "show": true,
+        "separator": " | ",
+        "hasprev": false,
+        "hasnext": true,
+        "showfirstpage": false,
+        "showfirstellipsis": false,
+        "showlastellipsis": false,
+        "showlastpage": false,
+        "showspecial": false,
+        "specialselected": false,
+        "nexturl": "https://example.com/mod/glossary/view.php?page=1",
+        "nextlabel": "Next",
+        "pages": [
+            {
+                "url": "https://example.com/mod/glossary/view.php?page=0",
+                "label": "1",
+                "current": true
+            },
+            {
+                "url": "https://example.com/mod/glossary/view.php?page=1",
+                "label": "2",
+                "current": false
+            }
+        ]
+    }
 }}
 {{#show}}
 <div style="text-align:center">

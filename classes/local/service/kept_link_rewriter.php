@@ -42,7 +42,7 @@ final class kept_link_rewriter {
      *
      * @param int $courseid The new course.
      * @param array $payloadactivities Every activity entry of the result, kept ones included.
-     * @param array $generatedcms Payload cmid => created cmid, for the generated activities.
+     * @param array $generatedcms Activity key (generated_activity_key) => created cmid, for the generated activities.
      * @param array $keptcms Base course cmid => created cmid, for the copied kept activities.
      */
     public static function rewrite_for_course(
@@ -95,11 +95,10 @@ final class kept_link_rewriter {
             $behavior = $entry['template_behavior'] ?? [];
             $action = $behavior['action'] ?? '';
             $sourcecmid = (int) ($behavior['template_source_cmid'] ?? 0);
-            $payloadcmid = (int) ($entry['cmid'] ?? 0);
             if ($action !== 'instance' || $sourcecmid === 0) {
                 continue;
             }
-            $createdcmid = $generatedcms[$payloadcmid] ?? 0;
+            $createdcmid = $generatedcms[generated_activity_key::of($entry)] ?? 0;
             $bysource[$sourcecmid][] = (int) $createdcmid;
         }
         return $bysource;
@@ -110,7 +109,7 @@ final class kept_link_rewriter {
      *
      * @param course_modinfo $modinfo
      * @param int[] $cmids
-     * @param array<int,int> $newcmidbyoldcmid
+     * @param array $newcmidbyoldcmid
      */
     private static function rewrite_activities(course_modinfo $modinfo, array $cmids, array $newcmidbyoldcmid): void {
         global $DB;
@@ -131,7 +130,7 @@ final class kept_link_rewriter {
      *
      * @param module_link_texts $texts
      * @param \stdClass[] $records
-     * @param array<int,int> $newcmidbyoldcmid
+     * @param array $newcmidbyoldcmid
      */
     private static function rewrite_records(module_link_texts $texts, array $records, array $newcmidbyoldcmid): void {
         foreach ($records as $record) {
@@ -144,7 +143,7 @@ final class kept_link_rewriter {
      *
      * @param module_link_texts $texts
      * @param \stdClass $record
-     * @param array<int,int> $newcmidbyoldcmid
+     * @param array $newcmidbyoldcmid
      */
     private static function rewrite_columns(module_link_texts $texts, \stdClass $record, array $newcmidbyoldcmid): void {
         global $DB;

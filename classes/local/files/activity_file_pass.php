@@ -264,14 +264,15 @@ final class activity_file_pass {
             $filepath .= '/';
         }
         $existing = $fs->get_file($area->contextid, $area->component, $area->filearea, $area->itemid, $filepath, $filename);
-        if ($existing) {
-            $this->check_same_file($existing, $source, $where, $path);
-            return;
-        }
         if ($source === null) {
             $encoded = text_file_rewriter::encode_path($path);
             $reference = new file_reference(file_reference::KIND_PLACEHOLDER, $encoded);
             $source = $this->sources->find($reference);
+        }
+        if ($existing) {
+            // A file the text only names is looked up too, so a different file under that name is not overwritten.
+            $this->check_same_file($existing, $source, $where, $path);
+            return;
         }
         if ($source === null) {
             throw file_copy_exception::missing($where, ltrim($path, '/'));

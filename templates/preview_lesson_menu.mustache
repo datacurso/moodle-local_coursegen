@@ -23,6 +23,23 @@
     Context variables required for this template:
     * skiplabel - string.
     * pages - array of {selected, title, url}.
+
+    Example context (json):
+    {
+        "skiplabel": "Skip lesson menu",
+        "pages": [
+            {
+                "selected": true,
+                "title": "Introduction",
+                "url": "https://example.com/mod/lesson/view.php?pageid=1"
+            },
+            {
+                "selected": false,
+                "title": "Question 1",
+                "url": "https://example.com/mod/lesson/view.php?pageid=2"
+            }
+        ]
+    }
 }}
 <a href="#maincontent" class="accesshide">{{skiplabel}}</a>
 <div class="menuwrapper">

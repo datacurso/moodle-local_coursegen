@@ -121,18 +121,18 @@ final class template_row_options_test extends \advanced_testcase {
 
     /**
      * activity_actions() never offers "instance", for either an
-     * AI-supported type or an unsupported one — "template" is the only
-     * action still gated to ai_activity_types::MODNAMES, and "space" is offered for
-     * every type.
+     * AI-supported type or an unsupported one — "template" and "aimodify" are the
+     * actions gated to ai_activity_types::MODNAMES, and "space" is offered only for
+     * a file resource (space_rules).
      */
     public function test_activity_actions_never_offers_instance(): void {
         $supported = template_row_options::activity_actions(1, 'page');
         $supportedvalues = array_column($supported, 'value');
-        $this->assertSame(['template', 'keep', 'reference', 'exclude', 'space'], $supportedvalues);
+        $this->assertSame(['template', 'aimodify', 'keep', 'reference', 'exclude'], $supportedvalues);
 
         $unsupported = template_row_options::activity_actions(1, 'lti');
         $unsupportedvalues = array_column($unsupported, 'value');
-        $this->assertSame(['keep', 'reference', 'exclude', 'space'], $unsupportedvalues);
+        $this->assertSame(['keep', 'reference', 'exclude'], $unsupportedvalues);
     }
 
     /**
@@ -210,5 +210,15 @@ final class template_row_options_test extends \advanced_testcase {
             }
         }
         return $active;
+    }
+
+    /**
+     * A section can be made a template section, and a saved one comes back selected.
+     */
+    public function test_section_actions_offer_the_template_section(): void {
+        $items = template_row_options::section_actions(7, 'template');
+
+        $this->assertSame(['aimodify', 'keep', 'template'], array_column($items, 'value'));
+        $this->assertSame('template', template_row_options::active_action($items));
     }
 }

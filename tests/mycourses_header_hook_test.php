@@ -266,9 +266,29 @@ final class mycourses_header_hook_test extends \advanced_testcase {
     }
 
     /**
-     * A non-admin user holding both capabilities gets the button.
+     * A non-admin user holding the full creation set (the four fixed capabilities) in a category
+     * gets the button.
      */
-    public function test_should_inject_for_user_with_both_capabilities(): void {
+    public function test_should_inject_for_user_with_the_full_creation_set(): void {
+        $this->require_datacurso_provider();
+        global $PAGE;
+
+        $this->resetAfterTest();
+        $generator = $this->getDataGenerator();
+        $user = $generator->create_user();
+        $roleid = $generator->get_plugin_generator('local_coursegen')->create_course_creator_role();
+        role_assign($roleid, $user->id, \context_system::instance());
+        $this->setUser($user);
+        $this->set_page_url('/my/courses.php');
+
+        $this->assertTrue(mycourses_header_hook::should_inject($PAGE));
+    }
+
+    /**
+     * Holding only the two page capabilities, without the rest of the creation set, no longer earns
+     * the button: the user could open the page but not complete the creation (ticket #9539).
+     */
+    public function test_should_not_inject_for_user_with_only_the_two_page_capabilities(): void {
         $this->require_datacurso_provider();
         global $PAGE;
 
@@ -280,33 +300,73 @@ final class mycourses_header_hook_test extends \advanced_testcase {
         $this->setUser($user);
         $this->set_page_url('/my/courses.php');
 
-        $this->assertTrue(mycourses_header_hook::should_inject($PAGE));
+        $this->assertFalse(mycourses_header_hook::should_inject($PAGE));
     }
 
     /**
-     * A user holding both capabilities in a single category (not at system level) gets the button.
+     * The Dashboard is not decorated while the site has its My courses page.
      */
-    public function test_should_inject_for_user_with_category_level_capabilities(): void {
+    public function test_should_not_inject_on_dashboard_when_my_courses_is_enabled(): void {
         $this->require_datacurso_provider();
         global $PAGE;
 
         $this->resetAfterTest();
-        $generator = $this->getDataGenerator();
-        $category = $generator->create_category();
-        $categorycontext = \context_coursecat::instance($category->id);
-        $user = $generator->create_user();
-        $roleid = $generator->create_role();
-        assign_capability('moodle/course:create', CAP_ALLOW, $roleid, $categorycontext);
-        assign_capability('local/coursegen:createfreecoursewithai', CAP_ALLOW, $roleid, $categorycontext);
-        role_assign($roleid, $user->id, $categorycontext);
-        $this->setUser($user);
+        $this->setAdminUser();
+        set_config('enablemycourses', 1);
+        $this->set_page_url('/my/index.php');
+
+        $this->assertFalse(mycourses_header_hook::should_inject($PAGE));
+    }
+
+    /**
+     * With the My courses page disabled the Dashboard gets the button, so the
+     * assistant stays reachable.
+     */
+    public function test_should_inject_on_dashboard_when_my_courses_is_disabled(): void {
+        $this->require_datacurso_provider();
+        global $PAGE;
+
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        set_config('enablemycourses', 0);
+        $this->set_page_url('/my/index.php');
+
+        $this->assertTrue(mycourses_header_hook::should_inject($PAGE));
+    }
+
+    /**
+     * Before Moodle 5.2 the My courses page cannot be disabled and the setting does not
+     * exist: the Dashboard is left alone, as with the page enabled.
+     */
+    public function test_should_not_inject_on_dashboard_when_the_setting_does_not_exist(): void {
+        $this->require_datacurso_provider();
+        global $PAGE;
+
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        unset_config('enablemycourses');
+        $this->set_page_url('/my/index.php');
+
+        $this->assertFalse(mycourses_header_hook::should_inject($PAGE));
+    }
+
+    /**
+     * My courses keeps the button whether the setting exists or not.
+     */
+    public function test_should_inject_on_my_courses_when_the_setting_does_not_exist(): void {
+        $this->require_datacurso_provider();
+        global $PAGE;
+
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        unset_config('enablemycourses');
         $this->set_page_url('/my/courses.php');
 
         $this->assertTrue(mycourses_header_hook::should_inject($PAGE));
     }
 
     /**
-     * Pages other than My courses are never decorated.
+     * Pages other than My courses and the Dashboard are never decorated.
      */
     public function test_should_not_inject_on_other_pages(): void {
         $this->require_datacurso_provider();
@@ -314,7 +374,8 @@ final class mycourses_header_hook_test extends \advanced_testcase {
 
         $this->resetAfterTest();
         $this->setAdminUser();
-        $this->set_page_url('/my/index.php');
+        set_config('enablemycourses', 0);
+        $this->set_page_url('/course/index.php');
 
         $this->assertFalse(mycourses_header_hook::should_inject($PAGE));
     }
@@ -322,7 +383,7 @@ final class mycourses_header_hook_test extends \advanced_testcase {
     /**
      * A user without local/coursegen:createfreecoursewithai does not get the button.
      */
-    public function test_should_not_inject_without_createcoursewithai(): void {
+    public function test_should_not_inject_without_createfreecoursewithai(): void {
         $this->require_datacurso_provider();
         global $PAGE;
 
@@ -413,7 +474,7 @@ final class mycourses_header_hook_test extends \advanced_testcase {
         $this->resetAfterTest();
         $this->setAdminUser();
         $this->set_page_url('/my/courses.php');
-        \aiprovider_datacurso\local\plugin_settings::set_enabled('local_coursegen', false);
+        set_config('plugin_enabled_local_coursegen', '0', 'aiprovider_datacurso');
 
         $this->assertFalse(mycourses_header_hook::should_inject($PAGE));
     }

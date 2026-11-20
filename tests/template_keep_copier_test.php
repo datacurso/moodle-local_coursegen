@@ -44,6 +44,7 @@ final class template_keep_copier_test extends \advanced_testcase {
      */
     public function test_copies_a_kept_activity_into_the_target_course(): void {
         $this->resetAfterTest(true);
+        $this->setAdminUser();
 
         $sourcecourse = $this->getDataGenerator()->create_course(['numsections' => 2]);
         $targetcourse = $this->getDataGenerator()->create_course(['numsections' => 2]);
@@ -64,6 +65,7 @@ final class template_keep_copier_test extends \advanced_testcase {
      */
     public function test_missing_template_record_returns_empty(): void {
         $this->resetAfterTest(true);
+        $this->setAdminUser();
 
         $targetcourse = $this->getDataGenerator()->create_course();
 
@@ -81,6 +83,7 @@ final class template_keep_copier_test extends \advanced_testcase {
     public function test_deleted_source_course_returns_empty_without_crashing(): void {
         global $DB;
         $this->resetAfterTest(true);
+        $this->setAdminUser();
 
         $sourcecourse = $this->getDataGenerator()->create_course();
         $targetcourse = $this->getDataGenerator()->create_course();
@@ -101,6 +104,7 @@ final class template_keep_copier_test extends \advanced_testcase {
      */
     public function test_deleted_kept_activity_is_skipped_without_failing_the_rest(): void {
         $this->resetAfterTest(true);
+        $this->setAdminUser();
 
         $sourcecourse = $this->getDataGenerator()->create_course(['numsections' => 2]);
         $targetcourse = $this->getDataGenerator()->create_course(['numsections' => 2]);
@@ -123,6 +127,7 @@ final class template_keep_copier_test extends \advanced_testcase {
      */
     public function test_unresolvable_target_section_is_reported_as_a_failure(): void {
         $this->resetAfterTest(true);
+        $this->setAdminUser();
 
         $sourcecourse = $this->getDataGenerator()->create_course(['numsections' => 3]);
         $targetcourse = $this->getDataGenerator()->create_course(['numsections' => 1]);
@@ -140,7 +145,9 @@ final class template_keep_copier_test extends \advanced_testcase {
      * caller can tell where each kept activity ended up.
      */
     public function test_reports_the_created_cmid_of_every_kept_activity(): void {
+        global $DB;
         $this->resetAfterTest(true);
+        $this->setAdminUser();
 
         $sourcecourse = $this->getDataGenerator()->create_course(['numsections' => 2]);
         $targetcourse = $this->getDataGenerator()->create_course(['numsections' => 2]);
@@ -151,15 +158,14 @@ final class template_keep_copier_test extends \advanced_testcase {
         $createdcmids = [];
         template_keep_copier::copy_into((int) $template->get('id'), $targetcourse->id, $createdcmids);
 
-        $targetmodinfo = get_fast_modinfo($targetcourse);
-        $targetcmids = array_keys($targetmodinfo->get_instances_of('page'));
+        // What the target course holds is read from the table, not from a modinfo the test could hold stale.
+        $targetcmids = array_map('intval', $DB->get_fieldset_select('course_modules', 'id', 'course = ?', [$targetcourse->id]));
         $sourcecmids = [(int) $first->cmid, (int) $second->cmid];
         $this->assertEqualsCanonicalizing($sourcecmids, array_keys($createdcmids));
         $this->assertEqualsCanonicalizing($targetcmids, array_values($createdcmids));
-        $this->assertSame(
-            $targetmodinfo->get_cm($createdcmids[(int) $first->cmid])->sectionnum,
-            1
-        );
+        rebuild_course_cache($targetcourse->id, true);
+        $targetmodinfo = get_fast_modinfo($targetcourse->id);
+        $this->assertEquals(1, $targetmodinfo->get_cm($createdcmids[(int) $first->cmid])->sectionnum);
     }
 
     /**
@@ -167,6 +173,7 @@ final class template_keep_copier_test extends \advanced_testcase {
      */
     public function test_failed_copy_has_no_created_cmid(): void {
         $this->resetAfterTest(true);
+        $this->setAdminUser();
 
         $sourcecourse = $this->getDataGenerator()->create_course(['numsections' => 3]);
         $targetcourse = $this->getDataGenerator()->create_course(['numsections' => 1]);
@@ -187,6 +194,7 @@ final class template_keep_copier_test extends \advanced_testcase {
      */
     public function test_a_kept_activity_keeps_the_files_of_its_texts(): void {
         $this->resetAfterTest(true);
+        $this->setAdminUser();
 
         $sourcecourse = $this->getDataGenerator()->create_course(['numsections' => 2]);
         $targetcourse = $this->getDataGenerator()->create_course(['numsections' => 2]);
@@ -217,6 +225,7 @@ final class template_keep_copier_test extends \advanced_testcase {
      */
     public function test_a_space_is_copied_only_when_asked_for(): void {
         $this->resetAfterTest(true);
+        $this->setAdminUser();
 
         $sourcecourse = $this->getDataGenerator()->create_course(['numsections' => 2]);
         $targetcourse = $this->getDataGenerator()->create_course(['numsections' => 2]);
@@ -235,7 +244,7 @@ final class template_keep_copier_test extends \advanced_testcase {
         $targetmodinfo = get_fast_modinfo($targetcourse);
         $this->assertSame([], $failures);
         $this->assertSame([(int) $resource->cmid], array_keys($with));
-        $this->assertSame(2, $targetmodinfo->get_cm($with[(int) $resource->cmid])->sectionnum);
+        $this->assertEquals(2, $targetmodinfo->get_cm($with[(int) $resource->cmid])->sectionnum);
     }
 
     /**

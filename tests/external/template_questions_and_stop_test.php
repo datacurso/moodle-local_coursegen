@@ -63,6 +63,7 @@ final class template_questions_and_stop_test extends \advanced_testcase {
      * A user who may start a generation can answer its questions.
      */
     public function test_answering_needs_the_capability_to_create_with_a_template(): void {
+        $this->skip_without_ai_provider();
         $this->resetAfterTest();
         $this->login_without('local/coursegen:createtemplatecoursewithai');
         $session = $this->create_session($GLOBALS['USER']->id);
@@ -75,6 +76,7 @@ final class template_questions_and_stop_test extends \advanced_testcase {
      * Another user's generation cannot be answered.
      */
     public function test_answering_a_generation_of_someone_else_is_refused(): void {
+        $this->skip_without_ai_provider();
         $this->resetAfterTest();
         $other = $this->getDataGenerator()->create_user();
         $session = $this->create_session((int) $other->id);
@@ -88,6 +90,7 @@ final class template_questions_and_stop_test extends \advanced_testcase {
      * An answer that is not JSON is refused before anything is sent to the service.
      */
     public function test_an_answer_that_is_not_json_is_refused(): void {
+        $this->skip_without_ai_provider();
         $this->resetAfterTest();
         $this->login_user_with(['local/coursegen:createtemplatecoursewithai']);
         $session = $this->create_session($GLOBALS['USER']->id);
@@ -102,6 +105,7 @@ final class template_questions_and_stop_test extends \advanced_testcase {
      * A file answer needs the capability to upload a syllabus.
      */
     public function test_a_file_answer_needs_the_capability_to_upload_a_syllabus(): void {
+        $this->skip_without_ai_provider();
         $this->resetAfterTest();
         $this->login_user_with(['local/coursegen:createtemplatecoursewithai']);
         $session = $this->create_session($GLOBALS['USER']->id);
@@ -116,6 +120,7 @@ final class template_questions_and_stop_test extends \advanced_testcase {
      * A file answer that points at a draft item with no file is refused.
      */
     public function test_a_file_answer_with_no_file_in_its_draft_item_is_refused(): void {
+        $this->skip_without_ai_provider();
         $this->resetAfterTest();
         $this->login_user_with([
             'local/coursegen:createtemplatecoursewithai',
@@ -133,6 +138,7 @@ final class template_questions_and_stop_test extends \advanced_testcase {
      * Stopping needs the same capability as starting.
      */
     public function test_stopping_needs_the_capability_to_create_with_a_template(): void {
+        $this->skip_without_ai_provider();
         $this->resetAfterTest();
         $this->login_without('local/coursegen:createtemplatecoursewithai');
         $session = $this->create_session($GLOBALS['USER']->id);
@@ -145,6 +151,7 @@ final class template_questions_and_stop_test extends \advanced_testcase {
      * Another user's generation cannot be stopped.
      */
     public function test_stopping_a_generation_of_someone_else_is_refused(): void {
+        $this->skip_without_ai_provider();
         $this->resetAfterTest();
         $other = $this->getDataGenerator()->create_user();
         $session = $this->create_session((int) $other->id);

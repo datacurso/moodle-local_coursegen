@@ -23,6 +23,12 @@
     Context variables required for this template:
     * action - string.
     * questionshtml - string, already-rendered HTML from the question engine.
+
+    Example context (json):
+    {
+        "action": "https://example.com/mod/quiz/processattempt.php",
+        "questionshtml": "<div class=\"que\">A question</div>"
+    }
 }}
 <form action="{{{action}}}" method="post" enctype="multipart/form-data" accept-charset="utf-8" id="responseform">
     <div>{{{questionshtml}}}</div>

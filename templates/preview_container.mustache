@@ -29,5 +29,13 @@
 
     Context variables required for this template:
     * content - string, already-rendered HTML.
+
+    Example context (json):
+    {
+        "id": "preview-box",
+        "classes": "clearer",
+        "style": "",
+        "content": "<p>Already rendered content</p>"
+    }
 }}
 <div{{#id}} id="{{id}}"{{/id}}{{#classes}} class="{{classes}}"{{/classes}}{{#style}} style="{{style}}"{{/style}}>{{{content}}}</div>

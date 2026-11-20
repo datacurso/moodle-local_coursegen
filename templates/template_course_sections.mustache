@@ -37,7 +37,9 @@
     * none
 
     Data attributes required for JS:
-    * data-for="section" data-id on each section card
+    * data-for="section" data-id on each section card; a subsection of a flexsections
+      course also carries data-parent (its parent's section number) and data-depth,
+      so changing the behavior of a section reaches its subsections
     * data-for="cmitem" data-id + data-modname + data-typelabel on each
       real activity row (data-typelabel lets the instance-menu builder read
       a template mold's type label without a string lookup)
@@ -92,6 +94,8 @@
     * spacebadgeoptional string - "Space · Optional", for the space badge's data-badge-optional
     * legacyspace bool (per real row) - saved as a space on a type that cannot be one; shows a warning
     * sections array   - Sections, each with: id int, num int, name string,
+                         isnested bool, parentnum int, depth int, indentrem float (a subsection of a
+                         flexsections course only),
                          activitycount int, hasactivities bool,
                          actions array (value, sectionid, label, tip, active),
                          rows array, each either a real activity row
@@ -142,7 +146,7 @@
 }}
 <div class="local_coursegen-template_course_sections" data-region="course-sections">
 {{#sections}}
-    <div class="tpl-section-card" data-for="section" data-id="{{id}}" data-number="{{num}}">
+    <div class="tpl-section-card" data-for="section" data-id="{{id}}" data-number="{{num}}"{{#isnested}} data-parent="{{parentnum}}" data-depth="{{depth}}" style="margin-left: {{indentrem}}rem"{{/isnested}}>
         <div class="tpl-section-header d-flex align-items-center">
             {{#hasactivities}}
             {{! A sibling of the collapse toggle, never inside it: checking
@@ -173,6 +177,30 @@
             </select>
         </div>
         <div class="collapse show" id="local-coursegen-tpl-section-{{courseid}}-{{id}}">
+            {{#cannaming}}
+            <div class="tpl-section-naming px-3 py-2 border-bottom"
+                 data-region="section-naming" data-sid="{{id}}" data-custom="{{naming.customvalue}}"
+                 {{^istemplatesection}}hidden{{/istemplatesection}}>
+                <div class="d-flex flex-wrap align-items-center">
+                <label class="mb-0 mr-2" for="tpl-naming-{{id}}">{{#str}} template_naming_pattern, local_coursegen {{/str}}</label>
+                <select class="custom-select custom-select-sm w-auto mr-2" id="tpl-naming-{{id}}" data-region="section-naming-pattern">
+                    {{#naming.options}}
+                    <option value="{{value}}"{{#selected}} selected{{/selected}}>{{label}}</option>
+                    {{/naming.options}}
+                </select>
+                <input type="text" class="form-control form-control-sm w-auto mr-3" data-region="section-naming-custom"
+                       value="{{naming.custom}}" placeholder="{{#str}} template_naming_custom_placeholder, local_coursegen {{/str}}"
+                       aria-label="{{#str}} template_naming_custom, local_coursegen {{/str}}"
+                       {{#naming.customhidden}}hidden{{/naming.customhidden}}>
+                <label class="mb-0 mr-2" for="tpl-naming-start-{{id}}">{{#str}} template_naming_start, local_coursegen {{/str}}</label>
+                <select class="custom-select custom-select-sm w-auto" id="tpl-naming-start-{{id}}" data-region="section-naming-start">
+                    {{#naming.starts}}
+                    <option value="{{value}}"{{#selected}} selected{{/selected}}>{{value}}</option>
+                    {{/naming.starts}}
+                </select>
+                </div>
+            </div>
+            {{/cannaming}}
             <table class="table generaltable table-hover mb-0 tpl-activity-table">
                 <thead>
                     <tr>

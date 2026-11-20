@@ -42,9 +42,9 @@ trait book_chapters {
      * @return array
      */
     public static function book_preload_chapters($book, json_store $store) {
-        $chapters = $store->get_records('book_chapters', array('bookid' => $book->id), 'pagenum');
+        $chapters = $store->get_records('book_chapters', ['bookid' => $book->id], 'pagenum');
         if (!$chapters) {
-            return array();
+            return [];
         }
 
         $prevsub = null;
@@ -69,7 +69,7 @@ trait book_chapters {
                 $hidesub = $ch->hidden;
                 $parent = $ch->id;
                 $ch->parent = null;
-                $ch->subchapters = array();
+                $ch->subchapters = [];
             } else {
                 $ch->parent = $parent;
                 $ch->subchapters = null;
@@ -120,11 +120,11 @@ trait book_chapters {
      */
     public static function book_get_chapter_title($chid, $chapters, $book, $context) {
         $ch = $chapters[$chid];
-        $formatted = format_string($ch->title, true, array('context' => $context));
+        $formatted = format_string($ch->title, true, ['context' => $context]);
         $title = trim($formatted);
-        $numbers = array();
+        $numbers = [];
         if ($book->numbering == self::BOOK_NUM_NUMBERS) {
-            if ($ch->parent and $chapters[$ch->parent]->number) {
+            if ($ch->parent && $chapters[$ch->parent]->number) {
                 $numbers[] = $chapters[$ch->parent]->number;
             }
             if ($ch->number) {

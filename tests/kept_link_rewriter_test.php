@@ -63,6 +63,7 @@ final class kept_link_rewriter_test extends \advanced_testcase {
     public function test_a_link_to_a_kept_activity_points_at_its_copy(): void {
         global $DB;
         $this->resetAfterTest();
+        $this->setAdminUser();
         $course = $this->getDataGenerator()->create_course();
         $copy = $this->getDataGenerator()->create_module('resource', ['course' => $course->id]);
         $label = $this->getDataGenerator()->create_module('label', [
@@ -92,7 +93,7 @@ final class kept_link_rewriter_test extends \advanced_testcase {
         kept_link_rewriter::rewrite_for_course(
             $course->id,
             [$this->instance(-5, 9322)],
-            [-5 => (int) $generated->cmid],
+            ['uid-5' => (int) $generated->cmid],
             [9321 => (int) $label->cmid]
         );
 
@@ -115,7 +116,7 @@ final class kept_link_rewriter_test extends \advanced_testcase {
         kept_link_rewriter::rewrite_for_course(
             $course->id,
             [$this->instance(-1, 9331), $this->instance(-2, 9331)],
-            [-1 => (int) $first->cmid, -2 => (int) $second->cmid],
+            ['uid-1' => (int) $first->cmid, 'uid-2' => (int) $second->cmid],
             [9321 => (int) $label->cmid]
         );
 
@@ -148,12 +149,13 @@ final class kept_link_rewriter_test extends \advanced_testcase {
     public function test_links_in_the_texts_of_generated_activities_are_rewritten(): void {
         global $DB;
         $this->resetAfterTest();
+        $this->setAdminUser();
         $course = $this->getDataGenerator()->create_course();
         $copy = $this->getDataGenerator()->create_module('resource', ['course' => $course->id]);
         $intro = '<a href="' . $this->url('resource', 9326) . '">Support</a>';
         $generated = $this->getDataGenerator()->create_module('label', ['course' => $course->id, 'intro' => $intro]);
 
-        kept_link_rewriter::rewrite_for_course($course->id, [], [-1 => (int) $generated->cmid], [9326 => (int) $copy->cmid]);
+        kept_link_rewriter::rewrite_for_course($course->id, [], ['uid-1' => (int) $generated->cmid], [9326 => (int) $copy->cmid]);
 
         $expected = '<a href="' . $this->url('resource', (int) $copy->cmid) . '">Support</a>';
         $this->assertSame($expected, $DB->get_field('label', 'intro', ['id' => $generated->id]));
@@ -173,7 +175,7 @@ final class kept_link_rewriter_test extends \advanced_testcase {
         kept_link_rewriter::rewrite_for_course(
             $course->id,
             [$this->instance(-1, 9331)],
-            [-1 => (int) $forum->cmid, -2 => (int) $label->cmid],
+            ['uid-1' => (int) $forum->cmid, 'uid-2' => (int) $label->cmid],
             []
         );
 
@@ -187,6 +189,7 @@ final class kept_link_rewriter_test extends \advanced_testcase {
     public function test_kept_pages_are_rewritten_in_content_and_intro(): void {
         global $DB;
         $this->resetAfterTest();
+        $this->setAdminUser();
         $course = $this->getDataGenerator()->create_course();
         $copy = $this->getDataGenerator()->create_module('resource', ['course' => $course->id]);
         $text = '<a href="' . $this->url('resource', 9326) . '">Support</a>';

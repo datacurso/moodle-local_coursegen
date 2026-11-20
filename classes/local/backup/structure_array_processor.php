@@ -118,6 +118,10 @@ class structure_array_processor extends backup_vars_processor {
         $attributes = $nested->get_attributes();
         $node = [];
         foreach ($attributes as $attribute) {
+            // An attribute nothing gave a value to is left out, as an unset final element is.
+            if (!$attribute->is_set()) {
+                continue;
+            }
             $name = $attribute->get_name();
             $value = $attribute->get_value();
             $node[$name] = $value;
@@ -184,7 +188,10 @@ class structure_array_processor extends backup_vars_processor {
         }
         $contextid = (int) $this->get_var(\backup::VAR_CONTEXTID);
         $finished['node'] = structure_node_resolver::with_file_addresses(
-            $finished['node'], $finished['files'], $contextid);
+            $finished['node'],
+            $finished['files'],
+            $contextid
+        );
 
         if (!$this->stack) {
             $this->result = $finished['node'];

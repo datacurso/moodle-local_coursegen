@@ -65,14 +65,20 @@ export async function getCourseSettings(recordid) {
  *     fullname?: string,
  *     shortname?: string,
  *     category?: number,
+ *     startdate?: string,
+ *     targetmode?: string,
+ *     targetcourseid?: number,
  * }} payload - The payload to create the course
  * - recordid: The planning session record ID in local_coursegen_course_sessions
  * - fullname: Optional override for course fullname
  * - shortname: Optional override for course shortname
  * - category: Optional override for course category ID
+ * - startdate: Optional course start day (Y-m-d)
+ * - targetmode: 'new' (default) or 'import' into an existing course
+ * - targetcourseid: The existing course to import into (import mode only)
  * @return {Promise<Object>} response
  */
-export async function createCourse({recordid, fullname, shortname, category}) {
+export async function createCourse({recordid, fullname, shortname, category, startdate, targetmode, targetcourseid}) {
     const args = {
         recordid: Number(recordid) || 0,
     };
@@ -84,6 +90,15 @@ export async function createCourse({recordid, fullname, shortname, category}) {
     }
     if (typeof category === 'number' && category > 0) {
         args.category = category;
+    }
+    if (typeof startdate === 'string' && startdate.trim()) {
+        args.startdate = startdate.trim();
+    }
+    if (targetmode === 'new' || targetmode === 'import') {
+        args.targetmode = targetmode;
+    }
+    if (typeof targetcourseid === 'number' && targetcourseid > 0) {
+        args.targetcourseid = targetcourseid;
     }
     return ajax.call([
         {

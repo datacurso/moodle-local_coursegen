@@ -24,11 +24,12 @@
 
 namespace local_coursegen\external;
 
+use aiprovider_datacurso\local\plugin_settings;
 use context_system;
-use external_api;
-use external_function_parameters;
-use external_single_structure;
-use external_value;
+use core_external\external_api;
+use core_external\external_function_parameters;
+use core_external\external_single_structure;
+use core_external\external_value;
 use local_coursegen\local\models\course_session;
 use local_coursegen\local\service\activity_link_resolver;
 use local_coursegen\local\service\course_creation_guard;
@@ -36,6 +37,7 @@ use local_coursegen\local\service\course_review_service;
 use local_coursegen\local\service\course_session_service;
 use local_coursegen\local\service\create_course_service;
 use local_coursegen\local\service\generated_activities_filter;
+use local_coursegen\local\service\generated_activity_key;
 use local_coursegen\local\service\kept_link_rewriter;
 use local_coursegen\local\service\teacher_space_choices;
 use local_coursegen\local\service\template_ai_api_service;
@@ -43,8 +45,10 @@ use local_coursegen\local\service\template_course_image_applier;
 use local_coursegen\local\service\template_course_order;
 use local_coursegen\local\service\template_keep_copier;
 use local_coursegen\local\service\template_run_history;
+use local_coursegen\local\service\template_section_map;
 use local_coursegen\local\service\template_settings_copier;
 use local_coursegen\local\service\template_syllabus_linker;
+use local_coursegen\local\service\template_unit_copies;
 use local_coursegen\local\space\activity_spaces;
 use local_coursegen\local\space\file_spaces;
 use local_coursegen\local\space\space_file_storage;
@@ -54,8 +58,6 @@ use local_coursegen\local\space\space_selection;
 use local_coursegen\local\space\upload_spaces;
 
 defined('MOODLE_INTERNAL') || die();
-
-require_once($CFG->libdir . '/externallib.php');
 
 /**
  * Turns one finished generation into a real course.
@@ -83,6 +85,7 @@ class finish_template_generation extends external_api {
             'fullname' => new external_value(PARAM_TEXT, 'Course fullname chosen at the review', VALUE_DEFAULT, ''),
             'shortname' => new external_value(PARAM_TEXT, 'Course shortname chosen at the review', VALUE_DEFAULT, ''),
             'category' => new external_value(PARAM_INT, 'Course category chosen at the review', VALUE_DEFAULT, 0),
+            'startdate' => new external_value(PARAM_TEXT, 'Course start day (Y-m-d) chosen at the review', VALUE_DEFAULT, ''),
         ]);
     }
 
@@ -93,15 +96,21 @@ class finish_template_generation extends external_api {
      * @param string $fullname Course fullname chosen at the review.
      * @param string $shortname Course shortname chosen at the review.
      * @param int $category Course category chosen at the review.
+     * @param string $startdate Course start day (Y-m-d) chosen at the review, empty for none.
      * @return array
      */
-    public static function execute($sessionid, $fullname = '', $shortname = '', $category = 0) {
+    public static function execute($sessionid, $fullname = '', $shortname = '', $category = 0, $startdate = '') {
+        plugin_settings::require_enabled('local_coursegen');
+
         try {
-            return self::build_course($sessionid, $fullname, $shortname, $category);
+            return self::build_course($sessionid, $fullname, $shortname, $category, null, $startdate);
         } catch (\Throwable $e) {
             // The person sees a short message; the cause is kept in the log of the server.
-            error_log('local_coursegen: creating the course of session ' . (int) $sessionid . ' failed: ' . get_class($e) . ': '
-                . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
+            debugging(
+                'local_coursegen: creating the course of session ' . (int) $sessionid . ' failed: ' . get_class($e) . ': '
+                    . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine(),
+                DEBUG_DEVELOPER
+            );
             throw $e;
         }
     }
@@ -118,10 +127,26 @@ class finish_template_generation extends external_api {
      * @param string $shortname
      * @param int $category
      * @param callable|null $progress Called with (string $step, int $done, int $total) as the creation goes on.
+     * @param string $startdate Course start day (Y-m-d) chosen at the review, empty for none.
      * @return array
      */
-    public static function build_course($sessionid, $fullname, $shortname, $category, ?callable $progress = null) {
+    public static function build_course(
+        $sessionid,
+        $fullname,
+        $shortname,
+        $category,
+        ?callable $progress = null,
+        $startdate = ''
+    ) {
         global $USER, $CFG, $DB;
+
+        $params = self::validate_parameters(self::execute_parameters(), [
+            'sessionid' => $sessionid,
+            'fullname' => $fullname,
+            'shortname' => $shortname,
+            'category' => $category,
+            'startdate' => $startdate,
+        ]);
 
         // Each step also says, in the record of the session, that the creation is alive: a request that finds the
         // session "creating" waits only while that is recent, and builds the course itself when it is not.
@@ -131,13 +156,6 @@ class finish_template_generation extends external_api {
                 $progress($step, $done, $total);
             }
         };
-
-        $params = self::validate_parameters(self::execute_parameters(), [
-            'sessionid' => $sessionid,
-            'fullname' => $fullname,
-            'shortname' => $shortname,
-            'category' => $category,
-        ]);
 
         $context = context_system::instance();
         self::validate_context($context);
@@ -171,6 +189,7 @@ class finish_template_generation extends external_api {
         $report('result');
         $api = new template_ai_api_service();
         $result = $api->get_result($session->get('session_id'));
+        template_unit_copies::adopt($session, (array) ($result['sections_info'] ?? []));
         $templateid = self::template_id_of($session);
 
         // Only the AI-generated activities are built from the payload. The
@@ -185,7 +204,8 @@ class finish_template_generation extends external_api {
         $overrides = course_review_service::overrides(
             (string) $params['fullname'],
             (string) $params['shortname'],
-            (int) $params['category']
+            (int) $params['category'],
+            (string) $params['startdate']
         );
         $report('course');
         create_course_service::on_progress($report);
@@ -198,9 +218,10 @@ class finish_template_generation extends external_api {
         $courseid = $created['courseid'] ?? 0;
         $courseid = (int) $courseid;
         $keptcms = [];
+        $sectionmap = self::section_map($session);
         if ($courseid > 0 && $templateid !== null && $templateid > 0) {
             $report('kept');
-            template_keep_copier::copy_into($templateid, $courseid, $keptcms, $selection->filled_cmids());
+            template_keep_copier::copy_into($templateid, $courseid, $keptcms, $selection->filled_cmids(), $sectionmap);
         }
         self::place_space_files($session, $selection, $keptcms);
         $spacecms = self::place_space_activities($session, $templateid, $courseid);
@@ -210,14 +231,20 @@ class finish_template_generation extends external_api {
         }
         $generatedcms = $created['generatedcms'] ?? [];
         // The activities the teacher added in the spaces were generated: they go in the place of their space.
+        $keybycmid = [];
+        foreach ($generatedactivities as $activity) {
+            $keybycmid[(int) ($activity['cmid'] ?? 0)] = generated_activity_key::of($activity);
+        }
         foreach (teacher_space_choices::spaces_of((int) $templateid) as $uid => $space) {
-            $payloadcmid = teacher_space_choices::cmid_of($space);
-            if (isset($generatedcms[$payloadcmid])) {
-                $spacecms[$uid] = (int) $generatedcms[$payloadcmid];
+            $key = $keybycmid[teacher_space_choices::cmid_of($space)] ?? '';
+            if (isset($generatedcms[$key])) {
+                $spacecms[$uid] = (int) $generatedcms[$key];
             }
         }
         $report('arrange');
-        self::arrange_course($templateid, $courseid, $generatedactivities, $generatedcms, $keptcms, $spacecms);
+        self::arrange_course($templateid, $courseid, $generatedactivities, $generatedcms, $keptcms, $sectionmap, $spacecms);
+        $storedsections = json_decode((string) $session->get('coursedata'), true)['payload']['sections_info'] ?? [];
+        template_unit_copies::order_copies($courseid, (array) $storedsections, $generatedactivities, $generatedcms);
         self::resolve_activity_links($session, $courseid, $generatedactivities, $generatedcms, $keptcms);
         if ($courseid > 0) {
             template_syllabus_linker::apply(
@@ -308,8 +335,9 @@ class finish_template_generation extends external_api {
      * @param int|null $templateid
      * @param int $courseid
      * @param array $payloadactivities Every activity entry of the result, kept ones included.
-     * @param array $generatedcms Payload cmid => created cmid, for the generated activities.
-     * @param array $keptcms Payload cmid => created cmid, for the copied kept activities.
+     * @param array $generatedcms Activity key (generated_activity_key) => created cmid, for the generated activities.
+     * @param array $keptcms Template cmid => created cmid, for the copied kept activities.
+     * @param template_section_map $sectionmap Where each section of the template went in the new course.
      * @param array $spacecms Space uid => cmid of the activity the teacher brought, in the new course.
      */
     private static function arrange_course(
@@ -318,14 +346,29 @@ class finish_template_generation extends external_api {
         array $payloadactivities,
         array $generatedcms,
         array $keptcms,
+        template_section_map $sectionmap,
         array $spacecms = []
     ): void {
         if ($courseid <= 0 || $templateid === null || $templateid <= 0) {
             return;
         }
         kept_link_rewriter::rewrite_for_course($courseid, $payloadactivities, $generatedcms, $keptcms);
-        template_course_order::apply($templateid, $courseid, $payloadactivities, $generatedcms, $keptcms, $spacecms);
-        template_settings_copier::copy_into($templateid, $courseid, $payloadactivities, $generatedcms, $keptcms);
+        template_course_order::apply($templateid, $courseid, $payloadactivities, $generatedcms, $keptcms, $spacecms, $sectionmap);
+        template_settings_copier::copy_into($templateid, $courseid, $payloadactivities, $generatedcms, $keptcms, $sectionmap);
+    }
+
+    /**
+     * Which section of the template each section of the new course stands for.
+     *
+     * Read from the payload that was sent, which is where a resized flexsections
+     * course says it; any other course has the template's own sections.
+     *
+     * @param course_session $session
+     * @return template_section_map
+     */
+    private static function section_map(course_session $session): template_section_map {
+        $coursedata = json_decode((string) $session->get('coursedata'), true);
+        return template_section_map::from_sections_info($coursedata['payload']['sections_info'] ?? []);
     }
 
     /**
@@ -339,8 +382,8 @@ class finish_template_generation extends external_api {
      * @param course_session $session
      * @param int $courseid
      * @param array $payloadactivities Every activity entry of the result, kept ones included.
-     * @param array $generatedcms Payload cmid => created cmid, for the generated activities.
-     * @param array $keptcms Payload cmid => created cmid, for the copied kept activities.
+     * @param array $generatedcms Activity key (generated_activity_key) => created cmid, for the generated activities.
+     * @param array $keptcms Template cmid => created cmid, for the copied kept activities.
      */
     private static function resolve_activity_links(
         course_session $session,

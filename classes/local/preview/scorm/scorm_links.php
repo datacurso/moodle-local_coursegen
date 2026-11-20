@@ -35,8 +35,14 @@ trait scorm_links {
      */
     protected function format_module_intro(): string {
         $options = ['noclean' => true, 'para' => false, 'filter' => true, 'context' => $this->context, 'overflowdiv' => true];
-        $intro = file_rewrite_pluginfile_urls((string) $this->scorm->intro, 'pluginfile.php', $this->context->id,
-            'mod_scorm', 'intro', null);
+        $intro = file_rewrite_pluginfile_urls(
+            (string) $this->scorm->intro,
+            'pluginfile.php',
+            $this->context->id,
+            'mod_scorm',
+            'intro',
+            null
+        );
         return trim(format_text($intro, (int) $this->scorm->introformat, $options, null));
     }
 

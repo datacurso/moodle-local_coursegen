@@ -15,8 +15,7 @@
 
 /**
  * What a generation tells the person while it runs, under the phase it is in: that the AI provider asked to wait,
- * that a request is being tried again or is slow, and, for the pictures, which one is being made, from which
- * reference, and how many are ready.
+ * or that a request is being tried again or is slow. The pictures of the run are counted by the images pill.
  *
  * The service sends stable codes and numbers, never sentences; every sentence here is a language string.
  *
@@ -29,10 +28,6 @@ import {getString} from 'core/str';
 import {serviceRecovered, showServiceRetry} from 'local_coursegen/local/courseai/template/auto_retry';
 
 const NOTICE_ID = 'cgGenNotice';
-const PICTURES_ID = 'cgGenPictures';
-const COUNTER_ID = 'cgGenPicturesCounter';
-/** How many lines of pictures stay on screen: the ones being made and the last ones that finished. */
-const VISIBLE_LINES = 5;
 /** A notice about a slow request leaves the screen after this long if nothing else replaces it. */
 const NOTICE_SECONDS = 25;
 
@@ -47,7 +42,7 @@ let noticeTimer = null;
 /**
  * Create the elements under the phase line, once.
  *
- * @returns {{notice: Element, pictures: Element, counter: Element}|null} Null when the page has no phase line.
+ * @returns {{notice: Element}|null} Null when the page has no phase line.
  */
 const ensureElements = () => {
     const stage = document.getElementById('tplGenStage');
@@ -61,29 +56,17 @@ const ensureElements = () => {
         notice.className = 'small mb-1 text-warning-emphasis';
         notice.setAttribute('aria-live', 'polite');
         notice.hidden = true;
-        const counter = document.createElement('p');
-        counter.id = COUNTER_ID;
-        counter.className = 'small mb-1 fw-bold';
-        counter.hidden = true;
-        const pictures = document.createElement('ul');
-        pictures.id = PICTURES_ID;
-        pictures.className = 'small list-unstyled mb-0 text-muted';
-        stage.after(notice, counter, pictures);
+        stage.after(notice);
     }
-    return {
-        notice,
-        counter: document.getElementById(COUNTER_ID),
-        pictures: document.getElementById(PICTURES_ID),
-    };
+    return {notice};
 };
 
 /**
  * Empty everything this module shows: a new run, or a phase that has nothing to add.
  *
- * @param {boolean} [keepProgress] A run that goes on where it was keeps the count and the pictures it already showed.
  * @returns {void}
  */
-export const resetStatus = (keepProgress = false) => {
+export const resetStatus = () => {
     const elements = ensureElements();
     if (!elements) {
         return;
@@ -91,12 +74,6 @@ export const resetStatus = (keepProgress = false) => {
     clearTimeout(noticeTimer);
     elements.notice.hidden = true;
     elements.notice.textContent = '';
-    if (keepProgress) {
-        return;
-    }
-    elements.counter.hidden = true;
-    elements.counter.textContent = '';
-    elements.pictures.replaceChildren();
 };
 
 /**
@@ -136,49 +113,4 @@ export const showNotice = async(data) => {
         }, NOTICE_SECONDS * 1000);
     }
     return text;
-};
-
-/**
- * The line that tells what happens to one picture.
- *
- * @param {Object} data {state, activity, reference, done, total}
- * @returns {Promise<string>}
- */
-const pictureLine = (data) => {
-    const params = {activity: data.activity, reference: data.reference};
-    if (data.state === 'done') {
-        return getString('courseai_template_image_done', 'local_coursegen', params);
-    }
-    if (data.state === 'failed') {
-        return getString('courseai_template_image_failed', 'local_coursegen', params);
-    }
-    const key = data.reference ? 'courseai_template_image_start_ref' : 'courseai_template_image_start_new';
-    return getString(key, 'local_coursegen', params);
-};
-
-/**
- * Show one picture event: the counter, and the line of the picture, newest first.
- *
- * @param {Object} data {state, activity, reference, done, total}
- * @returns {Promise<string>} The counter and the line of the picture as one sentence, empty when nothing was shown.
- */
-export const showPicture = async(data) => {
-    const elements = ensureElements();
-    if (!elements) {
-        return '';
-    }
-    const counter = await getString('courseai_template_image_counter', 'local_coursegen', {
-        done: data.done,
-        total: data.total,
-    });
-    elements.counter.textContent = counter;
-    elements.counter.hidden = false;
-    const line = await pictureLine(data);
-    const item = document.createElement('li');
-    item.textContent = line;
-    elements.pictures.prepend(item);
-    while (elements.pictures.children.length > VISIBLE_LINES) {
-        elements.pictures.lastElementChild.remove();
-    }
-    return `${counter} · ${line}`;
 };

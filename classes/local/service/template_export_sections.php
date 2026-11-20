@@ -34,9 +34,10 @@ class template_export_sections {
      * @param \stdClass $course
      * @param \course_modinfo $modinfo
      * @param array $behaviors
+     * @param array $namings Section id => {naming_pattern, naming_start}, for the template sections.
      * @return array
      */
-    public static function sections_info($course, $modinfo, array $behaviors): array {
+    public static function sections_info($course, $modinfo, array $behaviors, array $namings = []): array {
         $format = course_get_format($course);
         $images = self::section_images($course);
         $contextid = \context_course::instance($course->id)->id;
@@ -44,7 +45,35 @@ class template_export_sections {
         $sectioninfos = $modinfo->get_section_info_all();
         $sections = [];
         foreach ($sectioninfos as $section) {
-            $sections[] = self::section_entry($course, $format, $section, $images, $behaviors, $contextid);
+            $entry = self::section_entry($course, $format, $section, $images, $behaviors, $contextid);
+            if ($entry['template_behavior']['behavior'] === 'template' && isset($namings[(int) $section->id])) {
+                $entry['template_behavior'] += $namings[(int) $section->id];
+            }
+            $sections[] = $entry;
+        }
+        if ($course->format === 'flexsections') {
+            $sections = self::with_hierarchy($sections);
+        }
+        return $sections;
+    }
+
+    /**
+     * Say where each section hangs in the tree of a flexsections course.
+     *
+     * The parent option is already in each section's format options; it is
+     * also given on its own, as parent_section, with how deep the section is,
+     * so whatever reads the payload does not need to know where a format keeps
+     * it. Additive: nothing already in an entry changes.
+     *
+     * @param array $sections The entries built by section_entry().
+     * @return array
+     */
+    private static function with_hierarchy(array $sections): array {
+        $tree = template_section_tree::from_entries($sections);
+        foreach ($sections as $index => $entry) {
+            $number = (int) $entry['section'];
+            $sections[$index]['parent_section'] = $tree->parent_of($number);
+            $sections[$index]['depth'] = $tree->depth_of($number);
         }
         return $sections;
     }

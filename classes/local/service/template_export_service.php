@@ -47,6 +47,9 @@ class template_export_service {
      * @param string $lang The language the professor picked for the generated course. Empty leaves it to the AI
      *                     service to detect it (the template course's language travels only as the fallback).
      * @param bool $withimages Whether the professor asked for the images to be generated.
+     * @param int|null $units How many units a flexsections course has to hold; null keeps the template's own.
+     *                        Another format has no units, so it is left as it is.
+     * @param string $instructions The institutional guidelines text; the payload has no such key when it is empty.
      * @param array $spacechoices The activities the teacher adds in the spaces (teacher_space_choices::validated()).
      * @return array
      */
@@ -55,6 +58,8 @@ class template_export_service {
         string $generalinstruction = '',
         string $lang = '',
         bool $withimages = false,
+        ?int $units = null,
+        string $instructions = '',
         array $spacechoices = []
     ): array {
         global $CFG;
@@ -70,6 +75,7 @@ class template_export_service {
 
         $actions = self::saved_activity_actions($templateid);
         $behaviors = self::saved_section_behaviors($templateid);
+        $namings = self::saved_section_namings($templateid);
 
         $langauto = ($lang === '');
         if ($langauto) {
@@ -83,7 +89,7 @@ class template_export_service {
         $numsections = count($sectioninfoall) - 1;
 
         $formatoptions = template_export_sections::format_settings($course);
-        $sectionsinfo = template_export_sections::sections_info($course, $modinfo, $behaviors);
+        $sectionsinfo = template_export_sections::sections_info($course, $modinfo, $behaviors, $namings);
 
         $realactivities = self::real_activities($modinfo, $actions);
         $instanceactivities = self::instance_activities($templateid, $modinfo);
@@ -93,6 +99,13 @@ class template_export_service {
         }
         $spaceactivities = teacher_space_choices::payload_entries($spacechoices, $sectionnums);
         $activities = array_merge($realactivities, $instanceactivities, $spaceactivities);
+        if ($units !== null && $course->format === 'flexsections') {
+            // The service keeps the structure it is given, so the units are made as many as wanted here.
+            $templatesections = count($sectionsinfo);
+            $sectionsinfo = template_unit_resizer::resize($sectionsinfo, $units);
+            $activities = template_unit_resizer::activities($activities, $sectionsinfo, $templatesections);
+            $numsections = count($sectionsinfo) - 1;
+        }
 
         $courseconfiguration = [
             'fullname' => $course->fullname,
@@ -110,15 +123,13 @@ class template_export_service {
             'course_settings' => template_course_settings::export($course),
         ];
 
-        return [
+        $payload = [
             'course_configuration' => $courseconfiguration,
             'sections_info' => $sectionsinfo,
             'activities' => $activities,
-            // The pictures of the course itself the author asked to be made again, with their instruction. When the person
-            // chose no images there are none to make: a marker in the template does not override that choice.
-            'image_slots' => $withimages
-                ? template_course_image_slots::payload(template_course_image_slots::for_course($course))
-                : [],
+            // The pictures of the course itself the author asked to be made again, with their instruction. They are sent
+            // even when the person chose no images, since the run can turn images on; the service makes them only then.
+            'image_slots' => template_course_image_slots::payload(template_course_image_slots::for_run($course, $withimages)),
             'general_instruction' => $generalinstruction,
             'lang' => $lang,
             'lang_auto' => $langauto,
@@ -128,6 +139,11 @@ class template_export_service {
             // thread_id), so the run must not start until they have landed.
             'defer_start' => true,
         ];
+        if ($instructions !== '') {
+            // Only when a guideline was chosen, so the payload stays as it was for everyone else.
+            $payload['instructions'] = $instructions;
+        }
+        return $payload;
     }
 
     /**
@@ -145,6 +161,24 @@ class template_export_service {
             $actions[$cmid] = $action;
         }
         return $actions;
+    }
+
+    /**
+     * sectionid => how each template section names its copies, for this template.
+     *
+     * @param int $templateid
+     * @return array
+     */
+    private static function saved_section_namings(int $templateid): array {
+        $namings = [];
+        $records = template_section::get_records(['templateid' => $templateid, 'behavior' => template_section::BEHAVIOR_TEMPLATE]);
+        foreach ($records as $section) {
+            $namings[(int) $section->get('sectionid')] = [
+                'naming_pattern' => (string) $section->get('namingpattern'),
+                'naming_start' => (int) $section->get('namingstart'),
+            ];
+        }
+        return $namings;
     }
 
     /**
@@ -204,6 +238,11 @@ class template_export_service {
         $cmid = (int) $cm->id;
         $uid = template_export_uids::random_uid();
         $parameters = template_activity_export::parameters_for($cm);
+        if ($cm->modname === 'h5pactivity' && $action === template_activity::ACTION_TEMPLATE) {
+            // The pictures the mold's own package holds, so the content the AI writes can point at
+            // them. The files stay in the package, which the plugin rebuilds the activity from.
+            $parameters['package_images'] = h5p_package_images::of_activity($cm);
+        }
         return [
             'resource_type' => $cm->modname,
             'uid' => $uid,

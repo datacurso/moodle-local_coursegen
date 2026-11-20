@@ -148,7 +148,7 @@ class view {
         }
         $context = $this->context;
         $urlbase = "$CFG->wwwroot/pluginfile.php";
-        $path = '/'.$context->id.'/mod_imscp/content/'.$imscp->revision.'/'.$href;
+        $path = '/' . $context->id . '/mod_imscp/content/' . $imscp->revision . '/' . $href;
         return file_encode_url($urlbase, $path, false);
     }
 }

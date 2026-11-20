@@ -38,7 +38,7 @@ trait resource_details {
         if (!empty($resource->displayoptions)) {
             $options = (array) unserialize_array($resource->displayoptions);
         }
-        $filedetails = array();
+        $filedetails = [];
         if (empty($options['showsize']) && empty($options['showtype']) && empty($options['showdate'])) {
             return $filedetails;
         }
@@ -178,7 +178,7 @@ trait resource_details {
         }
 
         if ($infodisplayed > 1) {
-            $detailsobject = (object) array('size' => $size, 'type' => $type, 'date' => $date);
+            $detailsobject = (object) ['size' => $size, 'type' => $type, 'date' => $date];
             return get_string("resourcedetails_{$langstring}", 'resource', $detailsobject);
         }
         // Only one of size, type and date is set, so just append.
@@ -204,8 +204,8 @@ trait resource_details {
     /**
      * mod/resource/locallib.php resource_get_intro().
      *
-     * @param stdClass $resource
-     * @param stdClass $cm
+     * @param object $resource
+     * @param object $cm
      * @param bool $ignoresettings
      * @return string
      */

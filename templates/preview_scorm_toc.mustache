@@ -29,6 +29,23 @@
     Context variables required for this template:
     * nodes - array, each shaped the way preview_scorm_toc_node.mustache
               expects.
+
+    Example context (json):
+    {
+        "orgtitle": "Safety course",
+        "nodes": [
+            {
+                "label": "<span>Module 1</span>",
+                "reallink": true,
+                "hooklink": false,
+                "spanwrap": false,
+                "bare": false,
+                "haschildren": false,
+                "url": "https://example.com/mod/scorm/player.php?scoid=1",
+                "scoid": 1
+            }
+        ]
+    }
 }}
 <ul>
     {{#orgtitle}}<li>{{{orgtitle}}}</li>{{/orgtitle}}

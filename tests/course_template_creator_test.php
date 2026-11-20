@@ -107,6 +107,9 @@ final class course_template_creator_test extends \advanced_testcase {
         global $DB;
         $course = $this->course_with_one_guide();
         $first = course_template_creator::create($course->id);
+        // A template keeps a row for every section of its course, the empty ones included.
+        $coursesections = $DB->count_records('course_sections', ['course' => $course->id]);
+        $this->assertSame($coursesections, $this->row_count('local_coursegen_tpl_section', ['templateid' => $first['templateid']]));
 
         $second = course_template_creator::create($course->id);
 
@@ -117,7 +120,7 @@ final class course_template_creator_test extends \advanced_testcase {
         $sections = $this->row_count('local_coursegen_tpl_section', ['templateid' => $first['templateid']]);
         $this->assertSame(1, $templates);
         $this->assertSame(1, $instances);
-        $this->assertSame(1, $sections);
+        $this->assertSame($coursesections, $sections);
     }
 
     /**
@@ -222,11 +225,11 @@ final class course_template_creator_test extends \advanced_testcase {
      * A name longer than the column is cut and the cut is reported.
      */
     public function test_a_very_long_name_is_cut_and_reported(): void {
+        // The full name of a course cannot be longer than its column, so the long name is the one asked for.
         $longname = str_repeat('N', 300);
-        $options = ['fullname' => $longname];
-        $course = $this->course_with_one_guide($options);
+        $course = $this->course_with_one_guide();
 
-        $result = course_template_creator::create($course->id);
+        $result = course_template_creator::create($course->id, ['name' => $longname]);
 
         $length = \core_text::strlen($result['name']);
         $warnings = implode(' ', $result['warnings']);

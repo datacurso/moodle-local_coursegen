@@ -1,0 +1,71 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+{{!
+    @template local_coursegen/template_image_row
+
+    One picture of a template run in the list of the pictures: the template's picture, the new one, its name,
+    where it starts from and how it is going.
+
+    Context variables required for this template:
+    * key - The key of the picture in the events of the run.
+    * name - The readable name of the picture.
+    * detail - What it starts from, or why it failed, or how many wait after it.
+    * done, working, failed, waiting - The state of the picture (one is true).
+    * original - The address of the template's picture, or empty.
+    * current - The address of the new picture, or empty.
+
+    Example context (json):
+    {
+        "key": "course:cover",
+        "name": "Portada del curso",
+        "detail": "A partir de «Banner dentro de lecciones (semanas) (72).png»",
+        "done": true,
+        "working": false,
+        "failed": false,
+        "waiting": false,
+        "original": "https://example.org/pluginfile.php/1/course/overviewfiles/a.png",
+        "current": "https://example.org/pluginfile.php/1/local_coursegen/generatedfiles/0/t/a.png"
+    }
+}}
+<li class="tpl-image-row{{#done}} is-done{{/done}}{{#working}} is-working{{/working}}{{#failed}} is-failed{{/failed}}{{#waiting}} is-waiting{{/waiting}}"
+    data-region="tpl-image-row" data-key="{{key}}">
+    <button type="button" class="tpl-image-thumbs" data-action="local_coursegen/template/open-image" data-key="{{key}}"
+            aria-label="{{#str}}courseai_images_open_detail, local_coursegen, {{name}}{{/str}}">
+        <span class="tpl-image-thumb tpl-image-thumb-original">
+            {{#original}}<img src="{{original}}" alt="" loading="lazy">{{/original}}
+        </span>
+        <span class="tpl-image-arrow" aria-hidden="true">&rarr;</span>
+        <span class="tpl-image-thumb tpl-image-thumb-new">
+            {{#current}}<img src="{{current}}" alt="" loading="lazy">{{/current}}
+            {{#working}}<span class="tpl-image-spinner" aria-hidden="true"></span>{{/working}}
+            {{#failed}}<span class="tpl-image-unchanged">{{#str}}courseai_images_unchanged, local_coursegen{{/str}}</span>{{/failed}}
+        </span>
+    </button>
+    <div class="tpl-image-text">
+        <div class="tpl-image-name">
+            {{#done}}<span class="tpl-image-state tpl-image-state-done" aria-hidden="true">&#10003;</span>{{/done}}
+            {{#failed}}<span class="tpl-image-state tpl-image-state-failed" aria-hidden="true">&#10005;</span>{{/failed}}
+            <span>{{name}}</span>
+        </div>
+        <div class="tpl-image-detail">{{detail}}</div>
+        <div class="tpl-image-links">
+            {{#original}}<a href="{{original}}" target="_blank" rel="noopener">{{#str}}courseai_images_view_original, local_coursegen{{/str}}</a>{{/original}}
+            {{#original}}{{#current}}<span aria-hidden="true"> · </span>{{/current}}{{/original}}
+            {{#current}}<a href="{{current}}" target="_blank" rel="noopener">{{#str}}courseai_images_view_new, local_coursegen{{/str}}</a>{{/current}}
+        </div>
+    </div>
+</li>

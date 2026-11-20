@@ -64,6 +64,10 @@ class template_persistence_service {
         $sec->set('sectionid', $sectiondata['sectionid']);
         $sec->set('sectionnum', $sectiondata['sectionnum']);
         $sec->set('behavior', $sectiondata['behavior']);
+        if ($sectiondata['behavior'] === template_section::BEHAVIOR_TEMPLATE) {
+            $sec->set('namingpattern', (string) ($sectiondata['namingpattern'] ?? ''));
+            $sec->set('namingstart', (int) ($sectiondata['namingstart'] ?? 1));
+        }
         $sec->create();
 
         self::save_activities($templateid, $sectiondata['sectionid'], $sectiondata['activities']);
@@ -223,7 +227,12 @@ class template_persistence_service {
      * @param array $spacedata
      */
     private static function create_space(int $templateid, int $sectionid, array $spacedata): void {
-        if (!\core_component::is_valid_plugin_name('mod', $spacedata['modname'])) {
+        // A valid name is not enough: the type has to be an activity the site has installed.
+        $installed = \core_component::get_plugin_directory('mod', $spacedata['modname']);
+        if (
+            !\core_component::is_valid_plugin_name('mod', $spacedata['modname'])
+            || $installed === null
+        ) {
             throw new \invalid_parameter_exception('Not an activity type: ' . $spacedata['modname']);
         }
         $uid = \core\uuid::generate();

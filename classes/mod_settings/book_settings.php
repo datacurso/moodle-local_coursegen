@@ -63,7 +63,7 @@ class book_settings extends base_settings {
             $contenteditor = ['text' => (string)$contenteditor];
         }
 
-        $contenteditor['text'] = (string)($contenteditor['text'] ?? '');
+        $contenteditor['text'] = \local_coursegen\utils\ai_text_sanitiser::clean_html((string)($contenteditor['text'] ?? ''));
         $contenteditor['format'] = (int)($contenteditor['format'] ?? FORMAT_HTML);
 
         $contentitemid = (int)($contenteditor['itemid'] ?? 0);

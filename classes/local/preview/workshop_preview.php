@@ -107,7 +107,14 @@ class workshop_preview extends preview_base {
         if ($workshop === null) {
             return null;
         }
-        return new view($workshop, $this->cm(), $this->course(), $this->context(), $this->store(), $this->url_to(),
-            (int) $USER->id);
+        return new view(
+            $workshop,
+            $this->cm(),
+            $this->course(),
+            $this->context(),
+            $this->store(),
+            $this->url_to(),
+            (int) $USER->id
+        );
     }
 }

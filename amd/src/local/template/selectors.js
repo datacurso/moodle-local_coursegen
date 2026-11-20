@@ -38,11 +38,9 @@ export default {
         menuFromTemplate: '[data-action="local_coursegen/template/menu-from-template"]',
         menuBack: '[data-action="local_coursegen/template/menu-back"]',
         menuAddSpace: '[data-action="local_coursegen/template/menu-add-space"]',
-        menuTeacherSpace: '[data-action="local_coursegen/template/menu-teacher-space"]',
         menuAny: '[data-action="local_coursegen/template/menu-from-template"], ' +
             '[data-action="local_coursegen/template/menu-back"], ' +
-            '[data-action="local_coursegen/template/menu-add-space"], ' +
-            '[data-action="local_coursegen/template/menu-teacher-space"]',
+            '[data-action="local_coursegen/template/menu-add-space"]',
         pickTemplateSource: '[data-action="local_coursegen/template/pick-template-source"][data-source-cmid]',
         spaceEdit: '[data-action="local_coursegen/template/space-edit"]',
         spaceRemove: '[data-action="local_coursegen/template/space-remove"]',
@@ -83,10 +81,6 @@ export default {
         spaceRequiredGroup: '[data-region="local_coursegen/template/space-required-group"]',
         spaceInstructionLabel: '[data-region="local_coursegen/template/space-instruction-label"]',
         spaceAiHelp: '[data-region="local_coursegen/template/space-ai-help"]',
-        namingPreview: '[data-region="local_coursegen/template/naming-preview"]',
-        namingPattern: '[data-region="local_coursegen/template/naming-pattern"]',
-        customPattern: '[data-region="local_coursegen/template/custom-pattern"]',
-        namingStart: '[data-region="local_coursegen/template/naming-start"]',
         maxSections: '[data-region="local_coursegen/template/max-sections"]',
         allowAddSections: '[data-region="local_coursegen/template/allow-add-sections"]',
         templateName: '[data-region="local_coursegen/template/template-name"]',

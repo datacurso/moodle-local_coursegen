@@ -29,6 +29,19 @@
     Context variables optional for this template:
     * linkicon, disapproveicon, deleteicon, editicon - each either absent or
       {url, title, iconhtml}.
+
+    Example context (json):
+    {
+        "show": true,
+        "hidden": false,
+        "hiddentext": "Pending approval",
+        "exportedtext": "",
+        "editicon": {
+            "url": "https://example.com/mod/glossary/edit.php?id=1",
+            "title": "Edit",
+            "iconhtml": "<span class=\"icon\">E</span>"
+        }
+    }
 }}
 {{#show}}
 <span class="commands">

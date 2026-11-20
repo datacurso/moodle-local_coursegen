@@ -27,17 +27,23 @@
  */
 
 import Notification from 'core/notification';
-import {getString, getStrings} from 'core/str';
+import {getString} from 'core/str';
 import {getTemplateStructure} from './template/repository';
 import {reopenGeneration, runGeneration} from './template/run_generation';
 import {wireInputBar} from './template/input_bar';
 import {refreshPreviewLinks} from './template/preview';
+import {mergeAddedStructure, mergeUnitCopies, setCopiesListener, setStructureListener} from './template/added_structure';
+import {ALL_STATUS_CLASSES, STATUS_CLASS} from './template/generation_events';
 import {initTopBar} from './template/top_bar';
+import {initImagesPanel} from 'local_coursegen/local/courseai/template/images_panel';
 import {
     createTemplateState,
     applyStructureResponse,
     toggleSectionCollapsed,
+    setUnits,
+    countsForUnits,
 } from './template/state';
+import Selectors from './template/selectors';
 import {renderStructure, wireStructureEvents} from './template/render';
 import {pickSpaceFile, removeSpaceFile, refreshGenerateState} from './template/space_files';
 import {pickSpaceActivity, removeSpaceActivity} from './template/space_activities';
@@ -59,17 +65,6 @@ const getStatsTemplate = () => {
     return statsTemplatePromise;
 };
 
-/** The actions of a template activity that is copied into the course as it is, without the AI. */
-const COPIED_ACTIONS = ['keep', 'reference'];
-
-/**
- * Whether a row is copied into the course as it is.
- *
- * @param {Object} activity
- * @returns {boolean}
- */
-const isCopied = (activity) => !activity.isinstance && COPIED_ACTIONS.includes(activity.action);
-
 /**
  * Update the "N sections · M activities" summary line in the toolbar.
  *
@@ -81,15 +76,60 @@ const updateStats = (tplState, statsTemplate) => {
     if (!statsEl) {
         return;
     }
-    const activities = tplState.sections.flatMap((section) => section.activities);
-    const counts = {
-        sections: tplState.sections.length,
-        activities: activities.length,
-        copied: activities.filter(isCopied).length,
-    };
+    // The counts follow the number of units asked, not only the template's own sections.
+    const counts = countsForUnits(tplState);
     // The activities copied as they are get named, so the total does not read as what the AI writes.
     const template = counts.copied > 0 ? statsTemplate.copied : statsTemplate.plain;
     statsEl.textContent = formatTemplate(template, counts);
+};
+
+/**
+ * Mark the rows drawn after the run began as waiting, the way the rows of the template already are.
+ */
+const markRowsPending = () => {
+    document.querySelectorAll('[data-generation-uid]').forEach((row) => {
+        const started = ALL_STATUS_CLASSES.some((name) => row.classList.contains(name));
+        if (!started) {
+            row.classList.add(STATUS_CLASS.pending);
+        }
+    });
+};
+
+/**
+ * Show the units field for a template that has units, with its range and the professor's number.
+ *
+ * @param {Object} tplState
+ */
+const refreshUnitsField = (tplState) => {
+    const field = document.querySelector(Selectors.regions.unitsField);
+    const input = document.querySelector(Selectors.actions.unitsInput);
+    if (!field || !input) {
+        return;
+    }
+    field.hidden = !tplState.unitcount;
+    if (tplState.unitcount) {
+        input.min = 1;
+        input.max = tplState.maxunits;
+        input.value = tplState.units;
+    }
+};
+
+/**
+ * Keep the state in step with the units field.
+ *
+ * @param {Object} tplState
+ */
+const wireUnitsField = (tplState) => {
+    const input = document.querySelector(Selectors.actions.unitsInput);
+    if (!input) {
+        return;
+    }
+    input.addEventListener('change', async() => {
+        setUnits(tplState, input.value);
+        // Show the value that was kept, which may differ from what was typed.
+        input.value = tplState.units;
+        updateStats(tplState, await getStatsTemplate());
+    });
 };
 
 /**
@@ -115,11 +155,13 @@ export const wireTemplateMode = (state, host, reopened = null) => {
 
     // The activities pill of the top bar opens and closes its list of activities.
     initTopBar();
+    initImagesPanel();
 
     // Input-bar defaults: no images, language left to the AI (detect automatically), no syllabus yet.
     const tplState = createTemplateState({lang: ''});
 
     wireInputBar(tplState, state);
+    wireUnitsField(tplState);
 
     // Sequence guard: reselecting the template autocomplete before a previous
     // getTemplateStructure() fetch resolves must not let the slower, stale
@@ -138,6 +180,19 @@ export const wireTemplateMode = (state, host, reopened = null) => {
         updateStats(tplState, statsTemplate);
         refreshGenerateState(tplState, genBtn);
     };
+
+    // The sections and activities the guideline adds join the structure and its counters while the run is on.
+    setStructureListener(async(data) => {
+        mergeAddedStructure(tplState, data);
+        await rerenderStructure();
+        markRowsPending();
+    });
+    // The copies of a template section, one per unit of the syllabus, join it while the run is on.
+    setCopiesListener(async(data) => {
+        mergeUnitCopies(tplState, data);
+        await rerenderStructure();
+        markRowsPending();
+    });
 
     wireStructureEvents(container, {
         onToggleSection: async(sectionIndex) => {
@@ -278,7 +333,6 @@ const reopenRun = async(reopened, page) => {
 const loadTemplateStructure = async(templateId, tplState, container, state, requestTracker, requestId) => {
     const detailsEl = document.getElementById('tplModeDetails');
     const limitsEl = document.getElementById('tplModeLimits');
-    const limitsBadge = document.getElementById('tplModeLimitsBadge');
     const genBtn = document.getElementById('tplModeGenerate');
     if (!container) {
         return;
@@ -291,6 +345,7 @@ const loadTemplateStructure = async(templateId, tplState, container, state, requ
             return;
         }
         applyStructureResponse(tplState, data);
+        refreshUnitsField(tplState);
 
         if (detailsEl) {
             detailsEl.style.display = '';
@@ -300,7 +355,7 @@ const loadTemplateStructure = async(templateId, tplState, container, state, requ
         await renderStructure(container, tplState);
         refreshPreviewLinks();
         updateStats(tplState, statsTemplate);
-        await renderLimitsBanner(limitsEl, limitsBadge, tplState);
+        showTopBarStats(limitsEl);
 
         // A required space keeps the button off until its file is picked.
         refreshGenerateState(tplState, genBtn);
@@ -311,7 +366,7 @@ const loadTemplateStructure = async(templateId, tplState, container, state, requ
             // handler already owns the UI, so this stale failure stays silent.
             return;
         }
-        // Reset the structure panel, limits badge and Generate button so the
+        // Reset the structure panel, top bar stats and Generate button so the
         // professor doesn't see a mix of the failed template's name with the
         // previous template's structure still on screen.
         clearStructure(tplState, container, state);
@@ -320,29 +375,14 @@ const loadTemplateStructure = async(templateId, tplState, container, state, requ
 };
 
 /**
- * Render the section limits banner text (the badge markup itself is static,
- * see courseai_page.mustache#tplModeLimits — this only toggles it and sets text).
+ * Show the stats of the structure and the preview link in the top bar, once a template is loaded.
  *
  * @param {HTMLElement} limitsEl
- * @param {HTMLElement} limitsBadge
- * @param {Object} tplState
  */
-const renderLimitsBanner = async(limitsEl, limitsBadge, tplState) => {
-    if (!limitsEl || !limitsBadge) {
-        return;
+const showTopBarStats = (limitsEl) => {
+    if (limitsEl) {
+        limitsEl.style.display = '';
     }
-    if (tplState.nolimit) {
-        const [nolimitStr] = await getStrings([
-            {key: 'courseai_template_limits_nolimit', component: 'local_coursegen'},
-        ]);
-        limitsBadge.textContent = nolimitStr;
-    } else {
-        const [remainingStr] = await getStrings([
-            {key: 'courseai_template_limits_remaining', component: 'local_coursegen'},
-        ]);
-        limitsBadge.textContent = remainingStr.replace('{$a}', tplState.remainingSections);
-    }
-    limitsEl.style.display = '';
 };
 
 /**
@@ -360,17 +400,17 @@ const clearStructure = (tplState, container, state) => {
     if (detailsEl) {
         detailsEl.style.display = 'none';
     }
+    const unitsField = document.querySelector(Selectors.regions.unitsField);
+    if (unitsField) {
+        unitsField.hidden = true;
+    }
     const workspace = document.getElementById('courseaiWorkspace');
     if (workspace) {
         workspace.classList.remove('tpl-active');
     }
     const limitsEl = document.getElementById('tplModeLimits');
-    const limitsBadge = document.getElementById('tplModeLimitsBadge');
     if (limitsEl) {
         limitsEl.style.display = 'none';
-    }
-    if (limitsBadge) {
-        limitsBadge.textContent = '';
     }
     const genBtn = document.getElementById('tplModeGenerate');
     if (genBtn) {
@@ -389,6 +429,7 @@ const clearStructure = (tplState, container, state) => {
         lang: tplState.lang,
         syllabusdraftitemid: tplState.syllabusdraftitemid,
         syllabusfilename: tplState.syllabusfilename,
+        guidelineid: tplState.guidelineid,
     }));
     state.templateStructureLoaded = false;
 };

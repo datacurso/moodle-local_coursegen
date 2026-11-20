@@ -159,10 +159,16 @@ class view {
         $pageaftersubmitformat = $this->feedback->page_after_submitformat ?? FORMAT_HTML;
 
         $context = $this->context;
-        $output = file_rewrite_pluginfile_urls($pageaftersubmit,
-                'pluginfile.php', $context->id, 'mod_feedback', 'page_after_submit', 0);
+        $output = file_rewrite_pluginfile_urls(
+            $pageaftersubmit,
+            'pluginfile.php',
+            $context->id,
+            'mod_feedback',
+            'page_after_submit',
+            0
+        );
 
-        return format_text($output, $pageaftersubmitformat, array('overflowdiv' => true));
+        return format_text($output, $pageaftersubmitformat, ['overflowdiv' => true]);
     }
 
     /**
@@ -187,7 +193,6 @@ class view {
         $out .= $OUTPUT->box_end();
 
         if (has_capability('mod/feedback:edititems', $context)) {
-
             $out .= $OUTPUT->heading(get_string('overview', 'feedback'), 3);
 
             $groupselect = groups_print_activity_menu($cm, $this->here, true);
@@ -226,5 +231,4 @@ class view {
 
         return $out;
     }
-
 }

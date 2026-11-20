@@ -19,7 +19,11 @@ namespace local_coursegen\event;
 /**
  * Event fired when a file is sent to the external Datacurso course service.
  *
- * Carries the file name and size only, never the file content.
+ * The payload is deliberately non-identifying: the original file name is
+ * personal data (it routinely carries the learner or author name) and would
+ * outlive the file itself in {logstore_standard_log}, so only the extension,
+ * the size and the opaque generation thread/session identifiers are stored.
+ * The file content is never carried either.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -48,10 +52,30 @@ class external_transfer_initiated extends \core\event\base {
     /**
      * Returns non-localised description of what happened.
      *
+     * No user-supplied text is interpolated: the extension comes from the
+     * server-side allow list and the thread id is minted by the AI backend.
+     *
      * @return string
      */
     public function get_description() {
-        $filename = $this->other['filename'] ?? '';
-        return "The user with id '$this->userid' sent the file '$filename' to the external Datacurso course service.";
+        $extension = $this->other['fileextension'] ?? '';
+        $filesize = (int)($this->other['filesize'] ?? 0);
+        $threadid = $this->other['threadid'] ?? '';
+
+        return "The user with id '$this->userid' sent a '$extension' file of $filesize bytes "
+            . "to the external Datacurso course service for the generation thread '$threadid'.";
+    }
+
+    /**
+     * This event stores no restorable ids.
+     *
+     * The payload holds an extension, a byte count and identifiers minted by
+     * the external service, none of which map to a Moodle record, so the
+     * restore mapping is explicitly empty.
+     *
+     * @return bool False: nothing in 'other' can be mapped on restore.
+     */
+    public static function get_other_mapping() {
+        return false;
     }
 }

@@ -24,10 +24,12 @@
 import {announceSession} from 'local_coursegen/local/courseai/template/session_name';
 import Notification from 'core/notification';
 import {startTemplateGeneration} from './repository';
-import {pickedSpaceActivities, pickedSpaceChoices, pickedSpaceFiles} from './state';
+import {pickedSpaceActivities, pickedSpaceChoices, pickedSpaceFiles, requestedUnits} from './state';
 import {GenerationStopped, abortGenerationView, beginGenerationView, runGenerationStream} from './generation_stream';
 import {usePreviewSession} from './preview';
+import {resetImages, useImagesSession} from './images_panel';
 import {reviewAndCreate} from './finish';
+import {tellLicenseRefusal} from './generation_retry';
 
 /**
  * The visible text of a select's chosen option.
@@ -81,11 +83,15 @@ export const runGeneration = async(tplState, tplSelect, genBtn, state, host) => 
             parseInt(tplState.syllabusdraftitemid || 0, 10) || 0,
             tplState.lang || '',
             Boolean(tplState.generateimages),
+            requestedUnits(tplState),
+            tplState.guidelineid || 0,
             pickedSpaceFiles(tplState),
             pickedSpaceActivities(tplState),
             pickedSpaceChoices(tplState)
         );
         usePreviewSession(started.sessionid);
+        resetImages();
+        useImagesSession(started.sessionid);
         announceSession(started.sessionid);
         await runGenerationStream(
             started.streamurl,
@@ -101,7 +107,10 @@ export const runGeneration = async(tplState, tplSelect, genBtn, state, host) => 
             if (opened) {
                 abortGenerationView('');
             }
-            Notification.exception(e);
+            // A license with no credits left is said plainly; anything else keeps the error of the request.
+            if (!await tellLicenseRefusal(e)) {
+                Notification.exception(e);
+            }
         }
     }
 };
@@ -128,6 +137,7 @@ export const reopenGeneration = async(tplState, genBtn, state, host, session) =>
     try {
         await beginGenerationView(context);
         usePreviewSession(session.id);
+        useImagesSession(session.id);
         await runGenerationStream(
             session.streamurl,
             () => reviewAndCreate(host, state, tplState, session.id),
@@ -142,7 +152,9 @@ export const reopenGeneration = async(tplState, genBtn, state, host, session) =>
         }
         if (!(e instanceof GenerationStopped)) {
             abortGenerationView('');
-            Notification.exception(e);
+            if (!await tellLicenseRefusal(e)) {
+                Notification.exception(e);
+            }
         }
     }
 };

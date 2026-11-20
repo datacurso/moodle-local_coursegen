@@ -25,6 +25,49 @@
 
     Context variables: see template_course_sections.mustache's own
     docblock for the full shape of one "rows" entry.
+
+    Example context (json):
+    {
+        "isfirst": false,
+        "islast": true,
+        "isreal": true,
+        "istemplate": false,
+        "isspace": false,
+        "isaimodify": false,
+        "cmid": 42,
+        "modname": "page",
+        "typelabel": "Page",
+        "hasmarkers": false,
+        "name": "Welcome page",
+        "iconurl": "https://example.com/page.svg",
+        "viewurl": "https://example.com/mod/page/view.php?id=42",
+        "scopelabel": "Course",
+        "scopelabelcourse": "Course",
+        "scopelabelsection": "Section",
+        "spacebadge": "",
+        "spacebadgerequired": "Space · Required",
+        "spacebadgeoptional": "Space · Optional",
+        "aimodifyinstruction": "",
+        "hasspaceinstruction": false,
+        "spaceinstruction": "",
+        "legacyspace": false,
+        "actions": [
+            {
+                "value": "keep",
+                "tip": "Keep it as it is",
+                "label": "Keep",
+                "active": true
+            },
+            {
+                "value": "exclude",
+                "tip": "Leave it out",
+                "label": "Exclude",
+                "active": false
+            }
+        ],
+        "isinstance": false,
+        "isvirtualspace": false
+    }
 }}
 {{! The gap before the first row: where an activity or a space is added at the start of the section. }}
 {{#isfirst}}

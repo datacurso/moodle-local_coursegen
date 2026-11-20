@@ -28,17 +28,26 @@
     * aliasesid - string, required when aliaseshtml is set.
     * aliaseshtml - string, already-rendered HTML.
     * icons - string, already-rendered HTML.
+
+    Example context (json):
+    {
+        "show": true,
+        "printseparator": true,
+        "aliasesid": "aliases-1",
+        "aliaseshtml": "Air channel",
+        "icons": "<span class=\"commands\">Edit</span>"
+    }
 }}
 {{#show}}
 <table>
     {{#aliaseshtml}}
-    <tr valign="top">
+    <tr style="vertical-align: top">
         <td class="aliases">
             <label for="{{aliasesid}}">{{#str}} aliases, glossary {{/str}}: </label>{{{aliaseshtml}}}
         </td>
     </tr>
     {{/aliaseshtml}}
-    {{#icons}}<tr valign="top"><td class="icons">{{{icons}}}</td></tr>{{/icons}}
+    {{#icons}}<tr style="vertical-align: top"><td class="icons">{{{icons}}}</td></tr>{{/icons}}
 </table>
 {{#printseparator}}<hr>{{/printseparator}}
 {{/show}}

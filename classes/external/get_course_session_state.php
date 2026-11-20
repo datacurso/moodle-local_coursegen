@@ -27,22 +27,25 @@ namespace local_coursegen\external;
 
 use aiprovider_datacurso\local\plugin_settings;
 use context_system;
-use external_api;
-use external_function_parameters;
-use external_single_structure;
-use external_value;
-use local_coursegen\local\permission;
+use core_external\external_api;
+use core_external\external_function_parameters;
+use core_external\external_single_structure;
+use core_external\external_value;
 use local_coursegen\local\models\course_session;
 use local_coursegen\local\service\access_guard;
 use local_coursegen\local\service\ai_course_api_service;
+use local_coursegen\local\service\course_import_service;
 use local_coursegen\local\service\course_session_service;
+use local_coursegen\local\service\creation_permissions;
 
 defined('MOODLE_INTERNAL') || die();
 
-require_once($CFG->libdir . '/externallib.php');
-
 /**
  * External API to retrieve resumable state for an AI course session.
+ *
+ * No audit event is emitted: this is a read-only resume/poll call that changes
+ * no state and transfers nothing outwards, and one event per poll would flood
+ * {logstore_standard_log} without adding audit value.
  */
 class get_course_session_state extends external_api {
     /**
@@ -83,14 +86,14 @@ class get_course_session_state extends external_api {
 
         // Owning the session is not enough: resuming exposes planning data and
         // backend state, so require the same capabilities as start_course_planning.
-        permission::require_create_course_with_ai();
+        creation_permissions::require_anywhere();
 
         $sessionid = (string)$session->get('session_id');
         if ($sessionid === '') {
             throw new \moodle_exception('error_no_session_found', 'local_coursegen');
         }
 
-        $apiservice = new ai_course_api_service();
+        $apiservice = static::get_api_service();
         $snapshot = $apiservice->get_course_state($sessionid);
         $streamingurl = $apiservice->get_course_streaming_url($sessionid);
 
@@ -99,7 +102,9 @@ class get_course_session_state extends external_api {
             $coursedata = [];
         }
 
-        return [
+        $import = self::describe_import($coursedata);
+
+        return $import + [
             'success' => true,
             'recordid' => (int)$session->get('id'),
             'sessionid' => $sessionid,
@@ -110,6 +115,50 @@ class get_course_session_state extends external_api {
             'coursedatajson' => json_encode($coursedata, JSON_UNESCAPED_UNICODE),
             'snapshotjson' => json_encode($snapshot, JSON_UNESCAPED_UNICODE),
         ];
+    }
+
+    /**
+     * Expose the import bookkeeping kept in the coursedata JSON bag.
+     *
+     * @param array $coursedata Decoded session course data.
+     * @return array importstate, importmessage, copycourseid and copycourseurl (done only).
+     */
+    private static function describe_import(array $coursedata): array {
+        $import = isset($coursedata['import']) && is_array($coursedata['import']) ? $coursedata['import'] : [];
+        $messages = [
+            course_import_service::STATE_QUEUED => 'import_queued',
+            course_import_service::STATE_RUNNING => 'import_running',
+            course_import_service::STATE_DONE => 'import_completed',
+            course_import_service::STATE_FAILED => 'import_failed',
+        ];
+        $state = (string)($import['state'] ?? '');
+        if (!isset($messages[$state])) {
+            return ['importstate' => '', 'importmessage' => '', 'copycourseid' => 0];
+        }
+
+        $copycourseid = (int)($import['copycourseid'] ?? 0);
+        $result = [
+            'importstate' => $state,
+            'importmessage' => get_string($messages[$state], 'local_coursegen'),
+            'copycourseid' => $copycourseid,
+        ];
+        if ($state === course_import_service::STATE_DONE && $copycourseid > 0) {
+            $result['copycourseurl'] = (new \moodle_url('/course/view.php', ['id' => $copycourseid]))->out(false);
+        }
+
+        return $result;
+    }
+
+    /**
+     * Build the AI course API service used by this endpoint.
+     *
+     * Extracted as a protected factory so PHPUnit tests can override it
+     * through a testable subclass (late static binding).
+     *
+     * @return ai_course_api_service
+     */
+    protected static function get_api_service(): ai_course_api_service {
+        return new ai_course_api_service();
     }
 
     /**
@@ -128,6 +177,15 @@ class get_course_session_state extends external_api {
             'iscreated' => new external_value(PARAM_BOOL, 'Whether local session is marked as created'),
             'coursedatajson' => new external_value(PARAM_RAW, 'Serialized local course data'),
             'snapshotjson' => new external_value(PARAM_RAW, 'Serialized backend state snapshot'),
+            'importstate' => new external_value(
+                PARAM_ALPHA,
+                'Import into existing course: empty, queued, running, done or failed',
+                VALUE_DEFAULT,
+                ''
+            ),
+            'copycourseid' => new external_value(PARAM_INT, 'Course that replaced the target once imported', VALUE_DEFAULT, 0),
+            'copycourseurl' => new external_value(PARAM_URL, 'URL of the copy course, present when done', VALUE_OPTIONAL),
+            'importmessage' => new external_value(PARAM_TEXT, 'Localised message for the import state', VALUE_DEFAULT, ''),
         ]);
     }
 }

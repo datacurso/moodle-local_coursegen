@@ -110,8 +110,14 @@ class view {
                 $out .= $OUTPUT->heading($currsubtitle, 4);
             }
         }
-        $chaptertext = file_rewrite_pluginfile_urls($chapter->content, 'pluginfile.php', $context->id, 'mod_book',
-            'chapter', $chapter->id);
+        $chaptertext = file_rewrite_pluginfile_urls(
+            $chapter->content,
+            'pluginfile.php',
+            $context->id,
+            'mod_book',
+            'chapter',
+            $chapter->id
+        );
         $out .= format_text($chaptertext, $chapter->contentformat, ['noclean' => true, 'overflowdiv' => true,
             'context' => $context]);
 

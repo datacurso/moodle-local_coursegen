@@ -36,7 +36,7 @@ final class activity_url_remap {
      * Replace the course module id of every mapped activity address.
      *
      * @param string $text
-     * @param array<int,int> $newcmidbyoldcmid Old course module id => new course module id.
+     * @param array $newcmidbyoldcmid Old course module id => new course module id.
      * @return string
      */
     public static function apply(string $text, array $newcmidbyoldcmid): string {

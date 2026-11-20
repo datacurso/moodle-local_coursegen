@@ -21,6 +21,10 @@ use local_coursegen\local\models\template_activity;
 use local_coursegen\local\models\template_instance;
 use local_coursegen\local\service\template_export_service;
 
+defined('MOODLE_INTERNAL') || die();
+
+require_once(__DIR__ . '/flexsections_required_trait.php');
+
 /**
  * Unit tests for template_export_service::build_init_payload().
  *
@@ -33,6 +37,8 @@ use local_coursegen\local\service\template_export_service;
  * @runTestsInSeparateProcesses
  */
 final class template_export_service_test extends \advanced_testcase {
+    use flexsections_required_trait;
+
     /**
      * A real activity's own entry carries a random UUID uid, not the old
      * "cm-{templateid}-{cmid}" derived key.
@@ -91,6 +97,37 @@ final class template_export_service_test extends \advanced_testcase {
 
         $this->assertFalse(template_export_service::build_init_payload($templateid)['with_images']);
         $this->assertTrue(template_export_service::build_init_payload($templateid, '', '', true)['with_images']);
+    }
+
+    /**
+     * The mold of an H5P activity lists the images its package holds, and nothing else does.
+     */
+    public function test_an_h5p_mold_lists_the_images_of_its_package(): void {
+        global $CFG;
+        $this->resetAfterTest(true);
+        $this->setAdminUser();
+
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course();
+        $mold = $generator->create_module('h5pactivity', [
+            'course' => $course->id,
+            'packagefilepath' => $CFG->dirroot . '/h5p/tests/fixtures/guess-the-answer.h5p',
+        ]);
+        $kept = $generator->create_module('h5pactivity', [
+            'course' => $course->id,
+            'packagefilepath' => $CFG->dirroot . '/h5p/tests/fixtures/guess-the-answer.h5p',
+        ]);
+        $page = $generator->create_module('page', ['course' => $course->id]);
+        $templateid = $this->create_template($course->id)->get('id');
+        $this->mark_with_action($templateid, (int) $mold->cmid, 'template');
+
+        $payload = template_export_service::build_init_payload($templateid);
+
+        $images = $this->find_activity($payload, (int) $mold->cmid)['parameters']['package_images'];
+        $this->assertCount(1, $images);
+        $this->assertSame(['path', 'mime', 'width', 'height'], array_keys($images[0]));
+        $this->assertArrayNotHasKey('package_images', $this->find_activity($payload, (int) $kept->cmid)['parameters']);
+        $this->assertArrayNotHasKey('package_images', $this->find_activity($payload, (int) $page->cmid)['parameters']);
     }
 
     /**
@@ -275,6 +312,68 @@ final class template_export_service_test extends \advanced_testcase {
     }
 
     /**
+     * A flexsections course: 1 and 4 are units (children 2, 3 and 5, 6), 7 closes the course.
+     *
+     * @return \stdClass
+     */
+    private function create_flexsections_course(): \stdClass {
+        $this->require_flexsections();
+        $course = $this->getDataGenerator()->create_course(['format' => 'flexsections', 'numsections' => 0]);
+        $format = course_get_format($course);
+        $parents = [1 => 0, 2 => 1, 3 => 1, 4 => 0, 5 => 4, 6 => 4, 7 => 0];
+        foreach ($parents as $number => $parent) {
+            $section = course_create_section($course, $number);
+            $format->update_section_format_options(['id' => $section->id, 'parent' => $parent]);
+        }
+        rebuild_course_cache($course->id, true);
+        return get_course($course->id);
+    }
+
+    /**
+     * Asking for more units than a flexsections template has clones the last unit and moves the closing section.
+     */
+    public function test_a_flexsections_template_is_expanded_to_the_units_asked_for(): void {
+        global $DB;
+        $this->resetAfterTest(true);
+        $this->setAdminUser();
+
+        $course = $this->create_flexsections_course();
+        $template = $this->create_template($course->id);
+        $page = $this->getDataGenerator()->create_module('page', ['course' => $course->id, 'section' => 5]);
+        $this->mark_with_action($template->get('id'), (int) $page->cmid, 'template');
+        $instance = $this->create_instance($template->get('id'), (int) $page->cmid);
+        $instance->set('sectionid', $DB->get_field('course_sections', 'id', ['course' => $course->id, 'section' => 5]));
+        $instance->update();
+
+        $payload = template_export_service::build_init_payload($template->get('id'), '', '', false, 3);
+
+        $sections = $payload['sections_info'];
+        $this->assertCount(11, $sections);
+        $this->assertSame(10, $payload['course_configuration']['numsections']);
+        $this->assertSame([0, 0, 1, 1, 0, 4, 4, 0, 7, 7, 0], array_column($sections, 'parent_section'));
+        $this->assertSame(7, $sections[10]['source_section']);
+        $instances = array_filter($payload['activities'], static fn($a) => $a['template_behavior']['action'] === 'instance');
+        $this->assertSame([5, 8], array_column(array_column($instances, 'parameters'), 'section'));
+    }
+
+    /**
+     * Without a count, or for another format, the sections are the template's own.
+     */
+    public function test_the_units_asked_for_change_nothing_unless_the_format_is_flexsections(): void {
+        $this->resetAfterTest(true);
+        $this->setAdminUser();
+
+        $flex = $this->create_flexsections_course();
+        $same = template_export_service::build_init_payload($this->create_template($flex->id)->get('id'));
+        $this->assertCount(8, $same['sections_info']);
+        $this->assertArrayNotHasKey('source_section', $same['sections_info'][1]);
+
+        $topics = $this->getDataGenerator()->create_course(['format' => 'topics', 'numsections' => 3]);
+        $payload = template_export_service::build_init_payload($this->create_template($topics->id)->get('id'), '', '', false, 6);
+        $this->assertCount(4, $payload['sections_info']);
+    }
+
+    /**
      * Save an "exclude" action for one cmid of this template.
      *
      * @param int $templateid
@@ -361,9 +460,9 @@ final class template_export_service_test extends \advanced_testcase {
     }
 
     /**
-     * A reference marker in the template asks for a picture only when the person chose to have images.
+     * The pictures of the course go with the run even without images, since the run can turn them on later.
      */
-    public function test_pictures_of_the_course_are_asked_only_when_images_are_on(): void {
+    public function test_pictures_of_the_course_go_with_the_run_whether_or_not_images_are_on(): void {
         $this->resetAfterTest(true);
         $this->setAdminUser();
 
@@ -373,7 +472,7 @@ final class template_export_service_test extends \advanced_testcase {
         $templateid = $this->create_template($course->id)->get('id');
 
         $without = template_export_service::build_init_payload($templateid, '', '', false);
-        $this->assertSame([], $without['image_slots']);
+        $this->assertCount(1, $without['image_slots']);
 
         $with = template_export_service::build_init_payload($templateid, '', '', true);
         $this->assertCount(1, $with['image_slots']);

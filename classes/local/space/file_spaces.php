@@ -91,7 +91,7 @@ final class file_spaces {
      * The spaces among the activities of a course, in course order.
      *
      * @param \course_modinfo $modinfo
-     * @param array<int,template_activity> $saved
+     * @param array $saved
      * @return file_space[]
      */
     private static function spaces_of_modinfo(\course_modinfo $modinfo, array $saved): array {

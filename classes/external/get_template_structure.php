@@ -26,15 +26,15 @@
 
 namespace local_coursegen\external;
 
-use external_api;
-use external_function_parameters;
-use external_value;
+use core_external\external_api;
+use core_external\external_function_parameters;
+use core_external\external_value;
 use context_system;
 use local_coursegen\local\models\template;
+use local_coursegen\local\service\template_unit_resizer;
+use local_coursegen\local\service\template_units;
 
 defined('MOODLE_INTERNAL') || die();
-
-require_once($CFG->libdir . '/externallib.php');
 
 /**
  * Builds the guided-form structure for a given template.
@@ -96,11 +96,18 @@ class get_template_structure extends external_api {
             $remaining = max(0, $maxsections);
         }
 
-        return [
+        $result = [
             'nolimit' => $nolimit,
             'maxsections' => $maxsections,
             'remainingsections' => $remaining,
             'sections' => $sections,
         ];
+        // Only a course with units (Flexible sections) lets the professor choose how many to make.
+        $units = template_units::count($modinfo);
+        if ($units !== null) {
+            $result['unitcount'] = $units;
+            $result['maxunits'] = template_unit_resizer::MAX_UNITS;
+        }
+        return $result;
     }
 }

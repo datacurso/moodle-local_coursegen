@@ -27,18 +27,21 @@ namespace local_coursegen\external;
 
 use aiprovider_datacurso\local\plugin_settings;
 use context_course;
-use external_api;
-use external_function_parameters;
-use external_single_structure;
-use external_value;
+use core_external\external_api;
+use core_external\external_function_parameters;
+use core_external\external_single_structure;
+use core_external\external_value;
 
 defined('MOODLE_INTERNAL') || die();
 
-require_once($CFG->libdir . '/externallib.php');
 require_once($CFG->dirroot . '/repository/lib.php');
 
 /**
  * External API to initialise a filepicker (draft area) for AI activity uploads.
+ *
+ * No audit event is emitted: this call only allocates an unused draft item id
+ * and returns filepicker options, it modifies no state and transfers nothing.
+ * The transfer that may follow is audited by activity_file_upload.
  */
 class activity_filepicker_init extends external_api {
     /**

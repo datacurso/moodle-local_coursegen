@@ -22,9 +22,14 @@
 
     Context variables required for this template:
     * headinghtml - string, already-rendered HTML.
+
+    Example context (json):
+    {
+        "headinghtml": "<b>A</b>"
+    }
 }}
 <div>
-    <table cellspacing="0" class="glossarycategoryheader">
+    <table class="glossarycategoryheader" style="border-spacing: 0">
         <tr>
             <th>{{{headinghtml}}}</th>
         </tr>

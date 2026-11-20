@@ -37,11 +37,13 @@ final class generated_cmids_tracking_test extends \advanced_testcase {
      *
      * @param int $payloadcmid
      * @param string $name
+     * @param string $uid The uid the result answers to, empty for none.
      * @return array
      */
-    private function label_result(int $payloadcmid, string $name): array {
+    private function label_result(int $payloadcmid, string $name, string $uid = ''): array {
         return [
             'resource_type' => 'label',
+            'uid' => $uid,
             'cmid' => $payloadcmid,
             'parameters' => [
                 'modulename' => 'label',
@@ -85,9 +87,25 @@ final class generated_cmids_tracking_test extends \advanced_testcase {
     }
 
     /**
-     * A virtual instance travels under a negative cmid and is tracked under it.
+     * An activity the AI wrote is tracked under its uid, whatever id it travelled with.
      */
-    public function test_negative_instance_cmid_is_tracked(): void {
+    public function test_generated_activity_is_tracked_by_its_uid(): void {
+        global $DB;
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $result = $this->create_course_from([$this->label_result(0, 'Copied label', 'uid-copy')]);
+
+        $this->assertTrue($result['success'], $result['message']);
+        $cms = $DB->get_records('course_modules', ['course' => $result['courseid']]);
+        $cm = reset($cms);
+        $this->assertSame(['uid-copy' => (int) $cm->id], $result['generatedcms']);
+    }
+
+    /**
+     * An entry of an older payload, with no uid, is still tracked under the id it travelled with.
+     */
+    public function test_entry_without_a_uid_is_tracked_by_its_id(): void {
         global $DB;
         $this->resetAfterTest();
         $this->setAdminUser();
@@ -97,11 +115,11 @@ final class generated_cmids_tracking_test extends \advanced_testcase {
         $this->assertTrue($result['success'], $result['message']);
         $cms = $DB->get_records('course_modules', ['course' => $result['courseid']]);
         $cm = reset($cms);
-        $this->assertSame([-7 => (int) $cm->id], $result['generatedcms']);
+        $this->assertSame(['cmid:-7' => (int) $cm->id], $result['generatedcms']);
     }
 
     /**
-     * An activity with no cmid in the payload is not tracked.
+     * An activity with neither a uid nor an id is not tracked.
      */
     public function test_activity_without_a_cmid_is_not_tracked(): void {
         $this->resetAfterTest();

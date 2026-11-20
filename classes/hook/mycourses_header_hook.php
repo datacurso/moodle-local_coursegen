@@ -16,9 +16,9 @@
 
 namespace local_coursegen\hook;
 
-use aiprovider_datacurso\local\plugin_settings;
 use core\hook\output\before_http_headers;
-use local_coursegen\local\permission;
+use local_coursegen\local\provider_state;
+use local_coursegen\local\service\creation_permissions;
 
 /**
  * Hook to add the "Create with AI" button to the My courses page.
@@ -90,7 +90,7 @@ class mycourses_header_hook {
      * @return bool
      */
     public static function should_inject(\moodle_page $page): bool {
-        return plugin_settings::is_enabled('local_coursegen')
+        return provider_state::is_enabled()
             && self::is_my_courses_page($page)
             && self::user_can_see_button();
     }
@@ -137,27 +137,42 @@ class mycourses_header_hook {
     }
 
     /**
-     * Determine if the given page is the My courses page.
+     * Determine if the given page is where the user lists their courses.
+     *
+     * That is the My courses page, or the Dashboard when the site has the My courses
+     * page disabled: My courses then redirects to the Dashboard, whose Course overview
+     * block carries the course actions, and without this the teacher had no way in.
+     *
+     * The setting only exists from Moodle 5.2. Before that the My courses page cannot be
+     * disabled, so an unset setting means My courses is there and the Dashboard is left alone.
      *
      * @param \moodle_page $page The page being rendered.
      * @return bool
      */
     private static function is_my_courses_page(\moodle_page $page): bool {
+        global $CFG;
+
         if (!$page->has_set_url()) {
             return false;
         }
 
-        return str_ends_with($page->url->get_path(), '/my/courses.php');
+        $path = $page->url->get_path();
+        if (str_ends_with($path, '/my/courses.php')) {
+            return true;
+        }
+
+        $isdashboard = str_ends_with($path, '/my/') || str_ends_with($path, '/my/index.php');
+        return $isdashboard && isset($CFG->enablemycourses) && empty($CFG->enablemycourses);
     }
 
     /**
      * Check whether the current user has the capabilities required to see the
-     * AI course button.
+     * AI course button: the full creation set in at least one category (ticket #9539).
      *
      * @return bool
      */
     private static function user_can_see_button(): bool {
-        return permission::can_create_course_with_ai();
+        return creation_permissions::can_create_anywhere();
     }
 
     /**

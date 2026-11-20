@@ -116,6 +116,9 @@ class text_editor_parameter_cleaner {
         }
 
         $text = self::normalize_escaped_html_quotes((string)($editorobject['text'] ?? ''));
+        // The same cleaning as the sanitiser of the AI texts, so the frame of a file of the activity it lets
+        // through is not removed again here.
+        $text = ai_text_sanitiser::sanitise_string($text);
 
         return [
             'text' => $text,

@@ -22,6 +22,23 @@
 
     Context variables required for this template:
     * items - array, each shaped the way preview_imscp_item.mustache expects.
+
+    Example context (json):
+    {
+        "items": [
+            {
+                "haslink": true,
+                "title": "Unit 1",
+                "url": "https://example.com/mod/imscp/view.php?r=1",
+                "hassubitems": false
+            },
+            {
+                "haslink": false,
+                "title": "Unit 2",
+                "hassubitems": false
+            }
+        ]
+    }
 }}
 <div id="imscp_layout">
     <div id="imscp_toc">

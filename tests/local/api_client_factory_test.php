@@ -44,13 +44,39 @@ final class api_client_factory_test extends \advanced_testcase {
     }
 
     /**
+     * Give the provider a license the way the running Moodle stores it.
+     *
+     * Moodle 4.5 keeps it in the plugin settings; Moodle 5.0+ keeps it in an enabled provider
+     * instance, and the provider refuses to build a client without one.
+     *
+     * @param string $licensekey
+     */
+    private function configure_the_provider_license(string $licensekey): void {
+        global $DB;
+
+        $hasinstances = class_exists(\core_ai\manager::class)
+            && method_exists(\core_ai\manager::class, 'create_provider_instance');
+        if (!$hasinstances) {
+            set_config('licensekey', $licensekey, 'aiprovider_datacurso');
+            return;
+        }
+
+        (new \core_ai\manager($DB))->create_provider_instance(
+            classname: \aiprovider_datacurso\provider::class,
+            name: 'test',
+            enabled: true,
+            config: ['licensekey' => $licensekey],
+        );
+    }
+
+    /**
      * The client identifies as this plugin and reports its release.
      */
     public function test_the_client_identifies_as_this_plugin_with_its_release(): void {
         $this->resetAfterTest();
         $this->require_the_provider_that_names_the_caller();
         // The real client reads the license and asks the shop for its region: give it both, offline.
-        set_config('licensekey', 'test-license-key', 'aiprovider_datacurso');
+        $this->configure_the_provider_license('test-license-key');
         \curl::mock_response('{"is_for_eu": false}');
         $manager = \core_plugin_manager::instance();
         $plugin = $manager->get_plugin_info('local_coursegen');

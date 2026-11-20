@@ -42,15 +42,19 @@ trait workshop_plan_late {
         $phase->title = get_string('phaseassessment', 'workshop');
         $phase->tasks = [];
         $phase->isreviewer = has_capability('mod/workshop:peerassess', $this->context, $userid);
-        if ($workshop->phase == workshop::PHASE_SUBMISSION && $workshop->phaseswitchassessment
-                && has_capability('mod/workshop:switchphase', $this->context, $userid)) {
+        if (
+            $workshop->phase == workshop::PHASE_SUBMISSION && $workshop->phaseswitchassessment
+                && has_capability('mod/workshop:switchphase', $this->context, $userid)
+        ) {
             $task = new stdClass();
             $task->title = get_string('switchphase30auto', 'mod_workshop', workshop::timestamp_formats($workshop->submissionend));
             $task->completed = 'info';
             $phase->tasks['autoswitchinfo'] = $task;
         }
-        if ($workshop->useexamples && $workshop->examplesmode == workshop::EXAMPLES_BEFORE_ASSESSMENT
-                && $phase->isreviewer && !has_capability('mod/workshop:manageexamples', $this->context, $userid)) {
+        if (
+            $workshop->useexamples && $workshop->examplesmode == workshop::EXAMPLES_BEFORE_ASSESSMENT
+                && $phase->isreviewer && !has_capability('mod/workshop:manageexamples', $this->context, $userid)
+        ) {
             $task = new stdClass();
             $task->title = get_string('exampleassesstask', 'workshop');
             $examples = $this->get_examples();
@@ -113,15 +117,21 @@ trait workshop_plan_late {
         }
         if ($workshop->assessmentstart) {
             $task = new stdClass();
-            $task->title = get_string('assessmentstartdatetime', 'workshop',
-                workshop::timestamp_formats($workshop->assessmentstart));
+            $task->title = get_string(
+                'assessmentstartdatetime',
+                'workshop',
+                workshop::timestamp_formats($workshop->assessmentstart)
+            );
             $task->completed = 'info';
             $phase->tasks['assessmentstartdatetime'] = $task;
         }
         if ($workshop->assessmentend) {
             $task = new stdClass();
-            $task->title = get_string('assessmentenddatetime', 'workshop',
-                workshop::timestamp_formats($workshop->assessmentend));
+            $task->title = get_string(
+                'assessmentenddatetime',
+                'workshop',
+                workshop::timestamp_formats($workshop->assessmentend)
+            );
             $task->completed = 'info';
             $phase->tasks['assessmentenddatetime'] = $task;
         }
@@ -151,7 +161,6 @@ trait workshop_plan_late {
         if (has_capability('mod/workshop:overridegrades', $this->context)) {
             $phase->tasks['calculatesubmissiongrade'] = $this->build_calculate_submission_grade_task($workshop);
             $phase->tasks['calculategradinggrade'] = $this->build_calculate_grading_grade_task($workshop);
-
         } else if ($workshop->phase == workshop::PHASE_EVALUATION) {
             $task = new stdClass();
             $task->title = get_string('evaluategradeswait', 'workshop');

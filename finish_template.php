@@ -29,11 +29,13 @@ define('NO_OUTPUT_BUFFERING', true);
 require_once('../../config.php');
 
 require_login(null, false);
+\aiprovider_datacurso\local\plugin_settings::require_enabled('local_coursegen');
 require_sesskey();
 
 $sessionid = required_param('sessionid', PARAM_INT);
 $fullname = optional_param('fullname', '', PARAM_TEXT);
 $shortname = optional_param('shortname', '', PARAM_TEXT);
 $category = optional_param('category', 0, PARAM_INT);
+$startdate = optional_param('startdate', '', PARAM_TEXT);
 
-(new \local_coursegen\local\streaming\finish_stream())->run($sessionid, $fullname, $shortname, $category);
+(new \local_coursegen\local\streaming\finish_stream())->run($sessionid, $fullname, $shortname, $category, $startdate);

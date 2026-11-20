@@ -24,20 +24,19 @@
 
 namespace local_coursegen\external;
 
+use aiprovider_datacurso\local\plugin_settings;
 use context_system;
-use external_api;
-use external_function_parameters;
-use external_multiple_structure;
-use external_single_structure;
-use external_value;
+use core_external\external_api;
+use core_external\external_function_parameters;
+use core_external\external_multiple_structure;
+use core_external\external_single_structure;
+use core_external\external_value;
 use local_coursegen\local\service\course_review_service;
 use local_coursegen\local\service\course_session_service;
 use local_coursegen\local\service\create_course_service;
 use local_coursegen\local\service\template_ai_api_service;
 
 defined('MOODLE_INTERNAL') || die();
-
-require_once($CFG->libdir . '/externallib.php');
 
 /**
  * What the review step of a template generation shows before the course exists.
@@ -61,9 +60,11 @@ class get_template_course_settings extends external_api {
      * The proposed course settings of a finished generation, and the categories to choose from.
      *
      * @param int $recordid Session record ID.
-     * @return array Course settings (fullname, shortname, category, categories).
+     * @return array Course settings (fullname, shortname, category, categories, warnings).
      */
     public static function execute($recordid) {
+        plugin_settings::require_enabled('local_coursegen');
+
         global $USER;
 
         $params = self::validate_parameters(self::execute_parameters(), ['recordid' => $recordid]);
@@ -80,7 +81,9 @@ class get_template_course_settings extends external_api {
         $settings = create_course_service::get_course_settings($session, $result);
         $categories = course_review_service::available_categories();
 
-        return $settings + ['categories' => $categories];
+        $warnings = course_review_service::warning_messages((array) ($result['generation_warnings'] ?? []));
+
+        return $settings + ['categories' => $categories, 'warnings' => $warnings];
     }
 
     /**
@@ -99,6 +102,11 @@ class get_template_course_settings extends external_api {
                     'pathname' => new external_value(PARAM_RAW, 'Category path name'),
                 ]),
                 'List of available categories with full paths',
+                VALUE_OPTIONAL
+            ),
+            'warnings' => new external_multiple_structure(
+                new external_value(PARAM_TEXT, 'A worded warning of the generation'),
+                'Non-blocking warnings of the generation, to show in the review',
                 VALUE_OPTIONAL
             ),
         ]);

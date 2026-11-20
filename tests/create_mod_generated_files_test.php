@@ -70,6 +70,9 @@ final class create_mod_generated_files_test extends \advanced_testcase {
         ];
         if ($entries) {
             $result['generated_files'] = $entries;
+        } else {
+            // Without generated files the text cannot point at one.
+            $result['parameters']['page']['text'] = '<p>Plain text</p>';
         }
         return $result;
     }

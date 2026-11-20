@@ -44,8 +44,8 @@ trait forum_notifications {
 
         if ($forum->is_cutoff_date_reached()) {
             $notifications[] = (new notification(
-                    get_string('cutoffdatereached', 'forum'),
-                    notification::NOTIFY_INFO
+                get_string('cutoffdatereached', 'forum'),
+                notification::NOTIFY_INFO
             ))->set_show_closebutton();
         }
 
@@ -53,7 +53,7 @@ trait forum_notifications {
             $notifications[] = (new notification(
                 get_string('thisforumisthrottled', 'forum', [
                     'blockafter' => $forum->get_block_after(),
-                    'blockperiod' => get_string('secondstotime' . $forum->get_block_period())
+                    'blockperiod' => get_string('secondstotime' . $forum->get_block_period()),
                 ]),
                 notification::NOTIFY_INFO
             ))->set_show_closebutton();
@@ -76,11 +76,12 @@ trait forum_notifications {
         if ('eachuser' === $forum->get_type()) {
             $notifications[] = (new notification(
                 get_string('allowsdiscussions', 'forum'),
-                notification::NOTIFY_INFO)
+                notification::NOTIFY_INFO
+            )
             )->set_show_closebutton();
         }
 
-        return array_map(function($notification) use ($OUTPUT) {
+        return array_map(function ($notification) use ($OUTPUT) {
             return $notification->export_for_template($OUTPUT);
         }, $notifications);
     }

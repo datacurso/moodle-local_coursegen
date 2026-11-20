@@ -45,7 +45,7 @@ trait url_parameter_values {
         $site = get_site();
 
         $coursecontext = \context_course::instance($course->id);
-        $formatoptions = array('context' => $coursecontext);
+        $formatoptions = ['context' => $coursecontext];
 
         $coursefullname = format_string($course->fullname, true, $formatoptions);
         $courseshortname = format_string($course->shortname, true, $formatoptions);
@@ -54,7 +54,7 @@ trait url_parameter_values {
         $lang = current_language();
         $currenttime = time();
 
-        $values = array (
+        $values = [
             'courseid'        => $course->id,
             'coursefullname'  => $coursefullname,
             'courseshortname' => $courseshortname,
@@ -69,7 +69,7 @@ trait url_parameter_values {
             'urlcmid'         => $cm->id,
             'urlname'         => $urlname,
             'urlidnumber'     => $cm->idnumber ?? '',
-        );
+        ];
 
         if (isloggedin()) {
             $values['userid']          = $USER->id;
@@ -93,12 +93,12 @@ trait url_parameter_values {
 
         // weak imitation of Single-Sign-On, for backwards compatibility only
         // NOTE: login hack is not included in 2.0 any more, new contrib auth plugin
-        //       needs to be createed if somebody needs the old functionality!
+        // needs to be createed if somebody needs the old functionality!
         if (!empty($config->secretphrase)) {
             $values['encryptedcode'] = self::url_get_encrypted_parameter($url, $config);
         }
 
-        //hmm, this is pretty fragile and slow, why do we need it here??
+        // hmm, this is pretty fragile and slow, why do we need it here??
         if ($url->parameters) {
             $values = self::url_apply_course_field_parameters($values, $url, $course);
         }

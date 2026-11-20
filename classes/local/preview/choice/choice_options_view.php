@@ -32,7 +32,6 @@ use stdClass;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 trait choice_options_view {
-
     /**
      * mod/choice/lib.php choice_prepare_options(), with no answers recorded.
      *
@@ -43,15 +42,16 @@ trait choice_options_view {
      * @return array
      */
     protected function choice_prepare_options($choice, $user, $coursemodule, $allresponses) {
-        $cdisplay = array('options'=>array());
+        $cdisplay = ['options' => []];
 
-        $cdisplay['limitanswers'] = $choice->limitanswers;
-        $cdisplay['showavailable'] = $choice->showavailable;
+        $cdisplay['limitanswers'] = $choice->limitanswers ?? 0;
+        $cdisplay['showavailable'] = $choice->showavailable ?? 0;
 
         foreach ($choice->option as $optionid => $text) {
-            if (isset($text)) { //make sure there are no dud entries in the db with blank text values.
-                $option = new stdClass;
-                $option->attributes = new stdClass;
+            // Make sure there are no dud entries in the db with blank text values.
+            if (isset($text)) {
+                $option = new stdClass();
+                $option->attributes = new stdClass();
                 $option->attributes->value = $optionid;
                 $option->text = format_string($text);
                 $option->maxanswers = $choice->maxanswers[$optionid];
@@ -62,14 +62,15 @@ trait choice_options_view {
                 } else {
                     $option->countanswers = 0;
                 }
-                if ( $choice->limitanswers && ($option->countanswers >= $option->maxanswers) && empty($option->attributes->checked)) {
+                $full = $option->countanswers >= $option->maxanswers;
+                if (!empty($choice->limitanswers) && $full && empty($option->attributes->checked)) {
                     $option->attributes->disabled = true;
                 }
                 $cdisplay['options'][] = $option;
             }
         }
 
-        $cdisplay['hascapability'] = $this->can_choose(); //only enrolled users are allowed to make a choice
+        $cdisplay['hascapability'] = $this->can_choose(); // only enrolled users are allowed to make a choice
 
         if ($choice->showpreview && $choice->timeopen > time()) {
             $cdisplay['previewonly'] = true;

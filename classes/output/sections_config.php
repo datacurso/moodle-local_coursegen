@@ -33,6 +33,7 @@ use local_coursegen\local\models\template_space;
 use local_coursegen\local\placeholder\activity_scanner;
 use local_coursegen\local\space\space_rules;
 use local_coursegen\local\service\template_instance_layout;
+use local_coursegen\local\service\template_section_tree;
 
 /**
  * Build the sections review straight from modinfo.
@@ -85,8 +86,15 @@ class sections_config {
 
         $sections = [];
         $sectioninfos = $modinfo->get_section_info_all();
+        $tree = template_section_tree::from_modinfo($modinfo);
         foreach ($sectioninfos as $sectioninfo) {
-            $sections[] = self::section_context($modinfo, $course, $sectioninfo, $saved);
+            $context = self::section_context($modinfo, $course, $sectioninfo, $saved);
+            if ($tree !== null) {
+                $context += self::hierarchy_context($tree, (int) $sectioninfo->section);
+            }
+            // Only a top section is repeated per unit: a subsection goes with it and has no naming of its own.
+            $context['cannaming'] = empty($context['isnested']);
+            $sections[] = $context;
         }
 
         $courseid = (int) $course->id;
@@ -118,6 +126,28 @@ class sections_config {
     }
 
     /**
+     * Where a section hangs in a flexsections course, for the card to show it.
+     *
+     * Only a subsection says anything: a top section is drawn as it always is.
+     *
+     * @param template_section_tree $tree
+     * @param int $number The section's number.
+     * @return array
+     */
+    private static function hierarchy_context(template_section_tree $tree, int $number): array {
+        $depth = $tree->depth_of($number);
+        if ($depth === 0) {
+            return [];
+        }
+        return [
+            'isnested' => true,
+            'parentnum' => $tree->parent_of($number),
+            'depth' => $depth,
+            'indentrem' => $depth * 1.5,
+        ];
+    }
+
+    /**
      * Everything a template already saved, keyed for the lookups the render
      * makes: empty for a new template (id 0).
      *
@@ -125,11 +155,12 @@ class sections_config {
      * @return array {behaviors, actions, scopes, spaces, instances}
      */
     private static function saved_configuration(int $templateid): array {
-        $saved = ['behaviors' => [], 'actions' => [], 'scopes' => [], 'spaces' => [], 'instances' => []];
+        $saved = ['behaviors' => [], 'namings' => [], 'actions' => [], 'scopes' => [], 'spaces' => [], 'instances' => []];
         if ($templateid <= 0) {
             return $saved;
         }
         $saved['behaviors'] = self::saved_behaviors($templateid);
+        $saved['namings'] = self::saved_namings($templateid);
         $activitysettings = self::saved_activity_settings($templateid);
         $saved = array_merge($saved, $activitysettings);
         $saved['instances'] = self::saved_virtual_rows($templateid);
@@ -157,6 +188,29 @@ class sections_config {
      * keyed by cmid.
      *
      * @param int $templateid
+     * @return array {actions, scopes, spaces, prompts}
+     */
+    /**
+     * How each template section names its copies: section id => [pattern, first number].
+     *
+     * @param int $templateid
+     * @return array
+     */
+    private static function saved_namings(int $templateid): array {
+        $namings = [];
+        foreach (template_section::get_records(['templateid' => $templateid]) as $record) {
+            $namings[(int) $record->get('sectionid')] = [
+                (string) $record->get('namingpattern'),
+                (int) $record->get('namingstart'),
+            ];
+        }
+        return $namings;
+    }
+
+    /**
+     * The saved settings of every activity of a template, each one keyed by course module id.
+     *
+     * @param int $templateid The template.
      * @return array {actions, scopes, spaces, prompts}
      */
     private static function saved_activity_settings(int $templateid): array {
@@ -233,6 +287,9 @@ class sections_config {
             'hasactivities' => !empty($rows),
             'rows' => $rows,
             'actions' => $actions,
+            // A template section shows how its copies are named.
+            'istemplatesection' => $behavior === template_section::BEHAVIOR_TEMPLATE,
+            'naming' => template_row_options::naming_context($saved['namings'][$sectionid] ?? ['', 1]),
         ];
     }
 

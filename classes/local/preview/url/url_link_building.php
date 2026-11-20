@@ -56,7 +56,7 @@ trait url_link_building {
         $geometric = '\x{25A0}-\x{25FF}';
         $emojis = '\x{1F000}-\x{1F6FF}';
 
-        if (preg_match('/^(\/|https?:|ftp:)/i', $fullurl) or preg_match('|^/|', $fullurl)) {
+        if (preg_match('/^(\/|https?:|ftp:)/i', $fullurl) || preg_match('|^/|', $fullurl)) {
             // encode extra chars in URLs - this does not make it always valid, but it helps with some UTF-8 problems
             // Thanks to 💩.la emojis count as valid, too.
             $allowed = "[" . $letters . $latin . $digits . $symbols . $arabic . $math . $othernumbers . $geometric .

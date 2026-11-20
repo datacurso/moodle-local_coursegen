@@ -18,10 +18,10 @@ namespace local_coursegen\external;
 
 use aiprovider_datacurso\local\plugin_settings;
 use context_course;
-use external_api;
-use external_function_parameters;
-use external_single_structure;
-use external_value;
+use core_external\external_api;
+use core_external\external_function_parameters;
+use core_external\external_single_structure;
+use core_external\external_value;
 use local_coursegen\event\generation_denied;
 use local_coursegen\event\generation_failed;
 use local_coursegen\event\generation_result_applied;
@@ -30,7 +30,6 @@ use local_coursegen\local\service\create_mod_service;
 use local_coursegen\local\service\module_job_service;
 
 defined('MOODLE_INTERNAL') || die();
-require_once($CFG->libdir . '/externallib.php');
 require_once($CFG->dirroot . '/course/externallib.php');
 require_once($CFG->dirroot . '/course/modlib.php');
 
@@ -135,7 +134,7 @@ class create_mod extends external_api {
                 'message' => get_string('resource_created', 'local_coursegen', $newcm->modulename),
                 'data' => [
                     'activityurl' => $url->out(false),
-                    'cmid' => $newcm->id,
+                    'cmid' => (int)$newcm->coursemodule,
                     'modname' => $newcm->modulename,
                 ],
             ];

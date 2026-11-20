@@ -156,6 +156,57 @@ body .tpl-left-panel .cg-thread-feed > .cg-log-entry--retrying .cg-log-msg {
   font-weight: 500;
 }
 
+/* A failure the person has to act on (the run stopped, no credits left...): a red block that stands out, as the amber
+   one of a retry does, whatever state the run is in. The id outweighs the rules of the steps of a paused run. */
+.tpl-left-panel #cgRetryCard {
+  margin: 6px 0;
+  padding-top: 12px;
+  padding-bottom: 12px;
+  border: 1px solid hsl(10 81% 48% / .35);
+  border-radius: 10px;
+  background: var(--danger-soft);
+}
+
+/* The alert icon of the title marks the block: no dot of the thread on it, nor the line that joins the steps. */
+.tpl-left-panel #cgRetryCard .cg-log-bar,
+.tpl-left-panel #cgRetryCard::before,
+.tpl-left-panel #cgRetryCard::after {
+  display: none !important;
+}
+
+/* Without the dot, the block keeps no gutter for it: the text starts at the edge of the block. */
+.tpl-left-panel #cgRetryCard.cg-log-entry {
+  padding-left: 14px !important;
+  padding-right: 14px !important;
+}
+
+.tpl-left-panel #cgRetryCard .cg-log-body {
+  padding-left: 0 !important;
+  margin-left: 0 !important;
+}
+
+.tpl-left-panel #cgRetryCard .cg-log-msg {
+  color: var(--fg);
+  font-weight: 400;
+}
+
+.tpl-left-panel #cgRetryCard .cg-log-msg > strong {
+  display: flex !important;
+  align-items: center;
+  gap: 6px;
+  color: var(--danger);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.tpl-left-panel #cgRetryCard .cg-log-msg > strong::before {
+  content: "";
+  flex: none;
+  width: 16px;
+  height: 16px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='hsl(10,81%25,48%25)' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z'/%3E%3Cline x1='12' y1='9' x2='12' y2='13'/%3E%3Cline x1='12' y1='17' x2='12.01' y2='17'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
 /* The thread has two feeds, one above the list of the activities and one under it. The step the run is on is the
    last of the feed that has the newest entries, so the last step of the upper feed is a plain one as soon as the
    lower feed has something. */

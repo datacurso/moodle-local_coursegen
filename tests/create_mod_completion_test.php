@@ -118,7 +118,7 @@ final class create_mod_completion_test extends \advanced_testcase {
         $cm = reset($cms);
         $this->assertSame(COMPLETION_TRACKING_AUTOMATIC, (int) $cm->completion);
         $this->assertSame(1, (int) $cm->completionview);
-        $this->assertSame([900001 => (int) $cm->id], $result['generatedcms']);
+        $this->assertSame(['cmid:900001' => (int) $cm->id], $result['generatedcms']);
     }
 
     /**

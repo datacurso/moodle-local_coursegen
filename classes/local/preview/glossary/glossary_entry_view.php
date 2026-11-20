@@ -43,7 +43,7 @@ trait glossary_entry_view {
      */
     protected function glossary_print_entry($entry, $mode = '', $hook = '', $printicons = 1, $displayformat = -1) {
         global $USER;
-        if ($entry->approved or ($USER->id == $entry->userid)) {
+        if ($entry->approved || ($USER->id == $entry->userid)) {
             return $this->glossary_show_entry_dictionary($entry, $mode, $hook, $printicons);
         }
         return '';
@@ -106,12 +106,10 @@ trait glossary_entry_view {
      * @return string
      */
     protected function glossary_print_entry_definition($entry) {
-        global $GLOSSARY_EXCLUDEENTRY;
-
         $definition = $entry->definition;
 
-        // Do not link self.
-        $GLOSSARY_EXCLUDEENTRY = $entry->id;
+        // Do not link self: the glossary filter reads this global by its core name.
+        $GLOBALS['GLOSSARY_EXCLUDEENTRY'] = $entry->id;
 
         $context = $this->context;
         $definition = file_rewrite_pluginfile_urls($definition, 'pluginfile.php', $context->id, 'mod_glossary', 'entry', $entry->id);
@@ -125,13 +123,14 @@ trait glossary_entry_view {
         $definitionformat = $entry->definitionformat ?? FORMAT_HTML;
         $text = format_text($definition, $definitionformat, $options);
 
-        // Stop excluding concepts from autolinking
-        unset($GLOSSARY_EXCLUDEENTRY);
+        // Stop excluding concepts from autolinking.
+        unset($GLOBALS['GLOSSARY_EXCLUDEENTRY']);
 
         if (!empty($entry->highlight)) {
             $text = highlight($entry->highlight, $text);
         }
-        if (isset($entry->footer)) {   // Unparsed footer info
+        // Unparsed footer info.
+        if (isset($entry->footer)) {
             $text .= $entry->footer;
         }
         return $text;
@@ -197,8 +196,14 @@ trait glossary_entry_view {
      * @param bool $printseparator
      * @return string
      */
-    protected function glossary_print_entry_lower_section($entry, $mode, $hook, $printicons, $aliases = true,
-            $printseparator = true) {
+    protected function glossary_print_entry_lower_section(
+        $entry,
+        $mode,
+        $hook,
+        $printicons,
+        $aliases = true,
+        $printseparator = true
+    ) {
         global $OUTPUT;
 
         $aliaseshtml = '';
@@ -218,5 +223,4 @@ trait glossary_entry_view {
             'printseparator' => $printseparator,
         ]);
     }
-
 }

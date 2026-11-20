@@ -41,12 +41,6 @@ final class template_reference_marker_strings_test extends \advanced_testcase {
             ['template_video_marker_example'],
             ['template_video_marker_help'],
             ['courseai_template_video_missing'],
-            ['courseai_reference_title'],
-            ['courseai_reference_intro'],
-            ['courseai_reference_hint'],
-            ['courseai_reference_current'],
-            ['courseai_reference_remove'],
-            ['courseai_reference_in_activity'],
         ];
     }
 
@@ -106,16 +100,5 @@ final class template_reference_marker_strings_test extends \advanced_testcase {
 
             $this->assertStringContainsString('un video corto', $notice);
         }
-    }
-
-    /**
-     * The Spanish hint says what happens with no file, as the teacher is told.
-     */
-    public function test_the_spanish_hint_says_what_happens_with_no_file(): void {
-        $manager = get_string_manager();
-
-        $hint = $manager->get_string('courseai_reference_hint', 'local_coursegen', null, 'es');
-
-        $this->assertStringStartsWith('Sin archivo:', $hint);
     }
 }

@@ -54,7 +54,8 @@ abstract class lesson_base {
     }
 
     /**
-     * Magic get: a get_$key method if there is one, else the raw property.
+     * Magic get: a get_$key method if there is one, else the raw property, or null when the row does not carry it
+     * (a lesson read from a result holds only the columns its tree names).
      *
      * @param string $key
      * @return mixed
@@ -63,7 +64,7 @@ abstract class lesson_base {
         if (method_exists($this, 'get_' . $key)) {
             return $this->{'get_' . $key}();
         }
-        return $this->properties->{$key};
+        return $this->properties->{$key} ?? null;
     }
 
     /**

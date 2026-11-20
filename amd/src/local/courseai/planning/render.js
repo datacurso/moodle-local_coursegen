@@ -21,6 +21,8 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+import {formatActivityCount} from 'local_coursegen/local/courseai/detailed/badges';
+
 /**
  * Append a new plan section card to the phase-2 planning list.
  *
@@ -69,7 +71,7 @@ export const addPlanSection = (section, ctx) => {
                 <h3 class="ps-section-name">${escapeHtml(section.name || '')}</h3>
                 <p class="ps-section-desc">${escapeHtml(section.description || '')}</p>
             </div>
-            <span class="ps-section-count">${activities.length} ${texts.courseai_activities_count}</span>
+            <span class="ps-section-count">${formatActivityCount(texts, activities.length)}</span>
         </div>
         <ul class="ps-activities">
             ${activities.map((activity) => {

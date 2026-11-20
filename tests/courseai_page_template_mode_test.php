@@ -66,7 +66,79 @@ final class courseai_page_template_mode_test extends \advanced_testcase {
             'freemodeactive' => !$templatemode,
             'subsectionsenabled' => false,
             'closeurl' => (new \moodle_url('/my/courses.php'))->out(false),
+            'canuploadsyllabus' => true,
+            'cangeneratecourseimages' => true,
+            'guidelinelist' => [
+                'listlabel' => 'Guidelines',
+                'emptytext' => 'No results',
+                'hasitems' => false,
+                'items' => [],
+            ],
+            'bs' => \local_coursegen\local\bootstrap_classes::get(),
         ]);
+    }
+
+    /**
+     * Template mode has the institutional guidelines: button, popover and one chip, inside the input bar.
+     */
+    public function test_template_mode_input_bar_has_the_guidelines_controls(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $html = $this->render_page(true);
+        $inputbarpos = strpos($html, 'data-region="tpl-input-bar"');
+        $this->assertNotFalse($inputbarpos);
+
+        foreach (
+            [
+                'id="tplBtnGuidelines"',
+                'id="tplGuidelinesPopover"',
+                'id="tplGuidelinesPopoverClose"',
+                'id="tplGuidelineSearch"',
+                'id="tplGuidelineList"',
+                'id="tplChipGuideline"',
+                'id="tplChipGuidelineName"',
+                'id="tplChipGuidelineView"',
+                'id="tplChipGuidelineRemove"',
+            ] as $needle
+        ) {
+            $this->assertSame(1, substr_count($html, $needle), "{$needle} must render exactly once");
+            $this->assertGreaterThan($inputbarpos, strpos($html, $needle), "{$needle} must be inside the input bar");
+        }
+        $this->assertSame(1, substr_count($html, 'class="chip chip-guideline hidden" id="tplChipGuideline"'));
+        $this->assertStringContainsString('aria-controls="tplGuidelinesPopover"', $html);
+        // The shared guideline handlers render the list into this wrapper region, so it must wrap the list.
+        $this->assertMatchesRegularExpression(
+            '/data-region="guideline-list-template">\s*<ul class="pop-list" id="tplGuidelineList"/',
+            $html
+        );
+    }
+
+    /**
+     * No id is repeated on the page, in either mode, and the free-mode guideline ids are untouched.
+     */
+    public function test_guideline_ids_are_unique_and_free_mode_keeps_its_own(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $freeids = ['btnDirectrices', 'guidelinesPopover', 'guidelineSearch', 'guidelineList', 'chipGuideline',
+            'chipGuidelineName', 'chipGuidelineEyeBtn', 'guidelineBadge'];
+        $free = $this->render_page(false);
+        $template = $this->render_page(true);
+
+        foreach ($freeids as $id) {
+            $this->assertSame(1, substr_count($free, 'id="' . $id . '"'), "free mode {$id}");
+            $this->assertSame(0, substr_count($template, 'id="' . $id . '"'), "template mode must not reuse {$id}");
+        }
+        foreach ([$free, $template] as $html) {
+            preg_match_all('/\sid="([^"]+)"/', $html, $matches);
+            $counts = array_count_values($matches[1]);
+            $repeated = array_keys(array_filter($counts, fn($count) => $count > 1));
+            $this->assertSame([], $repeated, 'Repeated ids: ' . implode(', ', $repeated));
+        }
+        foreach (['tplBtnGuidelines', 'tplChipGuideline', 'tplGuidelineList'] as $id) {
+            $this->assertSame(0, substr_count($free, 'id="' . $id . '"'), "free mode has no {$id}");
+        }
     }
 
     /**
@@ -105,7 +177,8 @@ final class courseai_page_template_mode_test extends \advanced_testcase {
         $inputbarpos = strpos($html, 'data-region="tpl-input-bar"');
         $this->assertNotFalse($inputbarpos, 'Input bar region missing');
 
-        foreach ([
+        foreach (
+            [
                 'id="tplPromptInput"',
                 'id="tplBtnSyllabus"',
                 'id="tplWithImages"',
@@ -113,7 +186,8 @@ final class courseai_page_template_mode_test extends \advanced_testcase {
                 'id="tplLangSelect"',
                 'id="tplModeGenerate"',
                 'id="tplChipSyllabus"',
-            ] as $needle) {
+            ] as $needle
+        ) {
             $pos = strpos($html, $needle);
             $this->assertNotFalse($pos, "Control {$needle} missing");
             $this->assertGreaterThan($inputbarpos, $pos, "Control {$needle} must render inside the input bar");
@@ -131,6 +205,63 @@ final class courseai_page_template_mode_test extends \advanced_testcase {
         $this->assertNotFalse($statspos, 'Stats span missing');
         $this->assertSame(1, substr_count($html, 'id="tplModeStats"'), 'Stats span must render exactly once');
         $this->assertLessThan($inputbarpos, $statspos, 'Stats span must not render inside the input bar');
+    }
+
+    /**
+     * The number of units is a hidden numeric field above the structure, shown only by the JS for a template with units.
+     */
+    public function test_template_mode_has_hidden_units_field_above_the_structure(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $html = $this->render_page(true);
+
+        $regionpos = strpos($html, 'data-region="local_coursegen/template/units"');
+        $this->assertNotFalse($regionpos, 'Units field region missing');
+        $this->assertGreaterThan(strpos($html, 'id="tplModeDetails"'), $regionpos);
+        $this->assertLessThan(strpos($html, 'id="tplModeStructure"'), $regionpos);
+
+        $this->assertMatchesRegularExpression(
+            '/<div[^>]*data-region="local_coursegen\/template\/units"[^>]*\shidden[\s>]/',
+            $html,
+            'The field stays hidden until a template with units is loaded'
+        );
+        // Bootstrap display utilities are !important and would beat the hidden attribute, showing an empty field.
+        preg_match('/<div[^>]*data-region="local_coursegen\/template\/units"[^>]*>/', $html, $wrapper);
+        $this->assertDoesNotMatchRegularExpression(
+            '/class="[^"]*\b(d-flex|d-block|d-inline|d-inline-flex|d-grid)\b/',
+            $wrapper[0],
+            'A display utility on the hidden element overrides the hidden attribute'
+        );
+        $this->assertMatchesRegularExpression(
+            '/<input(?=[^>]*type="number")(?=[^>]*min="1")(?=[^>]*data-action="local_coursegen\/template\/units-input")[^>]*>/',
+            $html
+        );
+        $this->assertStringContainsString(get_string('courseai_template_units_label', 'local_coursegen'), $html);
+    }
+
+    /**
+     * Free mode has no units field.
+     */
+    public function test_free_mode_has_no_units_field(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $this->assertStringNotContainsString('local_coursegen/template/units', $this->render_page(false));
+    }
+
+    /**
+     * The strings of the field exist in every pack that has the template form (English and Spanish).
+     */
+    public function test_units_strings_exist_in_english_and_spanish(): void {
+        foreach (['en', 'es'] as $lang) {
+            $string = [];
+            include(__DIR__ . "/../lang/{$lang}/local_coursegen.php");
+            foreach (['courseai_template_units_label', 'courseai_template_units_help'] as $key) {
+                $this->assertArrayHasKey($key, $string, "{$key} missing in {$lang}");
+                $this->assertNotSame('', $string[$key]);
+            }
+        }
     }
 
     /**
@@ -256,7 +387,10 @@ final class courseai_page_template_mode_test extends \advanced_testcase {
 
         $html = $this->render_page(false);
 
-        $this->assertStringNotContainsString('id="courseaiChecklist"', $html);
+        // Free mode keeps its own planned-structure checklist under the same id, so the pill is what is checked.
+        $this->assertStringNotContainsString('data-region="tpl-top-activities"', $html);
+        $this->assertStringNotContainsString('id="tplTopActivitiesToggle"', $html);
+        $this->assertStringNotContainsString('id="tplTopActivitiesPanel"', $html);
     }
 
     /**

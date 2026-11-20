@@ -98,8 +98,10 @@ trait workshop_plan_render {
      * @return pix_icon
      */
     protected function phase_switch_icon($phasecode): pix_icon {
-        if ($phasecode == workshop::PHASE_ASSESSMENT && $this->workshop->phase == workshop::PHASE_SUBMISSION
-                && $this->workshop->phaseswitchassessment) {
+        if (
+            $phasecode == workshop::PHASE_ASSESSMENT && $this->workshop->phase == workshop::PHASE_SUBMISSION
+                && $this->workshop->phaseswitchassessment
+        ) {
             return new pix_icon('i/scheduled', get_string('switchphaseauto', 'mod_workshop'));
         }
         return new pix_icon('i/marker', get_string('switchphase' . $phasecode, 'mod_workshop'));
@@ -166,8 +168,14 @@ trait workshop_plan_render {
      */
     protected function format_module_intro(): string {
         $options = ['noclean' => true, 'para' => false, 'filter' => true, 'context' => $this->context, 'overflowdiv' => true];
-        $intro = file_rewrite_pluginfile_urls((string) $this->workshop->intro, 'pluginfile.php', $this->context->id,
-            'mod_workshop', 'intro', null);
+        $intro = file_rewrite_pluginfile_urls(
+            (string) $this->workshop->intro,
+            'pluginfile.php',
+            $this->context->id,
+            'mod_workshop',
+            'intro',
+            null
+        );
         return trim(format_text($intro, (int) $this->workshop->introformat, $options, null));
     }
 }

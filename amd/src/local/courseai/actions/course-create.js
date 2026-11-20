@@ -21,7 +21,181 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+import {showReviewWarnings, validStartDate} from 'local_coursegen/local/courseai/actions/review-warnings';
 import {creationPercent} from 'local_coursegen/local/courseai/template/creation_progress';
+/** @type {string} AMD module implementing the ajax contract of the target-course autocomplete. */
+const TARGET_COURSE_DATASOURCE = 'local_coursegen/local/courseai/target-course-datasource';
+
+/**
+ * Controller of the "create new / import into existing" controls. The page has a
+ * single review panel, so it is wired once and reused on every panel show.
+ *
+ * @type {Object|null}
+ */
+let importControls = null;
+
+/**
+ * Replace the options of a category select with an empty choice plus the categories.
+ *
+ * @param {HTMLSelectElement} select
+ * @param {Array<{id: number, pathname: string}>} categories
+ * @param {string} emptyLabel
+ * @returns {void}
+ */
+const fillCategoryOptions = (select, categories, emptyLabel) => {
+    select.innerHTML = '';
+    const emptyOpt = document.createElement('option');
+    emptyOpt.value = '';
+    emptyOpt.textContent = '-- ' + emptyLabel + ' --';
+    select.appendChild(emptyOpt);
+    categories.forEach((cat) => {
+        const opt = document.createElement('option');
+        opt.value = String(cat.id);
+        opt.textContent = cat.pathname;
+        select.appendChild(opt);
+    });
+};
+
+/**
+ * Enhance a select as a core autocomplete without ever throwing: a plain select still works.
+ *
+ * Signature: enhance(selector, tags, ajax, placeholder, caseSensitive, showSuggestions,
+ * noSelectionString). `ajax` is an AMD MODULE NAME — passing a label there made RequireJS
+ * try to load a module called "Category" ("Script error for 'Category'").
+ *
+ * @param {Object} FormAutocomplete core/form-autocomplete module
+ * @param {HTMLSelectElement} select
+ * @param {string|boolean} ajaxModule AMD module name implementing transport/processResults, or false
+ * @param {string} placeholder
+ * @param {string} noResults
+ * @returns {void}
+ */
+const enhanceSelect = (FormAutocomplete, select, ajaxModule, placeholder, noResults) => {
+    try {
+        FormAutocomplete.enhance(select, false, ajaxModule, placeholder, false, true, noResults);
+    } catch (e) {
+        // Fall through — plain select still works.
+    }
+};
+
+/**
+ * Whether a category is picked in the new-course category field of the review panel.
+ *
+ * Read from the DOM each time: the field is enhanced by core/form-autocomplete, which
+ * keeps the original select in sync and dispatches its change event.
+ *
+ * @returns {boolean}
+ */
+const isNewCategoryPicked = () => {
+    const select = document.getElementById('reviewCategory');
+    return parseInt(select?.value || '', 10) > 0;
+};
+
+/**
+ * Wire the import-into-existing-course controls of the review panel (ticket #9539).
+ *
+ * Returns null when the site setting is off (the markup is not rendered) so the
+ * panel behaves exactly as before.
+ *
+ * @param {HTMLElement} panel #courseReviewPanel
+ * @param {HTMLButtonElement} confirmBtn
+ * @param {Object} texts
+ * @param {Object} FormAutocomplete core/form-autocomplete module
+ * @returns {Object|null} {reset, getMode, getTargetCourseId, syncConfirm} or null when disabled
+ */
+const setupImportControls = (panel, confirmBtn, texts, FormAutocomplete) => {
+    if (panel.dataset.importExistingEnabled !== '1') {
+        return null;
+    }
+    const modeSelect = document.getElementById('targetMode');
+    const targetFields = document.getElementById('importTargetFields');
+    const categorySelect = document.getElementById('importCategory');
+    const courseGroup = document.getElementById('importCourseGroup');
+    const fullnameGroup = document.getElementById('reviewFullnameGroup');
+    const shortnameGroup = document.getElementById('reviewShortnameGroup');
+    const newCategoryGroup = document.getElementById('reviewCategoryGroup');
+    const startdateGroup = document.getElementById('reviewStartdateGroup');
+    if (!modeSelect || !targetFields || !categorySelect || !courseGroup) {
+        return null;
+    }
+
+    // core/form-autocomplete does not re-read the underlying select once enhanced, so
+    // the course field is rebuilt from its pristine markup (and re-enhanced) whenever
+    // the category changes: the previous selection no longer belongs to the category.
+    const courseFieldHtml = courseGroup.innerHTML;
+    let courseSelect = null;
+    let categoryEnhanced = false;
+
+    const getMode = () => (modeSelect.value === 'import' ? 'import' : 'new');
+    const getTargetCourseId = () => {
+        const id = parseInt(courseSelect?.value || '', 10);
+        return id > 0 ? id : 0;
+    };
+    const syncConfirm = () => {
+        confirmBtn.disabled = getMode() === 'import' ? getTargetCourseId() === 0 : !isNewCategoryPicked();
+    };
+    const buildCourseField = () => {
+        courseGroup.innerHTML = courseFieldHtml;
+        courseSelect = courseGroup.querySelector('select');
+        if (!courseSelect) {
+            return;
+        }
+        // Core dispatches a native change on the select when a suggestion is picked.
+        courseSelect.addEventListener('change', syncConfirm);
+        enhanceSelect(
+            FormAutocomplete,
+            courseSelect,
+            TARGET_COURSE_DATASOURCE,
+            texts.courseai_import_course_placeholder || '',
+            texts.courseai_no_results || ''
+        );
+    };
+    const applyMode = () => {
+        const importing = getMode() === 'import';
+        targetFields.style.display = importing ? '' : 'none';
+        // The copy keeps the target's names and category: those fields are for new courses.
+        if (fullnameGroup) { fullnameGroup.style.display = importing ? 'none' : ''; }
+        if (shortnameGroup) { shortnameGroup.style.display = importing ? 'none' : ''; }
+        if (newCategoryGroup) { newCategoryGroup.style.display = importing ? 'none' : ''; }
+        if (startdateGroup) { startdateGroup.style.display = importing ? 'none' : ''; }
+        syncConfirm();
+    };
+
+    modeSelect.addEventListener('change', applyMode);
+    categorySelect.addEventListener('change', () => {
+        buildCourseField();
+        syncConfirm();
+    });
+    buildCourseField();
+
+    return {
+        /**
+         * Put the controls back to their initial state for a (re)opened panel.
+         *
+         * @param {Array<{id: number, pathname: string}>} categories same list as #reviewCategory
+         * @returns {void}
+         */
+        reset: (categories) => {
+            fillCategoryOptions(categorySelect, categories, texts.courseai_import_category_label || '');
+            if (!categoryEnhanced) {
+                categoryEnhanced = true;
+                enhanceSelect(
+                    FormAutocomplete,
+                    categorySelect,
+                    false,
+                    texts.courseai_import_category_placeholder || '',
+                    texts.courseai_no_results || ''
+                );
+            }
+            buildCourseField();
+            modeSelect.value = 'new';
+            applyMode();
+        },
+        getMode,
+        getTargetCourseId,
+        syncConfirm,
+    };
+};
 
 /**
  * Show the inline course-review panel, load categories from the backend,
@@ -32,13 +206,18 @@ import {creationPercent} from 'local_coursegen/local/courseai/template/creation_
  * @param {Object}   texts
  * @param {Function} getCourseSettings
  * @param {Object}   FormAutocomplete  - core/form-autocomplete module
+ * @param {boolean}  allowImport       - Offer the import into an existing course (only the free creation has it)
  * @returns {Promise<Object|null>}
  */
-export const showCourseReviewPanel = async(state, elements, texts, getCourseSettings, FormAutocomplete) => {
+export const showCourseReviewPanel = async(
+    state, elements, texts, getCourseSettings, FormAutocomplete, allowImport = true
+) => {
     const panel = document.getElementById('courseReviewPanel');
     const fullnameInput = document.getElementById('reviewFullname');
     const shortnameInput = document.getElementById('reviewShortname');
     const categorySelect = document.getElementById('reviewCategory');
+    const startdateInput = document.getElementById('reviewStartdate');
+    const warningsList = document.getElementById('reviewWarnings');
     const confirmBtn = document.getElementById('reviewConfirmBtn');
     const cancelBtn = document.getElementById('reviewCancelBtn');
 
@@ -55,44 +234,53 @@ export const showCourseReviewPanel = async(state, elements, texts, getCourseSett
 
     fullnameInput.value = settingsData?.fullname || state.courseTitle || '';
     shortnameInput.value = settingsData?.shortname || '';
+    if (startdateInput) {
+        startdateInput.value = '';
+    }
+    showReviewWarnings(warningsList, settingsData?.warnings);
 
     const defaultCategoryId = settingsData?.category || 0;
     const categories = settingsData?.categories || [];
 
-    categorySelect.innerHTML = '';
-    const emptyOpt = document.createElement('option');
-    emptyOpt.value = '';
-    emptyOpt.textContent = '-- ' + texts.courseai_review_category_label + ' --';
-    categorySelect.appendChild(emptyOpt);
-
-    categories.forEach((cat) => {
-        const opt = document.createElement('option');
-        opt.value = String(cat.id);
-        opt.textContent = cat.pathname;
-        categorySelect.appendChild(opt);
-    });
+    fillCategoryOptions(categorySelect, categories, texts.courseai_review_category_label || '');
 
     if (defaultCategoryId > 0) {
         categorySelect.value = String(defaultCategoryId);
     }
 
-    try {
-        // Signature: enhance(selector, tags, ajax, placeholder, caseSensitive,
-        // showSuggestions, noSelectionString). `ajax` is an AMD MODULE NAME — passing
-        // the label here made RequireJS try to load a module called "Category"
-        // ("Script error for 'Category'"). There is no remote datasource, so ajax=false.
-        FormAutocomplete.enhance(
-            categorySelect,
-            false,
-            false,
-            texts.courseai_review_category_label || '',
-            false,
-            true,
-            texts.courseai_no_results || ''
-        );
-    } catch (e) {
-        // Fall through — plain select still works.
+    // There is no remote datasource for the new-course category, so ajax=false.
+    enhanceSelect(
+        FormAutocomplete,
+        categorySelect,
+        false,
+        texts.courseai_review_category_label || '',
+        texts.courseai_no_results || ''
+    );
+
+    if (!importControls) {
+        importControls = setupImportControls(panel, confirmBtn, texts, FormAutocomplete);
     }
+    if (importControls) {
+        // Same category list as the new-course field: already filtered by moodle/course:create,
+        // which is exactly the permission the target's category needs.
+        importControls.reset(categories);
+    }
+    // The import belongs to the free creation: a course made from a template is always a new course.
+    const targetModeGroup = document.getElementById('targetModeGroup');
+    if (targetModeGroup) {
+        targetModeGroup.style.display = allowImport ? '' : 'none';
+    }
+
+    // A new course is never submitted without a category: the one proposed by the AI
+    // service is pre-selected only when it can be used, so the field may start empty.
+    const syncConfirm = () => {
+        if (importControls) {
+            importControls.syncConfirm();
+            return;
+        }
+        confirmBtn.disabled = !isNewCategoryPicked();
+    };
+    syncConfirm();
 
     return new Promise((resolve) => {
         let resolved = false;
@@ -100,21 +288,44 @@ export const showCourseReviewPanel = async(state, elements, texts, getCourseSett
         const cleanup = () => {
             confirmBtn.removeEventListener('click', onConfirm);
             cancelBtn.removeEventListener('click', onCancel);
+            categorySelect.removeEventListener('change', syncConfirm);
         };
         const hidePanel = () => { panel.style.display = 'none'; };
 
         const onConfirm = () => {
             if (resolved) { return; }
+            const targetMode = importControls ? importControls.getMode() : '';
+            const targetCourseId = importControls ? importControls.getTargetCourseId() : 0;
+            if (targetMode === 'import' && !targetCourseId) {
+                // Never submit an import without a target; the button is disabled anyway.
+                confirmBtn.disabled = true;
+                return;
+            }
+            if (targetMode !== 'import' && !isNewCategoryPicked()) {
+                // Never submit a new course without a category; the button is disabled anyway.
+                confirmBtn.disabled = true;
+                return;
+            }
             resolved = true;
             cleanup();
             hidePanel();
             const overrides = {};
+            if (targetMode === 'import') {
+                // The copy keeps the target's names and category: no fullname/shortname/category.
+                overrides.targetmode = 'import';
+                overrides.targetcourseid = targetCourseId;
+                resolve(overrides);
+                return;
+            }
+            if (targetMode === 'new') { overrides.targetmode = 'new'; }
             const fullname = fullnameInput.value.trim();
             if (fullname) { overrides.fullname = fullname; }
             const shortname = shortnameInput.value.trim();
             if (shortname) { overrides.shortname = shortname; }
             const category = parseInt(categorySelect.value, 10);
             if (category > 0) { overrides.category = category; }
+            const startdate = validStartDate(startdateInput ? startdateInput.value : '');
+            if (startdate) { overrides.startdate = startdate; }
             resolve(overrides);
         };
 
@@ -128,13 +339,15 @@ export const showCourseReviewPanel = async(state, elements, texts, getCourseSett
 
         confirmBtn.addEventListener('click', onConfirm);
         cancelBtn.addEventListener('click', onCancel);
+        categorySelect.addEventListener('change', syncConfirm);
         panel.style.display = '';
         setTimeout(() => fullnameInput.focus(), 100);
     });
 };
 
 /**
- * Call the createCourse WS, animate progress, then invoke showCompletionView on success.
+ * Call the createCourse WS, animate progress, then invoke showCompletionView on success
+ * (or showImportProgressView when the backend queued an import into an existing course).
  *
  * @param {Object}   state
  * @param {Object}   elements
@@ -143,12 +356,14 @@ export const showCourseReviewPanel = async(state, elements, texts, getCourseSett
  * @param {Object}   Notification
  * @param {Function} createCourse
  * @param {Function} showCompletionView
+ * @param {Function} showImportProgressView
  * @param {Object|null} overrides
  * @param {Function|null} onError Called with the error instead of showing it; resolves true to try again.
  * @returns {Promise<Object|null>}
  */
 export const createCourseFromSession = async(
-    state, elements, texts, stepsUi, Notification, createCourse, showCompletionView, overrides = null, onError = null
+    state, elements, texts, stepsUi, Notification, createCourse, showCompletionView, showImportProgressView,
+    overrides = null, onError = null
 ) => {
     if (!state.sessionid) { return; }
 
@@ -195,6 +410,9 @@ export const createCourseFromSession = async(
             if (overrides.fullname) { payload.fullname = overrides.fullname; }
             if (overrides.shortname) { payload.shortname = overrides.shortname; }
             if (overrides.category) { payload.category = overrides.category; }
+            if (overrides.startdate) { payload.startdate = overrides.startdate; }
+            if (overrides.targetmode) { payload.targetmode = overrides.targetmode; }
+            if (overrides.targetcourseid) { payload.targetcourseid = overrides.targetcourseid; }
         }
         // The creation may take minutes; what is not allowed is silence, so the clock starts again at each news.
         let idleTimer = null;
@@ -232,7 +450,14 @@ export const createCourseFromSession = async(
             throw new Error(result?.message || texts.courseai_error_create_course);
         }
 
-        showCompletionView(result);
+        if (result.importqueued) {
+            // courseid is the staging course. The import into the target either runs in an
+            // adhoc task (importstate=queued, the view polls) or already ran in this request
+            // (importstate=done|failed, the view renders the terminal state without polling).
+            showImportProgressView({...result, recordid: state.sessionid});
+        } else {
+            showCompletionView(result);
+        }
         return result;
     } catch (error) {
         if (progressInterval) { clearInterval(progressInterval); }
@@ -241,7 +466,8 @@ export const createCourseFromSession = async(
         if (onError) {
             if (await onError(error)) {
                 return createCourseFromSession(
-                    state, elements, texts, stepsUi, Notification, createCourse, showCompletionView, overrides, onError
+                    state, elements, texts, stepsUi, Notification, createCourse, showCompletionView,
+                    showImportProgressView, overrides, onError
                 );
             }
             return null;

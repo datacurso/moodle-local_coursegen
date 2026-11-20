@@ -31,11 +31,14 @@ import {
     closeActivity,
     failActivity,
     openChecklist,
+    showAddedStructure,
+    showUnitCopies,
     showRepeatProgress,
 } from 'local_coursegen/local/courseai/template/generation_checklist';
 import {showWorkingIndicator} from 'local_coursegen/local/courseai/ui/feedback-progress';
 import {createRepeatTracker} from 'local_coursegen/local/courseai/template/repeat_progress';
-import {resetStatus, showNotice, showPicture} from 'local_coursegen/local/courseai/template/generation_status';
+import {resetStatus, showNotice} from 'local_coursegen/local/courseai/template/generation_status';
+import {markImagesTotalKnown, onPicture} from 'local_coursegen/local/courseai/template/images_panel';
 
 const repeats = createRepeatTracker();
 
@@ -118,11 +121,18 @@ const reportRepeats = (uid) => {
     }
 };
 
+/** The stages that start once every activity is written, when the number of pictures is final. */
+const TOTAL_FINAL_STAGES = ['activity_images', 'saving'];
+
 /** One handler per stream event type, keyed the way the server names them. */
 const EVENT_HANDLERS = {
     template_stage: (data, progress, paintStage) => {
         resetStatus();
         paintStage(data.stage);
+        // Once every activity is written no new picture can appear: the images pill shows its final total.
+        if (TOTAL_FINAL_STAGES.includes(data.stage)) {
+            markImagesTotalKnown();
+        }
         return '';
     },
     // The line under the header's title is often scrolled out of sight on the right panel: what the person
@@ -132,7 +142,18 @@ const EVENT_HANDLERS = {
         return '';
     },
     template_image: (data) => {
-        showPicture(data).then((text) => text && showWorkingIndicator({}, text)).catch(() => undefined);
+        // The pictures are counted and listed by the images pill only, with readable names.
+        onPicture(data);
+        return '';
+    },
+    // What the guideline added after the template's own sections joins the structure on the right, and so the list.
+    template_structure: (data) => {
+        showAddedStructure(data);
+        return '';
+    },
+    // The copies of the template section, one per unit of the syllabus, are drawn after the section they repeat.
+    template_unit_copies: (data) => {
+        showUnitCopies(data);
         return '';
     },
     review_needed: () => 'review',

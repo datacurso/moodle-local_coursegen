@@ -103,7 +103,8 @@ final class course_sections_saved_config_test extends \advanced_testcase {
 
         $section2select = $this->extract_behavior_select($html, (int) $section2->id);
         $section2options = substr_count($section2select, '<option');
-        $this->assertSame(3, $section2options);
+        // A section that saved exclude offers every behavior, so the stored state is never hidden.
+        $this->assertSame(4, $section2options);
         $this->assertMatchesRegularExpression('/<option value="exclude"[^>]*\sselected/', $section2select);
 
         $section0 = $modinfo->get_section_info(0);

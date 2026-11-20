@@ -17,6 +17,7 @@
 namespace local_coursegen\local\streaming;
 
 use local_coursegen\external\finish_template_generation;
+use local_coursegen\local\service\license_failure;
 
 /**
  * The creation of the course of a finished generation, told to the browser as it goes.
@@ -37,7 +38,7 @@ class finish_stream {
     /** @var browser_output Writer to the browser. */
     private $output;
 
-    /** @var callable|null Builds the course: (sessionid, fullname, shortname, category, progress) => array. */
+    /** @var callable|null Builds the course: (sessionid, fullname, shortname, category, progress, startdate) => array. */
     private $builder;
 
     /**
@@ -58,24 +59,28 @@ class finish_stream {
      * @param string $fullname Course name chosen at the review.
      * @param string $shortname Course shortname chosen at the review.
      * @param int $category Course category chosen at the review.
+     * @param string $startdate Course start day (Y-m-d) chosen at the review, empty for none.
      */
-    public function run(int $sessionid, string $fullname, string $shortname, int $category): void {
+    public function run(int $sessionid, string $fullname, string $shortname, int $category, string $startdate = ''): void {
         $this->prepare_output();
         $this->output->send(sse_formatter::comment('open'));
 
         try {
             $result = ($this->builder)($sessionid, $fullname, $shortname, $category, function (string $step, int $done = 0, int $total = 0) {
                 $this->send_progress($step, $done, $total);
-            });
+            }, $startdate);
             $this->output->send(sse_formatter::event('result', json_encode($result)));
         } catch (\Throwable $e) {
-            error_log('local_coursegen: creating the course of session ' . $sessionid . ' failed: ' . get_class($e) . ': '
-                . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
+            debugging(
+                'local_coursegen: creating the course of session ' . $sessionid . ' failed: ' . get_class($e) . ': '
+                    . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine(),
+                DEBUG_DEVELOPER
+            );
             $code = $e instanceof \moodle_exception ? (string) $e->errorcode : 'failed';
             $this->output->send(sse_formatter::event('failed', json_encode([
                 'errorcode' => $code,
                 'retryable' => self::is_retryable($e),
-                'message' => get_string('error_course_creation_failed', 'local_coursegen'),
+                'message' => license_failure::message($e) ?? get_string('error_course_creation_failed', 'local_coursegen'),
             ])));
         }
         $this->output->send(sse_formatter::event('done', '{}'));

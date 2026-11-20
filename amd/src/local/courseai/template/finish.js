@@ -87,7 +87,7 @@ export const reviewAndCreate = async(host, state, tplState, sessionId) => {
 
     showFinishView();
     actions.showReviewState();
-    const overrides = await actions.showCourseReviewPanel(getTemplateCourseSettings);
+    const overrides = await actions.showCourseReviewPanel(getTemplateCourseSettings, false);
     if (overrides === null) {
         return null;
     }
@@ -99,7 +99,7 @@ export const reviewAndCreate = async(host, state, tplState, sessionId) => {
         create,
         // Whatever stops the creation, the person is offered to try again instead of a technical error: the
         // run is already generated and the server builds the course only once.
-        (error) => askToRetry(error?.errorcode || error?.code || '')
+        (error) => askToRetry(error?.errorcode || error?.code || '', error?.message || '')
     );
 };
 

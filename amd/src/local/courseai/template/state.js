@@ -41,6 +41,7 @@
  * @param {string} [inputbar.lang] - Course language code.
  * @param {number} [inputbar.syllabusdraftitemid] - Draft area of the attached syllabus.
  * @param {string} [inputbar.syllabusfilename] - Attached syllabus filename.
+ * @param {number} [inputbar.guidelineid] - Institutional guideline (system instruction) id, 0 for none.
  * @returns {Object}
  */
 export const createTemplateState = (inputbar = {}) => ({
@@ -48,14 +49,42 @@ export const createTemplateState = (inputbar = {}) => ({
     nolimit: false,
     remainingSections: 0,
     sections: [],
+    // True once the service added sections after the template's own (see added_structure.js).
+    addedSections: false,
     typeLabels: {},
+    // Units of the template and the number the professor wants, only for a format that has units (0 = none).
+    unitcount: 0,
+    maxunits: 0,
+    units: 0,
     // Input-bar values, ready for the future generation payload.
     prompt: inputbar.prompt || '',
     generateimages: inputbar.generateimages || 0,
     lang: inputbar.lang || '',
     syllabusdraftitemid: inputbar.syllabusdraftitemid || 0,
     syllabusfilename: inputbar.syllabusfilename || '',
+    guidelineid: inputbar.guidelineid || 0,
 });
+
+/**
+ * The numeric id of a guideline, from the id the page lists it under ('si_12') or a number.
+ *
+ * @param {string|number|null} value
+ * @returns {number} 0 when there is no usable id.
+ */
+export const guidelineIdOf = (value) => {
+    const match = String(value ?? '').match(/^(?:si_)?(\d+)$/);
+    return match ? parseInt(match[1], 10) : 0;
+};
+
+/**
+ * Choose the guideline of the run, replacing any previous one; null clears it.
+ *
+ * @param {Object} state
+ * @param {string|number|null} value
+ */
+export const setGuideline = (state, value) => {
+    state.guidelineid = guidelineIdOf(value);
+};
 
 /**
  * Populate state from a get_template_structure response.
@@ -65,13 +94,21 @@ export const createTemplateState = (inputbar = {}) => ({
  */
 export const applyStructureResponse = (state, data) => {
     state.loaded = true;
+    state.addedSections = false;
     state.nolimit = !!data.nolimit;
     state.remainingSections = data.remainingsections || 0;
+    state.unitcount = data.unitcount || 0;
+    state.maxunits = data.maxunits || 0;
+    state.units = state.unitcount;
     state.sections = (data.sections || []).map((section) => ({
         id: section.id,
+        // The section's number in the template: the copies of a template section are put after it.
+        num: section.num,
         name: section.name,
         behavior: section.behavior || 'aimodify',
         locked: !!section.locked,
+        // Where a section hangs, for a course whose format has subsections.
+        depth: section.depth || 0,
         collapsed: false,
         activities: (section.activities || []).map((activity) => ({
             id: activity.id,
@@ -114,6 +151,105 @@ export const applyStructureResponse = (state, data) => {
             spacechoice: null,
         })),
     }));
+};
+
+/**
+ * Set the number of units the professor wants, kept between 1 and the maximum.
+ *
+ * A value that is not a number goes back to the template's own count.
+ *
+ * @param {Object} state
+ * @param {string|number} raw What the field holds.
+ */
+export const setUnits = (state, raw) => {
+    const value = parseInt(raw, 10);
+    if (Number.isNaN(value)) {
+        state.units = state.unitcount;
+        return;
+    }
+    state.units = Math.min(state.maxunits, Math.max(1, value));
+};
+
+/**
+ * The number of units to ask the server for, null when the template's own count stands.
+ *
+ * @param {Object} state
+ * @returns {number|null}
+ */
+export const requestedUnits = (state) => {
+    if (!state.unitcount || state.units === state.unitcount) {
+        return null;
+    }
+    return state.units;
+};
+
+/**
+ * The end of the subtree that starts at a section: the index after its last deeper section.
+ *
+ * @param {Object[]} sections
+ * @param {number} start
+ * @returns {number}
+ */
+const subtreeEnd = (sections, start) => {
+    let end = start + 1;
+    while (end < sections.length && sections[end].depth > sections[start].depth) {
+        end++;
+    }
+    return end;
+};
+
+/** The actions of a template activity that is copied into the course as it is, without the AI. */
+const COPIED_ACTIONS = ['keep', 'reference'];
+
+/**
+ * Whether a row is copied into the course as it is.
+ *
+ * @param {Object} activity
+ * @returns {boolean}
+ */
+const isCopied = (activity) => !activity.isinstance && COPIED_ACTIONS.includes(activity.action);
+
+/**
+ * How many sections and activities the course will have for the number of units asked.
+ *
+ * Mirrors the server resize: a unit is a top section with subsections; more units copy the last unit
+ * (its subsections and the activities the AI writes in them), fewer drop whole units from the end with
+ * everything inside them.
+ *
+ * @param {Object} state
+ * @returns {{sections: number, activities: number, copied: number}} copied: the activities copied as they are.
+ */
+export const countsForUnits = (state) => {
+    const sections = state.sections;
+    const total = (list, only) => list.reduce((sum, section) => sum + section.activities.filter(only).length, 0);
+    const any = () => true;
+    const counts = {sections: sections.length, activities: total(sections, any), copied: total(sections, isCopied)};
+
+    const units = [];
+    sections.forEach((section, index) => {
+        if (section.depth === 0 && index + 1 < sections.length && sections[index + 1].depth > 0) {
+            units.push(index);
+        }
+    });
+    if (state.addedSections || !state.unitcount || !units.length || state.units === units.length) {
+        return counts;
+    }
+
+    if (state.units < units.length) {
+        units.slice(state.units).forEach((start) => {
+            const dropped = sections.slice(start, subtreeEnd(sections, start));
+            counts.sections -= dropped.length;
+            counts.activities -= total(dropped, any);
+            counts.copied -= total(dropped, isCopied);
+        });
+        return counts;
+    }
+
+    const last = sections.slice(units[units.length - 1], subtreeEnd(sections, units[units.length - 1]));
+    const copies = state.units - units.length;
+    counts.sections += copies * last.length;
+    counts.activities += copies * total(last, (activity) => activity.isinstance);
+    return counts;
 };
 
 /**
@@ -313,7 +449,12 @@ export const pickedSpaceActivities = (state) => allActivities(state)
  */
 export const toggleSectionCollapsed = (state, sectionIndex) => {
     const section = state.sections[sectionIndex];
-    if (section) {
-        section.collapsed = !section.collapsed;
+    if (!section) {
+        return;
+    }
+    section.collapsed = !section.collapsed;
+    // The subsections that follow a unit and are deeper than it are part of it, so they open and close with it.
+    for (let next = sectionIndex + 1; next < state.sections.length && state.sections[next].depth > section.depth; next++) {
+        state.sections[next].collapsed = section.collapsed;
     }
 };

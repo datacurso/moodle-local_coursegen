@@ -26,7 +26,7 @@
 
 import {renderMarkdownInline} from 'local_coursegen/local/courseai/ui/markdown';
 import {buildActivityDetailContent} from './detail-content';
-import {recalculateEntryImageCount, setImageBadge, updateDetailedHeaderStats} from './badges';
+import {formatActivityCount, recalculateEntryImageCount, setImageBadge, updateDetailedHeaderStats} from './badges';
 import {buildActivityItem, buildActivityActionControls, attachSkeletonProgress} from './activity-dom';
 import {createDetailedSectionRow} from './section-row';
 import {ensureSubsectionRendered, refreshSubsectionMeta} from './subsection-row';
@@ -234,9 +234,8 @@ export const refreshSectionMeta = (ctx, sectionId) => {
         return;
     }
     const count = meta.bodyEl.querySelectorAll('.activity[data-activity-id]:not([data-cg-transient])').length;
-    const label = (texts && texts.courseai_activities_count) || 'activities';
     meta.total = count;
-    meta.metaEl.textContent = count + ' ' + label;
+    meta.metaEl.textContent = formatActivityCount(texts, count);
 };
 
 /**

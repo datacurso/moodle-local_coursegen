@@ -29,7 +29,9 @@ use course_modinfo;
  * - how its completion is tracked, the rules of its module that do it, and its group mode and grouping;
  * - its tags and the competencies it is linked to.
  *
- * The template's dates are never copied: not the one it must be completed by, nor the dates of a restriction.
+ * The date an activity must be completed by is never copied. The dates of a restriction are moved by the distance
+ * between the start dates of the new course and of the template's course (see {@see self::date_shift()}), so a
+ * restriction opens at the same point of the course; when the new course has no start date they are left out.
  * What the course sets as a whole around its activities (the criteria that complete it) is copied by
  * {@see template_course_completion_copier}.
  *
@@ -50,15 +52,18 @@ final class template_settings_copier {
      * @param int $templateid The template.
      * @param int $courseid The new course.
      * @param array $payloadactivities Every activity entry of the result, kept ones included.
-     * @param array $generatedcms Payload cmid => created cmid, for the generated activities.
+     * @param array $generatedcms Activity key (generated_activity_key) => created cmid, for the generated activities.
      * @param array $keptcms Base course cmid => created cmid, for the copied kept activities.
+     * @param template_section_map|null $sectionmap Where each section of the template went in the new course;
+     *     null when the sections are the template's own.
      */
     public static function copy_into(
         int $templateid,
         int $courseid,
         array $payloadactivities,
         array $generatedcms,
-        array $keptcms
+        array $keptcms,
+        ?template_section_map $sectionmap = null
     ): void {
         global $DB;
 
@@ -68,17 +73,18 @@ final class template_settings_copier {
         }
         $counterparts = kept_link_rewriter::counterparts($payloadactivities, $generatedcms, $keptcms);
         $created = self::created_by_source($payloadactivities, $generatedcms, $keptcms);
-        $sections = self::sections_by_number($basecourseid, $courseid);
+        $sections = self::sections_by_number($basecourseid, $courseid, $sectionmap);
+        $delta = self::date_shift($basecourseid, $courseid);
         $sources = $created === [] ? [] : $DB->get_records_list('course_modules', 'id', array_keys($created));
 
         $maps = self::maps($basecourseid, $courseid, $counterparts, $created, $sources, $sections);
         $existing = template_counterparts::existing_ids($courseid);
         foreach ($sections as $pair) {
-            self::apply_section($courseid, $pair, $maps, $existing);
+            self::apply_section($courseid, $pair, $maps, $existing, $delta);
         }
         foreach ($created as $sourcecmid => $cmids) {
             foreach ($cmids as $cmid) {
-                self::apply_activity((int) $cmid, $sources[$sourcecmid] ?? null, $maps, $existing);
+                self::apply_activity((int) $cmid, $sources[$sourcecmid] ?? null, $maps, $existing, $delta);
             }
         }
         template_course_completion_copier::copy($basecourseid, $courseid, $counterparts);
@@ -87,12 +93,41 @@ final class template_settings_copier {
     }
 
     /**
+     * How many seconds the dates of the template's restrictions move in the new course.
+     *
+     * It is the distance between the start dates of the two courses, in whole days: a restriction written against
+     * the template's start moves with the new start, whatever the time of day the start date was saved with. The
+     * days are counted as 86400 seconds each, so across a change of daylight saving time a restricted moment can
+     * read one hour off on the wall clock; that is accepted to keep the shift a plain number of days.
+     *
+     * A course without a start date has nothing to measure from: when it is the template's, or both courses start
+     * together, the dates are kept as they are (0), and when it is the new course's, null says the dates are left out.
+     *
+     * @param int $basecourseid
+     * @param int $courseid
+     * @return int|null Seconds to add to each date, or null to leave the dates out.
+     */
+    private static function date_shift(int $basecourseid, int $courseid): ?int {
+        global $DB;
+
+        $basestart = (int) $DB->get_field('course', 'startdate', ['id' => $basecourseid]);
+        $newstart = (int) $DB->get_field('course', 'startdate', ['id' => $courseid]);
+        if ($newstart <= 0) {
+            return null;
+        }
+        if ($basestart <= 0 || $basestart === $newstart) {
+            return 0;
+        }
+        return (int) round(($newstart - $basestart) / DAYSECS) * DAYSECS;
+    }
+
+    /**
      * What each table a setting refers to maps to in the new course.
      *
      * @param int $basecourseid
      * @param int $courseid
-     * @param array<int,int> $counterparts Template cmid => new cmid.
-     * @param array<int,int[]> $created Template cmid => created cmids.
+     * @param array $counterparts Template cmid => new cmid.
+     * @param array $created Template cmid => created cmids.
      * @param \stdClass[] $sources The records of the template activities.
      * @param array $sections The pairs of sections.
      * @return array<string,array<int,int>>
@@ -143,7 +178,7 @@ final class template_settings_copier {
         foreach ($payloadactivities as $entry) {
             $behavior = $entry['template_behavior'] ?? [];
             $sourcecmid = (int) ($behavior['template_source_cmid'] ?? 0);
-            $cmid = (int) ($generatedcms[(int) ($entry['cmid'] ?? 0)] ?? 0);
+            $cmid = (int) ($generatedcms[generated_activity_key::of($entry)] ?? 0);
             if (($behavior['action'] ?? '') === 'instance' && $sourcecmid > 0 && $cmid > 0) {
                 $created[$sourcecmid][] = $cmid;
             }
@@ -156,9 +191,10 @@ final class template_settings_copier {
      *
      * @param int $basecourseid
      * @param int $courseid
+     * @param template_section_map|null $sectionmap Where each section of the template went; null for the same number.
      * @return array<int,array{source: \stdClass, target: \stdClass}>
      */
-    private static function sections_by_number(int $basecourseid, int $courseid): array {
+    private static function sections_by_number(int $basecourseid, int $courseid, ?template_section_map $sectionmap = null): array {
         global $DB;
 
         $columns = 'id, section, visible, availability';
@@ -169,8 +205,9 @@ final class template_settings_copier {
         $pairs = [];
         foreach ($DB->get_records('course_sections', ['course' => $basecourseid], 'section', $columns) as $source) {
             $number = (int) $source->section;
-            if (isset($bynumber[$number])) {
-                $pairs[$number] = ['source' => $source, 'target' => $bynumber[$number]];
+            $targetnumber = ($sectionmap === null) ? $number : $sectionmap->target_of_source($number);
+            if ($targetnumber !== null && isset($bynumber[$targetnumber])) {
+                $pairs[$number] = ['source' => $source, 'target' => $bynumber[$targetnumber]];
             }
         }
         return $pairs;
@@ -180,14 +217,15 @@ final class template_settings_copier {
      * Give one section of the new course the visibility and the restrictions of its template section.
      *
      * @param int $courseid
-     * @param array{source: \stdClass, target: \stdClass} $pair
-     * @param array<string,array<int,int>> $maps
-     * @param array<string,array<int,bool>> $existing
+     * @param array $pair The template row and the new row of one section: {source, target}.
+     * @param array $maps
+     * @param array $existing
+     * @param int|null $delta Seconds to move the dates of the restrictions by; null leaves them out.
      */
-    private static function apply_section(int $courseid, array $pair, array $maps, array $existing): void {
+    private static function apply_section(int $courseid, array $pair, array $maps, array $existing, ?int $delta): void {
         global $DB;
 
-        $availability = template_availability_tree::carry($pair['source']->availability, $maps, $existing);
+        $availability = template_availability_tree::carry($pair['source']->availability, $maps, $existing, $delta);
         $DB->set_field('course_sections', 'availability', $availability, ['id' => $pair['target']->id]);
         if ((int) $pair['source']->visible !== (int) $pair['target']->visible) {
             set_section_visible($courseid, (int) $pair['target']->section, (int) $pair['source']->visible);
@@ -199,10 +237,17 @@ final class template_settings_copier {
      *
      * @param int $cmid The activity of the new course.
      * @param \stdClass|null $source The template activity's record.
-     * @param array<string,array<int,int>> $maps
-     * @param array<string,array<int,bool>> $existing
+     * @param array $maps
+     * @param array $existing
+     * @param int|null $delta Seconds to move the dates of the restrictions by; null leaves them out.
      */
-    private static function apply_activity(int $cmid, ?\stdClass $source, array $maps, array $existing): void {
+    private static function apply_activity(
+        int $cmid,
+        ?\stdClass $source,
+        array $maps,
+        array $existing,
+        ?int $delta
+    ): void {
         global $DB;
 
         $target = $DB->get_record('course_modules', ['id' => $cmid]);
@@ -211,7 +256,7 @@ final class template_settings_copier {
         }
         set_coursemodule_visible($cmid, (int) $source->visible, (int) $source->visibleoncoursepage);
         $update = (object) ['id' => $cmid];
-        $update->availability = template_availability_tree::carry($source->availability, $maps, $existing);
+        $update->availability = template_availability_tree::carry($source->availability, $maps, $existing, $delta);
         $update->groupingid = $maps['groupings'][(int) $source->groupingid] ?? 0;
         foreach (self::ACTIVITY_COLUMNS as $column) {
             if (property_exists($source, $column)) {

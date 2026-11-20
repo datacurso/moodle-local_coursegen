@@ -218,5 +218,4 @@ abstract class activity_preview {
         $message = get_string('courseai_preview_empty', 'local_coursegen');
         return $OUTPUT->notification($message, \core\output\notification::NOTIFY_INFO);
     }
-
 }
