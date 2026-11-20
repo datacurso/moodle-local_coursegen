@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.16] - 2026112001
+
+### Added
+- **The AI can ask for a decision in the middle of a template run, and the question card offers real choices**  
+  When the AI cannot go on by itself (for example, no video of the length asked for exists), it asks in the thread with a card that says it needs a decision ("Necesito que decidas algo para continuar") and names the activity the question is about as a chip. The context of the question is shown under it. Each option is a large row that can be chosen with the mouse or the keyboard, with its label in bold, a one-line description and a "Recomendado" badge on the option the AI recommends; nothing is chosen for the person. When the question allows it, a last "Otra respuesta…" row opens a box to write the answer or paste a link; it cannot be sent empty, and a message next to the question says why. Several questions share one "Responder" button that waits for every required answer. The answers written in the thread read with the labels of the options and the words written, never internal values. Questions in the older shape look as before.
+
+### Changed
+- **The code of the question card is split into smaller modules**  
+  The answer sheet and summary, the simple controls, and the choice rows now live in their own modules beside the card.
+
 ## [2.0.16] - 2026112000
 
 ### Changed
