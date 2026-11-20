@@ -99,7 +99,7 @@ class template extends base {
 
         $columns[] = (new column(
             'timecreated',
-            new lang_string('timecreated', 'core_reportbuilder'),
+            new lang_string('templatedatecreated', 'local_coursegen'),
             $this->get_entity_name()
         ))
             ->add_joins($this->get_joins())
@@ -110,7 +110,7 @@ class template extends base {
 
         $columns[] = (new column(
             'timemodified',
-            new lang_string('timemodified', 'core_reportbuilder'),
+            new lang_string('templatedatemodified', 'local_coursegen'),
             $this->get_entity_name()
         ))
             ->add_joins($this->get_joins())
