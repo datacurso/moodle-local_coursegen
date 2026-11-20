@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.16-wp] - 2026111901
+
+### Added
+- **Everything of release 2.0.16 of the Moodle line**  
+  Template units with their sections repeated per unit, the guideline picker of the template mode, the images panel, the resolution of the links between the generated activities, the H5P embed markers kept in the generated texts, the cleaning of the texts the AI returns, the import of a generated course into an existing course, the security fixes of the Moodle 4.5 line and the message in the thread of a run that cannot go on because the license has no AI credits left.
+- **The import into an existing course has a settings page of its own**  
+  It is a site-wide option that only site administrators change, for every tenant at once: the importer role it installs is a site role.
+
+### Changed
+- **Creating a course with AI needs the full creation set in a category**  
+  The button, the page and every web service of the creation flow ask for the same capabilities: moodle/course:create, moodle/course:view, local/coursegen:createactivitywithai and the capability of the mode. They are checked in the categories the user can create courses in, so a tenant administrator or a teacher who holds them only in the categories of their tenant can create courses, and a grant on the whole site keeps working.
+- **The guidelines of the template mode belong to the tenant**  
+  The guideline picker lists only the guidelines of the user's tenant, and a guideline of another tenant sends no text to the service.
+
+### Fixed
+- **A Workplace site that skipped steps of the Moodle line gets them**  
+  The upgrade creates what the install file defines and the site lacks, grants the new capabilities to the tenant administrator and installs the recommended roles; every step is a no-op when the change is already in place.
+
 ## [2.0.10-wp] - 2026111708
 
 ### Changed
