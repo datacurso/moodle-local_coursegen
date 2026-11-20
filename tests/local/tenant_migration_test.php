@@ -66,8 +66,6 @@ final class tenant_migration_test extends \advanced_testcase {
 
         $settings = [
             'enablesubsections' => '1',
-            'datacurso_service_url' => 'https://us.example.com',
-            'datacurso_service_url_eu' => 'https://eu.example.com',
             'generationmode' => 'manual',
             'overridecourse' => '1',
             'overrideactivity' => '0',
@@ -118,13 +116,13 @@ final class tenant_migration_test extends \advanced_testcase {
         $this->setAdminUser();
         $this->require_tool_tenant();
         $defaulttenantid = \tool_tenant\tenancy::get_default_tenant_id();
-        tenant_config::set('datacurso_service_url', 'https://tenant.example.com', $defaulttenantid);
-        set_config('datacurso_service_url', 'https://site.example.com', 'local_coursegen');
+        tenant_config::set('generationmode', 'manual', $defaulttenantid);
+        set_config('generationmode', 'auto', 'local_coursegen');
 
         tenant_migration::migrate_site_data_to_default_tenant();
 
-        $this->assertSame('https://tenant.example.com', tenant_config::get_raw('datacurso_service_url', $defaulttenantid));
-        $this->assertFalse(get_config('local_coursegen', 'datacurso_service_url'));
+        $this->assertSame('manual', tenant_config::get_raw('generationmode', $defaulttenantid));
+        $this->assertFalse(get_config('local_coursegen', 'generationmode'));
     }
 
     /**
@@ -181,13 +179,57 @@ final class tenant_migration_test extends \advanced_testcase {
         $this->resetAfterTest();
         $this->setAdminUser();
         tenancy::simulate_unavailable_for_testing();
-        set_config('datacurso_service_url', 'https://site.example.com', 'local_coursegen');
+        set_config('generationmode', 'manual', 'local_coursegen');
         $siteid = $this->insert_instruction('Site rule', 0);
 
         tenant_migration::migrate_site_data_to_default_tenant();
 
-        $this->assertSame('https://site.example.com', tenant_config::get_raw('datacurso_service_url', 0));
-        $this->assertFalse(get_config('local_coursegen', 'datacurso_service_url'));
+        $this->assertSame('manual', tenant_config::get_raw('generationmode', 0));
+        $this->assertFalse(get_config('local_coursegen', 'generationmode'));
         $this->assertEquals(0, $DB->get_field('local_coursegen_system_instruction', 'tenantid', ['id' => $siteid]));
+    }
+
+    /**
+     * The development addresses of the service stay in config_plugins: the migration never hands them to a tenant.
+     */
+    public function test_service_urls_stay_with_the_site(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        $this->require_tool_tenant();
+        $defaulttenantid = \tool_tenant\tenancy::get_default_tenant_id();
+        set_config('datacurso_service_url', 'https://us.example.com', 'local_coursegen');
+        set_config('datacurso_service_url_eu', 'https://eu.example.com', 'local_coursegen');
+
+        tenant_migration::migrate_site_data_to_default_tenant();
+
+        $this->assertSame('https://us.example.com', get_config('local_coursegen', 'datacurso_service_url'));
+        $this->assertSame('https://eu.example.com', get_config('local_coursegen', 'datacurso_service_url_eu'));
+        $this->assertNull(tenant_config::get_raw('datacurso_service_url', $defaulttenantid));
+        $this->assertNull(tenant_config::get_raw('datacurso_service_url_eu', $defaulttenantid));
+    }
+
+    /**
+     * The addresses an earlier release stored for the tenants are dropped, never copied to the site, and the
+     * other tenant settings and the site addresses are kept.
+     */
+    public function test_forget_tenant_service_urls_drops_only_the_tenant_addresses(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        $this->require_tool_tenant();
+        $defaulttenantid = \tool_tenant\tenancy::get_default_tenant_id();
+        tenant_config::set('datacurso_service_url', 'https://dev.example.com', $defaulttenantid);
+        tenant_config::set('datacurso_service_url_eu', 'https://dev-eu.example.com', $defaulttenantid);
+        tenant_config::set('generationmode', 'manual', $defaulttenantid);
+        set_config('datacurso_service_url', 'https://site.example.com', 'local_coursegen');
+
+        $this->assertSame(2, tenant_migration::forget_tenant_service_urls());
+
+        $this->assertNull(tenant_config::get_raw('datacurso_service_url', $defaulttenantid));
+        $this->assertNull(tenant_config::get_raw('datacurso_service_url_eu', $defaulttenantid));
+        $this->assertNull(tenant_config::get('datacurso_service_url', null, $defaulttenantid));
+        $this->assertSame('manual', tenant_config::get_raw('generationmode', $defaulttenantid));
+        $this->assertSame('https://site.example.com', get_config('local_coursegen', 'datacurso_service_url'));
+        $this->assertFalse(get_config('local_coursegen', 'datacurso_service_url_eu'));
+        $this->assertSame(0, tenant_migration::forget_tenant_service_urls());
     }
 }

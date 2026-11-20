@@ -738,6 +738,12 @@ function xmldb_local_coursegen_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026111901, 'local', 'coursegen');
     }
 
+    if ($oldversion < 2026112001) {
+        // The development addresses of the service belong to the site again: drop what the tenants held.
+        \local_coursegen\local\tenant_migration::forget_tenant_service_urls();
+        upgrade_plugin_savepoint(true, 2026112001, 'local', 'coursegen');
+    }
+
     return true;
 }
 

@@ -65,60 +65,39 @@ final class api_client_factory_tenant_test extends \advanced_testcase {
     }
 
     /**
-     * The URLs of a tenant reach the client for its users only; config_plugins values are never used.
+     * The addresses of the site reach the client for the users of every tenant; tenant values are never read.
      */
-    public function test_tenant_override_urls_reach_client(): void {
+    public function test_site_urls_reach_client_for_every_tenant(): void {
         $this->resetAfterTest();
         $this->setAdminUser();
         set_config('datacurso_service_url', 'https://site-us.example.com/api/v1', 'local_coursegen');
+        set_config('datacurso_service_url_eu', 'https://site-eu.example.com/api/v1', 'local_coursegen');
         [$tenanta, $usera] = $this->create_tenant_with_user();
         [, $userb] = $this->create_tenant_with_user();
         tenant_config::set('datacurso_service_url', 'https://tenant-us.example.com/api/v1', $tenanta);
-        tenant_config::set('datacurso_service_url_eu', 'https://tenant-eu.example.com/api/v1', $tenanta);
+        tenant_config::set('datacurso_service_url', 'https://default.example.com/api/v1', tenancy::get_default_tenant_id());
         $this->inject_test_client();
+        $expected = ['baseurl' => 'https://site-us.example.com/api/v1', 'baseurleu' => 'https://site-eu.example.com/api/v1'];
 
-        $this->setUser($usera);
-        api_client_factory::ai_course_api_for_current_tenant();
-        $this->assertSame([
-            'baseurl' => 'https://tenant-us.example.com/api/v1',
-            'baseurleu' => 'https://tenant-eu.example.com/api/v1',
-        ], api_client_factory::get_last_urls());
-
-        $this->setUser($userb);
-        api_client_factory::ai_course_api_for_current_tenant();
-        $this->assertSame(['baseurl' => null, 'baseurleu' => null], api_client_factory::get_last_urls());
+        foreach ([$usera, $userb] as $user) {
+            $this->setUser($user);
+            api_client_factory::ai_course_api_for_current_tenant();
+            $this->assertSame($expected, api_client_factory::get_last_urls());
+        }
     }
 
     /**
-     * A tenant with no address of its own uses the one of the default tenant, and its own wins when it has one.
+     * Without site addresses the client gets null, so it uses the production service, even when a tenant (the
+     * default one included) still holds an address from an earlier release.
      */
-    public function test_tenant_without_urls_uses_those_of_the_default_tenant(): void {
+    public function test_empty_site_urls_are_passed_as_null(): void {
         $this->resetAfterTest();
         $this->setAdminUser();
-        $defaulttenant = tenancy::get_default_tenant_id();
-        tenant_config::set('datacurso_service_url', 'https://default.example.com/api/v1', $defaulttenant);
-        [$tenanta, $usera] = $this->create_tenant_with_user();
-        [, $userb] = $this->create_tenant_with_user();
-        tenant_config::set('datacurso_service_url', 'https://tenant-a.example.com/api/v1', $tenanta);
+        set_config('datacurso_service_url_eu', '', 'local_coursegen');
+        tenant_config::set('datacurso_service_url', 'https://dev.example.com/api/v1', tenancy::get_default_tenant_id());
+        [, $usera] = $this->create_tenant_with_user();
         $this->inject_test_client();
-
-        $this->setUser($userb);
-        api_client_factory::ai_course_api_for_current_tenant();
-        $this->assertSame(['baseurl' => 'https://default.example.com/api/v1', 'baseurleu' => null], api_client_factory::get_last_urls());
-
         $this->setUser($usera);
-        api_client_factory::ai_course_api_for_current_tenant();
-        $this->assertSame(['baseurl' => 'https://tenant-a.example.com/api/v1', 'baseurleu' => null], api_client_factory::get_last_urls());
-    }
-
-    /**
-     * Empty or missing URLs are passed as null so the client falls back to its defaults.
-     */
-    public function test_empty_urls_are_passed_as_null(): void {
-        $this->resetAfterTest();
-        $this->setAdminUser();
-        tenant_config::set('datacurso_service_url_eu', '', tenancy::get_tenant_id());
-        $this->inject_test_client();
 
         api_client_factory::ai_course_api_for_current_tenant();
 
@@ -126,18 +105,18 @@ final class api_client_factory_tenant_test extends \advanced_testcase {
     }
 
     /**
-     * The course API service builds its default client through the tenant-aware factory method.
+     * The course API service builds its default client with the addresses of the site.
      */
-    public function test_ai_course_api_service_uses_tenant_urls(): void {
+    public function test_ai_course_api_service_uses_site_urls(): void {
         $this->resetAfterTest();
         $this->setAdminUser();
-        [$tenanta, $usera] = $this->create_tenant_with_user();
-        tenant_config::set('datacurso_service_url', 'https://tenant-us.example.com/api/v1', $tenanta);
+        set_config('datacurso_service_url', 'https://site-us.example.com/api/v1', 'local_coursegen');
+        [, $usera] = $this->create_tenant_with_user();
         $this->inject_test_client();
         $this->setUser($usera);
 
         new ai_course_api_service();
 
-        $this->assertSame('https://tenant-us.example.com/api/v1', api_client_factory::get_last_urls()['baseurl']);
+        $this->assertSame('https://site-us.example.com/api/v1', api_client_factory::get_last_urls()['baseurl']);
     }
 }

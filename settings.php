@@ -88,8 +88,6 @@ $devsettings = new admin_settingpage(
     'local/coursegen:managetenantsettings'
 );
 
-$devsettings->add(new \local_coursegen\admin\setting_tenant_scope_notice('local_coursegen/devtenantscopenotice'));
-
 $devsettings->add(new admin_setting_heading(
     'local_coursegen/devsettingsheading',
     '',

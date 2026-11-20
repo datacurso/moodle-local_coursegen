@@ -100,10 +100,8 @@ final class tenant_scoped_settings_test extends \advanced_testcase {
     public function test_get_setting_returns_default_when_tenant_has_no_value(): void {
         $this->resetAfterTest();
         $this->login_into_new_tenant();
-        set_config('datacurso_service_url', 'https://site.example.com', 'local_coursegen');
         set_config('enablesubsections', '1', 'local_coursegen');
 
-        $this->assertSame('', $this->make_url_setting()->get_setting());
         $this->assertSame('0', $this->make_subsections_setting()->get_setting());
     }
 
@@ -115,13 +113,13 @@ final class tenant_scoped_settings_test extends \advanced_testcase {
         $othertenantid = $this->login_into_new_tenant('Other');
         $tenantid = $this->login_into_new_tenant('Mine');
 
-        $setting = $this->make_url_setting();
-        $this->assertSame('', $setting->write_setting('https://tenant.example.com'));
+        $setting = $this->make_subsections_setting();
+        $this->assertSame('', $setting->write_setting('1'));
 
-        $this->assertSame('https://tenant.example.com', $setting->get_setting());
-        $this->assertSame('https://tenant.example.com', tenant_config::get_raw('datacurso_service_url', $tenantid));
-        $this->assertNull(tenant_config::get_raw('datacurso_service_url', $othertenantid));
-        $this->assertFalse(get_config('local_coursegen', 'datacurso_service_url'));
+        $this->assertSame('1', $setting->get_setting());
+        $this->assertSame('1', tenant_config::get_raw('enablesubsections', $tenantid));
+        $this->assertNull(tenant_config::get_raw('enablesubsections', $othertenantid));
+        $this->assertFalse(get_config('local_coursegen', 'enablesubsections'));
     }
 
     /**
@@ -132,14 +130,13 @@ final class tenant_scoped_settings_test extends \advanced_testcase {
         $this->resetAfterTest();
         $tenantid = $this->login_into_new_tenant();
 
-        $this->assertSame('', $this->make_url_setting()->write_setting(''));
         $this->assertSame('', $this->make_subsections_setting()->write_setting('0'));
 
         $this->assertSame(0, $DB->count_records('local_coursegen_tenant_config', ['tenantid' => $tenantid]));
     }
 
     /**
-     * Admin defaults applied on install or upgrade never write tenant rows nor config_plugins.
+     * Admin defaults applied on install or upgrade never write tenant rows nor a tenant setting in config_plugins.
      */
     public function test_apply_default_settings_writes_nothing(): void {
         global $DB;
@@ -151,19 +148,28 @@ final class tenant_scoped_settings_test extends \advanced_testcase {
 
         $this->assertSame($before, $DB->count_records('local_coursegen_tenant_config'));
         $this->assertFalse(get_config('local_coursegen', 'enablesubsections'));
-        $this->assertFalse(get_config('local_coursegen', 'datacurso_service_url'));
+        // The development address is a site setting whose default is empty: the production service.
+        $this->assertEmpty(get_config('local_coursegen', 'datacurso_service_url'));
     }
 
     /**
-     * The HTTPS policy still rejects remote plain HTTP URLs.
+     * The development address is a site setting: a tenant user saves it in config_plugins, every tenant reads it,
+     * and the HTTPS policy still rejects remote plain HTTP URLs.
      */
-    public function test_url_setting_keeps_https_validation(): void {
+    public function test_url_setting_belongs_to_the_site(): void {
         global $CFG;
         $this->resetAfterTest();
-        $this->login_into_new_tenant();
+        $tenantid = $this->login_into_new_tenant('Mine');
         $CFG->debugdeveloper = false;
 
-        $this->assertIsString($this->make_url_setting()->validate('http://remote.example.com'));
+        $setting = $this->make_url_setting();
+        $this->assertSame('', $setting->write_setting('https://site.example.com'));
+
+        $this->assertSame('https://site.example.com', get_config('local_coursegen', 'datacurso_service_url'));
+        $this->assertNull(tenant_config::get_raw('datacurso_service_url', $tenantid));
+        $this->login_into_new_tenant('Other');
+        $this->assertSame('https://site.example.com', $this->make_url_setting()->get_setting());
+        $this->assertIsString($setting->validate('http://remote.example.com'));
     }
 
     /**

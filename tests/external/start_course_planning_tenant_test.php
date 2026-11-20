@@ -20,7 +20,6 @@ use aiprovider_datacurso\httpclient\ai_course_api;
 use local_coursegen\local\api_client_factory;
 use local_coursegen\local\service\system_instruction_service;
 use local_coursegen\local\tenancy;
-use local_coursegen\local\tenant_config;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -56,7 +55,7 @@ final class start_course_planning_tenant_test extends \advanced_testcase {
             $this->markTestSkipped('aiprovider_datacurso is not installed.');
         }
         $this->setAdminUser();
-        tenant_config::set('datacurso_service_url', 'https://invalid.invalid', tenancy::get_tenant_id());
+        set_config('datacurso_service_url', 'https://invalid.invalid', 'local_coursegen');
     }
 
     /**

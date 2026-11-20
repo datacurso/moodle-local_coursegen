@@ -35,8 +35,6 @@ class tenant_migration {
     /** @var string[] Tenant-scoped settings with a fixed name. */
     private const SETTINGS = [
         'enablesubsections',
-        'datacurso_service_url',
-        'datacurso_service_url_eu',
         'generationmode',
         'overridecourse',
         'overrideactivity',
@@ -96,5 +94,27 @@ class tenant_migration {
             }
         }
         return false;
+    }
+
+    /** @var string[] Development addresses of the service: they belong to the site, never to a tenant. */
+    public const SITE_SERVICE_URLS = ['datacurso_service_url', 'datacurso_service_url_eu'];
+
+    /**
+     * Forget the development addresses an earlier release stored for the tenants.
+     *
+     * Those values were handed to the tenants from the site and are hidden from the admin, so a tenant could keep
+     * calling a development service while its settings page showed nothing. The addresses are site settings again;
+     * what the tenants held is dropped, never copied back, so the site uses the production service unless an admin
+     * sets an address on the development page.
+     *
+     * @return int Number of tenant values removed.
+     */
+    public static function forget_tenant_service_urls(): int {
+        global $DB;
+        [$insql, $params] = $DB->get_in_or_equal(self::SITE_SERVICE_URLS);
+        $count = $DB->count_records_select(tenant_config::TABLE, "name $insql", $params);
+        $DB->delete_records_select(tenant_config::TABLE, "name $insql", $params);
+        tenant_config::reset_cache();
+        return $count;
     }
 }

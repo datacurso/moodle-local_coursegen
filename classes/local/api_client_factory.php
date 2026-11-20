@@ -58,37 +58,26 @@ class api_client_factory {
     }
 
     /**
-     * Build the AI course API client with the service URLs of the current user's tenant.
+     * Build the AI course API client with the service URLs of the site.
      *
-     * The URLs are the values of the tenant (tenant_config); an empty or missing
-     * value falls back to the client defaults.
+     * The development addresses (local_coursegen/datacurso_service_url and its EU twin) belong to the whole site,
+     * never to a tenant: an empty or missing value falls back to the client defaults (the production service).
+     * The name is kept for the callers; every tenant gets the same addresses.
      *
      * @return ai_course_api
      */
     public static function ai_course_api_for_current_tenant(): ai_course_api {
-        $baseurl = self::service_url('datacurso_service_url');
-        $baseurleu = self::service_url('datacurso_service_url_eu');
-
-        return self::ai_course_api($baseurl, $baseurleu);
+        return self::ai_course_api(self::service_url('datacurso_service_url'), self::service_url('datacurso_service_url_eu'));
     }
 
     /**
-     * The address of a service for the current tenant.
-     *
-     * The tenant's own value wins. A tenant that has none uses the one of the default tenant, where the address that
-     * the site had before the settings belonged to the tenants was handed to; an address says where the service is
-     * and is not content of a tenant. With none in either, the client default is used.
+     * The address of a service set for the site, or null for the client default.
      *
      * @param string $name Setting name.
-     * @return string|null The address, or null for the client default.
+     * @return string|null
      */
     private static function service_url(string $name): ?string {
-        $own = tenant_config::get($name);
-        if ($own) {
-            return $own;
-        }
-        $defaulttenant = tenancy::get_default_tenant_id();
-        return (tenant_config::get($name, null, $defaulttenant)) ?: null;
+        return get_config('local_coursegen', $name) ?: null;
     }
 
     /**

@@ -134,9 +134,8 @@ final class h5pactivity_download_config_test extends \advanced_testcase {
         $this->resetAfterTest();
         $this->setAdminUser();
 
-        $tenantid = \local_coursegen\local\tenancy::get_tenant_id();
-        \local_coursegen\local\tenant_config::set('datacurso_service_url', 'https://dev-us.example.com/api/v1', $tenantid);
-        \local_coursegen\local\tenant_config::set('datacurso_service_url_eu', 'https://dev-eu.example.com/api/v1', $tenantid);
+        set_config('datacurso_service_url', 'https://dev-us.example.com/api/v1', 'local_coursegen');
+        set_config('datacurso_service_url_eu', 'https://dev-eu.example.com/api/v1', 'local_coursegen');
 
         $course = $this->getDataGenerator()->create_course();
         $this->set_current_course($course);

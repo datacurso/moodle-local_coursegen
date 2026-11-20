@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.16-wp] - 2026112001
+
+### Fixed
+- **The development addresses of the service belong to the whole site again, not to each tenant**  
+  The "Configuración de desarrollo" page no longer says it applies only to the current tenant: its two addresses are site settings, as in the Moodle line. Before, a tenant with empty fields silently used the addresses kept for the default tenant, which an earlier upgrade had copied there from the site, so a site could keep calling a development service while the page showed nothing. The upgrade drops the addresses the tenants held (it never copies them back), so every tenant uses the production service unless an admin sets an address on that page.
+
 ## [2.0.16-wp] - 2026112000
 
 ### Changed
