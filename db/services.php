@@ -34,7 +34,8 @@ $functions = [
         'description' => 'Create module for ask question to chatbot based in that information',
         'type' => 'write',
         'ajax' => true,
-        'capabilities' => 'moodle/course:manageactivities,moodle/course:update',
+        'capabilities' => 'moodle/course:manageactivities,local/coursegen:createactivitywithai',
+        'loginrequired' => true,
     ],
     'local_coursegen_create_mod_stream' => [
         'classname' => 'local_coursegen\external\create_mod_stream',
@@ -42,7 +43,8 @@ $functions = [
         'description' => 'Start streaming job to create module with AI and store job_id',
         'type' => 'write',
         'ajax' => true,
-        'capabilities' => 'moodle/course:manageactivities,moodle/course:update',
+        'capabilities' => 'moodle/course:manageactivities,local/coursegen:createactivitywithai',
+        'loginrequired' => true,
     ],
     'local_coursegen_create_course' => [
         'classname' => 'local_coursegen\external\create_course',
@@ -51,6 +53,7 @@ $functions = [
         'type' => 'write',
         'ajax' => true,
         'capabilities' => 'moodle/course:create,local/coursegen:createfreecoursewithai',
+        'loginrequired' => true,
     ],
     'local_coursegen_get_course_settings' => [
         'classname' => 'local_coursegen\external\get_course_settings',
@@ -59,6 +62,7 @@ $functions = [
         'type' => 'read',
         'ajax' => true,
         'capabilities' => 'moodle/course:create,local/coursegen:createfreecoursewithai',
+        'loginrequired' => true,
     ],
     'local_coursegen_course_planning_feedback' => [
         'classname' => 'local_coursegen\external\course_planning_feedback',
@@ -84,7 +88,7 @@ $functions = [
         'description' => 'Initialise filepicker draft area for AI activity file uploads',
         'type' => 'read',
         'ajax' => true,
-        'capabilities' => 'moodle/course:manageactivities,moodle/course:update',
+        'capabilities' => 'moodle/course:manageactivities,local/coursegen:createactivitywithai',
         'loginrequired' => true,
     ],
     'local_coursegen_activity_file_upload' => [
@@ -93,7 +97,7 @@ $functions = [
         'description' => 'Upload a file for an AI activity generation thread',
         'type' => 'write',
         'ajax' => true,
-        'capabilities' => 'moodle/course:manageactivities,moodle/course:update',
+        'capabilities' => 'moodle/course:manageactivities,local/coursegen:createactivitywithai',
         'loginrequired' => true,
     ],
     'local_coursegen_manage_image_generation' => [
@@ -132,6 +136,9 @@ $functions = [
         'capabilities' => 'moodle/course:create,local/coursegen:uploadcoursesyllabus',
         'loginrequired' => true,
     ],
+    // Note: local_coursegen\external\regenerate_detailed_item is deliberately not
+    // declared as a web service. Its upstream endpoint no longer exists, so the
+    // class is unreachable from the browser and is kept only until it is removed.
     'local_coursegen_get_course_session_state' => [
         'classname' => 'local_coursegen\\external\\get_course_session_state',
         'methodname' => 'execute',
@@ -139,6 +146,15 @@ $functions = [
         'type' => 'read',
         'ajax' => true,
         'capabilities' => 'moodle/course:create,local/coursegen:createfreecoursewithai,local/coursegen:createtemplatecoursewithai',
+        'loginrequired' => true,
+    ],
+    'local_coursegen_get_template_image_urls' => [
+        'classname' => 'local_coursegen\\external\\get_template_image_urls',
+        'methodname' => 'execute',
+        'description' => 'Get the addresses of the template picture and the new picture of each picture of a template run',
+        'type' => 'read',
+        'ajax' => true,
+        'capabilities' => 'local/coursegen:createtemplatecoursewithai',
         'loginrequired' => true,
     ],
     'local_coursegen_get_templates' => [
@@ -292,6 +308,15 @@ $functions = [
         'type' => 'write',
         'ajax' => true,
         'capabilities' => 'local/coursegen:createtemplatecoursewithai',
+        'loginrequired' => true,
+    ],
+    'local_coursegen_search_target_courses' => [
+        'classname' => 'local_coursegen\\external\\search_target_courses',
+        'methodname' => 'execute',
+        'description' => 'Search courses in a category the user may import an AI-generated course into',
+        'type' => 'read',
+        'ajax' => true,
+        'capabilities' => 'local/coursegen:createfreecoursewithai,moodle/course:create',
         'loginrequired' => true,
     ],
 ];

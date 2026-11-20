@@ -258,15 +258,7 @@ function xmldb_local_coursegen_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026090900) {
-        // Define unique index job_id to be added to local_coursegen_module_jobs:
-        // an external job id maps to at most one local job record (replay protection).
-        $table = new xmldb_table('local_coursegen_module_jobs');
-        $index = new xmldb_index('job_id', XMLDB_INDEX_UNIQUE, ['job_id']);
-
-        // Conditionally launch add index job_id.
-        if (!$dbman->index_exists($table, $index)) {
-            $dbman->add_index($table, $index);
-        }
+        local_coursegen_upgrade_add_unique_job_index($dbman);
 
         // Coursegen savepoint reached.
         upgrade_plugin_savepoint(true, 2026090900, 'local', 'coursegen');
@@ -514,41 +506,26 @@ function xmldb_local_coursegen_upgrade($oldversion) {
     if ($oldversion < 2026101222) {
         // The list of sessions must not read the whole payload of every session (megabytes each): what it shows
         // is kept in small columns of its own.
-        $table = new xmldb_table('local_coursegen_course_sessions');
-        $fields = [
-            new xmldb_field('templateid', XMLDB_TYPE_INTEGER, '10', null, null, null, null, 'coursedata'),
-            new xmldb_field('title', XMLDB_TYPE_CHAR, '255', null, null, null, null, 'templateid'),
-            new xmldb_field('shortname', XMLDB_TYPE_CHAR, '100', null, null, null, null, 'title'),
-        ];
-        foreach ($fields as $field) {
-            if (!$dbman->field_exists($table, $field)) {
-                $dbman->add_field($table, $field);
-            }
-        }
-        // The sessions that already exist are read one at a time.
-        $ids = $DB->get_fieldset_select('local_coursegen_course_sessions', 'id', 'templateid IS NULL AND title IS NULL');
-        foreach ($ids as $id) {
-            $row = $DB->get_record('local_coursegen_course_sessions', ['id' => $id], 'id, coursedata');
-            $data = json_decode((string) $row->coursedata, true);
-            if (!is_array($data)) {
-                continue;
-            }
-            $update = ['id' => $id];
-            if (isset($data['templateid'])) {
-                $update['templateid'] = (int) $data['templateid'];
-            }
-            if (!empty($data['fullname'])) {
-                $update['title'] = \core_text::substr((string) $data['fullname'], 0, 255);
-            }
-            if (!empty($data['shortname'])) {
-                $update['shortname'] = \core_text::substr((string) $data['shortname'], 0, 100);
-            }
-            if (count($update) > 1) {
-                $DB->update_record('local_coursegen_course_sessions', (object) $update);
-            }
-            unset($row, $data);
-        }
+        local_coursegen_upgrade_add_session_summary_columns($dbman);
         upgrade_plugin_savepoint(true, 2026101222, 'local', 'coursegen');
+    }
+
+    if ($oldversion < 2026102000) {
+        // Create the two recommended roles (AI course creator, AI course creator and importer)
+        // unless roles with their shortnames already exist; existing roles are never modified.
+        \local_coursegen\local\role_installer::install_missing_roles();
+
+        // Coursegen savepoint reached.
+        upgrade_plugin_savepoint(true, 2026102000, 'local', 'coursegen');
+    }
+
+    if ($oldversion < 2026111713) {
+        // A site that came from the MOODLE_405_STABLE line never had the template tables, and the steps that create
+        // them are numbered below the versions that line installed, so it skipped them. Every step from here on that
+        // alters those tables would fail with a missing table, so the missing ones are created first, as install.xml
+        // defines them; the ones that exist are left as they are. This is a precondition, not a step: it has no
+        // savepoint of its own, because the versions the following steps record are lower than any number chosen here.
+        local_coursegen_upgrade_install_missing_template_tables($dbman);
     }
 
     if ($oldversion < 2026102637) {
@@ -565,65 +542,65 @@ function xmldb_local_coursegen_upgrade($oldversion) {
         // Repair sites where the course sessions table kept courseid as NOT NULL
         // and/or lacks coursedata (steps 2026021801 and 2026021803 did not take effect).
         // It inspects the real schema, so it is safe on sites that were already correct.
-        $table = new xmldb_table('local_coursegen_course_sessions');
-
-        if ($dbman->table_exists($table)) {
-            // Columns are read uncached so the real state of the table is seen.
-            $columns = $DB->get_columns('local_coursegen_course_sessions', false);
-
-            if (isset($columns['courseid']) && !empty($columns['courseid']->not_null)) {
-                $field = new xmldb_field('courseid', XMLDB_TYPE_INTEGER, '10', null, null, null, null, 'id');
-                $index = new xmldb_index('courseid', XMLDB_INDEX_NOTUNIQUE, ['courseid']);
-
-                if ($dbman->index_exists($table, $index)) {
-                    $dbman->drop_index($table, $index);
-                }
-
-                // Launch change of nullability for field courseid.
-                $dbman->change_field_notnull($table, $field);
-
-                if (!$dbman->index_exists($table, $index)) {
-                    $dbman->add_index($table, $index);
-                }
-            }
-
-            // Define field coursedata to be added to local_coursegen_course_sessions.
-            $field = new xmldb_field('coursedata', XMLDB_TYPE_TEXT, null, null, null, null, null, 'courseid');
-
-            // Conditionally launch add field coursedata.
-            if (!$dbman->field_exists($table, $field)) {
-                $dbman->add_field($table, $field);
-            }
-        }
+        local_coursegen_upgrade_repair_course_sessions($dbman);
 
         // Coursegen savepoint reached.
         upgrade_plugin_savepoint(true, 2026110400, 'local', 'coursegen');
+    }
+
+    if ($oldversion < 2026110935) {
+        // A file resource of a template can again be a space the teacher fills with a file.
+        $table = new xmldb_table('local_coursegen_tpl_activity');
+        $field = new xmldb_field('spacerequired', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '1', 'prompt');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+        $field = new xmldb_field('spaceinstruction', XMLDB_TYPE_TEXT, null, null, null, null, null, 'spacerequired');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+        upgrade_plugin_savepoint(true, 2026110935, 'local', 'coursegen');
+    }
+
+    if ($oldversion < 2026110947) {
+        // An activity the AI creates can leave its name to the AI: the template keeps a generic one meanwhile.
+        $table = new xmldb_table('local_coursegen_tpl_instance');
+        $field = new xmldb_field('ainame', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '0', 'name');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+        upgrade_plugin_savepoint(true, 2026110947, 'local', 'coursegen');
+    }
+
+    if ($oldversion < 2026110948) {
+        // An activity modified with AI makes an instance of its own, and a space lists the activities the teacher can add.
+        $table = new xmldb_table('local_coursegen_tpl_instance');
+        $field = new xmldb_field('ownercmid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0', 'ainame');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+        $table = new xmldb_table('local_coursegen_tpl_space');
+        $field = new xmldb_field('options', XMLDB_TYPE_TEXT, null, null, null, null, null, 'instruction');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+        upgrade_plugin_savepoint(true, 2026110948, 'local', 'coursegen');
+    }
+
+    if ($oldversion < 2026111001) {
+        // The importer role is no longer assignable on the whole site (Mindfree, observation 2).
+        // Assignments already made stay as they are.
+        \local_coursegen\local\role_installer::restrict_importer_context_levels();
+
+        // Coursegen savepoint reached.
+        upgrade_plugin_savepoint(true, 2026111001, 'local', 'coursegen');
     }
 
     if ($oldversion < 2026111101) {
         // A Workplace site that had the plugin before this branch has none of what came with it: the tables and
         // columns of the course templates, and the tenant tables and columns. Everything the install file defines
         // and the site lacks is created here, so no step above has to be repeated; what the site has is left alone.
-        global $CFG;
-        $installfile = new xmldb_file($CFG->dirroot . '/local/coursegen/db/install.xml');
-        $installfile->loadXMLStructure();
-        $schema = $installfile->getStructure();
-        foreach ($schema->getTables() as $table) {
-            if (!$dbman->table_exists($table)) {
-                $dbman->create_table($table);
-                continue;
-            }
-            foreach ($table->getFields() as $field) {
-                if (!$dbman->field_exists($table, $field)) {
-                    $dbman->add_field($table, $field);
-                }
-            }
-            foreach ($table->getIndexes() as $index) {
-                if (!$dbman->index_exists($table, $index)) {
-                    $dbman->add_index($table, $index);
-                }
-            }
-        }
+        local_coursegen_upgrade_sync_schema_with_install_file($dbman);
 
         // The capabilities that came with the templates exist and the tenant administrator holds them; the data
         // that belonged to the site goes to the default tenant (safe to run again).
@@ -674,5 +651,243 @@ function xmldb_local_coursegen_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026111132, 'local', 'coursegen');
     }
 
+    if ($oldversion < 2026111401) {
+        // A guideline can carry the number of units a template run takes; null keeps the template's own.
+        $table = new xmldb_table('local_coursegen_system_instruction');
+        $field = new xmldb_field('units', XMLDB_TYPE_INTEGER, '3', null, null, null, null, 'deleted');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+        upgrade_plugin_savepoint(true, 2026111401, 'local', 'coursegen');
+    }
+
+    if ($oldversion < 2026111403) {
+        // The optional number of units per institutional guideline is gone: templates keep their own count.
+        $table = new xmldb_table('local_coursegen_system_instruction');
+        $field = new xmldb_field('units');
+        if ($dbman->field_exists($table, $field)) {
+            $dbman->drop_field($table, $field);
+        }
+        upgrade_plugin_savepoint(true, 2026111403, 'local', 'coursegen');
+    }
+
+    if ($oldversion < 2026111404) {
+        // Merge of the dev and template branches: a site already past the dev builds (2026110935-2026110948) skipped
+        // their steps, so the fields they add are checked again. Every check is a no-op when the field exists.
+        $table = new xmldb_table('local_coursegen_tpl_activity');
+        $field = new xmldb_field('spacerequired', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '1', 'prompt');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+        $field = new xmldb_field('spaceinstruction', XMLDB_TYPE_TEXT, null, null, null, null, null, 'spacerequired');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+        $table = new xmldb_table('local_coursegen_tpl_instance');
+        $field = new xmldb_field('ainame', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '0', 'name');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+        $field = new xmldb_field('ownercmid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0', 'ainame');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+        $table = new xmldb_table('local_coursegen_tpl_space');
+        $field = new xmldb_field('options', XMLDB_TYPE_TEXT, null, null, null, null, null, 'instruction');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+        upgrade_plugin_savepoint(true, 2026111404, 'local', 'coursegen');
+    }
+
+    if ($oldversion < 2026111712) {
+        // A template section names its copies with a pattern of its own.
+        $table = new xmldb_table('local_coursegen_tpl_section');
+        $field = new xmldb_field('namingpattern', XMLDB_TYPE_CHAR, '255', null, null, null, null, 'behavior');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+        $field = new xmldb_field('namingstart', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '1', 'namingpattern');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+        upgrade_plugin_savepoint(true, 2026111712, 'local', 'coursegen');
+    }
+
+    if ($oldversion < 2026111713) {
+        // A site that came from the MOODLE_405_STABLE line never had the template tables, and the steps that create
+        // them are numbered below the versions that line installed, so it skipped them. Every step from here on that
+        // alters those tables would fail with a missing table, so the missing ones are created first, as install.xml
+        // defines them; the ones that exist are left as they are. This is a precondition, not a step: it has no
+        // savepoint of its own, because the versions the following steps record are lower than any number chosen here.
+        local_coursegen_upgrade_install_missing_template_tables($dbman);
+    }
+
+    if ($oldversion < 2026111901) {
+        // The Workplace line was synchronised with the dev line. A Workplace site skipped every dev step whose version
+        // is lower than the one it had installed, so what the install file defines and the site lacks is created
+        // here, the capabilities that came with the dev line exist and the tenant administrator holds them, and the
+        // recommended roles are installed. Every call is a no-op when the change is already in place.
+        local_coursegen_upgrade_sync_schema_with_install_file($dbman);
+        update_capabilities('local_coursegen');
+        \local_coursegen\local\tenancy::add_plugin_capabilities_to_tenant_admin_role();
+        \local_coursegen\local\role_installer::install_missing_roles();
+        \local_coursegen\local\role_installer::restrict_importer_context_levels();
+
+        // Coursegen savepoint reached.
+        upgrade_plugin_savepoint(true, 2026111901, 'local', 'coursegen');
+    }
+
     return true;
+}
+
+/**
+ * Create the template tables that are missing, as install.xml defines them.
+ *
+ * @param database_manager $dbman Database manager.
+ * @return void
+ */
+function local_coursegen_upgrade_install_missing_template_tables(database_manager $dbman): void {
+    $tables = [
+        'local_coursegen_template',
+        'local_coursegen_tpl_section',
+        'local_coursegen_tpl_activity',
+        'local_coursegen_tpl_instance',
+        'local_coursegen_tpl_space',
+    ];
+    foreach ($tables as $name) {
+        if (!$dbman->table_exists($name)) {
+            $dbman->install_one_table_from_xmldb_file(__DIR__ . '/install.xml', $name);
+        }
+    }
+}
+
+/**
+ * Add the unique index of the external job id to the module jobs: a job id maps to at most one local record.
+ *
+ * @param database_manager $dbman Database manager.
+ * @return void
+ */
+function local_coursegen_upgrade_add_unique_job_index(database_manager $dbman): void {
+    $table = new xmldb_table('local_coursegen_module_jobs');
+    $index = new xmldb_index('job_id', XMLDB_INDEX_UNIQUE, ['job_id']);
+    if (!$dbman->index_exists($table, $index)) {
+        $dbman->add_index($table, $index);
+    }
+}
+
+/**
+ * Add the small columns the list of sessions reads, and fill them for the sessions that already exist.
+ *
+ * The list must not read the whole payload of every session (megabytes each), so what it shows is kept in
+ * columns of its own. The sessions that exist are read one at a time.
+ *
+ * @param database_manager $dbman Database manager.
+ * @return void
+ */
+function local_coursegen_upgrade_add_session_summary_columns(database_manager $dbman): void {
+    global $DB;
+
+    $table = new xmldb_table('local_coursegen_course_sessions');
+    $fields = [
+        new xmldb_field('templateid', XMLDB_TYPE_INTEGER, '10', null, null, null, null, 'coursedata'),
+        new xmldb_field('title', XMLDB_TYPE_CHAR, '255', null, null, null, null, 'templateid'),
+        new xmldb_field('shortname', XMLDB_TYPE_CHAR, '100', null, null, null, null, 'title'),
+    ];
+    foreach ($fields as $field) {
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+    }
+    $ids = $DB->get_fieldset_select('local_coursegen_course_sessions', 'id', 'templateid IS NULL AND title IS NULL');
+    foreach ($ids as $id) {
+        $row = $DB->get_record('local_coursegen_course_sessions', ['id' => $id], 'id, coursedata');
+        $data = json_decode((string) $row->coursedata, true);
+        if (!is_array($data)) {
+            continue;
+        }
+        $update = ['id' => $id];
+        if (isset($data['templateid'])) {
+            $update['templateid'] = (int) $data['templateid'];
+        }
+        if (!empty($data['fullname'])) {
+            $update['title'] = \core_text::substr((string) $data['fullname'], 0, 255);
+        }
+        if (!empty($data['shortname'])) {
+            $update['shortname'] = \core_text::substr((string) $data['shortname'], 0, 100);
+        }
+        if (count($update) > 1) {
+            $DB->update_record('local_coursegen_course_sessions', (object) $update);
+        }
+        unset($row, $data);
+    }
+}
+
+/**
+ * Repair sites where the course sessions table kept courseid as NOT NULL and/or lacks coursedata.
+ *
+ * Steps 2026021801 and 2026021803 did not take effect on those sites. The real schema is inspected, so it is
+ * safe on sites that were already correct.
+ *
+ * @param database_manager $dbman Database manager.
+ * @return void
+ */
+function local_coursegen_upgrade_repair_course_sessions(database_manager $dbman): void {
+    global $DB;
+
+    $table = new xmldb_table('local_coursegen_course_sessions');
+    if (!$dbman->table_exists($table)) {
+        return;
+    }
+
+    // Columns are read uncached so the real state of the table is seen.
+    $columns = $DB->get_columns('local_coursegen_course_sessions', false);
+    if (isset($columns['courseid']) && !empty($columns['courseid']->not_null)) {
+        $field = new xmldb_field('courseid', XMLDB_TYPE_INTEGER, '10', null, null, null, null, 'id');
+        $index = new xmldb_index('courseid', XMLDB_INDEX_NOTUNIQUE, ['courseid']);
+        if ($dbman->index_exists($table, $index)) {
+            $dbman->drop_index($table, $index);
+        }
+        $dbman->change_field_notnull($table, $field);
+        if (!$dbman->index_exists($table, $index)) {
+            $dbman->add_index($table, $index);
+        }
+    }
+
+    $field = new xmldb_field('coursedata', XMLDB_TYPE_TEXT, null, null, null, null, null, 'courseid');
+    if (!$dbman->field_exists($table, $field)) {
+        $dbman->add_field($table, $field);
+    }
+}
+
+/**
+ * Create what the install file defines and the site lacks: tables, fields and indexes.
+ *
+ * What the site already has is left as it is, so it is safe to run on any site.
+ *
+ * @param database_manager $dbman Database manager.
+ * @return void
+ */
+function local_coursegen_upgrade_sync_schema_with_install_file(database_manager $dbman): void {
+    global $CFG;
+
+    $installfile = new xmldb_file($CFG->dirroot . '/local/coursegen/db/install.xml');
+    $installfile->loadXMLStructure();
+    $schema = $installfile->getStructure();
+    foreach ($schema->getTables() as $table) {
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+            continue;
+        }
+        foreach ($table->getFields() as $field) {
+            if (!$dbman->field_exists($table, $field)) {
+                $dbman->add_field($table, $field);
+            }
+        }
+        foreach ($table->getIndexes() as $index) {
+            if (!$dbman->index_exists($table, $index)) {
+                $dbman->add_index($table, $index);
+            }
+        }
+    }
 }

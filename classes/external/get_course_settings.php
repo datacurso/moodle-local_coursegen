@@ -25,24 +25,26 @@
 namespace local_coursegen\external;
 
 use aiprovider_datacurso\local\plugin_settings;
-use external_api;
-use external_function_parameters;
-use external_multiple_structure;
-use external_value;
-use external_single_structure;
-use local_coursegen\local\permission;
+use core_external\external_api;
+use core_external\external_function_parameters;
+use core_external\external_multiple_structure;
+use core_external\external_value;
+use core_external\external_single_structure;
 use local_coursegen\local\service\ai_course_api_service;
 use local_coursegen\local\service\course_session_service;
 use local_coursegen\local\service\course_review_service;
 use local_coursegen\local\service\create_course_service;
+use local_coursegen\local\service\creation_permissions;
 use context_system;
 
 defined('MOODLE_INTERNAL') || die();
 
-require_once($CFG->libdir . '/externallib.php');
-
 /**
  * External API for fetching the AI-generated course settings for final review.
+ *
+ * No audit event is emitted: the call only reads the generated result and the
+ * categories the user may create in, it modifies no state. The course creation
+ * that may follow is audited by create_course.
  */
 class get_course_settings extends external_api {
     /**
@@ -74,11 +76,7 @@ class get_course_settings extends external_api {
 
         $context = context_system::instance();
         self::validate_context($context);
-        permission::require_create_course_with(['local/coursegen:createfreecoursewithai']);
-
-        // Categories where the user can actually create courses (system-level
-        // creators get every category, category-level creators only theirs).
-        $catlist = \core_course_category::make_categories_list('moodle/course:create');
+        creation_permissions::require_anywhere(null, [creation_permissions::FREE_CAPABILITY]);
 
         $recordid = (int)$params['recordid'];
 
@@ -92,14 +90,8 @@ class get_course_settings extends external_api {
 
         $settings = create_course_service::get_course_settings($session, $resultdata);
 
-        // Offer only the categories where the user can actually create courses.
-        $categories = [];
-        foreach ($catlist as $id => $pathname) {
-            $categories[] = [
-                'id' => (int)$id,
-                'pathname' => $pathname,
-            ];
-        }
+        // Only the categories where the user holds the full creation set (ticket #9539) are offered.
+        $categories = course_review_service::available_categories();
 
         return $settings + ['categories' => $categories];
     }

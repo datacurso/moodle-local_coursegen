@@ -36,6 +36,9 @@ class tool_tenant {
         return [
             'local/coursegen:createfreecoursewithai' => CAP_ALLOW,
             'local/coursegen:createtemplatecoursewithai' => CAP_ALLOW,
+            // Part of the full creation set: without it a tenant administrator could not create a course with AI.
+            'local/coursegen:createactivitywithai' => CAP_ALLOW,
+            'local/coursegen:generateactivityimages' => CAP_ALLOW,
             'local/coursegen:uploadcoursesyllabus' => CAP_ALLOW,
             'local/coursegen:generatecourseimages' => CAP_ALLOW,
             'local/coursegen:viewsysteminstructions' => CAP_ALLOW,

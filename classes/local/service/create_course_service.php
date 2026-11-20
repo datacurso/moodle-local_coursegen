@@ -64,25 +64,26 @@ class create_course_service {
      * a live API connection.
      *
      * Optional overrides allow the user to modify course identity fields
-     * (fullname, shortname, category) before creation, as set via the review modal.
+     * (fullname, shortname, category, startdate) before creation, as set via the review modal.
      *
      * @param course_session $session Planning session persistent.
      * @param array $resultdata Result data from the Datacurso API (course_configuration, sections, activities).
      * @param array $overrides Optional user overrides for course fields.
-     *     Supported keys: fullname (string), shortname (string), category (int).
+     *     Supported keys: fullname (string), shortname (string), category (int), startdate (int timestamp).
      * @return array Result of the course content application. On success it also
-     *     carries 'generatedcms' (payload cmid, negative for a virtual instance => created cmid), which is internal
+     *     carries 'generatedcms' (activity key, see generated_activity_key, => created cmid), which is internal
      *     and must not be returned through a web service.
      */
     public static function create_course(course_session $session, array $resultdata, array $overrides = []): array {
         global $CFG;
 
-        // Resolve the effective category (user override → AI value → site default)
-        // and require course creation permission in that exact category before any
-        // creation work happens. Thrown (not returned) so callers surface it as a
-        // proper permission error.
+        // Resolve the effective category (user override → usable AI value → usable
+        // site default → first usable category) and require the full creation set in
+        // that exact category before any creation work happens (ticket #9539). Thrown
+        // (not returned) so callers surface it as a proper permission error naming the
+        // missing capability.
         $effectivecategoryid = self::resolve_effective_category($resultdata, $overrides);
-        require_capability('moodle/course:create', \context_coursecat::instance($effectivecategoryid));
+        creation_permissions::require_for_category($effectivecategoryid);
 
         try {
             // This request may take a long time depending on the complexity of the prompt that the AI has to resolve.
@@ -98,9 +99,20 @@ class create_course_service {
             // be copied over.
             $sourcecourseid = self::template_course_id_of($session);
 
+            // Keep section 0 as the course's general section. A template result keeps the section
+            // numbers of its template, so only a free generation is renumbered.
+            if ($sourcecourseid === null) {
+                $resultdata = self::move_plan_out_of_general_section($resultdata);
+            }
+
             // Build course data entirely from the API response.
             $coursedata = self::build_course_data_from_api($resultdata);
             $courseconfiguration = $resultdata['course_configuration'] ?? [];
+            // The language chosen in the assistant; a template course then keeps its own settings, language included.
+            $lang = self::resolve_course_language($session);
+            if ($lang !== '') {
+                $coursedata->lang = $lang;
+            }
             if ($sourcecourseid !== null) {
                 template_course_settings::apply_to_new_course($coursedata, $courseconfiguration);
             }
@@ -113,8 +125,11 @@ class create_course_service {
             if (!empty($overrides['shortname'])) {
                 $coursedata->shortname = (string)\core_text::substr(trim($overrides['shortname']), 0, 100);
             }
-            if (!empty($overrides['category'])) {
-                $coursedata->category = (int)$overrides['category'];
+            // The course goes where the permissions were checked, never to a category
+            // proposed by the AI service that this site does not have.
+            $coursedata->category = $effectivecategoryid;
+            if (!empty($overrides['startdate'])) {
+                $coursedata->startdate = (int)$overrides['startdate'];
             }
 
             $coursedata = self::ensure_unique_course_fields($coursedata);
@@ -142,9 +157,15 @@ class create_course_service {
 
             // Process sections if provided in the response.
             if (!empty($resultdata['sections_info'])) {
-                self::process_course_sections($course->id, $resultdata['sections_info']);
+                $sectionsinfo = $resultdata['sections_info'];
                 if ($sourcecourseid !== null) {
-                    template_section_look::apply(get_course($course->id), $resultdata['sections_info'], $sourcecourseid);
+                    $sectionsinfo = self::with_stored_structure($session, $sectionsinfo);
+                }
+                self::process_course_sections($course->id, $sectionsinfo);
+                if ($sourcecourseid !== null) {
+                    template_section_look::apply(get_course($course->id), $sectionsinfo, $sourcecourseid);
+                    // The names the AI gave are the last word on the sections' names, whatever the look touched.
+                    template_section_names::apply((int) $course->id, $sectionsinfo);
                 }
             }
 
@@ -168,6 +189,11 @@ class create_course_service {
             // Subsections declared without activities materialize at the end of
             // their parent section.
             self::materialize_remaining_subsections($course->id, $subsections, $activityerrors);
+
+            // Hidden activities, completion rules and unit locks the guideline asked for.
+            $generatedactivities = $resultdata['generated_activities'] ?? [];
+            guideline_activity_settings::apply((int) $course->id, $generatedactivities, $generatedcms);
+            guideline_unit_locks::apply((int) $course->id, $resultdata['sections_info'] ?? [], $generatedactivities, $generatedcms);
 
             // Ensure section sequences only contain valid course module ids.
             $removedreferences = self::repair_course_section_sequences($course->id);
@@ -237,8 +263,6 @@ class create_course_service {
             // Keep the technical detail in developer debugging only: the client
             // receives a localized message without internal information.
             debugging('local_coursegen: course creation failed. ' . $e->getMessage());
-            error_log('local_coursegen: course creation failed: ' . get_class($e) . ': ' . $e->getMessage() . ' at '
-                . $e->getFile() . ':' . $e->getLine());
 
             generation_failed::create([
                 'context' => \context_system::instance(),
@@ -250,7 +274,7 @@ class create_course_service {
                 'courseid' => 0,
                 'shortname' => '',
                 'fullname' => '',
-                'message' => get_string('error_course_creation_failed', 'local_coursegen'),
+                'message' => license_failure::message($e) ?? get_string('error_course_creation_failed', 'local_coursegen'),
                 'partial' => false,
                 'haswarnings' => false,
                 'warningscount' => 0,
@@ -261,24 +285,48 @@ class create_course_service {
     /**
      * Resolve the category the course will effectively be created in.
      *
-     * Precedence: user override → AI-generated value → default category
-     * (the category of the user's tenant, else the site default).
+     * A category the user picked in the review panel is kept: it must still exist, and the
+     * permission check that follows refuses it when the user cannot create courses there.
+     * The category proposed by the AI service is only a suggestion, made without knowing the
+     * categories of this site, so it is used only when it exists and the user holds the
+     * creation set there. Otherwise the default category (the category of the user's Workplace
+     * tenant, else the site default), and then the first category where the user holds the
+     * creation set, take its place.
      *
      * @param array $resultdata Result data from the Datacurso API.
      * @param array $overrides Optional user overrides for course fields.
      * @return int Category id.
+     * @throws \moodle_exception When the picked category does not exist, or no category is usable.
      */
-    private static function resolve_effective_category(array $resultdata, array $overrides): int {
+    public static function resolve_effective_category(array $resultdata, array $overrides): int {
         if (!empty($overrides['category'])) {
-            return (int)$overrides['category'];
+            $categoryid = (int)$overrides['category'];
+            if (!self::category_exists($categoryid)) {
+                throw new \moodle_exception('error_category_unavailable', 'local_coursegen');
+            }
+            return $categoryid;
         }
 
+        $candidates = [];
         $config = $resultdata['course_configuration'] ?? null;
         if (is_array($config) && !empty($config['category'])) {
-            return (int)$config['category'];
+            $candidates[] = (int)$config['category'];
+        }
+        $defaultcategoryid = self::get_default_categoryid();
+        if ($defaultcategoryid > 0) {
+            $candidates[] = $defaultcategoryid;
+        }
+        foreach ($candidates as $categoryid) {
+            if (self::category_exists($categoryid) && creation_permissions::can_create_in($categoryid)) {
+                return $categoryid;
+            }
         }
 
-        return self::get_default_categoryid();
+        $firstallowed = creation_permissions::first_allowed_category();
+        if ($firstallowed > 0) {
+            return $firstallowed;
+        }
+        throw new \moodle_exception('error_category_unavailable', 'local_coursegen');
     }
 
     /**
@@ -297,6 +345,17 @@ class create_course_service {
 
         $defaultcategory = core_course_category::get_default();
         return $defaultcategory ? (int)$defaultcategory->id : 0;
+    }
+
+    /**
+     * Whether a course category exists on this site.
+     *
+     * @param int $categoryid Category id.
+     * @return bool
+     */
+    private static function category_exists(int $categoryid): bool {
+        global $DB;
+        return $categoryid > 0 && $DB->record_exists('course_categories', ['id' => $categoryid]);
     }
 
     /**
@@ -335,6 +394,12 @@ class create_course_service {
 
         $coursedata->category = (int)($config['category'] ?? $defaultcategoryid);
         $coursedata->enablecompletion = self::enablecompletion_for($config);
+
+        $description = trim((string)($config['description'] ?? ''));
+        if ($description !== '') {
+            $coursedata->summary = self::description_to_html($description);
+            $coursedata->summaryformat = FORMAT_HTML;
+        }
 
         return $coursedata;
     }
@@ -406,10 +471,17 @@ class create_course_service {
      */
     public static function get_course_settings(course_session $session, array $resultdata): array {
         $coursedata = self::build_course_data_from_api($resultdata);
+        // Offer the category the course would be created in, so the review panel never
+        // starts on a category this site does not have or the user cannot use.
+        try {
+            $category = self::resolve_effective_category($resultdata, []);
+        } catch (\moodle_exception $e) {
+            $category = 0;
+        }
         return [
             'fullname' => $coursedata->fullname ?? '',
             'shortname' => $coursedata->shortname ?? '',
-            'category' => $coursedata->category ?? 0,
+            'category' => $category,
         ];
     }
 
@@ -451,6 +523,24 @@ class create_course_service {
         }
 
         return $coursedata;
+    }
+
+    /**
+     * The sections of the result, with the structure of the payload that was sent.
+     *
+     * A flexsections course made with another number of units than the
+     * template's was resized before it was sent; the structure (parents and the
+     * template section each one comes from) lives in the stored payload, not
+     * in what the service answers.
+     *
+     * @param course_session $session
+     * @param array $sectionsinfo The result's sections_info.
+     * @return array
+     */
+    private static function with_stored_structure(course_session $session, array $sectionsinfo): array {
+        $coursedata = json_decode((string) $session->get('coursedata'), true);
+        $sent = $coursedata['payload']['sections_info'] ?? [];
+        return template_unit_resizer::with_structure_of($sectionsinfo, $sent);
     }
 
     /**
@@ -516,15 +606,22 @@ class create_course_service {
 
         foreach ($sectionsinfo as $sectioninfo) {
             $sectionnumber = (int)$sectioninfo['section'];
-            $sectionname = $sectioninfo['name'] ?? '';
+            $sectionname = template_section_names::clean_name((string)($sectioninfo['name'] ?? ''));
+            $description = trim((string)($sectioninfo['description'] ?? ''));
+            $summary = $description !== '' ? self::description_to_html($description) : '';
 
             if (isset($existingsections[$sectionnumber])) {
-                // Update existing section name.
+                // Update the existing section with the planned name and summary.
+                $update = ['id' => $existingsections[$sectionnumber]->id];
                 if (!empty($sectionname) && $existingsections[$sectionnumber]->name !== $sectionname) {
-                    $DB->update_record('course_sections', [
-                        'id' => $existingsections[$sectionnumber]->id,
-                        'name' => $sectionname,
-                    ]);
+                    $update['name'] = $sectionname;
+                }
+                if ($summary !== '') {
+                    $update['summary'] = $summary;
+                    $update['summaryformat'] = FORMAT_HTML;
+                }
+                if (count($update) > 1) {
+                    $DB->update_record('course_sections', $update);
                 }
             } else {
                 // Create new section.
@@ -532,7 +629,7 @@ class create_course_service {
                 $sectiondata->course = $courseid;
                 $sectiondata->section = $sectionnumber;
                 $sectiondata->name = $sectionname;
-                $sectiondata->summary = '';
+                $sectiondata->summary = $summary;
                 $sectiondata->summaryformat = FORMAT_HTML;
                 $sectiondata->sequence = '';
                 $sectiondata->visible = 1;
@@ -555,6 +652,72 @@ class create_course_service {
 
         // Rebuild course cache.
         rebuild_course_cache($courseid, true);
+    }
+
+    /**
+     * Shift a plan that starts at section 0 one position down.
+     *
+     * The service numbers the planned sections from 0, which would turn the first
+     * unit into the course's general section and leave the course without one.
+     * Sections, the top-level section of each activity and the parent of each
+     * subsection move together, so the structure is kept.
+     *
+     * @param array $resultdata Result data from the Datacurso API.
+     * @return array The same data, with section numbers starting at 1.
+     */
+    private static function move_plan_out_of_general_section(array $resultdata): array {
+        $sections = $resultdata['sections_info'] ?? null;
+        if (!is_array($sections) || $sections === []) {
+            return $resultdata;
+        }
+        $numbers = array_map(fn($section) => (int)($section['section'] ?? 0), array_filter($sections, 'is_array'));
+        if ($numbers === [] || min($numbers) !== 0) {
+            return $resultdata;
+        }
+
+        foreach ($resultdata['sections_info'] as $key => $section) {
+            if (is_array($section)) {
+                $resultdata['sections_info'][$key]['section'] = (int)($section['section'] ?? 0) + 1;
+            }
+        }
+        foreach ($resultdata['generated_activities'] ?? [] as $key => $activity) {
+            if (is_array($activity)) {
+                $current = (int)($activity['parameters']['section'] ?? 0);
+                $resultdata['generated_activities'][$key]['parameters']['section'] = $current + 1;
+            }
+        }
+        foreach ($resultdata['subsections_info'] ?? [] as $key => $subsection) {
+            if (is_array($subsection)) {
+                $resultdata['subsections_info'][$key]['parent_section'] = (int)($subsection['parent_section'] ?? 0) + 1;
+            }
+        }
+        return $resultdata;
+    }
+
+    /**
+     * Language chosen in the assistant, when its language pack is installed.
+     *
+     * @param course_session $session Planning session persistent.
+     * @return string Language code, or '' to keep the site default.
+     */
+    private static function resolve_course_language(course_session $session): string {
+        $coursedata = json_decode((string)$session->get('coursedata'), true);
+        $lang = clean_param((string)($coursedata['local_coursegen_lang'] ?? ''), PARAM_LANG);
+        if ($lang === '' || !get_string_manager()->translation_exists($lang, false)) {
+            return '';
+        }
+        return $lang;
+    }
+
+    /**
+     * Turn a plain-text description from the service into summary HTML.
+     *
+     * @param string $description Plain text, one paragraph per line.
+     * @return string
+     */
+    private static function description_to_html(string $description): string {
+        $paragraphs = preg_split('/\R+/u', $description, -1, PREG_SPLIT_NO_EMPTY);
+        return implode('', array_map(fn($paragraph) => \html_writer::tag('p', s(trim($paragraph))), $paragraphs));
     }
 
     /**
@@ -704,9 +867,8 @@ class create_course_service {
      * @param int $courseid Course ID.
      * @param array $activities Generated activities from API.
      * @param array $subsections Declared subsections index, mutated as they materialize.
-     * @param array $generatedcms Filled with payload cmid => created cmid for every activity
-     *     that carries a cmid and was created. A virtual template instance travels under
-     *     a negative cmid, which is tracked like any other.
+     * @param array $generatedcms Filled with activity key => created cmid for every activity that was
+     *     created; an activity the AI wrote is known by its uid (see generated_activity_key).
      * @param int|null $sourcecourseid Course whose files the payload may reference (template base course).
      * @return array Activity creation errors.
      */
@@ -763,9 +925,9 @@ class create_course_service {
 
             try {
                 $newcm = create_mod_service::create_from_ai_result($activity, $course, $sectionnum, null, $sourcecourseid);
-                $payloadcmid = (int) ($activity['cmid'] ?? 0);
-                if ($payloadcmid !== 0) {
-                    $generatedcms[$payloadcmid] = (int) $newcm->coursemodule;
+                $key = generated_activity_key::of($activity);
+                if ($key !== '') {
+                    $generatedcms[$key] = (int) $newcm->coursemodule;
                 }
             } catch (\Throwable $e) {
                 $resource = (string)($activity['resource_type'] ?? 'unknown');

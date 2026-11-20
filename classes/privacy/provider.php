@@ -32,7 +32,8 @@ use core_privacy\local\request\approved_userlist;
 use core_privacy\local\request\contextlist;
 use core_privacy\local\request\userlist;
 use core_privacy\local\request\writer;
-use local_coursegen\local\space\space_file_storage;
+use local_coursegen\local\service\remote_data_service;
+use local_coursegen\local\service\user_data_eraser;
 use stdClass;
 
 /**
@@ -58,7 +59,8 @@ class provider implements
                 'prompt_text', 'timecreated', 'timemodified', 'usermodified',
             ],
             'local_coursegen_course_sessions' => [
-                'courseid', 'userid', 'session_id', 'status', 'templateid', 'title', 'shortname', 'timecreated', 'timemodified',
+                'courseid', 'userid', 'session_id', 'status', 'coursedata', 'templateid', 'title', 'shortname',
+                'timecreated', 'timemodified',
             ],
             'local_coursegen_module_jobs' => [
                 'courseid', 'userid', 'job_id', 'status', 'generate_images',
@@ -87,17 +89,55 @@ class provider implements
         // Data sent to the external Datacurso course generation service
         // (planning prompts, activity instructions, syllabus files and the
         // request context composed by the provider layer).
-        $collection->add_external_location_link('datacurso_course_service', [
-            'prompt' => 'privacy:metadata:datacurso_course_service:prompt',
-            'instructions' => 'privacy:metadata:datacurso_course_service:instructions',
-            'syllabus_file' => 'privacy:metadata:datacurso_course_service:syllabus_file',
-            'lang' => 'privacy:metadata:datacurso_course_service:lang',
-            'with_images' => 'privacy:metadata:datacurso_course_service:with_images',
-            'userid' => 'privacy:metadata:datacurso_course_service:userid',
-            'site_id' => 'privacy:metadata:datacurso_course_service:site_id',
-            'site_url' => 'privacy:metadata:datacurso_course_service:site_url',
-            'timezone' => 'privacy:metadata:datacurso_course_service:timezone',
-        ], 'privacy:metadata:datacurso_course_service');
+        //
+        // The list below is the union of the top-level fields of every outbound
+        // call: course planning init and feedback, activity init and feedback,
+        // and the two multipart file uploads. It is kept honest by
+        // privacy_outbound_payload_test, which captures the real payloads and
+        // fails when one of their fields is missing here.
+        $fields = [
+            // Course planning init (POST /course/init).
+            'prompt',
+            'instructions',
+            'lang',
+            'with_images',
+            'with_subsections',
+            'subsections_available',
+            'image_policy',
+            'filetype_groups',
+            'h5p_core_api',
+            // Activity init (POST /activity/init) adds the course context kind.
+            'context_type',
+            // Multipart uploads (/course/sillabus/upload, /activity/file/upload).
+            'thread_id',
+            'file',
+            'filename',
+            'mimetype',
+            'syllabus_file',
+            // Planning feedback (POST /course/feedback).
+            'pending_action',
+            // Activity feedback (POST /activity/feedback).
+            'approval_status',
+            'instruction',
+            // Privacy export and deletion (POST /privacy/export, /privacy/delete).
+            'thread_ids',
+            // Added by the provider transport layer to every single call.
+            'userid',
+            'site_id',
+            'site_url',
+            'timezone',
+        ];
+
+        $linkfields = [];
+        foreach ($fields as $field) {
+            $linkfields[$field] = 'privacy:metadata:datacurso_course_service:' . $field;
+        }
+
+        $collection->add_external_location_link(
+            'datacurso_course_service',
+            $linkfields,
+            'privacy:metadata:datacurso_course_service'
+        );
 
         return $collection;
     }
@@ -112,6 +152,13 @@ class provider implements
         $contextlist = new contextlist();
         if (self::user_has_coursegen_data($userid)) {
             $contextlist->add_user_context($userid);
+        }
+
+        // Syllabus files are written at system context with the planning
+        // session id as item id (see external\courseai_syllabus_upload), so the
+        // system context is where that personal data really lives.
+        if (self::user_has_syllabus_files($userid)) {
+            $contextlist->add_system_context();
         }
 
         // Course contexts where the user has course-scoped personal data.
@@ -144,6 +191,22 @@ class provider implements
     public static function get_users_in_context(userlist $userlist) {
         $context = $userlist->get_context();
 
+        if ($context instanceof \context_system) {
+            // Only the stored syllabus files live here, keyed by session id.
+            $userlist->add_from_sql(
+                'userid',
+                "SELECT DISTINCT s.userid AS userid
+                   FROM {files} f
+                   JOIN {local_coursegen_course_sessions} s ON s.id = f.itemid
+                  WHERE f.contextid = :contextid
+                        AND f.component = :component
+                        AND f.filearea = :filearea
+                        AND f.filename <> :dot",
+                self::syllabus_file_params($context->id)
+            );
+            return;
+        }
+
         if ($context instanceof \context_user) {
             if (self::user_has_coursegen_data($context->instanceid)) {
                 $userlist->add_user($context->instanceid);
@@ -175,7 +238,9 @@ class provider implements
         $user = $contextlist->get_user();
 
         foreach ($contextlist->get_contexts() as $context) {
-            if ($context instanceof \context_user && (int)$context->instanceid === (int)$user->id) {
+            if ($context instanceof \context_system) {
+                self::export_system_context_data($user);
+            } else if ($context instanceof \context_user && (int)$context->instanceid === (int)$user->id) {
                 self::export_user_context_data($user);
             } else if ($context instanceof \context_course) {
                 self::export_course_context_data($context, $user);
@@ -189,7 +254,11 @@ class provider implements
      * @param context $context The specific context to delete data for.
      */
     public static function delete_data_for_all_users_in_context(context $context) {
-        if ($context->contextlevel == CONTEXT_USER) {
+        if ($context->contextlevel == CONTEXT_SYSTEM) {
+            // Only this plugin's syllabus file area is removed: everything else
+            // stored at system context belongs to other components.
+            get_file_storage()->delete_area_files($context->id, 'local_coursegen', 'syllabus');
+        } else if ($context->contextlevel == CONTEXT_USER) {
             self::delete_user_data($context->instanceid);
         } else if ($context->contextlevel == CONTEXT_COURSE) {
             self::delete_course_data((int)$context->instanceid);
@@ -207,7 +276,9 @@ class provider implements
         }
         $userid = (int)$contextlist->get_user()->id;
         foreach ($contextlist->get_contexts() as $context) {
-            if ($context->contextlevel == CONTEXT_USER) {
+            if ($context->contextlevel == CONTEXT_SYSTEM) {
+                self::delete_syllabus_files_of_user($userid);
+            } else if ($context->contextlevel == CONTEXT_USER) {
                 self::delete_user_data($context->instanceid);
             } else if ($context->contextlevel == CONTEXT_COURSE) {
                 self::delete_course_data((int)$context->instanceid, $userid);
@@ -222,7 +293,11 @@ class provider implements
      */
     public static function delete_data_for_users(approved_userlist $userlist) {
         $context = $userlist->get_context();
-        if ($context instanceof \context_user) {
+        if ($context instanceof \context_system) {
+            foreach ($userlist->get_userids() as $userid) {
+                self::delete_syllabus_files_of_user((int)$userid);
+            }
+        } else if ($context instanceof \context_user) {
             self::delete_user_data($context->instanceid);
         } else if ($context instanceof \context_course) {
             foreach ($userlist->get_userids() as $userid) {
@@ -253,12 +328,51 @@ class provider implements
             $records->close();
         }
 
-        // Export the syllabus files stored for the user's planning sessions.
+        self::export_remote_data($user, $context);
+    }
+
+    /**
+     * Export what the Datacurso course service keeps of the user's threads (Mindfree, LCG-PRIV-001).
+     *
+     * When the service cannot be reached, the export says so instead of failing: the rest of the
+     * user's data is still exported, and the service deletes its copy when the retention expires.
+     *
+     * @param stdClass $user The user being exported.
+     * @param \context_user $context Their user context.
+     */
+    protected static function export_remote_data(stdClass $user, \context_user $context): void {
+        $subcontext = [
+            get_string('privacy:metadata:local_coursegen', 'local_coursegen'),
+            get_string('privacy:remote_service', 'local_coursegen'),
+        ];
+        try {
+            $threads = (new remote_data_service())->export_user((int)$user->id);
+        } catch (\Throwable $e) {
+            debugging('Could not export the data kept by the course service: ' . $e->getMessage(), DEBUG_DEVELOPER);
+            writer::with_context($context)->export_data($subcontext, (object)[
+                'status' => get_string('privacy:remote_unavailable', 'local_coursegen'),
+            ]);
+            return;
+        }
+        if ($threads !== []) {
+            writer::with_context($context)->export_data($subcontext, (object)['threads' => $threads]);
+        }
+    }
+
+    /**
+     * Export the syllabus files of a user under the system context, which is
+     * where they are stored.
+     *
+     * @param stdClass $user The user being exported.
+     */
+    protected static function export_system_context_data(stdClass $user) {
+        global $DB;
+
+        $context = \context_system::instance();
         $fs = get_file_storage();
-        $syscontextid = \context_system::instance()->id;
         $sessionids = $DB->get_fieldset_select('local_coursegen_course_sessions', 'id', 'userid = ?', [$user->id]);
         foreach ($sessionids as $sessionid) {
-            $files = $fs->get_area_files($syscontextid, 'local_coursegen', 'syllabus', (int)$sessionid, 'id', false);
+            $files = $fs->get_area_files($context->id, 'local_coursegen', 'syllabus', (int)$sessionid, 'id', false);
             foreach ($files as $file) {
                 writer::with_context($context)->export_file([
                     get_string('privacy:metadata:local_coursegen', 'local_coursegen'),
@@ -319,23 +433,13 @@ class provider implements
     /**
      * Perform deletion of user data given a userid.
      *
-     * Personal rows (sessions and their syllabus files, jobs) are deleted;
-     * shared configuration rows (system instructions and course context) are
-     * kept and anonymized instead, so other users keep working setups.
+     * See user_data_eraser: personal rows and the custom prompts the user wrote are deleted; the
+     * system instructions, institutional configuration, are kept without the reference to the user.
      *
      * @param int $userid The user ID
      */
     private static function delete_user_data(int $userid) {
-        global $DB;
-
-        $sessionids = $DB->get_fieldset_select('local_coursegen_course_sessions', 'id', 'userid = ?', [$userid]);
-        self::delete_syllabus_files($sessionids);
-        $DB->delete_records('local_coursegen_course_sessions', ['userid' => $userid]);
-        $DB->delete_records('local_coursegen_module_jobs', ['userid' => $userid]);
-
-        // Anonymize the shared configuration instead of destroying it.
-        $DB->set_field('local_coursegen_system_instruction', 'usermodified', 0, ['usermodified' => $userid]);
-        $DB->set_field('local_coursegen_course_context', 'usermodified', 0, ['usermodified' => $userid]);
+        user_data_eraser::erase_user($userid);
     }
 
     /**
@@ -345,38 +449,59 @@ class provider implements
      * @param int|null $userid Restrict the deletion to this user, or null for every user.
      */
     private static function delete_course_data(int $courseid, ?int $userid = null) {
-        global $DB;
-
-        $sessionfilter = ['courseid' => $courseid];
-        $jobfilter = ['courseid' => $courseid];
-        $contextfilter = ['courseid' => $courseid];
-        if ($userid !== null) {
-            $sessionfilter['userid'] = $userid;
-            $jobfilter['userid'] = $userid;
-            $contextfilter['usermodified'] = $userid;
-        }
-
-        $sessionids = array_keys($DB->get_records('local_coursegen_course_sessions', $sessionfilter, '', 'id'));
-        self::delete_syllabus_files($sessionids);
-        $DB->delete_records('local_coursegen_course_sessions', $sessionfilter);
-        $DB->delete_records('local_coursegen_module_jobs', $jobfilter);
-
-        // The course context configuration is shared: anonymize it.
-        $DB->set_field('local_coursegen_course_context', 'usermodified', 0, $contextfilter);
+        user_data_eraser::erase_course($courseid, $userid);
     }
 
     /**
-     * Delete the stored syllabus files of the given planning sessions.
+     * Return true if the user owns at least one stored syllabus file.
      *
-     * @param array $sessionids Session record ids (file item ids).
+     * @param int $userid The user to check for.
+     * @return bool
      */
-    private static function delete_syllabus_files(array $sessionids) {
-        $fs = get_file_storage();
-        $syscontextid = \context_system::instance()->id;
-        foreach ($sessionids as $sessionid) {
-            $fs->delete_area_files($syscontextid, 'local_coursegen', 'syllabus', (int)$sessionid);
-        }
-        space_file_storage::delete_user_files($userid);
+    private static function user_has_syllabus_files(int $userid): bool {
+        global $DB;
+
+        $params = self::syllabus_file_params(\context_system::instance()->id);
+        $params['userid'] = $userid;
+
+        return $DB->record_exists_sql(
+            "SELECT 1
+               FROM {files} f
+               JOIN {local_coursegen_course_sessions} s ON s.id = f.itemid
+              WHERE f.contextid = :contextid
+                    AND f.component = :component
+                    AND f.filearea = :filearea
+                    AND f.filename <> :dot
+                    AND s.userid = :userid",
+            $params
+        );
+    }
+
+    /**
+     * Named parameters shared by the syllabus file area queries.
+     *
+     * @param int $contextid System context id holding the files.
+     * @return array<string, mixed>
+     */
+    private static function syllabus_file_params(int $contextid): array {
+        return [
+            'contextid' => $contextid,
+            'component' => 'local_coursegen',
+            'filearea' => 'syllabus',
+            'dot' => '.',
+        ];
+    }
+
+    /**
+     * Delete the stored syllabus files belonging to a single user.
+     *
+     * Only the files are removed: the session rows they belong to are modelled
+     * under the user and course contexts and are deleted there.
+     *
+     * @param int $userid Owner of the planning sessions.
+     */
+    private static function delete_syllabus_files_of_user(int $userid) {
+        user_data_eraser::erase_syllabus_files_of_user($userid);
     }
 
     /**

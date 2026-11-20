@@ -26,17 +26,16 @@
 namespace local_coursegen\external;
 
 use context_system;
-use external_api;
-use external_function_parameters;
-use external_single_structure;
-use external_value;
-use local_coursegen\local\permission;
+use core_external\external_api;
+use core_external\external_function_parameters;
+use core_external\external_single_structure;
+use core_external\external_value;
+use local_coursegen\event\generation_job_started;
 use local_coursegen\local\service\ai_course_api_service;
 use local_coursegen\local\service\course_session_service;
+use local_coursegen\local\service\creation_permissions;
 
 defined('MOODLE_INTERNAL') || die();
-
-require_once($CFG->libdir . '/externallib.php');
 
 /**
  * External API to regenerate a single section, activity, or image in the detailed plan.
@@ -95,7 +94,7 @@ class regenerate_detailed_item extends external_api {
 
         // Owning the session is not enough: regenerating consumes paid AI
         // credits, so require the same capabilities as start_course_planning.
-        permission::require_create_course_with_ai();
+        creation_permissions::require_anywhere(null, [creation_permissions::FREE_CAPABILITY]);
 
         $sessionid = $session->get('session_id');
 
@@ -115,8 +114,22 @@ class regenerate_detailed_item extends external_api {
                 (bool)$params['deleted']
             );
         } catch (\moodle_exception $e) {
-            throw new \moodle_exception('error_sending_feedback', 'local_coursegen', '', $e->getMessage());
+            // Keep the technical detail in developer debugging only: the client
+            // receives a localized message without internal information.
+            debugging('Unexpected error while regenerating a detailed plan item: ' . $e->getMessage());
+            throw new \moodle_exception('error_sending_feedback', 'local_coursegen');
         }
+
+        // Regenerating an item starts a new AI generation turn on the thread,
+        // so it is audited like any other generation start. The free-text
+        // instruction is deliberately left out of the payload.
+        generation_job_started::create([
+            'context' => $context,
+            'other' => [
+                'job_id' => $sessionid,
+                'target_type' => (string)$params['target_type'],
+            ],
+        ])->trigger();
 
         return [
             'success' => !empty($result['success']),

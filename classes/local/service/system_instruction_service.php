@@ -163,6 +163,26 @@ class system_instruction_service {
     }
 
     /**
+     * The active guidelines of a tenant as the creation page lists them, ordered by name.
+     *
+     * @param int $tenantid Tenant whose guidelines are listed.
+     * @return array[] Items with id ('si_<id>'), name, category and description.
+     */
+    public static function page_items(int $tenantid): array {
+        $items = [];
+        foreach (self::get_available($tenantid) as $record) {
+            $items[] = [
+                'id' => 'si_' . $record->id,
+                'name' => $record->name,
+                // The table has no category field, so every guideline is listed under the default.
+                'category' => 'General',
+                'description' => $record->content ?? '',
+            ];
+        }
+        return $items;
+    }
+
+    /**
      * Ensure a tenant may use an instruction: it must be an active instruction of its own.
      *
      * @param int $id Instruction id.

@@ -27,19 +27,24 @@ namespace local_coursegen\external;
 
 use aiprovider_datacurso\local\plugin_settings;
 use context_system;
-use external_api;
-use external_function_parameters;
-use external_single_structure;
+use core_external\external_api;
+use core_external\external_function_parameters;
+use core_external\external_single_structure;
+use core_external\external_value;
 use local_coursegen\local\permission;
-use external_value;
+use local_coursegen\local\service\creation_permissions;
 
 defined('MOODLE_INTERNAL') || die();
 
-require_once($CFG->libdir . '/externallib.php');
 require_once($CFG->dirroot . '/repository/lib.php');
 
 /**
  * External API to initialise a filepicker (draft area) for courseai syllabus upload.
+ *
+ * No audit event is emitted: this call only allocates an unused draft item id
+ * and returns filepicker options, it modifies no state and transfers nothing.
+ * The accepted types and size limit it advertises are the browser-side half of
+ * the contract; courseai_syllabus_upload re-applies them server side.
  */
 class courseai_filepicker_init extends external_api {
     /**
@@ -67,7 +72,9 @@ class courseai_filepicker_init extends external_api {
         $context = context_system::instance();
         self::validate_context($context);
 
-        // Check permissions.
+        // Check permissions: the full creation set in at least one category, plus the syllabus upload
+        // capability, which may be held in a category (Workplace tenants) as well as on the site.
+        creation_permissions::require_anywhere();
         permission::require_create_course_with(['local/coursegen:uploadcoursesyllabus']);
 
         $draftitemid = file_get_unused_draft_itemid();
@@ -75,12 +82,13 @@ class courseai_filepicker_init extends external_api {
 
         $args = (object) [
             'context' => $context,
-            'accepted_types' => ['.pdf', '.docx', '.txt'],
+            // Single source of truth with the endpoint that enforces them.
+            'accepted_types' => courseai_syllabus_upload::accepted_filepicker_types(),
             'return_types' => FILE_INTERNAL,
             'env' => 'filepicker',
             'client_id' => $clientid,
             'itemid' => $draftitemid,
-            'maxbytes' => 10 * 1024 * 1024, // 10MB
+            'maxbytes' => courseai_syllabus_upload::MAX_SYLLABUS_BYTES,
             'maxfiles' => 1,
             'subdirs' => 0,
         ];

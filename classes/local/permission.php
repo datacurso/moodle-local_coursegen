@@ -18,6 +18,7 @@ namespace local_coursegen\local;
 
 use context_system;
 use core_course_category;
+use local_coursegen\local\service\creation_permissions;
 
 /**
  * Permission helper for the AI course creation entry points.
@@ -25,7 +26,10 @@ use core_course_category;
  * Course creation with AI needs two things: the plugin capability of one of the two modes (free or from a
  * template) and the ability to create a course somewhere. Both may be held at system level or in a course category, so the
  * check mirrors what core does on My courses rather than requiring system-level
- * capabilities. The authoritative check on the effective target category still
+ * capabilities. The creation itself needs the full capability set of
+ * {@see creation_permissions}, checked per category (which is tenant aware); the
+ * feature checks here add the capability of one feature, such as the upload of a
+ * syllabus. The authoritative check on the effective target category still
  * happens in create_course_service when the course is created.
  *
  * @package    local_coursegen
@@ -34,23 +38,16 @@ use core_course_category;
  */
 class permission {
     /** @var string[] Capabilities that allow creating a course with AI, one per mode: any one is enough. */
-    public const CREATION_CAPABILITIES = [
-        'local/coursegen:createfreecoursewithai',
-        'local/coursegen:createtemplatecoursewithai',
-    ];
+    public const CREATION_CAPABILITIES = creation_permissions::MODE_CAPABILITIES;
 
     /**
-     * Whether the user may create courses with AI.
-     *
-     * For the current user the core category helpers are used (they are cached
-     * and tenant aware). For another user the categories are inspected one by
-     * one, which is slower but gives the same answer.
+     * Whether the user may create courses with AI: the full creation set in at least one category.
      *
      * @param int|null $userid User id, or null for the current user.
      * @return bool
      */
     public static function can_create_course_with_ai(?int $userid = null): bool {
-        return self::can_create_course_with(self::CREATION_CAPABILITIES, $userid);
+        return creation_permissions::can_create_anywhere($userid);
     }
 
     /**
@@ -104,7 +101,7 @@ class permission {
      * @throws \required_capability_exception
      */
     public static function require_create_course_with_ai(): void {
-        self::require_create_course_with(self::CREATION_CAPABILITIES);
+        creation_permissions::require_anywhere();
     }
 
     /**

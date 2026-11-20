@@ -28,6 +28,14 @@ namespace local_coursegen\local;
 final class permission_test extends \advanced_testcase {
     use \local_coursegen\tests\requires_workplace;
 
+    /** @var string[] The full creation set with the free mode, the one creating a course with AI needs. */
+    private const FULL_SET = [
+        'moodle/course:create',
+        'moodle/course:view',
+        'local/coursegen:createactivitywithai',
+        'local/coursegen:createfreecoursewithai',
+    ];
+
     /**
      * Creates a user holding the given capabilities through a new role in the given context.
      *
@@ -47,12 +55,12 @@ final class permission_test extends \advanced_testcase {
     }
 
     /**
-     * Both capabilities at system level allow creating courses with AI.
+     * The full creation set at system level allows creating courses with AI.
      */
     public function test_system_capabilities_allow(): void {
         $this->resetAfterTest();
         $user = $this->create_user_with_capabilities(
-            ['moodle/course:create', 'local/coursegen:createfreecoursewithai'],
+            self::FULL_SET,
             \context_system::instance()
         );
         $this->setUser($user);
@@ -62,13 +70,13 @@ final class permission_test extends \advanced_testcase {
     }
 
     /**
-     * Both capabilities granted in a single category only are enough.
+     * The full creation set granted in a single category only is enough.
      */
     public function test_category_level_capabilities_allow(): void {
         $this->resetAfterTest();
         $category = $this->getDataGenerator()->create_category();
         $user = $this->create_user_with_capabilities(
-            ['moodle/course:create', 'local/coursegen:createfreecoursewithai'],
+            self::FULL_SET,
             \context_coursecat::instance($category->id)
         );
         $this->setUser($user);
@@ -144,7 +152,7 @@ final class permission_test extends \advanced_testcase {
         $this->setAdminUser();
         $category = $this->getDataGenerator()->create_category();
         $allowed = $this->create_user_with_capabilities(
-            ['moodle/course:create', 'local/coursegen:createfreecoursewithai'],
+            self::FULL_SET,
             \context_coursecat::instance($category->id)
         );
         $denied = $this->getDataGenerator()->create_user();

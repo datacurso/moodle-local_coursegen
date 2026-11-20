@@ -95,6 +95,7 @@ $context = [
     'currentmode'   => $currentmode,
 
     'activities' => $activitiescontext,
+    'bs' => \local_coursegen\local\bootstrap_classes::get(),
 ];
 
 echo $OUTPUT->header();

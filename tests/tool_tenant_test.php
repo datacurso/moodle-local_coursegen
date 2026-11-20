@@ -32,6 +32,8 @@ final class tool_tenant_test extends \advanced_testcase {
     private const EXPECTED = [
         'local/coursegen:createfreecoursewithai',
         'local/coursegen:createtemplatecoursewithai',
+        'local/coursegen:createactivitywithai',
+        'local/coursegen:generateactivityimages',
         'local/coursegen:uploadcoursesyllabus',
         'local/coursegen:generatecourseimages',
         'local/coursegen:viewsysteminstructions',

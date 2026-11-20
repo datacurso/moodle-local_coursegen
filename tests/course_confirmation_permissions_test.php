@@ -107,7 +107,7 @@ final class course_confirmation_permissions_test extends \advanced_testcase {
      * @param int $userid User id.
      * @return void
      */
-    private function allow_createcoursewithai_at_system(int $userid): void {
+    private function allow_createfreecoursewithai_at_system(int $userid): void {
         $systemcontext = \context_system::instance();
         $roleid = create_role('AI course creator', 'aicoursecreator', '');
         assign_capability('local/coursegen:createfreecoursewithai', CAP_ALLOW, $roleid, $systemcontext->id, true);
@@ -115,13 +115,27 @@ final class course_confirmation_permissions_test extends \advanced_testcase {
     }
 
     /**
-     * Give the user moodle/course:create in one category only.
+     * Give the user the full creation set (the four fixed capabilities, ticket #9539) in one
+     * category only.
      *
      * @param int $userid User id.
      * @param \core_course_category $category Category where the user may create courses.
      * @return void
      */
     private function allow_course_create_in_category(int $userid, \core_course_category $category): void {
+        $categorycontext = \context_coursecat::instance($category->id);
+        $roleid = $this->getDataGenerator()->get_plugin_generator('local_coursegen')->create_course_creator_role();
+        role_assign($roleid, $userid, $categorycontext->id);
+    }
+
+    /**
+     * Give the user moodle/course:create alone in one category.
+     *
+     * @param int $userid User id.
+     * @param \core_course_category $category Category where the user may create courses the plain way.
+     * @return void
+     */
+    private function allow_plain_course_create_in_category(int $userid, \core_course_category $category): void {
         $categorycontext = \context_coursecat::instance($category->id);
         $roleid = create_role('Category course creator', 'catcoursecreator', '');
         assign_capability('moodle/course:create', CAP_ALLOW, $roleid, $categorycontext->id, true);
@@ -195,7 +209,7 @@ final class course_confirmation_permissions_test extends \advanced_testcase {
     }
 
     /**
-     * A user with createcoursewithai but no course:create anywhere is rejected
+     * A user with createfreecoursewithai but no course:create anywhere is rejected
      * by get_course_settings.
      */
     public function test_get_course_settings_rejects_user_without_any_course_create(): void {
@@ -203,7 +217,7 @@ final class course_confirmation_permissions_test extends \advanced_testcase {
         $this->resetAfterTest();
 
         $user = $this->getDataGenerator()->create_user();
-        $this->allow_createcoursewithai_at_system($user->id);
+        $this->allow_createfreecoursewithai_at_system($user->id);
         $this->setUser($user);
         $session = $this->create_session($user->id);
 
@@ -278,7 +292,7 @@ final class course_confirmation_permissions_test extends \advanced_testcase {
         $catb = \core_course_category::create(['name' => 'Forbidden category']);
 
         $user = $generator->create_user();
-        $this->allow_createcoursewithai_at_system($user->id);
+        $this->allow_createfreecoursewithai_at_system($user->id);
         $this->allow_course_create_in_category($user->id, $cata);
         $this->setUser($user);
 
@@ -308,71 +322,32 @@ final class course_confirmation_permissions_test extends \advanced_testcase {
     }
 
     /**
-     * A user holding both capabilities in one category only (nothing at system
-     * level) passes the capability gates of the session web services.
+     * A category where the user holds moodle/course:create but not the full creation set is not
+     * offered: creating there would be refused by the gate (ticket #9539).
      */
-    public function test_category_level_creator_passes_capability_gates(): void {
+    public function test_category_with_plain_course_create_only_is_not_offered(): void {
         $this->require_datacurso_provider();
         $this->resetAfterTest();
 
-        $cata = \core_course_category::create(['name' => 'Allowed category']);
-        $user = $this->getDataGenerator()->create_user();
-        $this->allow_createcoursewithai_in_category($user->id, $cata);
+        $generator = $this->getDataGenerator();
+        $cata = \core_course_category::create(['name' => 'Full set category']);
+        $catb = \core_course_category::create(['name' => 'Plain create category']);
+
+        $user = $generator->create_user();
+        $this->allow_createfreecoursewithai_at_system($user->id);
         $this->allow_course_create_in_category($user->id, $cata);
+        $this->allow_plain_course_create_in_category($user->id, $catb);
         $this->setUser($user);
-        $session = $this->create_session($user->id);
-        $recordid = (int) $session->get('id');
 
-        // The gates run before any API call; the client double only keeps the
-        // calls that pass the gates away from the network.
-        $client = $this->createMock(\aiprovider_datacurso\httpclient\ai_course_api::class);
-        $client->method('request')->willReturn([]);
-        \local_coursegen\local\api_client_factory::set_test_client($client);
-
-        // The regenerate_detailed_item service is not exercised past its gate: it
-        // calls a service method that does not exist (ai_course_api_service::regenerate_detailed_item).
-        $calls = [
-            'course_planning_feedback' => static function () use ($recordid): void {
-                course_planning_feedback::execute($recordid, ['action' => 'accept', 'target_ids' => []]);
-            },
-            'get_course_session_state' => static function () use ($recordid): void {
-                get_course_session_state::execute($recordid);
-            },
-        ];
-
-        foreach ($calls as $label => $call) {
-            try {
-                $call();
-            } catch (\required_capability_exception $e) {
-                $this->fail($label . ' must accept a user holding both capabilities at category level.');
-            } catch (\moodle_exception $e) {
-                // Any later failure comes from the API double, after the gates.
-                $this->assertNotInstanceOf(\required_capability_exception::class, $e, $label);
-            }
-            $this->resetDebugging();
-        }
-        \local_coursegen\local\api_client_factory::set_test_client(null);
-    }
-
-    /**
-     * get_course_settings accepts a user holding both capabilities in one category only.
-     */
-    public function test_get_course_settings_accepts_category_level_creator(): void {
-        $this->require_datacurso_provider();
-        $this->resetAfterTest();
-
-        $cata = \core_course_category::create(['name' => 'Allowed category']);
-        $user = $this->getDataGenerator()->create_user();
-        $this->allow_createcoursewithai_in_category($user->id, $cata);
-        $this->allow_course_create_in_category($user->id, $cata);
-        $this->setUser($user);
         $session = $this->create_session($user->id);
 
         $service = $this->getMockBuilder(ai_course_api_service::class)
             ->disableOriginalConstructor()
             ->onlyMethods(['get_course_result'])
             ->getMock();
-        $service->method('get_course_result')->willReturn(['result' => []]);
+        $service->method('get_course_result')->willReturn([
+            'result' => ['course_configuration' => ['fullname' => 'AI planned course', 'shortname' => 'aiplanned']],
+        ]);
         testable_get_course_settings::$mockservice = $service;
 
         $result = testable_get_course_settings::execute((int) $session->get('id'));
@@ -391,7 +366,7 @@ final class course_confirmation_permissions_test extends \advanced_testcase {
         $cata = \core_course_category::create(['name' => 'Allowed category']);
 
         $user = $this->getDataGenerator()->create_user();
-        $this->allow_createcoursewithai_at_system($user->id);
+        $this->allow_createfreecoursewithai_at_system($user->id);
         $this->allow_course_create_in_category($user->id, $cata);
         $this->setUser($user);
 
@@ -416,7 +391,7 @@ final class course_confirmation_permissions_test extends \advanced_testcase {
         $catb = \core_course_category::create(['name' => 'Forbidden category']);
 
         $user = $this->getDataGenerator()->create_user();
-        $this->allow_createcoursewithai_at_system($user->id);
+        $this->allow_createfreecoursewithai_at_system($user->id);
         $this->allow_course_create_in_category($user->id, $cata);
         $this->setUser($user);
 

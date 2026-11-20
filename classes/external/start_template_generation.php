@@ -24,25 +24,28 @@
 
 namespace local_coursegen\external;
 
+use aiprovider_datacurso\local\plugin_settings;
 use context_system;
-use external_api;
-use external_function_parameters;
-use external_multiple_structure;
-use external_single_structure;
-use external_value;
+use core_external\external_api;
+use core_external\external_function_parameters;
+use core_external\external_multiple_structure;
+use core_external\external_single_structure;
+use core_external\external_value;
 use local_coursegen\local\models\course_session;
+use local_coursegen\local\models\template;
 use local_coursegen\local\service\course_session_service;
+use local_coursegen\local\service\system_instruction_service;
 use local_coursegen\local\service\teacher_space_choices;
 use local_coursegen\local\service\template_ai_api_service;
 use local_coursegen\local\service\template_course_image_slots;
 use local_coursegen\local\service\template_export_service;
 use local_coursegen\local\service\template_reference_uploads;
+use local_coursegen\local\service\template_units;
 use local_coursegen\local\space\activity_spaces;
 use local_coursegen\local\space\space_files_request;
+use local_coursegen\local\tenancy;
 
 defined('MOODLE_INTERNAL') || die();
-
-require_once($CFG->libdir . '/externallib.php');
 
 /**
  * Exports a template, sends it to the AI service, attaches the syllabus and starts the run.
@@ -65,6 +68,18 @@ class start_template_generation extends external_api {
                 ''
             ),
             'withimages' => new external_value(PARAM_BOOL, 'Whether to generate images', VALUE_DEFAULT, false),
+            'units' => new external_value(
+                PARAM_INT,
+                'Number of units wanted; only a template with units (Flexible sections) takes it, null for its own',
+                VALUE_DEFAULT,
+                null
+            ),
+            'systeminstructionid' => new external_value(
+                PARAM_INT,
+                'Institutional guideline (system instruction) id; its text is read here, never taken from the client',
+                VALUE_DEFAULT,
+                null
+            ),
             'spacefiles' => new external_multiple_structure(
                 new external_single_structure([
                     'cmid' => new external_value(PARAM_INT, 'Course module id of the space in the template course'),
@@ -104,13 +119,27 @@ class start_template_generation extends external_api {
      * @param int $draftitemid
      * @param string $lang
      * @param bool $withimages
+     * @param int|null $units Number of units wanted, null for the template's own.
+     * @param int|null $systeminstructionid Institutional guideline id, null for none.
      * @param array $spacefiles Each: cmid, draftitemid.
      * @param array $spaceactivities Each: uid (of the space), cmid (of the activity).
      * @param array $spacechoices Each: uid (of the space), modname and instruction of the activity the teacher adds.
      * @return array
      */
-    public static function execute($templateid, $prompt = '', $draftitemid = 0, $lang = '', $withimages = false, $spacefiles = [],
-            $spaceactivities = [], $spacechoices = []) {
+    public static function execute(
+        $templateid,
+        $prompt = '',
+        $draftitemid = 0,
+        $lang = '',
+        $withimages = false,
+        $units = null,
+        $systeminstructionid = null,
+        $spacefiles = [],
+        $spaceactivities = [],
+        $spacechoices = []
+    ) {
+        plugin_settings::require_enabled('local_coursegen');
+
         global $USER;
 
         $params = self::validate_parameters(self::execute_parameters(), [
@@ -119,10 +148,13 @@ class start_template_generation extends external_api {
             'draftitemid' => $draftitemid,
             'lang' => $lang,
             'withimages' => $withimages,
+            'units' => $units,
+            'systeminstructionid' => $systeminstructionid,
             'spacefiles' => $spacefiles,
             'spaceactivities' => $spaceactivities,
             'spacechoices' => $spacechoices,
         ]);
+        $guidelineid = (int) ($params['systeminstructionid'] ?? 0);
 
         $context = context_system::instance();
         self::validate_context($context);
@@ -137,27 +169,26 @@ class start_template_generation extends external_api {
         if (activity_spaces::ENABLED) {
             $spaceactivities = activity_spaces::validated($params['templateid'], (int) $USER->id, $params['spaceactivities']);
         }
-
         if ($params['withimages']) {
             require_capability('local/coursegen:generatecourseimages', $context);
         }
         // The activities the teacher adds in the spaces: each one allowed there, none of the required ones missing.
         $spacechoices = teacher_space_choices::validated($params['templateid'], $params['spacechoices']);
         $spaces = self::files_of_choices($spaces, $spacechoices);
-        $payload = template_export_service::build_init_payload(
-            $params['templateid'],
+        [$payload, $coursedata] = self::prepare(
+            (int) $params['templateid'],
             $params['prompt'],
             $params['lang'],
             (bool) $params['withimages'],
+            $params['units'],
+            $guidelineid,
             $spacechoices
         );
 
         // Read first: a reference marker with no usable target is refused before a session exists.
         $referenceuploads = template_reference_uploads::plan($payload);
-        $template = \local_coursegen\local\models\template::get_record(['id' => $params['templateid']]);
-        $slots = $params['withimages']
-            ? template_course_image_slots::for_course(get_course((int) $template->get('courseid')))
-            : [];
+        $template = template::get_record(['id' => $params['templateid']]);
+        $slots = template_course_image_slots::for_run(get_course((int) $template->get('courseid')), (bool) $params['withimages']);
         $referenceuploads = array_merge($referenceuploads, template_course_image_slots::uploads($slots));
 
         $api = new template_ai_api_service();
@@ -173,13 +204,9 @@ class start_template_generation extends external_api {
         // a preview reading it back later must see what the run saw, not the
         // template's course as it happens to look whenever the preview loads.
         // The syllabus's name is kept too, so the course says later what it was made from.
-        $coursedata = [
-            'templateid' => $params['templateid'],
-            'payload' => $payload,
-            'syllabus' => $file !== null ? $file->get_filename() : '',
-            // Copied into the course when it is created, each in the place of its space.
-            'space_activities' => $spaceactivities,
-        ];
+        $coursedata['syllabus'] = $file !== null ? $file->get_filename() : '';
+        // Copied into the course when it is created, each in the place of its space.
+        $coursedata['space_activities'] = $spaceactivities;
         $session = new course_session(0, (object) [
             'userid' => (int) $USER->id,
             'session_id' => $threadid,
@@ -202,6 +229,119 @@ class start_template_generation extends external_api {
             'sessionid' => (int) $session->get('id'),
             'streamurl' => $api->stream_url($threadid),
         ];
+    }
+
+    /**
+     * The payload of the run and the data its session keeps, both built from the same guideline id.
+     *
+     * The syllabus name is not known yet, so it starts empty and the caller sets it once the file is attached.
+     *
+     * @param int $templateid
+     * @param string $prompt
+     * @param string $lang
+     * @param bool $withimages
+     * @param int|null $units
+     * @param int|null $systeminstructionid Institutional guideline id, null for none.
+     * @param array $spacechoices The activities the teacher adds in the spaces (teacher_space_choices::validated()).
+     * @return array [payload, coursedata]
+     */
+    public static function prepare(
+        int $templateid,
+        string $prompt,
+        string $lang,
+        bool $withimages,
+        ?int $units,
+        ?int $systeminstructionid = null,
+        array $spacechoices = []
+    ): array {
+        $guidelineid = (int) $systeminstructionid;
+        $payload = self::payload_for($templateid, $prompt, $lang, $withimages, $units, $guidelineid, $spacechoices);
+        // A deleted or empty guideline sends no text, so the session must not claim it was used.
+        $kept = isset($payload['instructions']) ? $guidelineid : 0;
+        return [$payload, self::coursedata_for($templateid, $payload, '', $kept)];
+    }
+
+    /**
+     * The payload of the run, with the units the professor asked for when they differ from the template's.
+     *
+     * The number comes from the client, so it is kept between 1 and the maximum here, and a template
+     * with no units (any other format) or an unchanged count is exported exactly as it is.
+     *
+     * @param int $templateid
+     * @param string $prompt
+     * @param string $lang
+     * @param bool $withimages
+     * @param int|null $units
+     * @param int|null $systeminstructionid Institutional guideline id; only its stored text travels, and only when it resolves.
+     * @param array $spacechoices The activities the teacher adds in the spaces (teacher_space_choices::validated()).
+     * @return array
+     */
+    public static function payload_for(
+        int $templateid,
+        string $prompt,
+        string $lang,
+        bool $withimages,
+        ?int $units,
+        ?int $systeminstructionid = null,
+        array $spacechoices = []
+    ): array {
+        $template = template::get_record(['id' => $templateid]);
+        if (!$template) {
+            throw new \moodle_exception('invalidtemplate', 'local_coursegen');
+        }
+        $modinfo = get_fast_modinfo(get_course((int) $template->get('courseid')));
+        return template_export_service::build_init_payload(
+            $templateid,
+            $prompt,
+            $lang,
+            $withimages,
+            template_units::requested($modinfo, $units),
+            self::guideline_text((int) $systeminstructionid),
+            $spacechoices
+        );
+    }
+
+    /**
+     * The stored text of a guideline, empty when none was chosen or it is missing, deleted or empty.
+     *
+     * Same resolution as the free mode, which ignores such an id silently. A guideline of another
+     * Workplace tenant resolves to nothing as well: a tenant only ever reads its own guidelines.
+     *
+     * @param int $systeminstructionid
+     * @return string
+     */
+    private static function guideline_text(int $systeminstructionid): string {
+        if ($systeminstructionid <= 0) {
+            return '';
+        }
+        if (system_instruction_service::get_by_id($systeminstructionid, tenancy::get_tenant_id()) === null) {
+            return '';
+        }
+        return system_instruction_service::get_instruction_content($systeminstructionid);
+    }
+
+    /**
+     * What the session keeps of the run: the template, the exact payload, the syllabus and, when chosen, the guideline.
+     *
+     * The guideline keys are the ones the free mode stores, and are only there when a guideline was chosen.
+     *
+     * @param int $templateid
+     * @param array $payload
+     * @param string $syllabus Name of the attached syllabus, empty for none.
+     * @param int $systeminstructionid
+     * @return array
+     */
+    public static function coursedata_for(int $templateid, array $payload, string $syllabus, int $systeminstructionid): array {
+        $coursedata = [
+            'templateid' => $templateid,
+            'payload' => $payload,
+            'syllabus' => $syllabus,
+        ];
+        if ($systeminstructionid > 0) {
+            $coursedata['local_coursegen_use_system_instruction'] = 1;
+            $coursedata['local_coursegen_select_system_instruction'] = $systeminstructionid;
+        }
+        return $coursedata;
     }
 
     /**
@@ -231,7 +371,7 @@ class start_template_generation extends external_api {
      * The files of a request, checked against the choices of the teacher: the File the teacher picked to upload in a
      * space must come with its file, and a file of a space where the teacher picked an activity of the AI is dropped.
      *
-     * @param array<int,int> $drafts The draft of each filled space, by cmid.
+     * @param array $drafts The draft of each filled space, by cmid.
      * @param array[] $spacechoices What teacher_space_choices::validated() returned.
      * @return array<int,int>
      * @throws \moodle_exception When the File the teacher picked to upload has no file.

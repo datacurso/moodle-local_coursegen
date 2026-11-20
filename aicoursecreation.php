@@ -30,8 +30,11 @@ require_once($CFG->libdir . '/filelib.php');
 require_login();
 plugin_settings::require_enabled('local_coursegen');
 
-// Check permissions: system-level or category-level (Workplace tenant administrators).
-\local_coursegen\local\permission::require_create_course_with_ai();
+// Check permissions: the full creation set (a fixed list of four capabilities)
+// in at least one category, the same gate as the button and the web services
+// of the flow. It is checked per category, so Workplace tenant administrators
+// and teachers who hold it only in the categories of their tenant are accepted.
+\local_coursegen\local\service\creation_permissions::require_anywhere();
 
 // Set up the page through the admin tree entry registered in settings.php (the
 // Workplace page, or the core page gated by the capability on plain Moodle LMS).
@@ -62,6 +65,7 @@ $PAGE->requires->css(new moodle_url('/local/coursegen/styles/template_space_card
 $PAGE->requires->css(new moodle_url('/local/coursegen/styles/template_left_column.css', ['v' => $cssrev]));
 $PAGE->requires->css(new moodle_url('/local/coursegen/styles/template_left_cards.css', ['v' => $cssrev]));
 $PAGE->requires->css(new moodle_url('/local/coursegen/styles/template_top_bar.css', ['v' => $cssrev]));
+$PAGE->requires->css(new moodle_url('/local/coursegen/styles/template_images_panel.css', ['v' => $cssrev]));
 $PAGE->requires->css(new moodle_url('/local/coursegen/styles/template_repeat_count.css', ['v' => $cssrev]));
 $PAGE->requires->css(new moodle_url('/local/coursegen/styles/start_chooser.css', ['v' => $cssrev]));
 
@@ -95,8 +99,10 @@ if ($resumesessionid > 0) {
         $templatesession = ['id' => (int) $opened->id, 'created' => false];
         $openedrecord = new course_session((int) $opened->id);
         $createdcourseid = (int) ($openedrecord->get('courseid') ?? 0);
-        if ((int) $openedrecord->get('status') === course_session::STATUS_CREATED && $createdcourseid > 0
-                && $DB->record_exists('course', ['id' => $createdcourseid])) {
+        if (
+            (int) $openedrecord->get('status') === course_session::STATUS_CREATED && $createdcourseid > 0
+                && $DB->record_exists('course', ['id' => $createdcourseid])
+        ) {
             // What the finished course holds, counted in the course itself: every section, the general one too, as
             // the live run counts the sections of the template.
             $modinfo = get_fast_modinfo($createdcourseid, -1);
@@ -126,8 +132,16 @@ $templatemodeactive = $modeparam === 'template';
 
 // Each way of creating a course is its own capability. A user who has only one of
 // them is taken to that mode and is not offered the other, nor the choice.
-$canfree = has_capability('local/coursegen:createfreecoursewithai', $systemcontext);
-$cantemplate = has_capability('local/coursegen:createtemplatecoursewithai', $systemcontext);
+// Each mode is offered where the user holds the full creation set with its capability, checked per category
+// so the capabilities held only in the categories of a Workplace tenant count too.
+$canfree = \local_coursegen\local\service\creation_permissions::can_create_anywhere(
+    null,
+    [\local_coursegen\local\service\creation_permissions::FREE_CAPABILITY]
+);
+$cantemplate = \local_coursegen\local\service\creation_permissions::can_create_anywhere(
+    null,
+    [\local_coursegen\local\service\creation_permissions::TEMPLATE_CAPABILITY]
+);
 if (!$canfree) {
     $templatemodeactive = true;
 }
@@ -139,18 +153,8 @@ $hasbothmodes = $canfree && $cantemplate;
 // A resumed session skips the choice, as it was already made.
 $startchooser = $hasbothmodes && !$resumesessionid && $modeparam === null;
 
-// Load the system instructions (institutional guidelines) the user's tenant may
-// use: its own private ones plus the site ones.
-$systeminstructions = [];
-$records = system_instruction_service::get_available(tenancy::get_tenant_id());
-foreach ($records as $record) {
-    $systeminstructions[] = [
-        'id' => 'si_' . $record->id,
-        'name' => $record->name,
-        'category' => 'General', // The table doesn't have a category field, using default.
-        'description' => $record->content ?? '',
-    ];
-}
+// Load the institutional guidelines the user's tenant may use.
+$systeminstructions = system_instruction_service::page_items(tenancy::get_tenant_id());
 
 // Load available course templates.
 $coursetemplates = [];
@@ -243,7 +247,12 @@ $sidebarpinned = (bool) get_user_preferences('local_coursegen_sidebar_pinned', t
 
 // Native Moodle form (single autocomplete field) for the template-mode picker.
 $templatepickerform = new \local_coursegen\form\course_template_picker_form(
-    null, ['templates' => $coursetemplates], 'post', '', ['id' => 'tpl-select-form']);
+    null,
+    ['templates' => $coursetemplates],
+    'post',
+    '',
+    ['id' => 'tpl-select-form']
+);
 ob_start();
 $templatepickerform->display();
 $templatepickerformhtml = ob_get_clean();
@@ -251,7 +260,18 @@ $templatepickerformhtml = ob_get_clean();
 // Native Moodle "info" notification (same alert-info markup report builder
 // uses for "Nothing to display") shown until a template is picked.
 $templateemptystatehtml = $OUTPUT->notification(
-    get_string('courseai_template_empty_state', 'local_coursegen'), 'info', false);
+    get_string('courseai_template_empty_state', 'local_coursegen'),
+    'info',
+    false
+);
+
+// Import-into-existing-course controls render only when the site opted in and the user holds the
+// full import capability set on at least one course (ticket #9539).
+$importexistingenabled = \local_coursegen\local\service\import_permissions::is_offered($USER->id);
+
+// The import help describes the configured content mode: append for "add", replace otherwise.
+$importcontentmodeadd = \local_coursegen\local\service\course_import_service::get_content_mode()
+    === \local_coursegen\local\service\course_import_service::CONTENT_MODE_ADD;
 
 // Prepare template context.
 $templatecontext = [
@@ -274,11 +294,15 @@ $templatecontext = [
     'freemodeactive' => !$startchooser && !$templatemodeactive,
     'showstartcrumb' => $hasbothmodes && !$startchooser,
     'startcrumblocked' => $resumesessionid > 0,
-    'canuploadsyllabus' => has_capability('local/coursegen:uploadcoursesyllabus', $systemcontext),
-    'cangeneratecourseimages' => has_capability('local/coursegen:generatecourseimages', $systemcontext),
+    'canuploadsyllabus' => \local_coursegen\local\permission::can_create_course_with(['local/coursegen:uploadcoursesyllabus']),
+    'cangeneratecourseimages' => \local_coursegen\local\permission::can_create_course_with(
+        ['local/coursegen:generatecourseimages']
+    ),
     'subsectionsenabled' => $subsectionsenabled,
     'closeurl' => (new moodle_url('/my/courses.php'))->out(false),
     'sidebarclosed' => !$sidebarpinned,
+    'importexistingenabled' => $importexistingenabled,
+    'importcontentmodeadd' => $importcontentmodeadd,
     // Initial (empty) guideline listboxes; JavaScript re-renders them from the same templates.
     'guidelinelist' => [
         'listlabel' => get_string('courseai_guidelines_list_label', 'local_coursegen'),
@@ -286,6 +310,7 @@ $templatecontext = [
         'hasitems' => false,
         'items' => [],
     ],
+    'bs' => \local_coursegen\local\bootstrap_classes::get(),
 ];
 
 echo $OUTPUT->header();

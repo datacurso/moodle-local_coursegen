@@ -22,8 +22,8 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-use aiprovider_datacurso\local\plugin_settings;
 use local_coursegen\local\models\course_context;
+use local_coursegen\local\provider_state;
 use local_coursegen\local\service\course_session_service;
 
 /**
@@ -59,13 +59,20 @@ function local_coursegen_pluginfile(
     require_login(null, false);
 
     // Nothing is served while the plugin is disabled in the Datacurso AI provider.
-    if (!plugin_settings::is_enabled('local_coursegen')) {
+    if (!provider_state::is_enabled()) {
         return false;
     }
 
-    // The files the AI service made for a template run, shown in the review preview.
-    if ($filearea === \local_coursegen\utils\generated_file_cache::FILEAREA) {
-        return \local_coursegen\local\service\generated_file_server::serve($context, $args, $forcedownload, $options);
+    // The files the AI service made for a template run, shown in the review preview and in the list of pictures.
+    if ($filearea === \local_coursegen\utils\generated_file_cache::FILEAREA
+            || $filearea === \local_coursegen\local\files\generated_image_source::FILEAREA) {
+        return \local_coursegen\local\service\generated_file_server::serve(
+            $context,
+            $args,
+            $forcedownload,
+            $options,
+            $filearea
+        );
     }
 
     // Syllabus files live in the system context only.
@@ -137,7 +144,7 @@ function local_coursegen_user_preferences() {
 function local_coursegen_theme_workplace_menu_items(): array {
     global $OUTPUT;
 
-    if (!plugin_settings::is_enabled('local_coursegen')) {
+    if (!provider_state::is_enabled()) {
         return [];
     }
 

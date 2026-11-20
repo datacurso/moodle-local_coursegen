@@ -27,18 +27,17 @@ namespace local_coursegen\external;
 
 use aiprovider_datacurso\local\plugin_settings;
 use context_system;
-use external_api;
-use external_function_parameters;
-use external_single_structure;
-use external_value;
-use external_multiple_structure;
-use local_coursegen\local\permission;
+use core_external\external_api;
+use core_external\external_function_parameters;
+use core_external\external_single_structure;
+use core_external\external_value;
+use core_external\external_multiple_structure;
+use local_coursegen\event\generation_job_started;
 use local_coursegen\local\service\ai_course_api_service;
 use local_coursegen\local\service\course_session_service;
+use local_coursegen\local\service\creation_permissions;
 
 defined('MOODLE_INTERNAL') || die();
-
-require_once($CFG->libdir . '/externallib.php');
 
 /**
  * External API to send human feedback for AI course planning sessions.
@@ -95,13 +94,12 @@ class course_planning_feedback extends external_api {
 
         $context = context_system::instance();
         self::validate_context($context);
-        require_capability('local/coursegen:createfreecoursewithai', $context);
 
         $session = course_session_service::get_user_session($recordid, $USER->id);
 
         // Owning the session is not enough: adjusting a plan consumes paid AI
-        // credits, so require the same capabilities as start_course_planning.
-        permission::require_create_course_with_ai();
+        // credits, so require the same creation gate as start_course_planning.
+        creation_permissions::require_anywhere(null, [creation_permissions::FREE_CAPABILITY]);
 
         $sessionid = $session->get('session_id');
 
@@ -114,8 +112,31 @@ class course_planning_feedback extends external_api {
         try {
             $apiservice->send_planning_feedback($sessionid, $pendingaction);
         } catch (\moodle_exception $e) {
-            throw new \moodle_exception('error_sending_feedback', 'local_coursegen', '', $e->getMessage());
+            // Keep the technical detail in developer debugging only: the client
+            // receives a localized message without internal information.
+            debugging('Unexpected error while sending planning feedback: ' . $e->getMessage());
+            throw new \moodle_exception('error_sending_feedback', 'local_coursegen');
         }
+
+        // Accepting subsections from the decision card switches the session to subsections:
+        // record it, so a reload shows the "+" menu toggle on, as it was left.
+        if (($pendingaction['action'] ?? '') === 'enable_subsections') {
+            $coursedata = json_decode((string)$session->get('coursedata'), true) ?: [];
+            $coursedata['local_coursegen_generate_subsections'] = 1;
+            $session->set('coursedata', json_encode($coursedata));
+            $session->update();
+        }
+
+        // Adjusting the plan starts a new AI generation turn on the thread, so
+        // it is audited like any other generation start. The free-text
+        // instruction is deliberately left out of the payload.
+        generation_job_started::create([
+            'context' => $context,
+            'other' => [
+                'job_id' => $sessionid,
+                'action' => (string)($pendingaction['action'] ?? ''),
+            ],
+        ])->trigger();
 
         return [
             'success' => true,
