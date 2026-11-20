@@ -8,3 +8,4 @@ export const failActivity = (uid, progress) => events.push(['fail', uid, progres
 export const showRepeatProgress = (uid, summary) => events.push(['repeat', uid, summary]);
 export const showWrittenChecklist = (written) => events.push(['written', written]);
 export const showAddedStructure = (data) => events.push(['added', data]);
+export const showUnitCopies = (data) => events.push(['copies', data]);
