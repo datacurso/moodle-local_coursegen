@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.16] - 2026112000
+
+### Changed
+- **The list of templates shows when each template was created and last modified**  
+  The templates page has a "Fecha de creación" (Date created) column and the modification column is called "Fecha de modificación" (Date modified) instead of "Hora de modificación". Both columns can be sorted; the list still starts with the most recently modified template.
+
 ## [2.0.16] - 2026111805
 
 ### Added

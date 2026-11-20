@@ -70,6 +70,7 @@ class templates extends system_report {
         $this->add_column_from_entity('template:name');
         $this->add_column_from_entity('template:coursefullname');
         $this->add_column_from_entity('template:visible');
+        $this->add_column_from_entity('template:timecreated');
         $this->add_column_from_entity('template:timemodified');
         $this->set_initial_sort_column('template:timemodified', SORT_DESC);
     }
