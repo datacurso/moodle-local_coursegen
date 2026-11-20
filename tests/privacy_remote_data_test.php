@@ -26,7 +26,7 @@ use local_coursegen\privacy\provider;
 use local_coursegen\task\erase_remote_data;
 
 /**
- * What the course service keeps is exported and deleted from the Privacy API (Mindfree, LCG-PRIV-001).
+ * What the course service keeps is exported and deleted from the Privacy API (LCG-PRIV-001).
  *
  * Every deletion of the plugin (Privacy API, deleted user, deleted course) queues the deletion of
  * the same threads at the service, naming the threads it holds and, for a person, the person. An

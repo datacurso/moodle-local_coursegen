@@ -33,9 +33,9 @@ use local_coursegen\task\erase_remote_data;
  *
  * What the Datacurso course service keeps of the same sessions and jobs (prompt, conversation,
  * generated content) is deleted there by an adhoc task queued here, before the rows that hold the
- * thread ids go (Mindfree, LCG-PRIV-001).
+ * thread ids go (LCG-PRIV-001).
  *
- * Mindfree, LCG-PRIV-004.
+ * LCG-PRIV-004.
  *
  * @package    local_coursegen
  * @copyright  2026 Datacurso

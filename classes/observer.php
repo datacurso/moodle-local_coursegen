@@ -42,7 +42,7 @@ class observer {
      * Erase what the plugin keeps of a deleted user: sessions, jobs and the custom prompts they wrote.
      *
      * Moodle does not run the Privacy API when it deletes a user, so the plugin does it here
-     * (Mindfree, LCG-PRIV-004).
+     * (LCG-PRIV-004).
      *
      * @param \core\event\user_deleted $event The user_deleted event.
      * @return void

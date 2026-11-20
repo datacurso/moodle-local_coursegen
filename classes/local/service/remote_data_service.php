@@ -29,7 +29,7 @@ use local_coursegen\local\api_client_factory;
  * the person too, so threads the plugin no longer holds a row for are deleted as well.
  *
  * The service only touches the threads of this plugin (it identifies itself on every call) on this
- * site. Mindfree, LCG-PRIV-001.
+ * site. LCG-PRIV-001.
  *
  * @package    local_coursegen
  * @copyright  2026 Datacurso

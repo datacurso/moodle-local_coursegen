@@ -588,7 +588,7 @@ function xmldb_local_coursegen_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026111001) {
-        // The importer role is no longer assignable on the whole site (Mindfree, observation 2).
+        // The importer role is no longer assignable on the whole site (observation 2).
         // Assignments already made stay as they are.
         \local_coursegen\local\role_installer::restrict_importer_context_levels();
 

@@ -30,7 +30,7 @@ require_once($CFG->dirroot . '/local/coursegen/tests/fixtures/testable_failing_b
 /**
  * Integrity of the import into an existing course: lock, recovery, revalidation, backups, idnumber and roles.
  *
- * Mindfree, observation 2 of the report of 2026-10-26.
+ * Audit observation 2 of the report of 2026-10-26.
  *
  * @package    local_coursegen
  * @category   test

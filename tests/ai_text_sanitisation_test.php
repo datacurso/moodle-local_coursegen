@@ -32,7 +32,7 @@ require_once(__DIR__ . '/fixtures/aiprovider_datacurso_stub.php');
  * itself only accepts as plain text (glossary concept, wiki page title, forum subject) are left
  * plain: the core APIs reject markup there.
  *
- * Mindfree, observation 1 of the report of 2026-10-26 (stored XSS in lessons).
+ * Audit observation 1 of the report of 2026-10-26 (stored XSS in lessons).
  *
  * @package    local_coursegen
  * @category   test

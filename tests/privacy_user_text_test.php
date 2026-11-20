@@ -21,7 +21,7 @@ use core_privacy\local\request\approved_userlist;
 use local_coursegen\privacy\provider;
 
 /**
- * The text a person wrote does not outlive their deletion (Mindfree, LCG-PRIV-004).
+ * The text a person wrote does not outlive their deletion (LCG-PRIV-004).
  *
  * The custom prompt of a course is free text a teacher writes: it goes when its author is deleted,
  * through the Privacy API or by deleting the user, and when the course is erased through the

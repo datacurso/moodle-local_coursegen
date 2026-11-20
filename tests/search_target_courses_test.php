@@ -401,7 +401,7 @@ final class search_target_courses_test extends \advanced_testcase {
      * A search checks the permissions of SCAN_LIMIT courses at most, whatever the size of the category.
      *
      * A category holds SCAN_LIMIT courses the user cannot import into, then one they can: the search
-     * stops before it. Moved before the others, the same course is found (Mindfree, observation 2).
+     * stops before it. Moved before the others, the same course is found (observation 2).
      */
     public function test_search_stops_after_scanning_the_limit_of_courses(): void {
         global $DB;

@@ -27,7 +27,7 @@ use local_coursegen\local\service\remote_data_service;
  * moment: a failed call throws and Moodle runs the task again later, up to its attempt limit. If
  * every attempt fails, the service deletes the threads anyway when their retention expires.
  *
- * Custom data: userid (int|null) and threadids (string[]). Mindfree, LCG-PRIV-001.
+ * Custom data: userid (int|null) and threadids (string[]). LCG-PRIV-001.
  *
  * @package    local_coursegen
  * @copyright  2026 Datacurso

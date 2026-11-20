@@ -332,7 +332,7 @@ class provider implements
     }
 
     /**
-     * Export what the Datacurso course service keeps of the user's threads (Mindfree, LCG-PRIV-001).
+     * Export what the Datacurso course service keeps of the user's threads (LCG-PRIV-001).
      *
      * When the service cannot be reached, the export says so instead of failing: the rest of the
      * user's data is still exported, and the service deletes its copy when the retention expires.

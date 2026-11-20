@@ -84,7 +84,7 @@ class create_mod_service {
         self::validate_resultinfo($resultinfo);
 
         // The single point where the text the AI wrote is made safe, before Moodle or any activity
-        // settings class stores it (Mindfree, observation 1).
+        // settings class stores it (observation 1).
         // A text of a template run that matches one of the template's own texts is rebuilt from it instead.
         template_molds::use_course($sourcecourseid);
         $resultinfo['parameters'] = ai_text_sanitiser::sanitise($resultinfo['parameters']);
