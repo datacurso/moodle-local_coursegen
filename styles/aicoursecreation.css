@@ -5321,6 +5321,46 @@ body.cg-generating :is(#prvSections, #tplModeStructure) .dp-add-subsection-wrap 
   filter: none;
 }
 
+/* Long texts (a long question, an address without spaces) wrap inside the card and never push it sideways. */
+.cg-question-card--decision,
+.cg-question-card--decision .cg-log-msg {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.cg-question-card--decision .cg-question-prompt,
+.cg-question-card--decision .cg-question-prompt-text,
+.cg-question-card--decision .cg-question-hint,
+.cg-question-card--decision .cg-question-option-label,
+.cg-question-card--decision .cg-question-option-desc,
+.cg-question-card--decision .cg-question-other-text,
+.cg-question-card--decision .cg-question-error {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* However tall the card, its answer button stays in sight at the bottom of the thread while the card scrolls, on a
+   solid band so the texts it passes over never show through. */
+.cg-question-card--decision .cg-card-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 0 4px;
+  background: var(--card);
+  box-shadow: 0 -10px 10px -10px hsl(0 0% 0% / .12);
+}
+
+/* While the run waits for the answer the card is amber (template_left_column.css): the band takes the same amber,
+   laid over the solid card colour because the amber itself is see-through. */
+body.cg-generating.cg-generation-paused
+  .tpl-left-panel .cg-thread-feed > .cg-log-entry--turn-ai:nth-last-child(1 of .cg-log-entry).cg-question-card--decision
+  .cg-card-actions {
+  background: linear-gradient(var(--warn-soft), var(--warn-soft)), var(--card);
+}
+
 @media (max-width: 480px) {
   .cg-question-card--decision .cg-question-option {
     padding: 10px 10px 10px 34px;
