@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.16-wp] - 2026112003
+
+### Changed
+- **The questions the AI asks in the middle of a run read as a friendly colleague asking, and long texts stay inside the card**  
+  The card says "Tengo una consulta antes de seguir" and asks to "Elige una respuesta para que pueda seguir" instead of commanding wording. A long question, a long option or an address without spaces now wraps inside the card instead of pushing it sideways, and the "Responder" button stays at the bottom of the thread in sight while a tall card is scrolled.
+
 ## [2.0.16-wp] - 2026112002
 
 ### Added
