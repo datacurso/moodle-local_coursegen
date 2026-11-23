@@ -5221,7 +5221,7 @@ body.cg-generating :is(#prvSections, #tplModeStructure) .dp-add-subsection-wrap 
 .cg-question-card--decision .cg-question-option {
   position: relative;
   margin: 0;
-  padding: 9px 12px 9px 36px;
+  padding: 9px 12px 9px 40px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--card);
@@ -5242,11 +5242,20 @@ body.cg-generating :is(#prvSections, #tplModeStructure) .dp-add-subsection-wrap 
   background: var(--brand-soft);
 }
 
-.cg-question-card--decision .cg-question-option .form-check-input {
+/* The radio or checkbox has a fixed size and place whatever the theme makes of form controls (some themes draw them
+   at 24px with negative margins), so it never runs into the label. */
+.cg-question-card--decision .cg-question-option .form-check-input,
+.cg-question-card--decision .cg-question-option input[type="radio"],
+.cg-question-card--decision .cg-question-option input[type="checkbox"] {
   position: absolute;
   top: 12px;
   left: 12px;
+  float: none;
+  width: 16px;
+  min-width: 16px;
+  height: 16px;
   margin: 0;
+  padding: 0;
 }
 
 .cg-question-card--decision .cg-question-option .form-check-label {
@@ -5363,7 +5372,7 @@ body.cg-generating.cg-generation-paused
 
 @media (max-width: 480px) {
   .cg-question-card--decision .cg-question-option {
-    padding: 10px 10px 10px 34px;
+    padding: 10px 10px 10px 38px;
   }
 
   .cg-question-card--decision .cg-card-actions .cg-card-button {
