@@ -48,6 +48,8 @@ class template_transfer_import_form extends \moodleform {
         $mform->addElement('autocomplete', 'courseid', get_string('template_transfer_course', 'local_coursegen'), [], [
             'ajax' => 'local_coursegen/local/template/form_course_selector',
             'noselectionstring' => get_string('template_transfer_course_search', 'local_coursegen'),
+            // Shown again after a submit: the chosen course by its name, as the search listed it, not by its id.
+            'valuehtmlcallback' => [self::class, 'course_label'],
         ]);
         $mform->setType('courseid', PARAM_INT);
         $mform->addRule('courseid', null, 'required', null, 'client');
@@ -64,5 +66,22 @@ class template_transfer_import_form extends \moodleform {
         $mform->addHelpButton('templatename', 'template_transfer_name', 'local_coursegen');
 
         $this->add_action_buttons(false, get_string('template_transfer_import_button', 'local_coursegen'));
+    }
+
+    /**
+     * The label of a chosen course, as the course search lists it: "Full name (short name)".
+     *
+     * @param mixed $value The course id.
+     * @return string|false The label, or false when there is no such course.
+     */
+    public static function course_label($value) {
+        global $DB;
+        $course = $DB->get_record('course', ['id' => (int) $value], 'id, fullname, shortname');
+        if (!$course) {
+            return false;
+        }
+        $context = \context_course::instance($course->id);
+        return format_string($course->fullname, true, ['context' => $context]) . ' ('
+            . format_string($course->shortname, true, ['context' => $context]) . ')';
     }
 }
