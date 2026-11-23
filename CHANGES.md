@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.16-wp] - 2026112004
+
+### Fixed
+- **The choice buttons of a question card never run into their text, whatever the theme**  
+  Some themes draw radios and checkboxes bigger and with negative margins, so on those sites the button of each option sat on top of its label. The button now has a fixed size and place inside the row, and the label starts after it.
+
 ## [2.0.16-wp] - 2026112003
 
 ### Changed
