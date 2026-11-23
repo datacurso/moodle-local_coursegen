@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.16] - 2026112004
+
+### Fixed
+- **The H5P activities of a template run use libraries the site draws well**  
+  A template run now tells the course service which H5P framework the site runs, as the other flows already did. A site on H5P 1.28 then gets H5P packages built with the libraries its new H5P look expects, instead of older ones whose navigation buttons it draws empty.
+
 ## [2.0.16] - 2026112003
 
 ### Fixed
