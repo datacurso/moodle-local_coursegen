@@ -16,6 +16,7 @@
 
 namespace local_coursegen\local\service;
 
+use local_coursegen\local\h5p_core_api;
 use local_coursegen\local\models\template;
 use local_coursegen\local\models\template_activity;
 use local_coursegen\local\models\template_instance;
@@ -142,6 +143,12 @@ class template_export_service {
         if ($instructions !== '') {
             // Only when a guideline was chosen, so the payload stays as it was for everyone else.
             $payload['instructions'] = $instructions;
+        }
+        // The H5P framework of this site, so the H5P packages of the run use libraries this site renders well (a site
+        // on H5P 1.28 shows the buttons of older libraries empty). Without it the service uses its most compatible set.
+        $h5pcoreapi = h5p_core_api::resolve();
+        if ($h5pcoreapi !== null) {
+            $payload['h5p_core_api'] = $h5pcoreapi;
         }
         return $payload;
     }
