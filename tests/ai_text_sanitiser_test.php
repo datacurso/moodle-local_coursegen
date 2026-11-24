@@ -141,4 +141,30 @@ final class ai_text_sanitiser_test extends \advanced_testcase {
         $this->assertSame('<p>Ok</p>', $result['mod_settings']['pages'][0]['content_html']);
         $this->assertSame('<b>Term</b>', $result['mod_settings']['entry']->definition);
     }
+
+    /**
+     * The syllabus marker of a link survives the cleaning, like the H5P marker, so the uploaded syllabus can be linked.
+     */
+    public function test_the_syllabus_marker_of_a_link_is_kept(): void {
+        $clean = ai_text_sanitiser::sanitise_string(
+            '<p><a href="#" class="btn" data-coursegen-syllabus="1">Programa</a> '
+            . '<a href="https://example.com/x" data-coursegen-embed="1">H5P</a></p>'
+        );
+
+        $this->assertMatchesRegularExpression('~<a [^>]*data-coursegen-syllabus="1"[^>]*>Programa</a>~', $clean);
+        $this->assertMatchesRegularExpression('~<a [^>]*class="btn"[^>]*>Programa</a>~', $clean);
+        $this->assertMatchesRegularExpression('~<a [^>]*data-coursegen-embed="1"[^>]*>H5P</a>~', $clean);
+    }
+
+    /**
+     * Only the exact syllabus marker on a link is kept: on another element or with another value it is removed.
+     */
+    public function test_a_syllabus_marker_off_a_link_is_removed(): void {
+        $clean = ai_text_sanitiser::sanitise_string(
+            '<p data-coursegen-syllabus="1">Texto</p><p><a href="#" data-coursegen-syllabus="2">Otro</a></p>'
+        );
+
+        $this->assertStringNotContainsString('data-coursegen-syllabus', $clean);
+        $this->assertStringContainsString('Texto', $clean);
+    }
 }

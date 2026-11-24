@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.16-wp] - 2026112007
+
+### Fixed
+- **The link a template offers to the uploaded syllabus works in the activities the AI rewrites**  
+  A template can offer the syllabus the professor uploaded with a link marked `data-coursegen-syllabus="1"`, but the cleaning of the text the AI writes removed that mark, so the link of a page set to "Modificar con IA" never pointed at the syllabus. The mark of a link is now kept through the cleaning, as the H5P player mark already was; on any other element, or with another value, it is still removed.
+
 ## [2.0.16-wp] - 2026112006
 
 ### Fixed
