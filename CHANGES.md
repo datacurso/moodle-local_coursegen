@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.16-wp] - 2026112021
+
+### Fixed
+- **Nothing turns once a generation is stopped**  
+  After Stop, the activities that were being written kept their spinner and the header kept its ring, as if the run were still going. Now they show no spinner until the run resumes, and the header only says that it is stopped.
+
 ## [2.0.16-wp] - 2026112020
 
 ### Fixed
