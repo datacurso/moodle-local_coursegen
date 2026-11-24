@@ -2059,9 +2059,11 @@ svg { display: block; flex-shrink: 0; }
   animation: prv-spin 0.8s linear infinite;
 }
 
-/* Stopped (by the person or by an error): nothing is being made, so the ring of the header does not turn. */
+/* Stopped (by the person or by an error): nothing is being made, so the header shows no ring at all (a still ring
+   reads as loading); its text says the run is stopped. */
 body.cg-generation-paused .prv-spin {
   animation: none;
+  display: none;
 }
 
 .prv-header-text {
@@ -4285,6 +4287,11 @@ body.cg-generating :is(#prvSections, #tplModeStructure) .cg-gen-active .activity
   background: #fff;
   box-shadow: 0 0 0 2px #fff;
   animation: spin .8s linear infinite;
+}
+/* STOPPED — an activity that was being written is not any more: no spinner on its icon until the run resumes. */
+body.cg-generating.cg-generation-paused :is(#prvSections, #tplModeStructure) .cg-gen-active .activity-icon::after {
+  content: none;
+  animation: none;
 }
 /* DONE — the card "turns on" (full colour) + a sober check badge on the icon
    (same muted tone as the section checklist check, NOT a loud green). */
