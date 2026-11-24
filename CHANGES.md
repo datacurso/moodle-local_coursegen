@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.16-wp] - 2026112012
+
+### Fixed
+- **Links to an activity the AI rewrote without markers lead to its new version**  
+  A card or link that opened an activity set to "Modificar con IA" that has no markers (for example the presentation forum) kept opening the activity of the base course, because that activity is written from its instruction and names no mold. The link now opens the activity that replaced it in the new course, found through the instance that stands for it in the template.
+
 ## [2.0.16-wp] - 2026112011
 
 ### Fixed

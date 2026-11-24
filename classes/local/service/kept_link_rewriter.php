@@ -20,6 +20,7 @@ use course_modinfo;
 use local_coursegen\local\link\activity_url_remap;
 use local_coursegen\local\link\module_link_texts;
 use local_coursegen\local\link\module_link_texts_registry;
+use local_coursegen\local\models\template_instance;
 
 /**
  * Points the links of the copied kept activities, of the generated ones and of the section summaries at the new course.
@@ -52,7 +53,8 @@ final class kept_link_rewriter {
         array $generatedcms,
         array $keptcms
     ): void {
-        $newcmidbyoldcmid = self::counterparts($payloadactivities, $generatedcms, $keptcms);
+        $newcmidbyoldcmid = self::counterparts($payloadactivities, $generatedcms, $keptcms)
+            + self::rewritten_without_mold($payloadactivities, $generatedcms);
         if ($newcmidbyoldcmid === []) {
             return;
         }
@@ -106,6 +108,45 @@ final class kept_link_rewriter {
             }
         }
         return $counterparts;
+    }
+
+    /**
+     * The activities of the template's course that the AI rewrote without a mold, mapped to the activity that replaced them.
+     *
+     * An activity "modified with AI" that has no markers is written from its instruction, so its instance names no
+     * template source; the template keeps which activity it stands for (its owner) on the instance, found here by the
+     * uid the instance carries in the result.
+     *
+     * @param array $payloadactivities
+     * @param array $generatedcms
+     * @return array<int,int> Template course cmid => new course cmid.
+     */
+    private static function rewritten_without_mold(array $payloadactivities, array $generatedcms): array {
+        global $DB;
+
+        $createdbyuid = [];
+        foreach ($payloadactivities as $entry) {
+            $behavior = $entry['template_behavior'] ?? [];
+            if (($behavior['action'] ?? '') !== 'instance' || (int) ($behavior['template_source_cmid'] ?? 0) !== 0) {
+                continue;
+            }
+            $uid = trim((string) ($entry['uid'] ?? ''));
+            $created = (int) ($generatedcms[generated_activity_key::of($entry)] ?? 0);
+            if ($uid !== '' && $created > 0) {
+                $createdbyuid[$uid] = $created;
+            }
+        }
+        if ($createdbyuid === []) {
+            return [];
+        }
+        $owned = [];
+        foreach (array_chunk(array_keys($createdbyuid), 200) as $uids) {
+            [$insql, $params] = $DB->get_in_or_equal($uids);
+            foreach (template_instance::get_records_select("uid $insql AND ownercmid > 0", $params) as $instance) {
+                $owned[(int) $instance->get('ownercmid')] = $createdbyuid[(string) $instance->get('uid')];
+            }
+        }
+        return $owned;
     }
 
     /**
