@@ -31,6 +31,24 @@ final class teacher_space_choices {
     const CMID_BASE = 1000000000;
 
     /**
+     * The name a space shows to the teacher: the name the admin gave every option, or the generic one.
+     *
+     * The admin names each activity a space offers. When all of them carry the same name (the space has one
+     * purpose, such as "Práctica guiada", whatever activity the teacher picks), that name tells the teacher what
+     * the space is for; otherwise the space is shown as an activity to choose.
+     *
+     * @param array[] $options Each with its name.
+     * @return string
+     */
+    public static function display_name(array $options): string {
+        $names = array_unique(array_map(static fn(array $option): string => trim((string) ($option['name'] ?? '')), $options));
+        if (count($names) === 1 && reset($names) !== '') {
+            return format_string(reset($names));
+        }
+        return get_string('courseai_template_choice_space_name', 'local_coursegen');
+    }
+
+    /**
      * The choices, checked against the spaces of the template.
      *
      * @param int $templateid
