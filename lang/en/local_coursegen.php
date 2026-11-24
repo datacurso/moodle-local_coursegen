@@ -249,6 +249,9 @@ $string['template_transfer_missing_section'] = 'Section {$a}';
 $string['template_transfer_name'] = 'Template name';
 $string['template_transfer_name_help'] = 'Leave it empty to keep the name the template had when it was exported.';
 $string['template_transfer_open'] = 'Open the template';
+$string['template_syllabus_marker'] = 'Link to the syllabus';
+$string['template_syllabus_marker_example'] = 'href=&quot;[[coursegen:syllabus]]&quot;';
+$string['template_syllabus_marker_help'] = 'Type `[[coursegen:syllabus]]` as the whole address (`href`) of a link of an activity the AI modifies, for example a button "Download the official programme". When the course is created the link opens the syllabus the professor uploaded in the course creator, the same file the course was made from; when no syllabus was uploaded the link is taken out.';
 $string['template_video_marker'] = 'Video of an activity';
 $string['template_video_marker_example'] = 'src=&quot;[[coursegen:aiprompt: a video about the topic of the lesson]]&quot;';
 $string['template_video_marker_help'] = 'Type `[[coursegen:aiprompt: a video about the topic of the lesson]]` as the whole `src` of an `<iframe>` and keep the other attributes and styles of the iframe as they are. The text between the brackets describes the video you want; the topic is also taken from the course, the section and the text generated for the activity.

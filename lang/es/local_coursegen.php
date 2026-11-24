@@ -242,6 +242,9 @@ $string['template_transfer_missing_section'] = 'Sección {$a}';
 $string['template_transfer_name'] = 'Nombre de la plantilla';
 $string['template_transfer_name_help'] = 'Déjalo vacío para conservar el nombre que tenía la plantilla al exportarla.';
 $string['template_transfer_open'] = 'Abrir la plantilla';
+$string['template_syllabus_marker'] = 'Enlace al sílabo';
+$string['template_syllabus_marker_example'] = 'href=&quot;[[coursegen:syllabus]]&quot;';
+$string['template_syllabus_marker_help'] = 'Escribe `[[coursegen:syllabus]]` como dirección completa (`href`) de un enlace de una actividad que modifica la IA, por ejemplo un botón «Descargar el programa oficial». Al crear el curso, el enlace abre el sílabo que el profesor subió en el creador de cursos, el mismo archivo con el que se hizo el curso; si no subió ninguno, el enlace se quita.';
 $string['template_video_marker'] = 'Video de una actividad';
 $string['template_video_marker_example'] = 'src=&quot;[[coursegen:aiprompt: un video sobre el tema de la lección]]&quot;';
 $string['template_video_marker_help'] = 'Escribe `[[coursegen:aiprompt: un video sobre el tema de la lección]]` como el `src` completo de un `<iframe>` y deja los demás atributos y estilos del iframe como están. El texto entre corchetes describe el video que quieres; el tema también se toma del curso, la sección y el texto generado para la actividad.

@@ -43,5 +43,10 @@ trait template_config_form_markers {
         $example = get_string('template_video_marker_example', 'local_coursegen');
         $mform->addElement('static', 'videomarker', $label, $example);
         $mform->addHelpButton('videomarker', 'template_video_marker', 'local_coursegen');
+
+        $label = get_string('template_syllabus_marker', 'local_coursegen');
+        $example = get_string('template_syllabus_marker_example', 'local_coursegen');
+        $mform->addElement('static', 'syllabusmarker', $label, $example);
+        $mform->addHelpButton('syllabusmarker', 'template_syllabus_marker', 'local_coursegen');
     }
 }

@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.16] - 2026112007
+
+### Added
+- **A marker for the link to the syllabus**  
+  A template author can write `[[coursegen:syllabus]]` as the address of a link, like the other markers, instead of a hidden attribute. Before the template is sent to the AI service the link becomes the one the course creator already knows, so once the course exists it opens the syllabus the professor uploaded (and is taken out when none was uploaded). The Markers block of the template configuration documents it next to the other markers.
+
 ## [2.0.16] - 2026112006
 
 ### Fixed
