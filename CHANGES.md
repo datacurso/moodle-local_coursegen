@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.16-wp] - 2026112015
+
+### Fixed
+- **A course from a template is created with every activity the AI wrote, or says which ones failed and why**  
+  An activity that could not be created was skipped and the course went on without it; the links of the other activities to it could not be resolved, and the person only read "The course could not be created." Now the creation stops at that point, the half-built course is removed, and the message names the activities and the cause. When their files are no longer in the AI service (it was restarted between the generation and the creation of the course), it says to generate the course again.
+
 ## [2.0.16-wp] - 2026112014
 
 ### Fixed
