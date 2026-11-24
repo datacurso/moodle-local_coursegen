@@ -44,6 +44,8 @@ class template_keep_copier {
      *     spaces the teacher brought a file for.
      * @param template_section_map|null $sectionmap Where each section of the template went in the new course;
      *     null when the sections are the template's own.
+     * @param array $clonecms Filled with clone section number => [base course cmid => cmid of its copy there]: a kept
+     *     activity of a section the course repeats (one copy per syllabus unit) is copied into every copy too.
      * @return array Names of the activities that could not be copied.
      */
     public static function copy_into(
@@ -51,7 +53,8 @@ class template_keep_copier {
         int $targetcourseid,
         array &$createdcmids = [],
         array $alsocmids = [],
-        ?template_section_map $sectionmap = null
+        ?template_section_map $sectionmap = null,
+        array &$clonecms = []
     ): array {
         global $CFG;
         require_once($CFG->dirroot . '/course/lib.php');
@@ -82,7 +85,8 @@ class template_keep_copier {
             $targetcourse,
             $targetsectionids,
             $createdcmids,
-            $sectionmap
+            $sectionmap,
+            $clonecms
         );
 
         rebuild_course_cache($targetcourseid, true);
@@ -142,6 +146,7 @@ class template_keep_copier {
      * @param array $targetsectionids Section number => section id, from target_section_ids().
      * @param array $createdcmids Filled with base course cmid => cmid of its copy.
      * @param template_section_map|null $sectionmap Where each template section went; null for the same number.
+     * @param array $clonecms Filled with clone section number => [base course cmid => cmid of its copy there].
      * @return array Names of the activities that could not be copied.
      */
     private static function copy_kept_activities(
@@ -150,7 +155,8 @@ class template_keep_copier {
         $targetcourse,
         array $targetsectionids,
         array &$createdcmids,
-        ?template_section_map $sectionmap = null
+        ?template_section_map $sectionmap = null,
+        array &$clonecms = []
     ): array {
         $cms = $modinfo->get_cms();
 
@@ -159,9 +165,11 @@ class template_keep_copier {
             $cm = $cms[$cmid];
             $sectionnumber = $cm->sectionnum;
             $sectionnumber = (int) $sectionnumber;
+            $clones = [];
             if ($sectionmap !== null) {
-                // A section that was resized away has no place for its activities, and the clone of one has
-                // none either: a kept activity is copied once, into the section that is the template's.
+                // A section that was resized away has no place for its activities. A section the course repeats
+                // (one copy per syllabus unit) has its kept activities in each copy, as the template shows them.
+                $clones = $sectionmap->clones_of_source($sectionnumber);
                 $sectionnumber = $sectionmap->target_of_source($sectionnumber) ?? -1;
             }
             $sectionid = $targetsectionids[$sectionnumber] ?? null;
@@ -174,6 +182,15 @@ class template_keep_copier {
                 continue;
             }
             $createdcmids[(int) $cm->id] = $createdcmid;
+            foreach ($clones as $clone) {
+                $clonesectionid = $targetsectionids[$clone] ?? null;
+                $clonecmid = $clonesectionid === null ? null : self::copy_one($cm, $targetcourse, $clonesectionid);
+                if ($clonecmid === null) {
+                    $failures[] = $cm->name;
+                    continue;
+                }
+                $clonecms[$clone][(int) $cm->id] = $clonecmid;
+            }
         }
         return $failures;
     }
@@ -197,7 +214,8 @@ class template_keep_copier {
         foreach ($cms as $cm) {
             $action = $actions[$cm->id] ?? 'keep';
             $also = in_array((int) $cm->id, $alsocmids, true);
-            if ($action === 'keep' || $action === 'reference' || $also) {
+            // "Solo como referencia" is read by the AI only: it never reaches the new course.
+            if ($action === 'keep' || $also) {
                 $cmids[] = (int) $cm->id;
             }
         }

@@ -107,6 +107,23 @@ final class template_section_map {
     }
 
     /**
+     * The sections of the new course that are copies of a section of the template, in course order.
+     *
+     * @param int $source The section of the template.
+     * @return int[] Their numbers in the new course.
+     */
+    public function clones_of_source(int $source): array {
+        $numbers = [];
+        foreach ($this->sources as $number => $from) {
+            if ($from === $source && ($this->clones[$number] ?? false)) {
+                $numbers[] = (int) $number;
+            }
+        }
+        sort($numbers);
+        return $numbers;
+    }
+
+    /**
      * Whether a section of the new course is a copy of another one.
      *
      * @param int $number

@@ -56,6 +56,7 @@ final class template_settings_copier {
      * @param array $keptcms Base course cmid => created cmid, for the copied kept activities.
      * @param template_section_map|null $sectionmap Where each section of the template went in the new course;
      *     null when the sections are the template's own.
+     * @param array $clonecms Clone section number => [base course cmid => cmid of its copy there].
      */
     public static function copy_into(
         int $templateid,
@@ -63,7 +64,8 @@ final class template_settings_copier {
         array $payloadactivities,
         array $generatedcms,
         array $keptcms,
-        ?template_section_map $sectionmap = null
+        ?template_section_map $sectionmap = null,
+        array $clonecms = []
     ): void {
         global $DB;
 
@@ -73,6 +75,11 @@ final class template_settings_copier {
         }
         $counterparts = kept_link_rewriter::counterparts($payloadactivities, $generatedcms, $keptcms);
         $created = self::created_by_source($payloadactivities, $generatedcms, $keptcms);
+        foreach ($clonecms as $copies) {
+            foreach ($copies as $sourcecmid => $cmid) {
+                $created[(int) $sourcecmid][] = (int) $cmid;
+            }
+        }
         $sections = self::sections_by_number($basecourseid, $courseid, $sectionmap);
         $delta = self::date_shift($basecourseid, $courseid);
         $sources = $created === [] ? [] : $DB->get_records_list('course_modules', 'id', array_keys($created));

@@ -46,26 +46,33 @@ final class kept_link_rewriter {
      * @param array $payloadactivities Every activity entry of the result, kept ones included.
      * @param array $generatedcms Activity key (generated_activity_key) => created cmid, for the generated activities.
      * @param array $keptcms Base course cmid => created cmid, for the copied kept activities.
+     * @param array $clonecms Clone section number => [base course cmid => cmid of its copy there]: the texts of a
+     *     section that repeats a unit, and of its activities, lead to the kept activities of that same section.
      */
     public static function rewrite_for_course(
         int $courseid,
         array $payloadactivities,
         array $generatedcms,
-        array $keptcms
+        array $keptcms,
+        array $clonecms = []
     ): void {
         $newcmidbyoldcmid = self::counterparts($payloadactivities, $generatedcms, $keptcms)
             + self::rewritten_without_mold($payloadactivities, $generatedcms);
         if ($newcmidbyoldcmid === []) {
             return;
         }
-        $cmids = array_unique(array_map('intval', array_merge(array_values($keptcms), array_values($generatedcms))));
-        $cmids = array_values(array_filter($cmids));
+        $clonecmids = [];
+        foreach ($clonecms as $copies) {
+            $clonecmids = array_merge($clonecmids, array_values($copies));
+        }
+        $cmids = array_merge(array_values($keptcms), array_values($generatedcms), $clonecmids);
+        $cmids = array_values(array_filter(array_unique(array_map('intval', $cmids))));
         if ($cmids !== []) {
             course_modinfo::clear_instance_cache($courseid);
             $modinfo = get_fast_modinfo($courseid);
-            self::rewrite_activities($modinfo, $cmids, $newcmidbyoldcmid);
+            self::rewrite_activities($modinfo, $cmids, $newcmidbyoldcmid, $clonecms);
         }
-        self::rewrite_section_summaries($courseid, $newcmidbyoldcmid);
+        self::rewrite_section_summaries($courseid, $newcmidbyoldcmid, $clonecms);
         rebuild_course_cache($courseid, true);
     }
 
@@ -77,14 +84,16 @@ final class kept_link_rewriter {
      *
      * @param int $courseid
      * @param array $newcmidbyoldcmid
+     * @param array $clonecms Clone section number => [base course cmid => cmid of its copy there].
      */
-    private static function rewrite_section_summaries(int $courseid, array $newcmidbyoldcmid): void {
+    private static function rewrite_section_summaries(int $courseid, array $newcmidbyoldcmid, array $clonecms = []): void {
         global $DB;
 
-        $sections = $DB->get_records('course_sections', ['course' => $courseid], '', 'id, summary');
+        $sections = $DB->get_records('course_sections', ['course' => $courseid], '', 'id, section, summary');
         foreach ($sections as $section) {
             $original = (string) $section->summary;
-            $rewritten = activity_url_remap::apply($original, $newcmidbyoldcmid);
+            $map = ($clonecms[(int) $section->section] ?? []) + $newcmidbyoldcmid;
+            $rewritten = activity_url_remap::apply($original, $map);
             if ($rewritten !== $original) {
                 $DB->set_field('course_sections', 'summary', $rewritten, ['id' => $section->id]);
             }
@@ -177,8 +186,14 @@ final class kept_link_rewriter {
      * @param course_modinfo $modinfo
      * @param int[] $cmids
      * @param array $newcmidbyoldcmid
+     * @param array $clonecms Clone section number => [base course cmid => cmid of its copy there].
      */
-    private static function rewrite_activities(course_modinfo $modinfo, array $cmids, array $newcmidbyoldcmid): void {
+    private static function rewrite_activities(
+        course_modinfo $modinfo,
+        array $cmids,
+        array $newcmidbyoldcmid,
+        array $clonecms = []
+    ): void {
         global $DB;
 
         foreach ($cmids as $cmid) {
@@ -188,7 +203,8 @@ final class kept_link_rewriter {
                 continue;
             }
             $records = $DB->get_records($texts->table(), [$texts->instance_column() => $cm->instance]);
-            self::rewrite_records($texts, $records, $newcmidbyoldcmid);
+            $map = ($clonecms[(int) $cm->sectionnum] ?? []) + $newcmidbyoldcmid;
+            self::rewrite_records($texts, $records, $map);
         }
     }
 

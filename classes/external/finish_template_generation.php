@@ -222,10 +222,11 @@ class finish_template_generation extends external_api {
         // the missing ones could not be resolved: the creation stops here, saying which ones and why.
         template_activities_guard::ensure_all_created($session, $courseid, (array) ($created['activityerrors'] ?? []));
         $keptcms = [];
+        $clonecms = [];
         $sectionmap = self::section_map($session);
         if ($courseid > 0 && $templateid !== null && $templateid > 0) {
             $report('kept');
-            template_keep_copier::copy_into($templateid, $courseid, $keptcms, $selection->filled_cmids(), $sectionmap);
+            template_keep_copier::copy_into($templateid, $courseid, $keptcms, $selection->filled_cmids(), $sectionmap, $clonecms);
         }
         self::place_space_files($session, $selection, $keptcms);
         $spacecms = self::place_space_activities($session, $templateid, $courseid);
@@ -246,10 +247,10 @@ class finish_template_generation extends external_api {
             }
         }
         $report('arrange');
-        self::arrange_course($templateid, $courseid, $generatedactivities, $generatedcms, $keptcms, $sectionmap, $spacecms);
+        self::arrange_course($templateid, $courseid, $generatedactivities, $generatedcms, $keptcms, $sectionmap, $spacecms, $clonecms);
         $storedsections = json_decode((string) $session->get('coursedata'), true)['payload']['sections_info'] ?? [];
-        template_unit_copies::order_copies($courseid, (array) $storedsections, $generatedactivities, $generatedcms);
-        self::resolve_activity_links($session, $courseid, $generatedactivities, $generatedcms, $keptcms);
+        template_unit_copies::order_copies($courseid, (array) $storedsections, $generatedactivities, $generatedcms, $keptcms, $clonecms);
+        self::resolve_activity_links($session, $courseid, $generatedactivities, $generatedcms, $keptcms, $clonecms);
         if ($courseid > 0) {
             template_syllabus_linker::apply(
                 $courseid,
@@ -343,6 +344,7 @@ class finish_template_generation extends external_api {
      * @param array $keptcms Template cmid => created cmid, for the copied kept activities.
      * @param template_section_map $sectionmap Where each section of the template went in the new course.
      * @param array $spacecms Space uid => cmid of the activity the teacher brought, in the new course.
+     * @param array $clonecms Clone section number => [template cmid => cmid of its copy there].
      */
     private static function arrange_course(
         ?int $templateid,
@@ -351,14 +353,23 @@ class finish_template_generation extends external_api {
         array $generatedcms,
         array $keptcms,
         template_section_map $sectionmap,
-        array $spacecms = []
+        array $spacecms = [],
+        array $clonecms = []
     ): void {
         if ($courseid <= 0 || $templateid === null || $templateid <= 0) {
             return;
         }
-        kept_link_rewriter::rewrite_for_course($courseid, $payloadactivities, $generatedcms, $keptcms);
+        kept_link_rewriter::rewrite_for_course($courseid, $payloadactivities, $generatedcms, $keptcms, $clonecms);
         template_course_order::apply($templateid, $courseid, $payloadactivities, $generatedcms, $keptcms, $spacecms, $sectionmap);
-        template_settings_copier::copy_into($templateid, $courseid, $payloadactivities, $generatedcms, $keptcms, $sectionmap);
+        template_settings_copier::copy_into(
+            $templateid,
+            $courseid,
+            $payloadactivities,
+            $generatedcms,
+            $keptcms,
+            $sectionmap,
+            $clonecms
+        );
     }
 
     /**
@@ -388,16 +399,18 @@ class finish_template_generation extends external_api {
      * @param array $payloadactivities Every activity entry of the result, kept ones included.
      * @param array $generatedcms Activity key (generated_activity_key) => created cmid, for the generated activities.
      * @param array $keptcms Template cmid => created cmid, for the copied kept activities.
+     * @param array $clonecms Clone section number => [template cmid => cmid of its copy there].
      */
     private static function resolve_activity_links(
         course_session $session,
         int $courseid,
         array $payloadactivities,
         array $generatedcms,
-        array $keptcms
+        array $keptcms,
+        array $clonecms = []
     ): void {
         try {
-            activity_link_resolver::resolve_for_course($courseid, $payloadactivities, $generatedcms, $keptcms);
+            activity_link_resolver::resolve_for_course($courseid, $payloadactivities, $generatedcms, $keptcms, $clonecms);
         } catch (\Throwable $exception) {
             $sessionid = (int) $session->get('id');
             course_session_service::update_status($sessionid, course_session::STATUS_FAILED);

@@ -19,6 +19,7 @@ namespace local_coursegen;
 use local_coursegen\local\models\template;
 use local_coursegen\local\models\template_activity;
 use local_coursegen\local\service\template_keep_copier;
+use local_coursegen\local\service\template_section_map;
 
 /**
  * Unit tests for template_keep_copier::copy_into().
@@ -245,6 +246,81 @@ final class template_keep_copier_test extends \advanced_testcase {
         $this->assertSame([], $failures);
         $this->assertSame([(int) $resource->cmid], array_keys($with));
         $this->assertEquals(2, $targetmodinfo->get_cm($with[(int) $resource->cmid])->sectionnum);
+    }
+
+    /**
+     * An activity saved "Solo como referencia" is only read by the AI: it never reaches the new course.
+     */
+    public function test_a_reference_activity_is_not_copied(): void {
+        $this->resetAfterTest(true);
+        $this->setAdminUser();
+
+        $sourcecourse = $this->getDataGenerator()->create_course(['numsections' => 2]);
+        $targetcourse = $this->getDataGenerator()->create_course(['numsections' => 2]);
+        $reference = $this->getDataGenerator()->create_module('page', ['course' => $sourcecourse->id, 'section' => 1]);
+        $kept = $this->getDataGenerator()->create_module('url', ['course' => $sourcecourse->id, 'section' => 1]);
+        $template = $this->create_template($sourcecourse->id);
+        $this->save_action($template, (int) $reference->cmid, template_activity::ACTION_REFERENCE);
+
+        $created = [];
+        $failures = template_keep_copier::copy_into((int) $template->get('id'), $targetcourse->id, $created);
+
+        $targetmodinfo = get_fast_modinfo($targetcourse);
+        $this->assertSame([], $failures);
+        $this->assertCount(0, $targetmodinfo->get_instances_of('page'));
+        $this->assertCount(1, $targetmodinfo->get_instances_of('url'));
+        $this->assertSame([(int) $kept->cmid], array_keys($created));
+    }
+
+    /**
+     * A kept activity of a section the course repeats (one copy per syllabus unit) is in the section and in every copy.
+     */
+    public function test_a_kept_activity_of_a_repeated_section_is_in_every_copy(): void {
+        $this->resetAfterTest(true);
+        $this->setAdminUser();
+
+        $sourcecourse = $this->getDataGenerator()->create_course(['numsections' => 2]);
+        $targetcourse = $this->getDataGenerator()->create_course(['numsections' => 4]);
+        $folder = $this->getDataGenerator()->create_module('folder', ['course' => $sourcecourse->id, 'section' => 1]);
+        $template = $this->create_template($sourcecourse->id);
+        $map = template_section_map::from_sections_info([
+            ['section' => 0],
+            ['section' => 1],
+            ['section' => 2, 'source_section' => 1, 'cloned' => true],
+            ['section' => 3, 'source_section' => 1, 'cloned' => true],
+            ['section' => 4, 'source_section' => 2],
+        ]);
+
+        $created = [];
+        $clones = [];
+        $failures = template_keep_copier::copy_into((int) $template->get('id'), $targetcourse->id, $created, [], $map, $clones);
+
+        $targetmodinfo = get_fast_modinfo($targetcourse);
+        $sections = array_map(static fn($cm) => (int) $cm->sectionnum, array_values($targetmodinfo->get_instances_of('folder')));
+        sort($sections);
+        $this->assertSame([], $failures);
+        $this->assertSame([1, 2, 3], $sections);
+        $this->assertSame([(int) $folder->cmid], array_keys($created));
+        $this->assertSame([2, 3], array_keys($clones));
+        $this->assertEquals(2, $targetmodinfo->get_cm($clones[2][(int) $folder->cmid])->sectionnum);
+        $this->assertEquals(3, $targetmodinfo->get_cm($clones[3][(int) $folder->cmid])->sectionnum);
+    }
+
+    /**
+     * Save an action for an activity of a template.
+     *
+     * @param template $template
+     * @param int $cmid
+     * @param string $action
+     */
+    private function save_action(template $template, int $cmid, string $action): void {
+        $record = new template_activity(0, (object) [
+            'templateid' => $template->get('id'),
+            'sectionid' => 0,
+            'cmid' => $cmid,
+            'action' => $action,
+        ]);
+        $record->create();
     }
 
     /**

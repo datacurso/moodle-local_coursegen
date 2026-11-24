@@ -45,17 +45,44 @@ final class activity_link_resolver {
      * @param array $payloadactivities Every activity entry of the result, kept ones included.
      * @param array $generatedcms Activity key (generated_activity_key) => created cmid, for the generated activities.
      * @param array $keptcms Template cmid => created cmid, for the copied kept activities.
+     * @param array $clonecms Clone section number => [template cmid => cmid of its copy there].
      * @throws \moodle_exception When a token names no activity of the course.
      */
     public static function resolve_for_course(
         int $courseid,
         array $payloadactivities,
         array $generatedcms,
-        array $keptcms
+        array $keptcms,
+        array $clonecms = []
     ): void {
         $cmidbyuid = link_targets::build($payloadactivities, $generatedcms, $keptcms);
         $generatedcmids = array_values($generatedcms);
-        self::resolve($courseid, $cmidbyuid, $generatedcmids);
+        self::resolve($courseid, $cmidbyuid, $generatedcmids, self::clone_targets($payloadactivities, $generatedcms, $clonecms));
+    }
+
+    /**
+     * For each section that repeats a unit, the uid of every kept activity copied there => its copy there.
+     *
+     * @param array $payloadactivities
+     * @param array $generatedcms
+     * @param array $clonecms Clone section number => [template cmid => cmid of its copy there].
+     * @return array<int,array<string,int>> Section number => uid => cmid.
+     */
+    private static function clone_targets(array $payloadactivities, array $generatedcms, array $clonecms): array {
+        $targets = [];
+        foreach ($payloadactivities as $entry) {
+            $uid = (string) ($entry['uid'] ?? '');
+            $cmid = (int) ($entry['cmid'] ?? 0);
+            if ($uid === '' || $cmid <= 0 || isset($generatedcms[generated_activity_key::of($entry)])) {
+                continue;
+            }
+            foreach ($clonecms as $section => $copies) {
+                if (isset($copies[$cmid])) {
+                    $targets[(int) $section][$uid] = (int) $copies[$cmid];
+                }
+            }
+        }
+        return $targets;
     }
 
     /**
@@ -64,17 +91,22 @@ final class activity_link_resolver {
      * @param int $courseid
      * @param array $cmidbyuid Target uid => created cmid.
      * @param int[] $generatedcmids The activities whose texts are searched.
+     * @param array $sectioncmidbyuid Section number => uid => cmid: the targets that differ in that section.
      * @throws \moodle_exception When a token names no activity of the course.
      */
-    public static function resolve(int $courseid, array $cmidbyuid, array $generatedcmids): void {
+    public static function resolve(int $courseid, array $cmidbyuid, array $generatedcmids, array $sectioncmidbyuid = []): void {
         global $DB;
 
         course_modinfo::clear_instance_cache($courseid);
         $modinfo = get_fast_modinfo($courseid);
         $urlbyuid = self::urls_by_uid($cmidbyuid, $modinfo);
+        $sectionurlbyuid = [];
+        foreach ($sectioncmidbyuid as $section => $targets) {
+            $sectionurlbyuid[(int) $section] = self::urls_by_uid($targets, $modinfo);
+        }
 
         // Every text is resolved in memory first, so a token that cannot be resolved stops the run before anything is written.
-        $updates = self::resolve_activities($modinfo, $generatedcmids, $urlbyuid);
+        $updates = self::resolve_activities($modinfo, $generatedcmids, $urlbyuid, $sectionurlbyuid);
 
         $transaction = $DB->start_delegated_transaction();
         try {
@@ -113,14 +145,21 @@ final class activity_link_resolver {
      * @param course_modinfo $modinfo
      * @param int[] $generatedcmids
      * @param array $urlbyuid
+     * @param array $sectionurlbyuid Section number => uid => URL, overriding $urlbyuid in that section.
      * @return \stdClass[] The texts that changed, each with table, id, column and value.
      * @throws \moodle_exception When a token remains after resolving.
      */
-    private static function resolve_activities(course_modinfo $modinfo, array $generatedcmids, array $urlbyuid): array {
+    private static function resolve_activities(
+        course_modinfo $modinfo,
+        array $generatedcmids,
+        array $urlbyuid,
+        array $sectionurlbyuid = []
+    ): array {
         $updates = [];
         foreach ($generatedcmids as $cmid) {
             $cm = $modinfo->get_cm($cmid);
-            $updates = array_merge($updates, self::resolve_activity($cm, $urlbyuid));
+            $urls = ($sectionurlbyuid[(int) $cm->sectionnum] ?? []) + $urlbyuid;
+            $updates = array_merge($updates, self::resolve_activity($cm, $urls));
         }
         return $updates;
     }

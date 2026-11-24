@@ -79,6 +79,33 @@ final class kept_link_rewriter_test extends \advanced_testcase {
     }
 
     /**
+     * In a section that repeats a unit, a link to a kept activity of the unit points at the copy in that same section.
+     */
+    public function test_a_link_in_a_unit_copy_points_at_the_kept_activity_of_that_copy(): void {
+        global $DB;
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        $course = $this->getDataGenerator()->create_course(['numsections' => 2]);
+        $first = $this->getDataGenerator()->create_module('folder', ['course' => $course->id, 'section' => 1]);
+        $second = $this->getDataGenerator()->create_module('folder', ['course' => $course->id, 'section' => 2]);
+        $link = '<a href="' . $this->url('folder', 9330) . '">Materials</a>';
+        $label = $this->getDataGenerator()->create_module('label', ['course' => $course->id, 'section' => 2, 'intro' => $link]);
+        $DB->set_field('course_sections', 'summary', $link, ['course' => $course->id, 'section' => 2]);
+
+        kept_link_rewriter::rewrite_for_course(
+            $course->id,
+            [],
+            [],
+            [9330 => (int) $first->cmid, 9331 => (int) $label->cmid],
+            [2 => [9330 => (int) $second->cmid]]
+        );
+
+        $expected = '<a href="' . $this->url('folder', (int) $second->cmid) . '">Materials</a>';
+        $this->assertSame($expected, $DB->get_field('label', 'intro', ['id' => $label->id]));
+        $this->assertSame($expected, $DB->get_field('course_sections', 'summary', ['course' => $course->id, 'section' => 2]));
+    }
+
+    /**
      * A link to a template source that produced one activity points at that activity.
      */
     public function test_a_link_to_a_single_instance_source_points_at_the_instance(): void {
