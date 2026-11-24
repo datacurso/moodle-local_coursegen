@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.16-wp] - 2026112019
+
+### Fixed
+- **The count of activities matches what the AI wrote**  
+  When the stream of a generation was cut and reached again, the events of the activities finished meanwhile never arrived, and the header could stay at "112/113" although every activity was written. The review lists every activity the run wrote: the count now shows that list, and an activity is counted only once whatever the stream repeats.
+
 ## [2.0.16-wp] - 2026112018
 
 ### Fixed
