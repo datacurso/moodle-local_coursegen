@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.16] - 2026112010
+
+### Fixed
+- **Links inside the chapters of a book reach their activity**  
+  A book of a template (for example the contents of a unit) can carry a button to another activity the AI creates, such as the H5P of key concepts of the unit. The chapters of a book were not searched when the course was built, so the button kept its internal token instead of the address of the activity (or the H5P player). Book chapters are now searched like pages, labels and lessons: their links are resolved, pointed at the new course and given the uploaded syllabus.
+
 ## [2.0.16] - 2026112009
 
 ### Fixed
