@@ -239,7 +239,8 @@ final class ai_text_sanitiser {
      * Moodle's cleaning never lets an iframe through, but a template may show the file the teacher brings in a
      * frame that points at the file's address on this site. Such a frame is rebuilt from the few attributes a
      * frame needs, so nothing else it carried (events, styles, other sources) survives, and put back after the
-     * cleaning. A frame that points anywhere else is left to the cleaning, which removes it.
+     * cleaning. So is a frame that asks to show the syllabus the professor uploads (see syllabus_link). A frame that
+     * points anywhere else is left to the cleaning, which removes it.
      *
      * @param string $text
      * @param string[] $frames Filled with the rebuilt frame of each token.
@@ -254,7 +255,7 @@ final class ai_text_sanitiser {
         $prefix = [$CFG->wwwroot . '/pluginfile.php/', '@@PLUGINFILE@@/'];
         $salt = bin2hex(random_bytes(4));
         $callback = static function (array $matches) use (&$frames, $prefix, $salt): string {
-            $frame = self::site_file_frame($matches[1], $prefix);
+            $frame = self::syllabus_frame($matches[1]) ?? self::site_file_frame($matches[1], $prefix);
             if ($frame === null) {
                 return $matches[0];
             }
@@ -263,6 +264,25 @@ final class ai_text_sanitiser {
             return $token;
         };
         return preg_replace_callback('~<iframe\b([^>]*)>\s*</iframe\s*>~iu', $callback, $text) ?? $text;
+    }
+
+    /**
+     * The frame that asks to show the syllabus (see syllabus_link), written again with only its mark and its size.
+     *
+     * @param string $attributes What the opening tag holds.
+     * @return string|null Null when the frame does not carry the syllabus mark.
+     */
+    private static function syllabus_frame(string $attributes): ?string {
+        if (!preg_match('~\sdata-coursegen-syllabus\s*=\s*(["\'])1\1~i', ' ' . $attributes)) {
+            return null;
+        }
+        $kept = ['src="about:blank"', 'data-coursegen-syllabus="1"'];
+        foreach (['width', 'height'] as $name) {
+            if (preg_match('~\b' . $name . '\s*=\s*(["\'])(\d+(?:\.\d+)?(?:%|px)?)\1~i', $attributes, $size)) {
+                $kept[] = $name . '="' . $size[2] . '"';
+            }
+        }
+        return '<iframe ' . implode(' ', $kept) . '></iframe>';
     }
 
     /**

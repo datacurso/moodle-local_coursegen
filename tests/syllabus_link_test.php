@@ -94,4 +94,38 @@ final class syllabus_link_test extends \basic_testcase {
         $this->assertSame(2, substr_count($result, '@@PLUGINFILE@@/g.pdf'));
         $this->assertStringContainsString('<a data-coursegen-syllabus="0" href="#">B</a>', $result);
     }
+
+    /**
+     * A frame marked for the syllabus shows the uploaded PDF, keeping its size.
+     */
+    public function test_a_frame_shows_the_uploaded_pdf(): void {
+        $text = '<p>Guía</p><iframe src="about:blank" data-coursegen-syllabus="1" width="100%" height="650px"></iframe>';
+
+        $this->assertTrue(syllabus_link::present($text));
+        $this->assertSame(
+            '<p>Guía</p><iframe src="@@PLUGINFILE@@/Gu%C3%ADa%20did%C3%A1ctica.pdf" width="100%" height="650px"></iframe>',
+            syllabus_link::apply($text, 'Guía didáctica.pdf')
+        );
+    }
+
+    /**
+     * A syllabus a browser cannot show in a frame (a Word document) is offered as a link to download it instead.
+     */
+    public function test_a_frame_becomes_a_link_when_the_syllabus_is_not_a_pdf(): void {
+        $text = '<iframe src="about:blank" data-coursegen-syllabus="1" height="650px"></iframe>';
+
+        $this->assertSame(
+            '<p><a href="@@PLUGINFILE@@/programa.docx">programa.docx</a></p>',
+            syllabus_link::apply($text, 'programa.docx')
+        );
+    }
+
+    /**
+     * Without an uploaded syllabus the frame is taken out.
+     */
+    public function test_without_a_file_the_frame_is_taken_out(): void {
+        $text = '<p>Antes</p><iframe src="about:blank" data-coursegen-syllabus="1"></iframe><p>Después</p>';
+
+        $this->assertSame('<p>Antes</p><p>Después</p>', syllabus_link::apply($text, null));
+    }
 }

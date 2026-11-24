@@ -19,18 +19,25 @@ namespace local_coursegen\local\link;
 /**
  * The marker a template author writes as the address of a link that must open the syllabus the professor uploads.
  *
- * The author writes it like the other markers: `<a href="[[coursegen:syllabus]]">Programa</a>`. Before the template
- * is sent to the AI service, the link becomes the one syllabus_link knows (`href="#" data-coursegen-syllabus="1"`),
- * so the service never sees a marker it does not read, and once the course exists the link opens the uploaded
- * syllabus (or is taken out when none was uploaded).
+ * The author writes it like the other markers, as the address of a link or of a frame:
+ * `<a href="[[coursegen:syllabus]]">Programa</a>` or `<iframe src="[[coursegen:syllabus]]"></iframe>`. Before the
+ * template is sent to the AI service, the link or frame becomes the one syllabus_link knows (marked with
+ * `data-coursegen-syllabus="1"`), so the service never sees a marker it does not read. Once the course exists the
+ * link opens the uploaded syllabus and the frame shows it (or they are taken out when none was uploaded).
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 final class syllabus_marker {
-    /** @var string The address of a link written as the marker, plain or as an editor encodes the brackets. */
-    private const HREF_PATTERN = '~\bhref=(["\'])\s*(?:\[\[|%5B%5B)\s*coursegen:syllabus\s*(?:\]\]|%5D%5D)\s*\1~i';
+    /** @var string The marker as an address, plain or as an editor encodes the brackets. */
+    private const MARKER = '(["\'])\s*(?:\[\[|%5B%5B)\s*coursegen:syllabus\s*(?:\]\]|%5D%5D)\s*\g{-1}';
+
+    /** @var string The address of a link written as the marker. */
+    private const HREF_PATTERN = '~\bhref=' . self::MARKER . '~i';
+
+    /** @var string The address of a frame written as the marker: the frame, up to that address. */
+    private const SRC_PATTERN = '~(<iframe\b[^>]*?)\bsrc=' . self::MARKER . '~i';
 
     /**
      * Turn every link written with the marker into a link marked for the syllabus, in a text or a whole structure.
@@ -48,6 +55,7 @@ final class syllabus_marker {
         if (!is_string($value) || stripos($value, 'coursegen:syllabus') === false) {
             return $value;
         }
+        $value = preg_replace(self::SRC_PATTERN, '$1src="about:blank" data-coursegen-syllabus="1"', $value) ?? $value;
         return preg_replace(self::HREF_PATTERN, 'href="#" data-coursegen-syllabus="1"', $value) ?? $value;
     }
 }
