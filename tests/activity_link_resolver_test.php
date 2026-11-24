@@ -144,6 +144,34 @@ final class activity_link_resolver_test extends \advanced_testcase {
     }
 
     /**
+     * Tokens in every chapter of a generated book are resolved (a book offers the activities of its unit, such as
+     * the H5P a button opens).
+     */
+    public function test_replaces_tokens_in_every_book_chapter(): void {
+        global $DB;
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        $course = $this->getDataGenerator()->create_course();
+        $target = $this->getDataGenerator()->create_module('page', ['course' => $course->id]);
+        $book = $this->getDataGenerator()->create_module('book', ['course' => $course->id]);
+        $generator = $this->getDataGenerator()->get_plugin_generator('mod_book');
+        $generator->create_chapter(['bookid' => $book->id, 'content' => '<p>' . $this->link('uid-page') . '</p>']);
+        $generator->create_chapter(['bookid' => $book->id, 'content' => '<p>' . $this->link('uid-page') . '</p>']);
+
+        activity_link_resolver::resolve_for_course(
+            $course->id,
+            $this->payload(['uid-page' => -1]),
+            ['uid-page' => (int) $target->cmid, 'other-2' => (int) $book->cmid],
+            []
+        );
+
+        $contents = $DB->get_fieldset_select('book_chapters', 'content', 'bookid = ?', [$book->id]);
+        $this->assertCount(2, $contents);
+        $expected = '<p><a href="' . $this->url('page', (int) $target->cmid) . '">Go</a></p>';
+        $this->assertSame([$expected, $expected], $contents);
+    }
+
+    /**
      * A kept activity is a target as well as a generated one.
      */
     public function test_kept_activities_are_link_targets(): void {

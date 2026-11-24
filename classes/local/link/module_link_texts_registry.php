@@ -33,6 +33,7 @@ final class module_link_texts_registry {
         'label' => label_link_texts::class,
         'page' => page_link_texts::class,
         'lesson' => lesson_link_texts::class,
+        'book' => book_link_texts::class,
     ];
 
     /**
