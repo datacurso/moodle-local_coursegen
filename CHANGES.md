@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.16-wp] - 2026112009
+
+### Added
+- **The syllabus can be shown inside a page, not only linked**  
+  `[[coursegen:syllabus]]` also works as the address (`src`) of a frame, so a page can show the didactic guide the professor uploaded, the way a guide shown in a page looks. When the course is created the frame shows the uploaded PDF; a syllabus that is not a PDF is offered as a link to download it instead, and without a syllabus the frame is taken out. The cleaning of the text the AI writes keeps that frame (only its size), and the Markers block explains both uses.
+
 ## [2.0.16-wp] - 2026112008
 
 ### Added

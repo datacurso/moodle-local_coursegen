@@ -167,4 +167,28 @@ final class ai_text_sanitiser_test extends \advanced_testcase {
         $this->assertStringNotContainsString('data-coursegen-syllabus', $clean);
         $this->assertStringContainsString('Texto', $clean);
     }
+
+    /**
+     * A frame marked for the syllabus survives the cleaning, rebuilt with only its size and the mark.
+     */
+    public function test_a_syllabus_frame_survives_the_cleaning(): void {
+        $clean = ai_text_sanitiser::sanitise_string(
+            '<p>Guía</p><iframe src="about:blank" data-coursegen-syllabus="1" width="100%" height="650px" onload="x()"></iframe>'
+        );
+
+        $this->assertStringContainsString(
+            '<iframe src="about:blank" data-coursegen-syllabus="1" width="100%" height="650px"></iframe>',
+            $clean
+        );
+        $this->assertStringNotContainsString('onload', $clean);
+    }
+
+    /**
+     * An empty frame without the mark is still removed by the cleaning.
+     */
+    public function test_an_unmarked_blank_frame_is_removed(): void {
+        $clean = ai_text_sanitiser::sanitise_string('<p>Guía</p><iframe src="about:blank" width="100%"></iframe>');
+
+        $this->assertStringNotContainsString('<iframe', $clean);
+    }
 }

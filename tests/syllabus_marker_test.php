@@ -70,4 +70,16 @@ final class syllabus_marker_test extends \basic_testcase {
 
         $this->assertSame($text, syllabus_marker::to_link_mark($text));
     }
+
+    /**
+     * A frame whose address is the marker becomes an empty frame marked for the syllabus, keeping its size.
+     */
+    public function test_a_frame_to_the_marker_is_marked_for_the_syllabus(): void {
+        $text = '<iframe src="[[coursegen:syllabus]]" width="100%" height="650px" style="border:none;"></iframe>';
+
+        $this->assertSame(
+            '<iframe src="about:blank" data-coursegen-syllabus="1" width="100%" height="650px" style="border:none;"></iframe>',
+            syllabus_marker::to_link_mark($text)
+        );
+    }
 }
