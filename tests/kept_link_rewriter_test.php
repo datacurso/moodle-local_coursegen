@@ -204,6 +204,47 @@ final class kept_link_rewriter_test extends \advanced_testcase {
     }
 
     /**
+     * A link in a section summary (a card of the section) points at the counterpart of the activity it names.
+     */
+    public function test_links_in_section_summaries_point_at_the_new_course(): void {
+        global $DB;
+        $this->resetAfterTest();
+        $course = $this->getDataGenerator()->create_course(['numsections' => 2]);
+        $copy = $this->getDataGenerator()->create_module('page', ['course' => $course->id, 'section' => 2]);
+        $generated = $this->getDataGenerator()->create_module('page', ['course' => $course->id, 'section' => 1]);
+        $card = '<a href="' . $this->url('page', 9330) . '">Help desk</a><a href="' . $this->url('page', 9331) . '">Guide</a>';
+        $DB->set_field('course_sections', 'summary', $card, ['course' => $course->id, 'section' => 2]);
+
+        kept_link_rewriter::rewrite_for_course(
+            $course->id,
+            [$this->instance(-7, 9331)],
+            ['uid-7' => (int) $generated->cmid],
+            [9330 => (int) $copy->cmid]
+        );
+
+        $summary = $DB->get_field('course_sections', 'summary', ['course' => $course->id, 'section' => 2]);
+        $expected = '<a href="' . $this->url('page', (int) $copy->cmid) . '">Help desk</a>'
+            . '<a href="' . $this->url('page', (int) $generated->cmid) . '">Guide</a>';
+        $this->assertSame($expected, $summary);
+    }
+
+    /**
+     * A section link to an activity with no counterpart, and every other address, is left as it is.
+     */
+    public function test_section_links_without_counterpart_are_left_untouched(): void {
+        global $DB;
+        $this->resetAfterTest();
+        $course = $this->getDataGenerator()->create_course(['numsections' => 1]);
+        $copy = $this->getDataGenerator()->create_module('page', ['course' => $course->id]);
+        $text = '<a href="' . $this->url('page', 9340) . '">Other</a> <a href="https://example.com/a?id=9330">Out</a>';
+        $DB->set_field('course_sections', 'summary', $text, ['course' => $course->id, 'section' => 1]);
+
+        kept_link_rewriter::rewrite_for_course($course->id, [], [], [9330 => (int) $copy->cmid]);
+
+        $this->assertSame($text, $DB->get_field('course_sections', 'summary', ['course' => $course->id, 'section' => 1]));
+    }
+
+    /**
      * With nothing kept there is nothing to rewrite, and nothing fails.
      */
     public function test_nothing_kept_is_a_no_op(): void {
