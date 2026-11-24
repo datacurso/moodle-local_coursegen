@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.16] - 2026112015
+
+### Fixed
+- **A teacher can bring a file of any type to a space**  
+  When a course is created from a template, the file picker of a space only took the syllabus types (PDF, DOCX, TXT), so a space whose file is a video (for example the teacher's welcome video) could not be filled. A space now takes any file, up to the site's upload limit; the syllabus picker keeps its types.
+
 ## [2.0.16] - 2026112014
 
 ### Fixed

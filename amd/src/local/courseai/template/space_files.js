@@ -112,7 +112,8 @@ export const pickSpaceFile = async(tplState, sectionIndex, activityIndex, onChan
     try {
         await showFilePicker({
             state: {},
-            CourseaiRepository: {initFilepicker},
+            // A space takes the file the template's activity holds there, of any type (a video, a document...).
+            CourseaiRepository: {initFilepicker: () => initFilepicker(true)},
             Notification,
             YUI,
             texts: {},
