@@ -54,6 +54,9 @@ final class ai_text_sanitiser {
      */
     private const JSON_KEYS = ['content_json', 'h5p_json'];
 
+    /** @var string[] The attributes that flag a link for later work, kept through the cleaning (value "1", links only). */
+    private const LINK_MARKERS = ['data-coursegen-embed', 'data-coursegen-syllabus'];
+
     /**
      * Clean every string of a value, recursively through arrays and objects.
      *
@@ -147,68 +150,87 @@ final class ai_text_sanitiser {
         $text = str_replace(['\\"', "\\'"], ['"', "'"], $text);
         $frames = [];
         $text = self::set_aside_site_file_frames($text, $frames);
-        $embedclass = 'cgembed' . bin2hex(random_bytes(4));
-        $text = self::carry_embed_markers($text, $embedclass);
-        return self::restore_embed_markers(strtr(clean_text($text, FORMAT_HTML), $frames), $embedclass);
+        $classes = self::marker_classes();
+        $text = self::carry_link_markers($text, $classes);
+        return self::restore_link_markers(strtr(clean_text($text, FORMAT_HTML), $frames), $classes);
     }
 
     /**
-     * Move the embed marker of each link into a class, which the cleaning keeps.
+     * A unique class for each link marker, standing for it while the text is cleaned.
      *
-     * A link that asks to be shown as the player of its H5P activity carries `data-coursegen-embed="1"`, and
-     * the cleaning removes every attribute it does not know. The marker only flags the link: `embed_link`
-     * turns it into a player when the link points at an H5P activity of this site, after the activity
-     * exists. Only the exact marker on a link is carried, so the same attribute on another element or with
-     * another value is still removed, and everything else a link carries is cleaned as before.
+     * @return array<string,string> Marker attribute => class.
+     */
+    private static function marker_classes(): array {
+        $classes = [];
+        foreach (self::LINK_MARKERS as $marker) {
+            $classes[$marker] = 'cgmark' . bin2hex(random_bytes(4));
+        }
+        return $classes;
+    }
+
+    /**
+     * Move the markers of each link into classes, which the cleaning keeps.
+     *
+     * A link that asks to be shown as the player of its H5P activity carries `data-coursegen-embed="1"`, and a link
+     * that offers the syllabus the professor uploaded carries `data-coursegen-syllabus="1"`; the cleaning removes
+     * every attribute it does not know. A marker only flags the link: `embed_link` and `syllabus_link` act on it
+     * once the course exists. Only the exact marker on a link is carried, so the same attribute on another element
+     * or with another value is still removed, and everything else a link carries is cleaned as before.
      *
      * @param string $text The text before the cleaning.
-     * @param string $class The unique class that stands for the marker while the text is cleaned.
-     * @return string The text with the marker of each link written as that class.
+     * @param array<string,string> $classes Marker attribute => the unique class that stands for it.
+     * @return string The text with the markers of each link written as those classes.
      */
-    private static function carry_embed_markers(string $text, string $class): string {
-        if (stripos($text, 'data-coursegen-embed') === false) {
-            return $text;
+    private static function carry_link_markers(string $text, array $classes): string {
+        foreach ($classes as $marker => $class) {
+            if (stripos($text, $marker) === false) {
+                continue;
+            }
+            $callback = static function (array $matches) use ($marker, $class): string {
+                $attributes = $matches[1];
+                $pattern = '~\s+' . preg_quote($marker, '~') . '\s*=\s*(["\'])1\1~i';
+                if (!preg_match($pattern, $attributes)) {
+                    return $matches[0];
+                }
+                $attributes = preg_replace($pattern, '', $attributes, 1);
+                if (preg_match('~\sclass\s*=\s*(["\'])(.*?)\1~is', $attributes)) {
+                    $attributes = preg_replace('~(\sclass\s*=\s*)(["\'])(.*?)\2~is', '$1$2$3 ' . $class . '$2', $attributes, 1);
+                } else {
+                    $attributes .= ' class="' . $class . '"';
+                }
+                return '<a' . $attributes . '>';
+            };
+            $text = preg_replace_callback('~<a\b([^>]*)>~i', $callback, $text) ?? $text;
         }
-        $callback = static function (array $matches) use ($class): string {
-            $attributes = $matches[1];
-            $marker = '~\s+data-coursegen-embed\s*=\s*(["\'])1\1~i';
-            if (!preg_match($marker, $attributes)) {
-                return $matches[0];
-            }
-            $attributes = preg_replace($marker, '', $attributes, 1);
-            if (preg_match('~\sclass\s*=\s*(["\'])(.*?)\1~is', $attributes)) {
-                $attributes = preg_replace('~(\sclass\s*=\s*)(["\'])(.*?)\2~is', '$1$2$3 ' . $class . '$2', $attributes, 1);
-            } else {
-                $attributes .= ' class="' . $class . '"';
-            }
-            return '<a' . $attributes . '>';
-        };
-        return preg_replace_callback('~<a\b([^>]*)>~i', $callback, $text) ?? $text;
+        return $text;
     }
 
     /**
-     * Write the embed marker back on each link that carried it through the cleaning as a class.
+     * Write the markers back on each link that carried them through the cleaning as classes.
      *
      * @param string $text The cleaned text.
-     * @param string $class The unique class that stood for the marker.
-     * @return string The text with `data-coursegen-embed="1"` on those links and the class removed again.
+     * @param array<string,string> $classes Marker attribute => the unique class that stood for it.
+     * @return string The text with each marker (value "1") back on its links and the classes removed again.
      */
-    private static function restore_embed_markers(string $text, string $class): string {
-        if (strpos($text, $class) === false) {
-            return $text;
+    private static function restore_link_markers(string $text, array $classes): string {
+        foreach ($classes as $marker => $class) {
+            if (strpos($text, $class) === false) {
+                continue;
+            }
+            $callback = static function (array $matches) use ($marker, $class): string {
+                $anchor = $matches[0];
+                if (strpos($anchor, $class) === false) {
+                    return $anchor;
+                }
+                $anchor = preg_replace('~\sclass\s*=\s*"\s*' . preg_quote($class, '~') . '\s*"~', '', $anchor, 1, $removed);
+                if (!$removed) {
+                    $anchor = preg_replace('~(\sclass\s*=\s*"[^"]*?)\s*' . preg_quote($class, '~') . '~', '$1', $anchor, 1);
+                }
+                return preg_replace('~<a\b~i', '<a ' . $marker . '="1"', $anchor, 1);
+            };
+            $text = preg_replace_callback('~<a\b[^>]*>~i', $callback, $text) ?? $text;
         }
-        $callback = static function (array $matches) use ($class): string {
-            $anchor = $matches[0];
-            if (strpos($anchor, $class) === false) {
-                return $anchor;
-            }
-            $anchor = preg_replace('~\sclass\s*=\s*"\s*' . preg_quote($class, '~') . '\s*"~', '', $anchor, 1, $removed);
-            if (!$removed) {
-                $anchor = preg_replace('~(\sclass\s*=\s*"[^"]*?)\s*' . preg_quote($class, '~') . '~', '$1', $anchor, 1);
-            }
-            return preg_replace('~<a\b~i', '<a data-coursegen-embed="1"', $anchor, 1);
-        };
-        return preg_replace_callback('~<a\b[^>]*>~i', $callback, $text) ?? $text;
+        return $text;
     }
 
     /**
