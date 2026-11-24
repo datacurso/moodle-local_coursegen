@@ -52,12 +52,13 @@ export const initSession = (params) => {
 /**
  * Initialise filepicker for courseai syllabus upload.
  *
+ * @param {boolean} anyType For the file a teacher brings to a space: any type, up to the site limit.
  * @returns {Promise<Object>} Response with clientid, draftitemid, options, templates
  */
-export const initFilepicker = () => {
+export const initFilepicker = (anyType = false) => {
     const request = {
         methodname: 'local_coursegen_courseai_filepicker_init',
-        args: {},
+        args: anyType ? {anytype: true} : {},
     };
 
     return Ajax.call([request])[0];

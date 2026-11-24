@@ -53,21 +53,27 @@ class courseai_filepicker_init extends external_api {
      * @return external_function_parameters
      */
     public static function execute_parameters(): external_function_parameters {
-        return new external_function_parameters([]);
+        return new external_function_parameters([
+            'anytype' => new external_value(PARAM_BOOL,
+                'For the file a teacher brings to a space of a template: any type, up to the site limit', VALUE_DEFAULT, false),
+        ]);
     }
 
     /**
      * Initialise and return filepicker options.
      *
+     * @param bool $anytype For the file a teacher brings to a space of a template (a video, a document...): any type,
+     *     up to the site limit. Otherwise the picker is the syllabus one, with its types and size.
      * @return array
      * @throws \moodle_exception plugindisabled or plugindisabled_admin when the plugin is disabled.
      */
-    public static function execute(): array {
+    public static function execute(bool $anytype = false): array {
         global $PAGE;
 
         plugin_settings::require_enabled('local_coursegen');
 
-        $params = self::validate_parameters(self::execute_parameters(), []);
+        $params = self::validate_parameters(self::execute_parameters(), ['anytype' => $anytype]);
+        $anytype = (bool) $params['anytype'];
 
         $context = context_system::instance();
         self::validate_context($context);
@@ -83,12 +89,12 @@ class courseai_filepicker_init extends external_api {
         $args = (object) [
             'context' => $context,
             // Single source of truth with the endpoint that enforces them.
-            'accepted_types' => courseai_syllabus_upload::accepted_filepicker_types(),
+            'accepted_types' => $anytype ? '*' : courseai_syllabus_upload::accepted_filepicker_types(),
             'return_types' => FILE_INTERNAL,
             'env' => 'filepicker',
             'client_id' => $clientid,
             'itemid' => $draftitemid,
-            'maxbytes' => courseai_syllabus_upload::MAX_SYLLABUS_BYTES,
+            'maxbytes' => $anytype ? 0 : courseai_syllabus_upload::MAX_SYLLABUS_BYTES,
             'maxfiles' => 1,
             'subdirs' => 0,
         ];
