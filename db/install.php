@@ -38,6 +38,8 @@ function xmldb_local_coursegen_install() {
     update_capabilities('local_coursegen');
     \local_coursegen\local\tenancy::add_plugin_capabilities_to_tenant_admin_role();
     \local_coursegen\local\role_installer::install_missing_roles();
+    // The YouTube player of every H5P video stays in sight (see youtube_player_style).
+    \local_coursegen\local\h5p\youtube_player_style::apply();
 
     return true;
 }

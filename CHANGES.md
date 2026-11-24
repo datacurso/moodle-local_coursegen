@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.16-wp] - 2026112020
+
+### Fixed
+- **YouTube videos of H5P activities are no longer a black box**  
+  H5P.Video before 1.6.79 places the YouTube player through a property of the YouTube API that no longer exists, so the sound played over a black box in every H5P with a YouTube video (interactive videos above all). The fixed library needs the H5P framework 1.28. The plugin now adds one CSS rule that puts the player back in place to the site's H5P custom CSS, when it installs or upgrades, keeping the site's own CSS: no site needs it pasted by hand.
+
 ## [2.0.16-wp] - 2026112019
 
 ### Fixed
