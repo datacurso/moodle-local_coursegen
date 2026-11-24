@@ -18,6 +18,7 @@ namespace local_coursegen\local\service;
 
 use cm_info;
 use local_coursegen\local\backup\activity_reader;
+use local_coursegen\local\link\syllabus_marker;
 
 /**
  * One real activity's "parameters" for the course-template payload.
@@ -60,7 +61,8 @@ class template_activity_export {
             // Everything the activity is made of, as its own module declares
             // it: its settings, and every list that belongs to it, each
             // element carrying the id the module gave it.
-            'structure' => $read['tree'],
+            // A link the author wrote with the syllabus marker travels as a link marked for the syllabus.
+            'structure' => syllabus_marker::to_link_mark($read['tree']),
             // Where each element came from, so the tree can be read back as
             // the rows the module's own code asks for.
             'structure_tables' => $read['tables'],
