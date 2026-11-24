@@ -74,6 +74,48 @@ export const markRow = (uid, status) => {
 const resetProgress = (progress, data) => {
     progress.total = Math.max(0, Number(data.total) || 0);
     progress.done = 0;
+    progress.doneUids = new Set();
+};
+
+/**
+ * Count one finished activity once: the same activity is never counted twice, whatever the stream repeats.
+ *
+ * @param {string} uid
+ * @param {Object} progress Mutable {total, done, doneUids} counters.
+ * @returns {boolean} Whether it was not counted before.
+ */
+const countDone = (uid, progress) => {
+    if (!(progress.doneUids instanceof Set)) {
+        progress.doneUids = new Set();
+    }
+    if (progress.doneUids.has(uid)) {
+        return false;
+    }
+    progress.doneUids.add(uid);
+    progress.done = progress.doneUids.size;
+    return true;
+};
+
+/**
+ * The review lists every activity the run wrote: it is what the count shows, even when the stream that told each one
+ * was cut and some of their events never arrived (the run went on and was reached again).
+ *
+ * @param {Object} data A review_needed event with its generated_activities.
+ * @param {Object} progress Mutable {total, done, doneUids} counters.
+ * @returns {string} 'review'
+ */
+const reviewActivities = (data, progress) => {
+    const written = (Array.isArray(data.generated_activities) ? data.generated_activities : [])
+        .filter((activity) => activity && activity.uid);
+    progress.total = Math.max(Number(progress.total) || 0, written.length);
+    for (const activity of written) {
+        const uid = String(activity.uid);
+        if (countDone(uid, progress)) {
+            markRow(uid, 'done');
+            closeActivity(uid, progress);
+        }
+    }
+    return 'review';
 };
 
 /**
@@ -87,8 +129,9 @@ const resetProgress = (progress, data) => {
  */
 const finishActivity = (data, progress, paintStage) => {
     markRow(data.uid, 'done');
-    progress.done += 1;
-    closeActivity(data.uid, progress);
+    if (countDone(String(data.uid), progress)) {
+        closeActivity(data.uid, progress);
+    }
     if (progress.total > 0 && progress.done >= progress.total) {
         paintStage('saving');
     }
@@ -156,7 +199,7 @@ const EVENT_HANDLERS = {
         showUnitCopies(data);
         return '';
     },
-    review_needed: () => 'review',
+    review_needed: reviewActivities,
     activity_progress_init: (data, progress, paintStage) => {
         resetStatus();
         repeats.reset();
