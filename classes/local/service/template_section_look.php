@@ -177,6 +177,8 @@ class template_section_look {
 
         $address = $CFG->wwwroot . '/pluginfile.php/' . $fromcontextid . '/course/section/' . $sourcesection->id;
         $summary = str_replace($address, '@@PLUGINFILE@@', (string) ($info['summary'] ?? ''));
+        // The service fills the markers of a summary; any it left is taken out rather than shown to students.
+        $summary = leftover_markers::strip($summary);
 
         $DB->update_record('course_sections', (object) [
             'id' => $section->id,
