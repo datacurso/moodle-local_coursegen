@@ -286,20 +286,24 @@ final class template_flexsections_course_test extends \advanced_testcase {
         $this->assertSame('closing-bytes', $file->get_content());
     }
 
-    public function test_kept_activities_are_copied_into_the_section_they_moved_to_and_not_cloned(): void {
+    public function test_kept_activities_are_copied_into_the_section_they_moved_to_and_into_every_clone(): void {
         $this->resetAfterTest();
         $this->setAdminUser();
         $result = $this->create_from_template(3);
         $map = template_section_map::from_sections_info($this->sent);
 
         $kept = [];
-        $failures = template_keep_copier::copy_into($this->templateid, $result['courseid'], $kept, [], $map);
+        $clones = [];
+        $failures = template_keep_copier::copy_into($this->templateid, $result['courseid'], $kept, [], $map, $clones);
 
+        $activities = $this->activities_of($result['courseid']);
         $this->assertSame([], $failures);
-        $this->assertSame([
-            6 => ['Resource two'],
-            11 => ['Closing one', 'Closing two'],
-        ], $this->activities_of($result['courseid']));
+        $this->assertSame(['Resource two'], $activities[6]);
+        $this->assertSame(['Closing one', 'Closing two'], $activities[11]);
+        $this->assertNotEmpty($clones);
+        foreach (array_keys($clones) as $clone) {
+            $this->assertSame(['Resource two'], $activities[$clone]);
+        }
     }
 
     public function test_kept_activities_of_a_dropped_unit_are_not_copied_and_the_rest_land_in_place(): void {

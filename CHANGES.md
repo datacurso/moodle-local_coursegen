@@ -8,6 +8,14 @@ All notable changes to this project will be documented in this file. Each change
 - **A course from a template is created with every activity the AI wrote, or says which ones failed and why**  
   An activity that could not be created was skipped and the course went on without it; the links of the other activities to it could not be resolved, and the person only read "The course could not be created." Now the creation stops at that point, the half-built course is removed, and the message names the activities and the cause. When their files are no longer in the AI service (it was restarted between the generation and the creation of the course), it says to generate the course again.
 
+## [2.0.16] - 2026112014
+
+### Fixed
+- **"Solo como referencia" activities stay out of the new course**  
+  An activity saved "Solo como referencia" is only read by the AI, as its option says, but it was copied into the new course. It is no longer copied.
+- **Every unit gets the kept activities of the template unit**  
+  In a section repeated once per syllabus unit, an activity saved "Mantener intacta" (for example a folder of unit materials) was copied only into the first unit. Each unit now gets its own copy, in the same place as in the template, and the links of each unit lead to its own copy.
+
 ## [2.0.16] - 2026112013
 
 ### Fixed

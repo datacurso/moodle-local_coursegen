@@ -76,8 +76,17 @@ final class template_unit_copies {
      * @param array $sectionsinfo The sections the session kept (see adopt()).
      * @param array $payloadactivities Every activity entry of the result.
      * @param array $generatedcms Activity key (generated_activity_key) => created cmid.
+     * @param array $keptcms Base course cmid => cmid of its copy in the first copy, for the kept activities.
+     * @param array $clonecms Clone section number => [base course cmid => cmid of its copy there].
      */
-    public static function order_copies(int $courseid, array $sectionsinfo, array $payloadactivities, array $generatedcms): void {
+    public static function order_copies(
+        int $courseid,
+        array $sectionsinfo,
+        array $payloadactivities,
+        array $generatedcms,
+        array $keptcms = [],
+        array $clonecms = []
+    ): void {
         global $DB;
         if ($courseid <= 0 || !self::has_copies($sectionsinfo)) {
             return;
@@ -88,6 +97,14 @@ final class template_unit_copies {
             $copy = $generatedcms[generated_activity_key::of($entry)] ?? null;
             if ($source !== '' && $copy !== null && isset($generatedcms[$source])) {
                 $original[(int) $copy] = (int) $generatedcms[$source];
+            }
+        }
+        // A kept activity copied into a copy repeats the one copied into the first copy.
+        foreach ($clonecms as $copies) {
+            foreach ($copies as $basecmid => $copy) {
+                if (isset($keptcms[$basecmid])) {
+                    $original[(int) $copy] = (int) $keptcms[$basecmid];
+                }
             }
         }
         $map = template_section_map::from_sections_info($sectionsinfo);
