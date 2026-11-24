@@ -22,7 +22,7 @@ use local_coursegen\local\link\module_link_texts;
 use local_coursegen\local\link\module_link_texts_registry;
 
 /**
- * Points the links of the copied kept activities and of the generated ones at the new course.
+ * Points the links of the copied kept activities, of the generated ones and of the section summaries at the new course.
  *
  * A kept activity is copied as it was written, and a generated one keeps the text of its template
  * that has no placeholder, so the links in both still address the activities of the template's course. Each address of an
@@ -30,7 +30,8 @@ use local_coursegen\local\link\module_link_texts_registry;
  * counterpart: a kept activity maps to its copy and a template source that
  * produced exactly one activity maps to that activity. An address of any
  * other activity is left as it is, as is every text of a module that is not in
- * module_link_texts_registry.
+ * module_link_texts_registry. Section summaries are copied from the template as they were written too, so the
+ * cards of a section that lead to its activities are rewritten the same way.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -52,15 +53,40 @@ final class kept_link_rewriter {
         array $keptcms
     ): void {
         $newcmidbyoldcmid = self::counterparts($payloadactivities, $generatedcms, $keptcms);
-        $cmids = array_unique(array_map('intval', array_merge(array_values($keptcms), array_values($generatedcms))));
-        $cmids = array_values(array_filter($cmids));
-        if ($newcmidbyoldcmid === [] || $cmids === []) {
+        if ($newcmidbyoldcmid === []) {
             return;
         }
-        course_modinfo::clear_instance_cache($courseid);
-        $modinfo = get_fast_modinfo($courseid);
-        self::rewrite_activities($modinfo, $cmids, $newcmidbyoldcmid);
+        $cmids = array_unique(array_map('intval', array_merge(array_values($keptcms), array_values($generatedcms))));
+        $cmids = array_values(array_filter($cmids));
+        if ($cmids !== []) {
+            course_modinfo::clear_instance_cache($courseid);
+            $modinfo = get_fast_modinfo($courseid);
+            self::rewrite_activities($modinfo, $cmids, $newcmidbyoldcmid);
+        }
+        self::rewrite_section_summaries($courseid, $newcmidbyoldcmid);
         rebuild_course_cache($courseid, true);
+    }
+
+    /**
+     * Rewrite the summaries of the sections of the new course.
+     *
+     * A summary is copied from the template's section as it was written, so its links (the cards that lead to
+     * the activities of the section) still address the template's course.
+     *
+     * @param int $courseid
+     * @param array $newcmidbyoldcmid
+     */
+    private static function rewrite_section_summaries(int $courseid, array $newcmidbyoldcmid): void {
+        global $DB;
+
+        $sections = $DB->get_records('course_sections', ['course' => $courseid], '', 'id, summary');
+        foreach ($sections as $section) {
+            $original = (string) $section->summary;
+            $rewritten = activity_url_remap::apply($original, $newcmidbyoldcmid);
+            if ($rewritten !== $original) {
+                $DB->set_field('course_sections', 'summary', $rewritten, ['id' => $section->id]);
+            }
+        }
     }
 
     /**

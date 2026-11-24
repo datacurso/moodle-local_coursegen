@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.16] - 2026112005
+
+### Fixed
+- **The cards of a section lead to the activities of the new course**  
+  A section summary is copied from the base course as it was written, so a card or link that opens one of its activities (for example the cards of an institutional resources section) kept opening the activity of the base course. When a course is created from a template, those links now open the counterpart of the activity in the new course: its copy, or the activity the AI made from it. Links to anything else are left as they are.
+
 ## [2.0.16] - 2026112004
 
 ### Fixed
