@@ -605,6 +605,13 @@ function xmldb_local_coursegen_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026111713, 'local', 'coursegen');
     }
 
+    if ($oldversion < 2026112018) {
+        // The YouTube player of every H5P video is put back in sight with one rule in the H5P custom CSS
+        // (H5P.Video before 1.6.79 left it below a black box), so no site needs the CSS pasted by hand.
+        \local_coursegen\local\h5p\youtube_player_style::apply();
+        upgrade_plugin_savepoint(true, 2026112018, 'local', 'coursegen');
+    }
+
     return true;
 }
 
