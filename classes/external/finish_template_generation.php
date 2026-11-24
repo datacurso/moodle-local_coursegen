@@ -40,6 +40,7 @@ use local_coursegen\local\service\generated_activities_filter;
 use local_coursegen\local\service\generated_activity_key;
 use local_coursegen\local\service\kept_link_rewriter;
 use local_coursegen\local\service\teacher_space_choices;
+use local_coursegen\local\service\template_activities_guard;
 use local_coursegen\local\service\template_ai_api_service;
 use local_coursegen\local\service\template_course_image_applier;
 use local_coursegen\local\service\template_course_order;
@@ -217,6 +218,9 @@ class finish_template_generation extends external_api {
         course_creation_guard::ensure_created($created);
         $courseid = $created['courseid'] ?? 0;
         $courseid = (int) $courseid;
+        // A course without some of the activities the AI wrote is not the course that was reviewed, and the links to
+        // the missing ones could not be resolved: the creation stops here, saying which ones and why.
+        template_activities_guard::ensure_all_created($session, $courseid, (array) ($created['activityerrors'] ?? []));
         $keptcms = [];
         $sectionmap = self::section_map($session);
         if ($courseid > 0 && $templateid !== null && $templateid > 0) {

@@ -918,6 +918,7 @@ class create_course_service {
                     'section' => (int)$sectionnum,
                     'message' => get_string('error_activity_creation_failed', 'local_coursegen'),
                     'title' => $title,
+                    'cause' => self::failure_cause($e),
                 ];
                 $context = [
                     'resource_type' => $resource,
@@ -935,6 +936,20 @@ class create_course_service {
         rebuild_course_cache($courseid, true);
 
         return $errors;
+    }
+
+    /**
+     * Why an activity could not be created, in one word the caller can act on.
+     *
+     * A file the activity is built from (an H5P package, a document) is fetched from the service when the course is
+     * created; when the service no longer has it the fetch fails, and generating again is what makes it anew.
+     *
+     * @param \Throwable $error
+     * @return string "download" when a file of the service could not be fetched, "other" for anything else.
+     */
+    private static function failure_cause(\Throwable $error): string {
+        $fetch = $error instanceof \file_exception && str_contains((string) ($error->a ?? ''), 'Cannot fetch file from URL');
+        return $fetch ? 'download' : 'other';
     }
 
     /**

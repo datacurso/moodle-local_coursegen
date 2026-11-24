@@ -35,6 +35,9 @@ class finish_stream {
     /** @var int Seconds the creation may take, at most. */
     private const MAX_SECONDS = 7200;
 
+    /** @var string[] Error codes whose message is written for the person, shown as it is instead of a generic one. */
+    private const TOLD_ERRORS = ['template_activities_not_created'];
+
     /** @var browser_output Writer to the browser. */
     private $output;
 
@@ -80,10 +83,23 @@ class finish_stream {
             $this->output->send(sse_formatter::event('failed', json_encode([
                 'errorcode' => $code,
                 'retryable' => self::is_retryable($e),
-                'message' => license_failure::message($e) ?? get_string('error_course_creation_failed', 'local_coursegen'),
+                'message' => license_failure::message($e) ?? self::told_message($e)
+                    ?? get_string('error_course_creation_failed', 'local_coursegen'),
             ])));
         }
         $this->output->send(sse_formatter::event('done', '{}'));
+    }
+
+    /**
+     * The message of a failure that is written for the person creating the course, or null for any other failure.
+     *
+     * @param \Throwable $error
+     * @return string|null
+     */
+    private static function told_message(\Throwable $error): ?string {
+        $told = $error instanceof \moodle_exception && $error->module === 'local_coursegen'
+            && in_array($error->errorcode, self::TOLD_ERRORS, true);
+        return $told ? $error->getMessage() : null;
     }
 
     /**
