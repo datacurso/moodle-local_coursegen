@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.16] - 2026112012
+
+### Fixed
+- **A section never shows a marker to students**  
+  The text of a section of a course made from a template is written as the course creator service returns it. When the service leaves a marker unfilled, `[[coursegen:…]]` reached the course page. Any marker left in a section text is now taken out before it is written (a paragraph that held only a marker goes with it), as a safety net for the service filling those texts.
+
 ## [2.0.16] - 2026112011
 
 ### Fixed
