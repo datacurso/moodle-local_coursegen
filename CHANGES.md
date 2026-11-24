@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.16] - 2026112016
+
+### Fixed
+- **"Crear con AI" sits in line with the other buttons when the teacher has no courses**  
+  On My courses with no enrolled courses, the button was put inside the wrapper of "Crear curso" (the empty state is inside the Course overview block on Moodle 4.5), so it showed below it, out of line. It is now one more button of the bar, right after "Crear curso".
+
 ## [2.0.16] - 2026112015
 
 ### Fixed

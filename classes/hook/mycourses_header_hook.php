@@ -99,8 +99,8 @@ class mycourses_header_hook {
      * Inject the button fragment into the rendered page buffer.
      *
      * The first matching container wins: the header button group (Moodle
-     * 4.5/5.0), the course actions of the Course overview block (Moodle 5.2),
-     * then the empty-state action bar (all versions). The buffer is returned
+     * 4.5/5.0), the empty-state action bar (all versions), then the course
+     * actions of the Course overview block (Moodle 5.2). The buffer is returned
      * unchanged when no container is found or the button is already present.
      *
      * @param string $htmlbuffer Full page HTML buffer.
@@ -118,19 +118,20 @@ class mycourses_header_hook {
             return self::insert_into_buffer($htmlbuffer, $buttonhtmlfragment, $headergroupstart);
         }
 
-        // Route 2: Moodle 5.2, user has enrolled courses — after the "Create course"
+        // Route 2: no enrolled courses — empty-state action bar. It goes before the Course overview route: on
+        // Moodle 4.5 the empty state lives inside that block, and its "Create course" form is the action bar's own.
+        // Wrapped in singlebutton, the button is one more button of the bar, right after "Create course".
+        $emptystateposition = self::find_empty_state_insert_point($htmlbuffer);
+        if ($emptystateposition !== null) {
+            $wrappedbutton = \html_writer::div($buttonhtmlfragment, 'singlebutton');
+            return self::insert_into_buffer($htmlbuffer, $wrappedbutton, $emptystateposition);
+        }
+
+        // Route 3: Moodle 5.2, user has enrolled courses — after the "Create course"
         // form inside the Course overview block.
         $blockformend = self::find_myoverview_create_course_form_end($htmlbuffer);
         if ($blockformend !== null) {
             return self::insert_into_buffer($htmlbuffer, $buttonhtmlfragment, $blockformend);
-        }
-
-        // Route 3: no enrolled courses — empty-state action bar. Wrap in
-        // singlebutton to keep it inline with core's button.
-        $emptystatebarstart = self::find_empty_state_action_bar_start($htmlbuffer);
-        if ($emptystatebarstart !== null) {
-            $wrappedbutton = \html_writer::div($buttonhtmlfragment, 'singlebutton');
-            return self::insert_into_buffer($htmlbuffer, $wrappedbutton, $emptystatebarstart);
         }
 
         return $htmlbuffer;
@@ -233,6 +234,27 @@ class mycourses_header_hook {
      */
     private static function find_empty_state_action_bar_start(string $htmlbuffer): ?int {
         return self::find_opening_tag_end($htmlbuffer, self::ZERO_STATE_MARKER);
+    }
+
+    /**
+     * Where the button goes in the empty-state action bar: after the button holding the "Create course" form, or at
+     * the start of the bar when it has none.
+     *
+     * @param string $htmlbuffer Full page HTML buffer.
+     * @return int|null Byte offset, or null when the page has no empty-state action bar.
+     */
+    private static function find_empty_state_insert_point(string $htmlbuffer): ?int {
+        $barstart = self::find_empty_state_action_bar_start($htmlbuffer);
+        if ($barstart === null) {
+            return null;
+        }
+        $pattern = '~<form\b[^>]*\baction="[^"]*/course/edit\.php[^"]*"[^>]*>~i';
+        if (!preg_match($pattern, $htmlbuffer, $matches, PREG_OFFSET_CAPTURE, $barstart)) {
+            return $barstart;
+        }
+        $formclose = stripos($htmlbuffer, '</form>', $matches[0][1]);
+        $wrapperclose = $formclose === false ? false : stripos($htmlbuffer, '</div>', $formclose);
+        return $wrapperclose === false ? $barstart : $wrapperclose + strlen('</div>');
     }
 
     /**

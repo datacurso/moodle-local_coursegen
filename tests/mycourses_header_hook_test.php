@@ -191,6 +191,22 @@ final class mycourses_header_hook_test extends \advanced_testcase {
     }
 
     /**
+     * With no enrolled courses on Moodle 4.5 the empty state is inside the Course overview block: the button is one
+     * more button of its action bar, right after "Create course", not inside that button's wrapper.
+     */
+    public function test_inject_puts_button_after_create_course_in_zero_state_inside_myoverview_block(): void {
+        $create = '<div class="singlebutton"><form method="post" action="https://example.org/course/edit.php">'
+            . '<button type="submit">Create course</button></form></div>';
+        $buffer = '<section data-region="myoverview"><div id="action_bar" class="whitebutton">'
+            . '<div class="singlebutton"><form method="post" action="https://example.org/course/management.php">'
+            . '<button type="submit">Manage courses</button></form></div>' . $create . '</div></section>';
+
+        $result = mycourses_header_hook::inject_button_into_buffer($buffer, '<form id="local_coursegen_aicourseform"></form>');
+
+        $this->assertStringContainsString($create . '<div class="singlebutton"><form id="local_coursegen_aicourseform"></form></div></div>', $result);
+    }
+
+    /**
      * A page without any of the known containers is returned untouched.
      */
     public function test_inject_returns_buffer_unchanged_without_known_container(): void {
