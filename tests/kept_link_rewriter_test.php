@@ -16,6 +16,7 @@
 
 namespace local_coursegen;
 
+use local_coursegen\local\models\template_instance;
 use local_coursegen\local\service\kept_link_rewriter;
 
 /**
@@ -242,6 +243,30 @@ final class kept_link_rewriter_test extends \advanced_testcase {
         kept_link_rewriter::rewrite_for_course($course->id, [], [], [9330 => (int) $copy->cmid]);
 
         $this->assertSame($text, $DB->get_field('course_sections', 'summary', ['course' => $course->id, 'section' => 1]));
+    }
+
+    /**
+     * A link to an activity rewritten by the AI without a mold (it had no markers) points at the activity that
+     * replaced it: the instance that stands for it, found by its uid.
+     */
+    public function test_a_link_to_an_activity_rewritten_without_mold_points_at_its_instance(): void {
+        global $DB;
+        $this->resetAfterTest();
+        $course = $this->getDataGenerator()->create_course(['numsections' => 1]);
+        $forum = $this->getDataGenerator()->create_module('forum', ['course' => $course->id]);
+        $instance = new template_instance(0, (object) [
+            'uid' => 'uid-forum', 'templateid' => 1, 'sectionid' => 1, 'sourcecmid' => 0, 'sourcename' => 'Foro',
+            'name' => 'Foro', 'typelabel' => 'Foro', 'modname' => 'forum', 'ownercmid' => 9350,
+        ]);
+        $instance->create();
+        $card = '<a href="' . $this->url('forum', 9350) . '">Preséntate</a>';
+        $DB->set_field('course_sections', 'summary', $card, ['course' => $course->id, 'section' => 0]);
+        $entry = ['uid' => 'uid-forum', 'cmid' => -4, 'template_behavior' => ['action' => 'instance', 'template_source_cmid' => 0]];
+
+        kept_link_rewriter::rewrite_for_course($course->id, [$entry], ['uid-forum' => (int) $forum->cmid], []);
+
+        $summary = $DB->get_field('course_sections', 'summary', ['course' => $course->id, 'section' => 0]);
+        $this->assertSame('<a href="' . $this->url('forum', (int) $forum->cmid) . '">Preséntate</a>', $summary);
     }
 
     /**
