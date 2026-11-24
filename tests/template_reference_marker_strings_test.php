@@ -75,6 +75,26 @@ final class template_reference_marker_strings_test extends \advanced_testcase {
     }
 
     /**
+     * The reference marker is told as a style reference the AI draws a new image from, never as a file the teacher brings.
+     */
+    public function test_the_reference_marker_is_a_style_reference(): void {
+        $manager = get_string_manager();
+        $expected = [
+            'en' => ['label' => 'Style reference image', 'help' => 'new image', 'not' => 'bring their own file'],
+            'es' => ['label' => 'Imagen de referencia de estilo', 'help' => 'imagen nueva', 'not' => 'aportar su propio archivo'],
+        ];
+
+        foreach ($expected as $lang => $words) {
+            $label = $manager->get_string('template_reference_marker', 'local_coursegen', null, $lang);
+            $help = $manager->get_string('template_reference_marker_help', 'local_coursegen', null, $lang);
+
+            $this->assertSame($words['label'], $label);
+            $this->assertStringContainsString($words['help'], $help);
+            $this->assertStringNotContainsString($words['not'], $help);
+        }
+    }
+
+    /**
      * The help names the video slot the way an author types it, and the rule that tells it from a link, in both languages.
      */
     public function test_the_video_help_names_the_syntax_and_the_rule_by_tag(): void {

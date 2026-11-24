@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.16] - 2026112013
+
+### Fixed
+- **The reference marker is described as what it does**  
+  The Markers block of the template form called the reference marker "File the teacher brings", and its help said the teacher could bring their own file for it. The teacher has no place to do that: the image under the marker is a style reference, and the AI draws a new image about the course that keeps its visual line. The label, the example and the help now say so.
+
 ## [2.0.16] - 2026112012
 
 ### Fixed
