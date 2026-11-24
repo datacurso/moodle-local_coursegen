@@ -363,7 +363,7 @@ trait get_template_structure_rows {
         $titles = implode(', ', array_column($choices, 'title'));
         return [
             'id' => (string) $space->get('uid'),
-            'name' => get_string('courseai_template_choice_space_name', 'local_coursegen'),
+            'name' => teacher_space_choices::display_name($options),
             'modname' => $options[0]['modname'],
             'purpose' => self::get_purpose($options[0]['modname']),
             'typelabel' => $titles,

@@ -138,7 +138,7 @@
                  data-action="local_coursegen/template/{{#ischoicespace}}pick-space-choice{{/ischoicespace}}{{^ischoicespace}}pick-space-file{{/ischoicespace}}"
                  data-label-busy="{{#str}}courseai_template_space_uploading, local_coursegen{{/str}}"
                  data-section-index="{{sectionindex}}" data-activity-index="{{index}}"
-                 aria-label="{{name}}: {{#hasspacefile}}{{#str}}courseai_template_space_change, local_coursegen{{/str}}{{/hasspacefile}}{{^hasspacefile}}{{#str}}courseai_template_space_upload, local_coursegen{{/str}}{{/hasspacefile}}">
+                 aria-label="{{name}}: {{#hasspacefile}}{{#str}}courseai_template_space_change, local_coursegen{{/str}}{{/hasspacefile}}{{^hasspacefile}}{{#ischoicespace}}{{#str}}courseai_template_choice_space_add, local_coursegen{{/str}}{{/ischoicespace}}{{^ischoicespace}}{{#str}}courseai_template_space_upload, local_coursegen{{/str}}{{/ischoicespace}}{{/hasspacefile}}">
               <div class="activity-grid">
                 <div class="activity-icon activityiconcontainer smaller {{purpose}} courseicon align-self-start me-2">
                   {{{iconhtml}}}
@@ -168,7 +168,7 @@
                 <div class="activity-actions cg-item-actions align-self-start ms-sm-2">
                   <span class="dp-action-btn cg-space-action">
                     {{#ischoicespace}}{{#hasspacefile}}{{#pix}} t/edit, core {{/pix}}{{/hasspacefile}}{{^hasspacefile}}{{#pix}} t/add, core {{/pix}}{{/hasspacefile}}{{/ischoicespace}}{{^ischoicespace}}{{#pix}} i/upload, core {{/pix}}{{/ischoicespace}}
-                    <span class="sr-only" data-region="local_coursegen/template/space-button-label">{{#hasspacefile}}{{#str}}courseai_template_space_change, local_coursegen{{/str}}{{/hasspacefile}}{{^hasspacefile}}{{#str}}courseai_template_space_upload, local_coursegen{{/str}}{{/hasspacefile}}</span>
+                    <span class="sr-only" data-region="local_coursegen/template/space-button-label">{{#hasspacefile}}{{#str}}courseai_template_space_change, local_coursegen{{/str}}{{/hasspacefile}}{{^hasspacefile}}{{#ischoicespace}}{{#str}}courseai_template_choice_space_add, local_coursegen{{/str}}{{/ischoicespace}}{{^ischoicespace}}{{#str}}courseai_template_space_upload, local_coursegen{{/str}}{{/ischoicespace}}{{/hasspacefile}}</span>
                   </span>
                   {{#hasspacefile}}
                   <span class="dp-action-btn cg-space-action" role="button" tabindex="0"

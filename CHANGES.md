@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.16] - 2026112009
+
+### Fixed
+- **A space with several activities to choose from shows its own name to the teacher**  
+  When the admin gives every activity of a space the same name (for example "Práctica guiada"), the creation screen now shows that name instead of the generic "Actividad a elegir", so the teacher knows what the space is for. Its button also reads "Agregar la actividad" for screen readers instead of "Subir archivo", which was the label of a file space.
+
 ## [2.0.16] - 2026112008
 
 ### Added
