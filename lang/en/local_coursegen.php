@@ -230,11 +230,11 @@ $string['template_image_marker_many_files'] = 'A reference marker in {$a} points
 $string['template_image_marker_twice'] = '{$a} has more than one reference marker asking for the picture of that place. Only one is allowed.';
 $string['template_import'] = 'Import';
 $string['template_markers_title'] = 'Markers';
-$string['template_reference_marker'] = 'File the teacher brings';
-$string['template_reference_marker_example'] = '[[coursegen:reference: what the teacher brings]]';
-$string['template_reference_marker_help'] = 'Type `[[coursegen:reference: what the teacher brings]]` as plain text right above the element of an activity that holds a file, such as the viewer of a PDF, an image, a video or a link to a document. The marker applies to the next element, whatever it is, and that element must hold exactly one file of this activity.
+$string['template_reference_marker'] = 'Style reference image';
+$string['template_reference_marker_example'] = '[[coursegen:reference: what the new image shows]]';
+$string['template_reference_marker_help'] = 'Type `[[coursegen:reference: what the new image shows]]` as plain text right above an image of an activity. The marker applies to the next element, whatever it is, and that element must hold exactly one file of this activity.
 
-When a course is made from the template, the teacher sees a place labelled with what you wrote and may bring their own file for it, before the course is generated. With no file, a new image is generated from the reference when the element is an image, and any other element is left out of the course. The marker is read in the activities saved with the action "template", and it never appears in the course.';
+That image is the style reference: when a course is made from the template, the AI draws a new image about the topic of the course that keeps its visual line (the same kind of image and the same colours), with a new scene. When the next element is not an image, it is left out of the course. The marker is read in the activities saved with the action "Use as template", and it never appears in the course.';
 $string['template_section_template'] = 'Template section';
 $string['template_section_template_tip'] = 'The section is repeated once per unit of the syllabus; its activities and its instruction say what every unit has';
 $string['template_transfer_course'] = 'Course';
