@@ -194,6 +194,11 @@ class create_course_service {
             guideline_activity_settings::apply((int) $course->id, $generatedactivities, $generatedcms);
             guideline_unit_locks::apply((int) $course->id, $resultdata['sections_info'] ?? [], $generatedactivities, $generatedcms);
 
+            // The cover the service made for a free course; a template course applies its own pictures.
+            if ($sourcecourseid === null) {
+                free_course_cover::apply((int) $course->id, $resultdata);
+            }
+
             // Ensure section sequences only contain valid course module ids.
             $removedreferences = self::repair_course_section_sequences($course->id);
             self::stabilize_course_structure_cache($course->id);
