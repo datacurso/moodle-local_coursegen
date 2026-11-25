@@ -77,6 +77,9 @@ class course_planning_service {
         // and mod_subsection is available, whatever the client sent.
         $withsubsections = $withsubsections && $available;
 
+        // With the site image mode disabled no image is generated, whatever the client sent.
+        $withimages = $withimages && activities::images_enabled();
+
         $apiservice = new ai_course_api_service();
 
         $payload = [
@@ -91,14 +94,10 @@ class course_planning_service {
             'subsections_available' => $available,
         ];
 
-        // A disabled (or never configured) policy is left out: sent with the teacher's
-        // toggle on, it would make the service drop every image the teacher asked for.
+        // Images are only requested when the site mode allows them, so the policy always carries limits.
         // The activity flow does the same (create_mod_stream).
         if ($withimages) {
-            $imagepolicy = image_policy_builder::build();
-            if (($imagepolicy['mode'] ?? '') !== activities::MODE_DISABLED) {
-                $payload['image_policy'] = $imagepolicy;
-            }
+            $payload['image_policy'] = image_policy_builder::build();
         }
 
         // Site file-type group catalog, so activities generated in the course flow

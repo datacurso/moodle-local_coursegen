@@ -56,22 +56,22 @@ final class course_planning_image_policy_test extends \advanced_testcase {
     }
 
     /**
-     * A disabled policy must not reach the service when the teacher turns images on.
+     * With the site mode disabled no image is generated, even when the teacher turns images on.
      */
-    public function test_disabled_policy_is_left_out_when_images_are_on(): void {
+    public function test_disabled_mode_turns_the_images_off(): void {
         $this->start_planning(activities::MODE_DISABLED, true);
 
-        $this->assertTrue($this->payload['with_images']);
+        $this->assertFalse($this->payload['with_images']);
         $this->assertArrayNotHasKey('image_policy', $this->payload);
     }
 
     /**
-     * A policy that was never configured behaves as disabled and is left out too.
+     * A site that never configured the mode behaves as disabled.
      */
-    public function test_unconfigured_policy_is_left_out_when_images_are_on(): void {
+    public function test_unconfigured_mode_turns_the_images_off(): void {
         $this->start_planning(null, true);
 
-        $this->assertTrue($this->payload['with_images']);
+        $this->assertFalse($this->payload['with_images']);
         $this->assertArrayNotHasKey('image_policy', $this->payload);
     }
 

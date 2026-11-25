@@ -41,7 +41,7 @@ const STRING_KEYS = [
     'activityai_retry_slow_warning',
     'activityai_retry_action',
     'accept_planning_create_activity',
-    'adjust_course_planning',
+    'adjust_activity_planning',
 ];
 
 let cachedTexts = null;

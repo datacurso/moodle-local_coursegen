@@ -222,12 +222,10 @@ final class create_mod_stream_contract_test extends \advanced_testcase {
     }
 
     /**
-     * MDL-CTR-001: An unconfigured (disabled-by-default) admin image mode must
-     * NOT travel with the request: sending mode=disabled while the teacher
-     * enabled images made the service suppress the activity description image
-     * (regression observed on sites without generationmode configured).
+     * MDL-CTR-001: With the admin image mode disabled (also the mode of a site that never configured it) no image is
+     * generated: a request for images travels without them and without a policy.
      */
-    public function test_disabled_image_mode_is_not_sent_with_images_enabled(): void {
+    public function test_disabled_image_mode_turns_the_images_off(): void {
         $this->require_datacurso_provider();
         $this->resetAfterTest();
         $this->setAdminUser();
@@ -242,11 +240,11 @@ final class create_mod_stream_contract_test extends \advanced_testcase {
 
         $this->assertTrue($result['ok'], 'Start must succeed: ' . ($result['message'] ?? ''));
         $this->assertIsArray($captured);
-        $this->assertTrue($captured['with_images']);
+        $this->assertFalse($captured['with_images']);
         $this->assertArrayNotHasKey(
             'image_policy',
             $captured,
-            'A disabled-by-default policy must not override the teacher image toggle.'
+            'No policy travels when no image is generated.'
         );
     }
 

@@ -42,6 +42,18 @@ defined('MOODLE_INTERNAL') || die();
  * External API to upload files for AI activity generation jobs.
  */
 class activity_file_upload extends external_api {
+    /** @var int Largest document the AI service accepts (its DOCUMENT_MAX_UPLOAD_MB). */
+    public const MAX_FILE_BYTES = 25 * 1024 * 1024;
+
+    /**
+     * Accepted types in the form the filepicker API expects: the AI service reads PDF only.
+     *
+     * @return string[]
+     */
+    public static function accepted_filepicker_types(): array {
+        return ['.pdf'];
+    }
+
     /**
      * Parameters definition.
      *
@@ -113,6 +125,12 @@ class activity_file_upload extends external_api {
         $file = reset($files);
         if (!$file instanceof \stored_file) {
             throw new \moodle_exception('nofile', 'error');
+        }
+
+        // The filepicker only constrains the browser: the type and size are checked again here.
+        $extension = strtolower((string)pathinfo($file->get_filename(), PATHINFO_EXTENSION));
+        if ($extension !== 'pdf' || (int)$file->get_filesize() > self::MAX_FILE_BYTES) {
+            throw new \moodle_exception('error_activity_file_type', 'local_coursegen');
         }
 
         $apiservice = new ai_course_api_service();

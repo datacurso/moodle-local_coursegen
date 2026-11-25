@@ -61,31 +61,16 @@ class courseai_syllabus_upload extends external_api {
     public const MAX_SYLLABUS_BYTES = 10 * 1024 * 1024;
 
     /** @var string[] Extensions accepted by the server, lower case, no dot. */
-    public const ACCEPTED_EXTENSIONS = ['pdf', 'docx', 'txt'];
+    public const ACCEPTED_EXTENSIONS = ['pdf'];
 
     /**
      * @var array[] Content types legitimately sniffed from the bytes of each accepted extension.
      *
-     * An empty list means the extension cannot be recognised by content
-     * without false positives, and is checked by the text rule in
-     * syllabus_rejection_reason() instead.
+     * The AI service renders the syllabus as a PDF, so the bytes must be one.
      */
     protected const CONTENT_SIGNATURES = [
         'pdf' => ['application/pdf'],
-        'docx' => [
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            // Older libmagic cannot tell the OOXML container apart from a plain zip.
-            'application/zip',
-        ],
-        // Intentionally empty: plain text has no signature. Real syllabi sniff
-        // as text/plain, text/html, document/unknown (source-like text) or
-        // application/octet-stream (almost empty files), so requiring a
-        // recognised type would reject legitimate uploads.
-        'txt' => [],
     ];
-
-    /** @var int Bytes of content inspected when looking for binary markers in a text file. */
-    protected const TEXT_PROBE_BYTES = 8192;
 
     /**
      * Returns description of method parameters.
@@ -293,31 +278,7 @@ class courseai_syllabus_upload extends external_api {
         // from the file name for every known extension. Inspect the bytes.
         $path = get_file_storage()->get_file_system()->get_local_path_from_storedfile($file, true);
         $sniffed = \file_storage::mimetype_from_file($path);
-        $signatures = self::CONTENT_SIGNATURES[$extension];
-
-        if ($signatures !== []) {
-            return in_array($sniffed, $signatures, true) ? null : 'error_syllabus_invalid_file_type';
-        }
-
-        // Plain text has no signature, so it cannot be confirmed positively:
-        // legitimate syllabi sniff as text/plain, text/html, document/unknown
-        // or application/octet-stream depending on their wording and length.
-        // Reject only what text demonstrably is not. First, content that
-        // libmagic positively identifies as one of the binary formats accepted
-        // under another extension, which is the extension/content mismatch.
-        if (in_array($sniffed, array_merge(...array_values(self::CONTENT_SIGNATURES)), true)) {
-            return 'error_syllabus_invalid_file_type';
-        }
-
-        // Second, a NUL byte, which text never carries and binaries do. Only a
-        // bounded prefix is read so a file at the size limit is not loaded
-        // into memory.
-        $probe = @file_get_contents($path, false, null, 0, self::TEXT_PROBE_BYTES);
-        if ($probe === false || strpos($probe, "\0") !== false) {
-            return 'error_syllabus_invalid_file_type';
-        }
-
-        return null;
+        return in_array($sniffed, self::CONTENT_SIGNATURES[$extension], true) ? null : 'error_syllabus_invalid_file_type';
     }
 
     /**

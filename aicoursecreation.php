@@ -287,7 +287,8 @@ $templatecontext = [
     'showstartcrumb' => $hasbothmodes && !$startchooser,
     'startcrumblocked' => $resumesessionid > 0,
     'canuploadsyllabus' => has_capability('local/coursegen:uploadcoursesyllabus', $systemcontext),
-    'cangeneratecourseimages' => has_capability('local/coursegen:generatecourseimages', $systemcontext),
+    'cangeneratecourseimages' => \local_coursegen\local\image_generation\activities::images_enabled()
+        && has_capability('local/coursegen:generatecourseimages', $systemcontext),
     'subsectionsenabled' => $subsectionsenabled,
     'closeurl' => (new moodle_url('/my/courses.php'))->out(false),
     'sidebarclosed' => !$sidebarpinned,

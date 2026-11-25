@@ -37,6 +37,19 @@ class activities {
     public const MODE_MANUAL = 'manual';
 
     /**
+     * Whether the site lets the AI generate images at all.
+     *
+     * The mode «Deshabilitado» (also the mode of a site that never configured it) means no image is generated:
+     * the image choices are not offered and a request for images is treated as a request without them.
+     *
+     * @return bool
+     */
+    public static function images_enabled(): bool {
+        $mode = get_config('local_coursegen', 'generationmode') ?: self::MODE_DISABLED;
+        return $mode !== self::MODE_DISABLED;
+    }
+
+    /**
      * Get activity definitions.
      *
      * Each definition uses lowercase keys without underscores so it can be

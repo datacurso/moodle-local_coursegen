@@ -151,8 +151,52 @@ final class courseai_syllabus_upload_test extends \advanced_testcase {
     }
 
     /**
-     * The content must match the declared extension: a real PDF renamed to
-     * .txt satisfies a flat mimetype allow list but is still a mismatch.
+     * The AI service reads PDF syllabi only, so a real Word document is refused
+     * before it reaches the service.
+     */
+    public function test_upload_rejects_a_docx(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $session = $this->create_session();
+        $draftitemid = $this->create_draft_file('syllabus.docx', $this->docx_bytes());
+        testable_courseai_syllabus_upload::$mockservice = $this->mock_service_expecting_no_upload();
+
+        $result = testable_courseai_syllabus_upload::execute((int)$session->get('id'), $draftitemid);
+        $this->resetDebugging();
+
+        $this->assertFalse($result['success']);
+        $this->assertSame(
+            get_string('error_syllabus_invalid_file_type', 'local_coursegen'),
+            $result['message']
+        );
+        $this->assertSame([], $this->stored_syllabus_files((int)$session->get('id')));
+    }
+
+    /**
+     * A plain text syllabus is refused for the same reason: only PDF is read.
+     */
+    public function test_upload_rejects_a_txt(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $session = $this->create_session();
+        $draftitemid = $this->create_draft_file('syllabus.txt', "Unit 1. Introduction\n");
+        testable_courseai_syllabus_upload::$mockservice = $this->mock_service_expecting_no_upload();
+
+        $result = testable_courseai_syllabus_upload::execute((int)$session->get('id'), $draftitemid);
+        $this->resetDebugging();
+
+        $this->assertFalse($result['success']);
+        $this->assertSame(
+            get_string('error_syllabus_invalid_file_type', 'local_coursegen'),
+            $result['message']
+        );
+        $this->assertSame([], $this->stored_syllabus_files((int)$session->get('id')));
+    }
+
+    /**
+     * A real PDF renamed to .txt is still refused by its extension.
      */
     public function test_upload_rejects_a_pdf_renamed_to_txt(): void {
         $this->resetAfterTest();
@@ -171,107 +215,6 @@ final class courseai_syllabus_upload_test extends \advanced_testcase {
             $result['message']
         );
         $this->assertSame([], $this->stored_syllabus_files((int)$session->get('id')));
-    }
-
-    /**
-     * A .txt holding something libmagic cannot name is still a legitimate
-     * syllabus. Source-like text sniffs as document/unknown, so demanding a
-     * recognised text mimetype would reject real files.
-     */
-    public function test_upload_accepts_a_txt_whose_content_sniffs_as_unknown(): void {
-        $this->resetAfterTest();
-        $this->setAdminUser();
-
-        $session = $this->create_session();
-        $draftitemid = $this->create_draft_file(
-            'syllabus.txt',
-            "#include <stdio.h>\nint main(){return 0;}\n"
-        );
-        testable_courseai_syllabus_upload::$mockservice = $this->mock_service_expecting_one_upload();
-
-        $result = testable_courseai_syllabus_upload::execute((int)$session->get('id'), $draftitemid);
-        $this->resetDebugging();
-
-        $this->assertTrue($result['success'], 'Upload must succeed: ' . ($result['message'] ?? ''));
-        $this->assertSame(['syllabus.txt'], $this->stored_syllabus_files((int)$session->get('id')));
-    }
-
-    /**
-     * An almost empty .txt sniffs as application/octet-stream and is still a
-     * legitimate text file.
-     */
-    public function test_upload_accepts_an_almost_empty_txt(): void {
-        $this->resetAfterTest();
-        $this->setAdminUser();
-
-        $session = $this->create_session();
-        $draftitemid = $this->create_draft_file('syllabus.txt', ' ');
-        testable_courseai_syllabus_upload::$mockservice = $this->mock_service_expecting_one_upload();
-
-        $result = testable_courseai_syllabus_upload::execute((int)$session->get('id'), $draftitemid);
-        $this->resetDebugging();
-
-        $this->assertTrue($result['success'], 'Upload must succeed: ' . ($result['message'] ?? ''));
-        $this->assertSame(['syllabus.txt'], $this->stored_syllabus_files((int)$session->get('id')));
-    }
-
-    /**
-     * A .txt carrying NUL bytes is binary content, whatever its name says.
-     */
-    public function test_upload_rejects_a_txt_containing_nul_bytes(): void {
-        $this->resetAfterTest();
-        $this->setAdminUser();
-
-        $session = $this->create_session();
-        $draftitemid = $this->create_draft_file('syllabus.txt', "Unit 1\x00\x01\x02 binary payload\x00");
-        testable_courseai_syllabus_upload::$mockservice = $this->mock_service_expecting_no_upload();
-
-        $result = testable_courseai_syllabus_upload::execute((int)$session->get('id'), $draftitemid);
-        $this->resetDebugging();
-
-        $this->assertFalse($result['success']);
-        $this->assertSame(
-            get_string('error_syllabus_invalid_file_type', 'local_coursegen'),
-            $result['message']
-        );
-        $this->assertSame([], $this->stored_syllabus_files((int)$session->get('id')));
-    }
-
-    /**
-     * A real OOXML document is accepted.
-     */
-    public function test_upload_accepts_a_valid_docx(): void {
-        $this->resetAfterTest();
-        $this->setAdminUser();
-
-        $session = $this->create_session();
-        $draftitemid = $this->create_draft_file('syllabus.docx', $this->docx_bytes());
-        testable_courseai_syllabus_upload::$mockservice = $this->mock_service_expecting_one_upload();
-
-        $result = testable_courseai_syllabus_upload::execute((int)$session->get('id'), $draftitemid);
-        $this->resetDebugging();
-
-        $this->assertTrue($result['success'], 'Upload must succeed: ' . ($result['message'] ?? ''));
-        $this->assertSame(['syllabus.docx'], $this->stored_syllabus_files((int)$session->get('id')));
-    }
-
-    /**
-     * Older libmagic builds cannot tell an OOXML container apart from a plain
-     * zip, so application/zip must stay acceptable for .docx.
-     */
-    public function test_upload_accepts_a_docx_that_sniffs_as_a_plain_zip(): void {
-        $this->resetAfterTest();
-        $this->setAdminUser();
-
-        $session = $this->create_session();
-        $draftitemid = $this->create_draft_file('syllabus.docx', $this->plain_zip_bytes());
-        testable_courseai_syllabus_upload::$mockservice = $this->mock_service_expecting_one_upload();
-
-        $result = testable_courseai_syllabus_upload::execute((int)$session->get('id'), $draftitemid);
-        $this->resetDebugging();
-
-        $this->assertTrue($result['success'], 'Upload must succeed: ' . ($result['message'] ?? ''));
-        $this->assertSame(['syllabus.docx'], $this->stored_syllabus_files((int)$session->get('id')));
     }
 
     /**
@@ -457,15 +400,6 @@ final class courseai_syllabus_upload_test extends \advanced_testcase {
             '_rels/.rels' => $rels,
             'word/document.xml' => $document,
         ]);
-    }
-
-    /**
-     * Bytes of a zip archive that carries nothing OOXML specific.
-     *
-     * @return string
-     */
-    private function plain_zip_bytes(): string {
-        return $this->zip_bytes(['readme.txt' => 'A plain zip, not an OOXML package.']);
     }
 
     /**

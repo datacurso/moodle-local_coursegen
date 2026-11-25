@@ -86,12 +86,13 @@ class activity_filepicker_init extends external_api {
 
         $args = (object) [
             'context' => $context,
-            'accepted_types' => '*',
+            // The AI service reads PDF documents only.
+            'accepted_types' => activity_file_upload::accepted_filepicker_types(),
             'return_types' => FILE_INTERNAL,
             'env' => 'filepicker',
             'client_id' => $clientid,
             'itemid' => $draftitemid,
-            'maxbytes' => 0,
+            'maxbytes' => activity_file_upload::MAX_FILE_BYTES,
             'maxfiles' => 1,
             'subdirs' => 0,
         ];

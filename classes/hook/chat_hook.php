@@ -95,7 +95,8 @@ class chat_hook {
         if (self::can_create_activity()) {
             $languageoptions = self::get_supported_language_options();
             $coursecontext = \context_course::instance($COURSE->id);
-            $canimages = has_capability('local/coursegen:generateactivityimages', $coursecontext);
+            $canimages = \local_coursegen\local\image_generation\activities::images_enabled()
+                && has_capability('local/coursegen:generateactivityimages', $coursecontext);
             $PAGE->requires->js_call_amd('local_coursegen/activityai', 'init', [
                 $COURSE->id,
                 self::is_moodle_45(),

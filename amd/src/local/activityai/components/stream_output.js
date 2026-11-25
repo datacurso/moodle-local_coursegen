@@ -266,7 +266,7 @@ export default class extends BaseComponent {
         const btnAdjust = document.createElement('button');
         btnAdjust.type = 'button';
         btnAdjust.className = 'btn btn-outline-secondary shadow-sm';
-        btnAdjust.textContent = this.texts.adjust_course_planning;
+        btnAdjust.textContent = this.texts.adjust_activity_planning;
 
         container.appendChild(btnAccept);
         container.appendChild(btnAdjust);

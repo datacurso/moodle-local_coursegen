@@ -171,6 +171,8 @@ class start_template_generation extends external_api {
         if ($params['withimages']) {
             require_capability('local/coursegen:generatecourseimages', $context);
         }
+        // With the site image mode disabled no image is generated, whatever the client sent.
+        $withimages = (bool) $params['withimages'] && \local_coursegen\local\image_generation\activities::images_enabled();
         // The activities the teacher adds in the spaces: each one allowed there, none of the required ones missing.
         $spacechoices = teacher_space_choices::validated($params['templateid'], $params['spacechoices']);
         $spaces = self::files_of_choices($spaces, $spacechoices);
@@ -178,7 +180,7 @@ class start_template_generation extends external_api {
             (int) $params['templateid'],
             $params['prompt'],
             $params['lang'],
-            (bool) $params['withimages'],
+            $withimages,
             $params['units'],
             $guidelineid,
             $spacechoices
@@ -187,7 +189,7 @@ class start_template_generation extends external_api {
         // Read first: a reference marker with no usable target is refused before a session exists.
         $referenceuploads = template_reference_uploads::plan($payload);
         $template = template::get_record(['id' => $params['templateid']]);
-        $slots = template_course_image_slots::for_run(get_course((int) $template->get('courseid')), (bool) $params['withimages']);
+        $slots = template_course_image_slots::for_run(get_course((int) $template->get('courseid')), $withimages);
         $referenceuploads = array_merge($referenceuploads, template_course_image_slots::uploads($slots));
 
         $api = new template_ai_api_service();

@@ -117,6 +117,10 @@ class create_mod_stream extends external_api {
             if ($generateimages == 1) {
                 require_capability('local/coursegen:generateactivityimages', $context);
             }
+            // With the site image mode disabled no image is generated, whatever the request says.
+            if (!\local_coursegen\local\image_generation\activities::images_enabled()) {
+                $generateimages = 0;
+            }
 
             $coursecontext = course_context_service::get_course_context($courseid);
 
@@ -134,15 +138,9 @@ class create_mod_stream extends external_api {
                 'with_images' => $generateimages == 1,
             ];
 
-            // A disabled (or never configured) policy is omitted: it must not
-            // override the teacher's explicit image toggle by suppressing the
-            // activity description image (regression guard: see
-            // test_disabled_image_mode_is_not_sent_with_images_enabled).
+            // Images are only requested when the site mode allows them, so the policy always carries limits.
             if ($generateimages == 1) {
-                $imagepolicy = image_policy_builder::build();
-                if (($imagepolicy['mode'] ?? '') !== \local_coursegen\local\image_generation\activities::MODE_DISABLED) {
-                    $payload['image_policy'] = $imagepolicy;
-                }
+                $payload['image_policy'] = image_policy_builder::build();
             }
 
             if (!empty($coursecontext) && !empty($coursecontext->context_type)) {

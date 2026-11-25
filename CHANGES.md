@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.16] - 2026112020
+
+### Fixed
+- **«Deshabilitado» in image generation means no images**  
+  The mode said the AI would not generate any image, yet a teacher could still choose to generate images and got them without limits. With the mode disabled (also the mode of a site that never configured it), the activity window, the free course and the template no longer offer images and the server generates none.
+- **The image page no longer offers switches that do nothing**  
+  The course and activity override switches were saved but nothing used them. They are no longer shown.
+- **The free course gets its cover**  
+  The AI service made a cover for a free course when images were on, but the course never received it. It now becomes the course image.
+- **Syllabus and activity attachments accept PDF only**  
+  The AI service reads PDF documents only, so a DOCX or TXT syllabus failed. The syllabus picker and the activity attachment now accept PDF only (the activity one up to 25 MB), the server refuses anything else, and the attach button says what it takes.
+- **Clearer texts**  
+  The activity review button reads «Ajustar la planificación» instead of talking about the course, the out-of-credits message no longer names a button that the screen calls differently, and the free mode no longer shows a «Plantillas» option that did nothing.
+
 ## [2.0.16] - 2026112019
 
 ### Fixed
