@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.16-wp] - 2026112500
+
+### Changed
+- **Build of the day**  
+  A new build number above every build deployed so far, so every site upgrades to this code and never sees an older build as a downgrade.
+
 ## [2.0.16-wp] - 2026112021
 
 ### Fixed
