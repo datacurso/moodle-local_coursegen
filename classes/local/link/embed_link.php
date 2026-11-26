@@ -50,6 +50,36 @@ final class embed_link {
     }
 
     /**
+     * The H5P activities a text shows embedded: the ones its embed links turn into a player.
+     *
+     * @param string $text
+     * @return int[] Course module ids, each once.
+     */
+    public static function embedded_cmids(string $text): array {
+        if (strpos($text, 'data-coursegen-embed') === false || !preg_match_all(self::ANCHOR_PATTERN, $text, $anchors)) {
+            return [];
+        }
+        $cmids = [];
+        foreach ($anchors[0] as $anchor) {
+            $cmid = self::h5p_cmid(self::href($anchor));
+            if ($cmid !== null && self::player(self::href($anchor)) !== null) {
+                $cmids[$cmid] = $cmid;
+            }
+        }
+        return array_values($cmids);
+    }
+
+    /**
+     * The course module id of an H5P activity URL.
+     *
+     * @param string $href
+     * @return int|null
+     */
+    private static function h5p_cmid(string $href): ?int {
+        return preg_match('~/mod/h5pactivity/view\.php\?(?:[^#]*&)?id=(\d+)~', $href, $found) ? (int) $found[1] : null;
+    }
+
+    /**
      * The href of an anchor, unescaped.
      *
      * @param string $anchor
@@ -69,10 +99,11 @@ final class embed_link {
      * @return string|null Null when the URL is not an H5P activity with a package.
      */
     private static function player(string $href): ?string {
-        if (!preg_match('~/mod/h5pactivity/view\.php\?(?:[^#]*&)?id=(\d+)~', $href, $found)) {
+        $cmid = self::h5p_cmid($href);
+        if ($cmid === null) {
             return null;
         }
-        $context = \context_module::instance((int) $found[1], IGNORE_MISSING);
+        $context = \context_module::instance($cmid, IGNORE_MISSING);
         if (!$context) {
             return null;
         }
