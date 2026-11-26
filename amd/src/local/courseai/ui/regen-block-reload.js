@@ -26,7 +26,8 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import {renderMarkdown, formatActivityDetailMd, formatSectionMd} from 'local_coursegen/local/courseai/ui/markdown';
+import {renderMarkdown} from 'local_coursegen/local/courseai/ui/markdown';
+import {formatActivityDetailMd, formatSectionMd} from 'local_coursegen/local/courseai/ui/plan_markdown';
 import {clampDetail} from 'local_coursegen/local/courseai/ui/plan-transcript';
 import {buildItem, createBlock, findActivity} from 'local_coursegen/local/courseai/ui/regen-block';
 
