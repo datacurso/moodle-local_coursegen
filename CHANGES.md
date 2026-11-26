@@ -2,12 +2,6 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
-## [2.0.16-wp] - 2026112600
-
-### Fixed
-- **An H5P activity shown inside a lesson is no longer listed again on the course page**  
-  Each H5P activity a generated activity shows embedded also appeared on the course page, so the student saw the same activity twice. It now leaves the course page and stays available, and graded, inside the activity that shows it. Moodle does this only on sites that allow activities hidden from the course page but still available ("allowstealth"); on other sites the activity stays listed as before.
-
 ## [2.0.16-wp] - 2026112500
 
 ### Changed

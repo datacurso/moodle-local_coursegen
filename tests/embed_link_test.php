@@ -96,25 +96,4 @@ final class embed_link_test extends \advanced_testcase {
         $this->assertStringContainsString('<script src="' . s($resizer) . '"', $result);
         $this->assertStringNotContainsString($CFG->wwwroot . '/h5p/h5p-resizer.js', $result);
     }
-
-    /**
-     * The activities a text embeds are the H5P activities its embed links point to, each once; plain links and other
-     * targets are not.
-     */
-    public function test_embedded_cmids_names_each_embedded_h5p_activity_once(): void {
-        global $CFG;
-        $this->resetAfterTest();
-        $this->setAdminUser();
-        $course = $this->getDataGenerator()->create_course();
-        $one = $this->getDataGenerator()->create_module('h5pactivity', ['course' => $course->id]);
-        $two = $this->getDataGenerator()->create_module('h5pactivity', ['course' => $course->id]);
-        $url = fn($cmid) => $CFG->wwwroot . '/mod/h5pactivity/view.php?id=' . $cmid;
-        $text = '<a data-coursegen-embed="1" href="' . $url($one->cmid) . '">A</a>'
-            . '<a data-coursegen-embed="1" href="' . $url($one->cmid) . '">A again</a>'
-            . '<a href="' . $url($two->cmid) . '">Plain link</a>'
-            . '<a data-coursegen-embed="1" href="' . $CFG->wwwroot . '/mod/page/view.php?id=1">Page</a>';
-
-        $this->assertSame([(int) $one->cmid], embed_link::embedded_cmids($text));
-        $this->assertSame([], embed_link::embedded_cmids('<p>No links</p>'));
-    }
 }
