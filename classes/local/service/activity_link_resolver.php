@@ -118,7 +118,36 @@ final class activity_link_resolver {
             $transaction->rollback($exception);
         }
 
+        self::hide_embedded_from_course_page($courseid, $updates);
         rebuild_course_cache($courseid, true);
+    }
+
+    /**
+     * Take off the course page every H5P activity another activity shows embedded.
+     *
+     * The student uses it inside the activity that embeds it; listed on the course page as well, it was one more
+     * activity to do, the same one twice. It stays available (and graded) through the embedding activity. Moodle hides
+     * an available activity from the course page only on a site that allows it ("allowstealth"); elsewhere it stays
+     * listed as before.
+     *
+     * @param int $courseid
+     * @param \stdClass[] $updates The texts written, each with the activities it embeds.
+     */
+    private static function hide_embedded_from_course_page(int $courseid, array $updates): void {
+        global $DB;
+
+        $cmids = [];
+        foreach ($updates as $update) {
+            foreach ($update->embedded as $cmid) {
+                $cmids[$cmid] = $cmid;
+            }
+        }
+        foreach ($cmids as $cmid) {
+            $visible = $DB->get_field('course_modules', 'visible', ['id' => $cmid, 'course' => $courseid]);
+            if ((int) $visible === 1) {
+                set_coursemodule_visible($cmid, 1, 0, false);
+            }
+        }
     }
 
     /**
@@ -230,7 +259,7 @@ final class activity_link_resolver {
      * @param \stdClass $record
      * @param string $column
      * @param array $urlbyuid
-     * @return \stdClass|null The update to store, or null when the text did not change.
+     * @return \stdClass|null The update to store (with the H5P activities it embeds), or null when the text did not change.
      * @throws \moodle_exception When a token remains after resolving.
      */
     private static function resolve_column(
@@ -242,6 +271,7 @@ final class activity_link_resolver {
     ): ?\stdClass {
         $original = (string) $record->{$column};
         $resolved = link_token::replace($original, $urlbyuid);
+        $embedded = embed_link::embedded_cmids($resolved);
         $resolved = embed_link::apply($resolved);
 
         $remaininguid = link_token::first_remaining_uid($resolved);
@@ -252,6 +282,12 @@ final class activity_link_resolver {
         if ($resolved === $original) {
             return null;
         }
-        return (object) ['table' => $table, 'id' => $record->id, 'column' => $column, 'value' => $resolved];
+        return (object) [
+            'table' => $table,
+            'id' => $record->id,
+            'column' => $column,
+            'value' => $resolved,
+            'embedded' => $embedded,
+        ];
     }
 }

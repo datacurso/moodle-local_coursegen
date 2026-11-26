@@ -329,4 +329,82 @@ final class activity_link_resolver_test extends \advanced_testcase {
 
         $this->assertSame($intro, $DB->get_field('forum', 'intro', ['id' => $forum->id]));
     }
+
+    /**
+     * A generated lesson page that embeds an H5P activity, and the activity it embeds.
+     *
+     * @param \stdClass $course
+     * @param bool $embed True writes an embed link, false a plain link.
+     * @return array The lesson page record and the H5P activity.
+     */
+    private function lesson_with_h5p(\stdClass $course, bool $embed): array {
+        global $DB;
+        $h5p = $this->getDataGenerator()->create_module('h5pactivity', ['course' => $course->id]);
+        $lesson = $this->getDataGenerator()->create_module('lesson', ['course' => $course->id]);
+        $attribute = $embed ? ' data-coursegen-embed="1"' : '';
+        $pageid = $DB->insert_record('lesson_pages', (object) [
+            'lessonid' => $lesson->id, 'prevpageid' => 0, 'nextpageid' => 0, 'qtype' => 20, 'qoption' => 0, 'layout' => 1,
+            'display' => 1, 'timecreated' => time(), 'timemodified' => 0, 'title' => 'Activity',
+            'contents' => '<p><a' . $attribute . ' href="$@COURSEGENLINK*uid-h5p@$">Open</a></p>', 'contentsformat' => FORMAT_HTML,
+        ]);
+        activity_link_resolver::resolve_for_course(
+            $course->id,
+            $this->payload(['uid-h5p' => -5]),
+            ['uid-h5p' => (int) $h5p->cmid, 'other-6' => (int) $lesson->cmid],
+            []
+        );
+        return [$DB->get_record('lesson_pages', ['id' => $pageid]), $h5p];
+    }
+
+    /**
+     * An H5P activity a lesson shows embedded leaves the course page and stays available there, with allowstealth on.
+     */
+    public function test_an_embedded_h5p_activity_is_taken_off_the_course_page(): void {
+        global $DB;
+        $this->resetAfterTest();
+        set_config('allowstealth', 1);
+        $course = $this->getDataGenerator()->create_course();
+
+        [$page, $h5p] = $this->lesson_with_h5p($course, true);
+
+        $this->assertStringContainsString('<iframe', $page->contents);
+        $record = $DB->get_record('course_modules', ['id' => $h5p->cmid]);
+        $this->assertSame(1, (int) $record->visible);
+        $this->assertSame(0, (int) $record->visibleoncoursepage);
+        $student = $this->getDataGenerator()->create_and_enrol($course, 'student');
+        $cm = get_fast_modinfo($course->id, $student->id)->get_cm((int) $h5p->cmid);
+        $this->assertTrue($cm->uservisible);
+        $this->assertFalse($cm->is_visible_on_course_page());
+    }
+
+    /**
+     * An H5P activity that is only linked, not embedded, stays on the course page.
+     */
+    public function test_a_linked_h5p_activity_stays_on_the_course_page(): void {
+        global $DB;
+        $this->resetAfterTest();
+        set_config('allowstealth', 1);
+        $course = $this->getDataGenerator()->create_course();
+
+        [$page, $h5p] = $this->lesson_with_h5p($course, false);
+
+        $this->assertStringNotContainsString('<iframe', $page->contents);
+        $this->assertSame(1, (int) $DB->get_field('course_modules', 'visibleoncoursepage', ['id' => $h5p->cmid]));
+    }
+
+    /**
+     * On a site that does not allow stealth activities, the embedded H5P activity is listed on the course page as before.
+     */
+    public function test_without_allowstealth_the_embedded_h5p_activity_stays_listed(): void {
+        $this->resetAfterTest();
+        set_config('allowstealth', 0);
+        $course = $this->getDataGenerator()->create_course();
+
+        [, $h5p] = $this->lesson_with_h5p($course, true);
+
+        $student = $this->getDataGenerator()->create_and_enrol($course, 'student');
+        $cm = get_fast_modinfo($course->id, $student->id)->get_cm((int) $h5p->cmid);
+        $this->assertTrue($cm->uservisible);
+        $this->assertTrue($cm->is_visible_on_course_page());
+    }
 }
