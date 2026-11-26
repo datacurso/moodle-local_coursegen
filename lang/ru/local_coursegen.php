@@ -82,6 +82,7 @@ $string['activityai_error_generation_failed'] = 'Не удалось сгене�
 $string['activityai_error_high_demand'] = 'Услуга AI в настоящее время пользуется большим спросом. Пожалуйста, повторите попытку позже.';
 $string['activityai_error_unknown'] = 'Неизвестная ошибка';
 $string['activityai_prompt_prefix'] = 'Вы спросили:';
+$string['activityai_remove_file'] = 'Удалить прикреплённый PDF';
 $string['activityai_retry_action'] = 'Повторить попытку';
 $string['activityai_retry_slow_warning'] = 'Это занимает много времени.';
 $string['activityai_status_completed'] = 'Завершено.';

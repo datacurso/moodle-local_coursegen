@@ -155,7 +155,7 @@ export const buildActivityActionControls = (ctx, activityId, activityTitle, wrap
 
     deleteControl = createActionControl({
         variant: 'delete', iconUrl: getCoreIconUrl('t/delete'),
-        label: texts.courseai_btn_cancel,
+        label: texts.courseai_delete_activity_confirm_title,
         onActivate: async() => {
             const entry = state.detailedActivityEls[activityId];
             if (!entry) {

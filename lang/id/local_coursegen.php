@@ -82,6 +82,7 @@ $string['activityai_error_generation_failed'] = 'Kami tidak dapat menghasilkan a
 $string['activityai_error_high_demand'] = 'Layanan AI saat ini sedang mengalami permintaan yang tinggi. Silakan coba lagi nanti.';
 $string['activityai_error_unknown'] = 'Kesalahan tidak diketahui';
 $string['activityai_prompt_prefix'] = 'Anda bertanya:';
+$string['activityai_remove_file'] = 'Hapus PDF terlampir';
 $string['activityai_retry_action'] = 'Coba lagi';
 $string['activityai_retry_slow_warning'] = 'Ini memakan waktu lama.';
 $string['activityai_status_completed'] = 'Selesai.';

@@ -82,6 +82,7 @@ $string['activityai_error_generation_failed'] = 'Nous n’avons pas pu générer
 $string['activityai_error_high_demand'] = 'Le service AI connaît actuellement une forte demande. Veuillez réessayer plus tard.';
 $string['activityai_error_unknown'] = 'Erreur inconnue';
 $string['activityai_prompt_prefix'] = 'Vous avez demandé :';
+$string['activityai_remove_file'] = 'Retirer le PDF joint';
 $string['activityai_retry_action'] = 'Réessayer';
 $string['activityai_retry_slow_warning'] = 'Cela prend beaucoup de temps.';
 $string['activityai_status_completed'] = 'Terminé.';

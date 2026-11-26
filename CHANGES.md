@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.16] - 2026112021
+
+### Fixed
+- **Closing the activity window starts the next activity from scratch**  
+  After closing the «Crear recurso/actividad con AI» window, the next description was sent as an adjustment of the activity planned before. Closing the window now discards that plan, its attachment and its conversation.
+- **The delete buttons of the course plan say what they do**  
+  The trash buttons of a section and of an activity in the plan were labelled «Cancelar». They now read «Eliminar sección» and «Eliminar actividad», the same as their confirmation.
+- **The button that removes the attached PDF has a name**  
+  The ✕ next to the attached PDF in the activity window now says «Quitar el PDF adjunto» to screen readers and as a tooltip.
+
 ## [2.0.16] - 2026112020
 
 ### Fixed

@@ -82,6 +82,7 @@ $string['activityai_error_generation_failed'] = 'Não foi possível gerar a ativ
 $string['activityai_error_high_demand'] = 'O serviço AI está atualmente em alta demanda. Por favor, tente novamente mais tarde.';
 $string['activityai_error_unknown'] = 'Erro desconhecido';
 $string['activityai_prompt_prefix'] = 'Você perguntou:';
+$string['activityai_remove_file'] = 'Remover o PDF anexado';
 $string['activityai_retry_action'] = 'Tentar novamente';
 $string['activityai_retry_slow_warning'] = 'Isso está demorando muito.';
 $string['activityai_status_completed'] = 'Concluído.';

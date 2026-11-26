@@ -60,9 +60,17 @@ class Mutations {
     closeModal(stateManager) {
         closeStream();
         stateManager.setReadOnly(false);
-        stateManager.state.modal.open = false;
-        stateManager.state.session.locked = false;
-        stateManager.state.session.phase = 'idle';
+        const state = stateManager.state;
+        state.modal.open = false;
+        state.session.locked = false;
+        state.session.phase = 'idle';
+        // Closing the window abandons the activity being planned: the next window starts a new one instead of
+        // sending its description as an adjustment of this job.
+        state.session.jobid = '';
+        state.session.streamingurl = '';
+        state.upload.draftitemid = null;
+        state.upload.filename = '';
+        Array.from(state.runs.keys()).forEach((runid) => state.runs.delete(runid));
         stateManager.setReadOnly(true);
     }
 

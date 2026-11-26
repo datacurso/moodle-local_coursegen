@@ -167,7 +167,7 @@ export const buildSectionActionControls = (ctx, sectionId, sectionName, rowRef) 
 
     deleteControl = createActionControl({
         variant: 'delete', iconUrl: getCoreIconUrl('t/delete'),
-        label: texts.courseai_btn_cancel,
+        label: texts.courseai_delete_section_confirm_title,
         onActivate: async() => {
             const row = rowRef.current;
             if (!row) {
