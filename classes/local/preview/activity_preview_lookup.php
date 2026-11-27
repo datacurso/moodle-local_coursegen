@@ -17,6 +17,7 @@
 namespace local_coursegen\local\preview;
 
 use local_coursegen\local\models\course_session;
+use local_coursegen\local\models\template;
 use local_coursegen\local\service\template_ai_api_service;
 
 /**
@@ -41,7 +42,7 @@ class activity_preview_lookup {
      * @param string $uid
      * @param array $payload The full init payload the run was sent.
      * @param course_session $session
-     * @return array {modname: string, parameters: array, cmid: int, kept: bool, generated_files: array}
+     * @return array {modname: string, parameters: array, cmid: int, kept: bool, moldless: bool, generated_files: array}
      * @throws \moodle_exception When the activity is not part of the run, or its result cannot be drawn.
      */
     public static function resolve(string $uid, array $payload, course_session $session): array {
@@ -56,6 +57,31 @@ class activity_preview_lookup {
             throw new \moodle_exception('courseai_preview_not_found', 'local_coursegen');
         }
         return $found;
+    }
+
+    /**
+     * The course the template is built on, which the preview page belongs to.
+     *
+     * @param int $templateid
+     * @return \stdClass The course.
+     * @throws \moodle_exception When the run names no template, the template is gone, or its course is.
+     */
+    public static function template_course(int $templateid): \stdClass {
+        global $DB;
+
+        if ($templateid <= 0) {
+            throw new \moodle_exception('invalidtemplate', 'local_coursegen');
+        }
+        $template = template::get_record(['id' => $templateid]);
+        if (!$template) {
+            throw new \moodle_exception('invalidtemplate', 'local_coursegen');
+        }
+        $courseid = (int) $template->get('courseid');
+        $course = $DB->get_record('course', ['id' => $courseid]);
+        if (!$course) {
+            throw new \moodle_exception('invalidcourseid', 'error');
+        }
+        return $course;
     }
 
     /**
@@ -79,7 +105,7 @@ class activity_preview_lookup {
      *
      * @param array $answer The result of the run; empty while it has none.
      * @param string $uid
-     * @return array|null {modname: string, parameters: array, cmid: int, kept: bool, generated_files: array};
+     * @return array|null {modname: string, parameters: array, cmid: int, kept: bool, moldless: bool, generated_files: array};
      *                    null when the result has no such activity to draw.
      * @throws \moodle_exception When the activity predates record ids or a record names an unknown row.
      */
@@ -95,12 +121,21 @@ class activity_preview_lookup {
         $templatebehavior = $activity['template_behavior'] ?? [];
         $sourcecmid = $templatebehavior['template_source_cmid'] ?? 0;
         $parameters = $activity['parameters'] ?? [];
+        $parameters = (array) $parameters;
         $generatedfiles = $activity['generated_files'] ?? [];
+        // An activity the run wrote without a mould has no tree: its rows are
+        // put together from what the AI wrote, for the types that can be
+        // drawn from it.
+        $moldless = moldless_activity::is_moldless($activity);
+        if ($moldless && empty($parameters['structure'])) {
+            $parameters = moldless_activity::with_tree((string) $modname, $parameters);
+        }
         return [
             'modname' => (string) $modname,
-            'parameters' => (array) $parameters,
+            'parameters' => $parameters,
             'cmid' => (int) $sourcecmid,
             'kept' => false,
+            'moldless' => $moldless,
             'generated_files' => (array) $generatedfiles,
         ];
     }
@@ -114,7 +149,7 @@ class activity_preview_lookup {
      *
      * @param array $payload
      * @param string $uid
-     * @return array|null {modname: string, parameters: array, cmid: int, kept: bool}
+     * @return array|null {modname: string, parameters: array, cmid: int, kept: bool, moldless: bool}
      */
     public static function from_payload(array $payload, string $uid): ?array {
         $activities = $payload['activities'] ?? [];
@@ -131,6 +166,7 @@ class activity_preview_lookup {
             'parameters' => self::with_description($modname, (array) $parameters),
             'cmid' => (int) $cmid,
             'kept' => self::is_kept($activity),
+            'moldless' => false,
             'generated_files' => [],
         ];
     }

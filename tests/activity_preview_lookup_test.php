@@ -140,6 +140,79 @@ final class activity_preview_lookup_test extends \basic_testcase {
     }
 
     /**
+     * A finished activity written without a mould: its parameters carry what the AI wrote and no tree.
+     *
+     * @param string $modname
+     * @param array $parameters
+     * @return array
+     */
+    private function finished_moldless(string $modname, array $parameters): array {
+        return [
+            'uid' => 'moldless-uid',
+            'resource_type' => $modname,
+            'template_behavior' => ['action' => 'instance', 'template_source_cmid' => 0],
+            'parameters' => $parameters,
+        ];
+    }
+
+    /**
+     * Every type the template can add on its own resolves from its result, with no tree and no mould.
+     *
+     * @dataProvider moldless_types
+     * @param string $modname
+     */
+    public function test_an_activity_without_a_mould_resolves_without_a_tree(string $modname): void {
+        $parameters = ['name' => 'Alone', 'introeditor' => ['text' => '<p>About</p>', 'format' => 1, 'itemid' => 0]];
+        $answer = ['generated_activities' => [$this->finished_moldless($modname, $parameters)]];
+
+        $found = activity_preview_lookup::from_answer($answer, 'moldless-uid');
+
+        $this->assertSame($modname, $found['modname']);
+        $this->assertSame(0, $found['cmid']);
+        $this->assertTrue($found['moldless']);
+        $this->assertFalse($found['kept']);
+        $this->assertSame('Alone', $found['parameters']['name']);
+    }
+
+    /**
+     * The types written without a mould in a template run.
+     *
+     * @return array
+     */
+    public static function moldless_types(): array {
+        return ['page' => ['page'], 'book' => ['book'], 'forum' => ['forum'], 'quiz' => ['quiz'],
+            'assign' => ['assign'], 'feedback' => ['feedback'], 'h5pactivity' => ['h5pactivity']];
+    }
+
+    /**
+     * A page without a mould gets the rows its view reads, from what the AI wrote.
+     */
+    public function test_a_page_without_a_mould_is_given_its_rows(): void {
+        $parameters = ['name' => 'Alone', 'page' => ['text' => '<p>Body</p>', 'format' => 1, 'itemid' => 0]];
+        $answer = ['generated_activities' => [$this->finished_moldless('page', $parameters)]];
+
+        $found = activity_preview_lookup::from_answer($answer, 'moldless-uid');
+
+        $this->assertSame('<p>Body</p>', $found['parameters']['structure']['page'][0]['content']);
+        $this->assertSame(['page' => 'page'], $found['parameters']['structure_tables']);
+    }
+
+    /**
+     * An activity with a mould whose result has no tree is still refused, never completed.
+     */
+    public function test_an_activity_with_a_mould_and_no_tree_is_still_refused(): void {
+        $activity = $this->finished_moldless('page', ['name' => 'Alone']);
+        $activity['template_behavior']['template_source_cmid'] = 12;
+
+        try {
+            activity_preview_lookup::from_answer(['generated_activities' => [$activity]], 'moldless-uid');
+            $this->fail('An activity with a mould and no tree must be refused');
+        } catch (\moodle_exception $exception) {
+            $this->assertSame('courseai_preview_result_outdated', $exception->errorcode);
+        }
+    }
+
+    /**
      * An activity the answer does not list is not found there.
      */
     public function test_an_unlisted_activity_is_not_found_in_the_answer(): void {
