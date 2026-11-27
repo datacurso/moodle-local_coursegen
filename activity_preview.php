@@ -35,7 +35,6 @@
 require_once(__DIR__ . '/../../config.php');
 
 use local_coursegen\local\models\course_session;
-use local_coursegen\local\models\template;
 use local_coursegen\local\preview\activity_preview_lookup;
 use local_coursegen\local\preview\preview_factory;
 
@@ -184,7 +183,7 @@ if (!empty($payload['lang'])) {
     force_current_language((string) $payload['lang']);
 }
 
-$preview = preview_factory::for_activity($modname, $parameters, $templatecmid);
+$preview = preview_factory::for_found($found);
 // A preview told which page to open is opened at that page; one that was not
 // opens where the module would open, which is not always its first page.
 $hereparams = ['sessionid' => $sessionid, 'uid' => $uid];
@@ -202,9 +201,7 @@ $name = $preview->name();
 // about a course is a lie. Nothing of the course is drawn from this: the
 // course index, which would list the real course, is turned off, and the
 // trail is written here from the payload rather than taken from the course.
-$templaterecord = template::get_record(['id' => $templateid]);
-$templatecourseid = $templaterecord->get('courseid');
-$templatecourse = get_course($templatecourseid);
+$templatecourse = activity_preview_lookup::template_course($templateid);
 $PAGE->set_course($templatecourse);
 $PAGE->set_show_course_index(false);
 
