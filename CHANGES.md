@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.16] - 2026112700
+
+### Added
+- **The optional block marker**  
+  Templates can wrap part of a text in `[[coursegen:optional: <condition>]] … [[/coursegen:optional]]` (or `⟦ ⟧`), a block that appears once when the source material meets the condition and is removed when it does not. The plugin counts its opener as a placeholder, reports an optional block without its closer, a closer without its opener, a marker without a condition or a block that crosses a repeat block, and keeps the template's own text when the block is there once or not at all.
+
 ## [2.0.16] - 2026112021
 
 ### Fixed

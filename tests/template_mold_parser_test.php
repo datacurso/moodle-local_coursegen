@@ -85,6 +85,36 @@ final class template_mold_parser_test extends \basic_testcase {
     }
 
     /**
+     * An optional block is a split that may skip it, a start, its body and an end that goes on past itself, never back.
+     */
+    public function test_optional_block_runs_at_most_once(): void {
+        $program = template_mold_parser::parse('<ul>[[coursegen:optional: a note]]<li>[[x]]</li>[[/coursegen:optional]]</ul>');
+        $this->assertSame([
+            ['lit', '<ul>'],
+            ['split', 7],
+            ['start', '0:1'],
+            ['lit', '<li>'],
+            ['gap', 'text'],
+            ['lit', '</li>'],
+            ['end', '0:1', 7],
+            ['lit', '</ul>'],
+        ], $program);
+    }
+
+    /**
+     * The angle bracket dialect and stray brackets read an optional block the same way.
+     */
+    public function test_optional_block_in_the_angle_dialect(): void {
+        $angle = template_mold_parser::parse('<ul>⟦coursegen:optional: a note⟧<li>⟦x⟧</li>⟦/coursegen:optional⟧</ul>');
+        $stray = template_mold_parser::parse(
+            '<ul>[[ [coursegen:optional: a note] ]]<li>[[x]]</li>[[ [/coursegen:optional] ]]</ul>'
+        );
+        $square = template_mold_parser::parse('<ul>[[coursegen:optional: a note]]<li>[[x]]</li>[[/coursegen:optional]]</ul>');
+        $this->assertSame($square, $angle);
+        $this->assertSame($square, $stray);
+    }
+
+    /**
      * Nested repeats each get their own loop, and stray brackets around a repeat label are tolerated.
      */
     public function test_nested_repeats_and_stray_brackets(): void {
@@ -116,6 +146,12 @@ final class template_mold_parser_test extends \basic_testcase {
         return [
             'close without open' => ['<p>x</p>[[/coursegen:repeat]]'],
             'open without close' => ['[[coursegen:repeat: a]]<p>x</p>'],
+            'optional close without open' => ['<p>x</p>[[/coursegen:optional]]'],
+            'optional open without close' => ['[[coursegen:optional: a]]<p>x</p>'],
+            'optional closed by a repeat closer' => ['[[coursegen:optional: a]]<p>x</p>[[/coursegen:repeat]]'],
+            'optional crossing a repeat' => [
+                '[[coursegen:repeat: a]][[coursegen:optional: b]]<p>x</p>[[/coursegen:repeat]][[/coursegen:optional]]',
+            ],
             'slot in a script' => ['<script>var a = "[[x]]";</script>'],
             'slot in a style block' => ['<style>.a{color:[[x]]}</style>'],
             'slot in a comment' => ['<!-- [[x]] -->'],

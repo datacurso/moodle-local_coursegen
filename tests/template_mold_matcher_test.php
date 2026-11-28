@@ -89,6 +89,23 @@ final class template_mold_matcher_test extends \basic_testcase {
     }
 
     /**
+     * An optional block matches when it is there once and when it is gone, never twice (its slots sit in attributes,
+     * which cannot swallow a second copy the way a text slot can).
+     */
+    public function test_optional_block_appears_at_most_once(): void {
+        $mold = '<div>[[coursegen:optional: the course has prerequisites]]<p class="pre" title="[[t]]">Before you start</p>'
+            . '[[/coursegen:optional]]<p title="[[u]]">End</p></div>';
+        $once = '<div><p class="pre" title="Algebra">Before you start</p><p title="Last">End</p></div>';
+        $absent = '<div><p title="Last">End</p></div>';
+        $twice = '<div><p class="pre" title="Algebra">Before you start</p><p class="pre" title="Logic">Before you start</p>'
+            . '<p title="Last">End</p></div>';
+
+        $this->assertSame(['Algebra', 'Last'], $this->gaps($mold, $once));
+        $this->assertSame(['Last'], $this->gaps($mold, $absent));
+        $this->assertNull($this->gaps($mold, $twice));
+    }
+
+    /**
      * Nested repeats match their own runs.
      */
     public function test_nested_repeats(): void {

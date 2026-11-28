@@ -54,6 +54,20 @@ final class marker_scanner_test extends \basic_testcase {
                 "[[coursegen:repeat: first line\nsecond line]]<p>x</p>[[/coursegen:repeat]]",
                 1,
             ],
+            'an optional block' => [
+                '[[coursegen:optional: the course has prerequisites]]<p>[[coursegen:aiprompt: text]]</p>'
+                    . '[[/coursegen:optional]]',
+                2,
+            ],
+            'an optional block in the angle bracket dialect' => [
+                '⟦coursegen:optional: the course has prerequisites⟧<p>⟦coursegen:aiprompt: text⟧</p>⟦/coursegen:optional⟧',
+                2,
+            ],
+            'an optional block inside a repeat block' => [
+                '[[coursegen:repeat: one card]][[coursegen:optional: a note fits]]<p>x</p>[[/coursegen:optional]]'
+                    . '[[/coursegen:repeat]]',
+                2,
+            ],
         ];
     }
 
@@ -118,6 +132,26 @@ final class marker_scanner_test extends \basic_testcase {
             'a marker with a wrong case' => ['[[CourseGen:aiprompt: x]]', 'unknown coursegen marker'],
             'a repeat that never closes' => ['[[coursegen:repeat: x]]<p>y</p>', 'unbalanced'],
             'a closer without its opener' => ['<p>y</p>[[/coursegen:repeat]]', 'unbalanced'],
+            'an optional block that never closes' => [
+                '[[coursegen:optional: x]]<p>y</p>',
+                'unbalanced optional blocks',
+            ],
+            'an optional closer without its opener' => [
+                '<p>y</p>⟦/coursegen:optional⟧',
+                'unbalanced optional blocks',
+            ],
+            'an optional marker without a condition' => [
+                '[[coursegen:optional:  ]]<p>y</p>[[/coursegen:optional]]',
+                'without an instruction',
+            ],
+            'an optional block closed by a repeat closer' => [
+                '[[coursegen:optional: x]]<p>y</p>[[/coursegen:repeat]]',
+                'unbalanced optional blocks',
+            ],
+            'an optional block that crosses a repeat block' => [
+                '[[coursegen:repeat: x]][[coursegen:optional: y]]<p>z</p>[[/coursegen:repeat]][[/coursegen:optional]]',
+                'unbalanced repeat blocks',
+            ],
         ];
     }
 
@@ -134,6 +168,37 @@ final class marker_scanner_test extends \basic_testcase {
         $joined = implode(' | ', $scan->problems);
         $this->assertNotEmpty($scan->problems);
         $this->assertStringContainsString($fragment, $joined);
+    }
+
+    /**
+     * Two blocks that cross report both blocks as unbalanced, each once.
+     */
+    public function test_crossing_blocks_report_both_blocks(): void {
+        $text = '[[coursegen:repeat: x]][[coursegen:optional: y]]<p>z</p>[[/coursegen:repeat]][[/coursegen:optional]]';
+
+        $scan = marker_scanner::scan($text);
+
+        $this->assertSame([
+            'unbalanced repeat blocks: an opener without its closer or a closer without its opener',
+            'unbalanced optional blocks: an opener without its closer or a closer without its opener',
+        ], $scan->problems);
+    }
+
+    /**
+     * A repeat block alone still balances and reports its problem as before the optional block existed.
+     */
+    public function test_repeat_blocks_keep_their_problems(): void {
+        $balanced = marker_scanner::scan('[[coursegen:repeat: a]]<p>[[coursegen:repeat: b]]x[[/coursegen:repeat]]</p>'
+            . '[[/coursegen:repeat]]');
+        $unclosed = marker_scanner::scan('[[coursegen:repeat: a]]<p>x</p>');
+
+        $this->assertSame(2, $balanced->placeholders);
+        $this->assertSame([], $balanced->problems);
+        $this->assertSame(1, $unclosed->placeholders);
+        $this->assertSame(
+            ['unbalanced repeat blocks: an opener without its closer or a closer without its opener'],
+            $unclosed->problems
+        );
     }
 
     /**
