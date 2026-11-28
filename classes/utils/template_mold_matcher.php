@@ -20,9 +20,10 @@ namespace local_coursegen\utils;
  * Reads a text the AI service returned as one mold of the template filled in.
  *
  * The text matches when it is the mold's own text, byte for byte and in the mold's order, with something in place
- * of each slot and each repeat run any number of times. The match splits the text into the author's parts and what
- * the AI wrote for each slot. It runs the program of template_mold_parser with an explicit stack of choices, so a
- * long page never deepens the PHP call stack, and gives up after a fixed number of steps.
+ * of each slot, each repeat run any number of times and each optional block run once or not at all. The match splits
+ * the text into the author's parts and what the AI wrote for each slot. It runs the program of template_mold_parser
+ * with an explicit stack of choices, so a long page never deepens the PHP call stack, and gives up after a fixed
+ * number of steps.
  *
  * @package    local_coursegen
  * @copyright  2026 Datacurso
@@ -50,10 +51,10 @@ final class template_mold_matcher {
     /** @var array The parts read so far: `['lit', text]` or `['gap', text, context]`. */
     private array $parts = [];
 
-    /** @var array Where the current run of each repeat started. */
+    /** @var array Where the current run of each block (repeat or optional) started. */
     private array $runs = [];
 
-    /** @var array The choices to come back to: a repeat that could end, a slot that could be longer. */
+    /** @var array The choices to come back to: a block that could be skipped or end, a slot that could be longer. */
     private array $choices = [];
 
     /**
@@ -224,24 +225,25 @@ final class template_mold_matcher {
     }
 
     /**
-     * End one run of a repeat: an empty run is refused, any other goes back to the split of the repeat.
+     * End one run of a block: an empty run is refused, any other goes on where the program says: back to the split of
+     * a repeat, or past the end of an optional block.
      *
      * @param string $id
-     * @param int $split
+     * @param int $next
      * @return bool
      */
-    private function end_run(string $id, int $split): bool {
+    private function end_run(string $id, int $next): bool {
         if ($this->position === $this->runs[$id]) {
             return false;
         }
-        $this->pc = $split;
+        $this->pc = $next;
         return true;
     }
 
     /**
      * Remember a choice to come back to, with the state it starts from.
      *
-     * @param string $kind 'split' (run the repeat once more) or 'gap' (make the slot longer).
+     * @param string $kind 'split' (run the block, or a repeat once more) or 'gap' (make the slot longer).
      * @param int $resume The instruction a split resumes at, or the least end of a longer slot.
      */
     private function remember(string $kind, int $resume): void {

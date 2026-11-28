@@ -21,9 +21,11 @@ namespace local_coursegen\local\placeholder;
  *
  * A marker is a body between `[[ ]]` or between the angle brackets of the second dialect. The bodies that count are
  * `coursegen:aiprompt: <instruction>` (a slot), `coursegen:repeat: <instruction>` with its `/coursegen:repeat` closer
- * (a block) and `coursegen:reference: <instruction>`. Any other text between brackets, such as a wiki page link, is
- * not a marker. A `coursegen:` body that is not one of the three, a marker without an instruction, a repeat block that
- * does not balance and an opener that never closes are reported as problems and never counted as placeholders.
+ * (a block that repeats), `coursegen:optional: <condition>` with its `/coursegen:optional` closer (a block that appears
+ * once or not at all) and `coursegen:reference: <instruction>`. Any other text between brackets, such as a wiki page
+ * link, is not a marker. A `coursegen:` body that is not one of these, a marker without an instruction, a repeat or
+ * optional block that does not balance (or crosses another block) and an opener that never closes are reported as
+ * problems and never counted as placeholders.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -41,6 +43,18 @@ final class marker_scanner {
 
     /** @var string The body that opens a repeat block. */
     private const REPEAT_OPENER = '/^coursegen:repeat\s*(?::(?<text>.*))?\z/s';
+
+    /** @var string The body that closes an optional block. */
+    private const OPTIONAL_CLOSER = '/^\/\s*coursegen:optional\z/';
+
+    /** @var string The body that opens an optional block. */
+    private const OPTIONAL_OPENER = '/^coursegen:optional\s*(?::(?<text>.*))?\z/s';
+
+    /** @var string[] The blocks a marker opens and closes, each with the body of its closer. */
+    private const BLOCK_CLOSERS = [
+        'repeat' => self::REPEAT_CLOSER,
+        'optional' => self::OPTIONAL_CLOSER,
+    ];
 
     /** @var string The body of a slot. */
     private const SLOT = '/^coursegen:aiprompt\s*(?::(?<text>.*))?\z/s';
@@ -80,7 +94,7 @@ final class marker_scanner {
      * The markers of a text, in order, each with its position, its kind and the problem it has, if any.
      *
      * @param string $text A text with valid utf-8.
-     * @return array[] Each {start, end, kind, problem}.
+     * @return array[] Each {start, end, kind, block, problem}; block is repeat or optional for an opener or a closer.
      */
     private static function markers_of(string $text): array {
         $markers = [];
@@ -96,6 +110,7 @@ final class marker_scanner {
                 'start' => $bounds['start'],
                 'end' => $bounds['end'],
                 'kind' => $classified['kind'],
+                'block' => $classified['block'] ?? null,
                 'problem' => $classified['problem'],
             ];
             $position = $bounds['end'];
@@ -132,24 +147,30 @@ final class marker_scanner {
      * What one marker body is.
      *
      * @param string $body The text between the brackets, e.g. 'coursegen:aiprompt: course title'.
-     * @return array {kind, problem}; kind is closer, opener, slot, reference, other or bad.
+     * @return array {kind, problem, block}; kind is closer, opener, slot, reference, other or bad, and block is
+     *     repeat or optional for an opener or a closer.
      */
     private static function classify(string $body): array {
         $stripped = trim($body);
-        $closer = preg_match(self::REPEAT_CLOSER, $stripped);
-        if ($closer) {
-            return ['kind' => 'closer', 'problem' => null];
+        foreach (self::BLOCK_CLOSERS as $block => $pattern) {
+            $closer = preg_match($pattern, $stripped);
+            if ($closer) {
+                return ['kind' => 'closer', 'problem' => null, 'block' => $block];
+            }
         }
         $known = [
-            'opener' => self::REPEAT_OPENER,
-            'slot' => self::SLOT,
-            'reference' => self::REFERENCE,
+            'repeat' => ['opener', self::REPEAT_OPENER],
+            'optional' => ['opener', self::OPTIONAL_OPENER],
+            'slot' => ['slot', self::SLOT],
+            'reference' => ['reference', self::REFERENCE],
         ];
-        foreach ($known as $kind => $pattern) {
+        foreach ($known as $name => [$kind, $pattern]) {
             $matched = preg_match($pattern, $stripped, $parts);
             if ($matched) {
                 $instruction = $parts['text'] ?? '';
-                return self::with_instruction($kind, $instruction, $stripped);
+                $classified = self::with_instruction($kind, $instruction, $stripped);
+                $classified['block'] = $kind === 'opener' ? $name : null;
+                return $classified;
             }
         }
         return self::unknown_body($stripped);
@@ -173,7 +194,7 @@ final class marker_scanner {
     }
 
     /**
-     * A body that is not one of the three: other text between brackets is ignored, a coursegen one is an error.
+     * A body that is not a known marker: other text between brackets is ignored, a coursegen one is an error.
      *
      * @param string $stripped The trimmed body.
      * @return array {kind, problem}
@@ -205,7 +226,7 @@ final class marker_scanner {
     }
 
     /**
-     * Every problem of a text: the markers that are wrong, repeat blocks that do not balance and markers left unclosed.
+     * Every problem of a text: the markers that are wrong, blocks that do not balance and markers left unclosed.
      *
      * @param string $text The text.
      * @param array[] $markers Its markers.
@@ -213,9 +234,8 @@ final class marker_scanner {
      */
     private static function problems_of(string $text, array $markers): array {
         $problems = self::marker_problems($markers);
-        $balanced = self::repeats_balance($markers);
-        if (!$balanced) {
-            $problems[] = 'unbalanced repeat blocks: an opener without its closer or a closer without its opener';
+        foreach (self::unbalanced_blocks($markers) as $block) {
+            $problems[] = 'unbalanced ' . $block . ' blocks: an opener without its closer or a closer without its opener';
         }
         $literal = self::literal_text($text, $markers);
         $leftover = preg_match(self::LEFTOVER, $literal, $found, PREG_OFFSET_CAPTURE);
@@ -243,25 +263,37 @@ final class marker_scanner {
     }
 
     /**
-     * Whether every repeat opener has its closer, in order.
+     * The blocks whose openers and closers do not pair, in order: a closer with no opener left of its own block, a
+     * closer that meets an opener of the other block (two blocks that cross) and an opener that never closes.
      *
      * @param array[] $markers The markers of a text.
-     * @return bool
+     * @return string[] The blocks that do not balance, each once, e.g. ['repeat'].
      */
-    private static function repeats_balance(array $markers): bool {
-        $depth = 0;
+    private static function unbalanced_blocks(array $markers): array {
+        $open = [];
+        $unbalanced = [];
         foreach ($markers as $marker) {
             if ($marker['kind'] === 'opener') {
-                $depth++;
+                $open[] = $marker['block'];
+                continue;
             }
-            if ($marker['kind'] === 'closer') {
-                $depth--;
+            if ($marker['kind'] !== 'closer') {
+                continue;
             }
-            if ($depth < 0) {
-                return false;
+            $innermost = array_pop($open);
+            if ($innermost === $marker['block']) {
+                continue;
             }
+            $unbalanced[] = $marker['block'];
+            if ($innermost === null) {
+                continue;
+            }
+            $unbalanced[] = $innermost;
+            break;
         }
-        return $depth === 0;
+        $unbalanced = array_merge($unbalanced, $open);
+        $blocks = array_intersect(array_keys(self::BLOCK_CLOSERS), $unbalanced);
+        return array_values($blocks);
     }
 
     /**

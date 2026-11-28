@@ -29,12 +29,12 @@ final class marker_scan {
     /**
      * Keep the findings of one scan.
      *
-     * @param int $placeholders Slots, repeat blocks and references that are well formed, e.g. 3.
+     * @param int $placeholders Slots, repeat and optional blocks and references that are well formed, e.g. 3.
      * @param string[] $problems Short descriptions of malformed markers, e.g. ["a marker without an instruction"].
      * @param int $hidden Well formed markers inside a comment, a script or a style, e.g. 1.
      */
     public function __construct(
-        /** @var int Slots, repeat blocks and references that are well formed. */
+        /** @var int Slots, repeat and optional blocks and references that are well formed. */
         public readonly int $placeholders,
         /** @var string[] Short descriptions of malformed markers. */
         public readonly array $problems,
