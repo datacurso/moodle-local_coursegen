@@ -159,7 +159,7 @@ export const mergeAddedStructure = (state, data) => {
  *
  * @param {Object} state The structure state.
  * @param {Object} data A template_unit_copies event:
- *     {renamed, renamed_activities, sections: [{section, name, copy_of, depth}], activities}.
+ *     {renamed, renamed_activities, removed_activities, sections: [{section, name, copy_of, depth}], activities}.
  */
 export const mergeUnitCopies = (state, data) => {
     const sections = Array.isArray(data?.sections) ? data.sections : [];
@@ -171,6 +171,13 @@ export const mergeUnitCopies = (state, data) => {
             first.name = renamed.name;
         }
     }
+    // The ones the placement kept out of the first copy are not part of the run: they leave the list, and the counts.
+    const removed = new Set((Array.isArray(data?.removed_activities) ? data.removed_activities : []).map(String));
+    if (removed.size > 0) {
+        state.sections.forEach((section) => {
+            section.activities = section.activities.filter((activity) => !removed.has(String(activity.generationuid)));
+        });
+    }
     // Its activities keep their uids; their names lose the markers of the template.
     const names = new Map((Array.isArray(data?.renamed_activities) ? data.renamed_activities : [])
         .map((item) => [String(item.uid), item.name]));
@@ -180,18 +187,32 @@ export const mergeUnitCopies = (state, data) => {
             activity.name = name;
         }
     }));
+    // The event lists the copies in the order of the new course: a unit, then its subsections. A subsection goes right
+    // after the copy before it; a unit goes after the last copy of its kind and the subsections that copy already has.
+    let previous = -1;
     for (const copy of sections) {
         const source = Number(copy.copy_of);
-        let last = -1;
-        state.sections.forEach((section, index) => {
-            if (section.num === source || section.copyOf === source) {
-                last = index;
+        const depth = Number(copy.depth) || 0;
+        let at = -1;
+        if (depth > 0 && previous >= 0) {
+            at = previous + 1;
+        } else {
+            let last = -1;
+            state.sections.forEach((section, index) => {
+                if (section.num === source || section.copyOf === source) {
+                    last = index;
+                }
+            });
+            if (last < 0) {
+                continue;
             }
-        });
-        if (last < 0) {
-            continue;
+            at = last + 1;
+            while (at < state.sections.length && state.sections[at].depth > state.sections[last].depth) {
+                at++;
+            }
         }
-        state.sections.splice(last + 1, 0, {
+        previous = at;
+        state.sections.splice(at, 0, {
             id: `copy-${copy.section}`,
             num: null,
             copyOf: source,

@@ -24,7 +24,8 @@ namespace local_coursegen\local\preview;
  * quiz, which a quiz's tree only points at. A result written before the tree
  * and the record ids travelled with it cannot be drawn, and drawing it from
  * anything else would be a guess, so it is refused with a message that says
- * what to do.
+ * what to do. An activity written without a mould has no tree to travel, and
+ * is drawn from what the AI wrote (see moldless_activity).
  *
  * Every record the AI wrote says which template record it came from
  * (source_id) and which row of the result it is (record_id). A record that
@@ -71,12 +72,18 @@ class result_activity_check {
         $label = self::label_of($activity);
 
         $structure = $parameters['structure'] ?? [];
-        if (!is_array($structure) || !$structure) {
+        $hastree = is_array($structure) && $structure;
+        if (!$hastree && !moldless_activity::is_moldless($activity)) {
             throw self::outdated($label);
         }
 
+        // An activity written without a mould carries no tree and never did:
+        // what it names is checked against the ids its result holds, and a
+        // record that names a row there is none to find is refused as always.
         $treeids = [];
-        self::collect_ids($structure, $treeids);
+        if ($hastree) {
+            self::collect_ids($structure, $treeids);
+        }
         $check = new self($label, self::known_ids($parameters), $treeids);
         $check->assert_parameters($parameters);
     }

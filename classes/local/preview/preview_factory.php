@@ -72,6 +72,25 @@ class preview_factory {
     }
 
     /**
+     * The preview for an activity the lookup found.
+     *
+     * An activity written without a mould is drawn by its own type's preview
+     * when that can be built from what the AI wrote, and shown as its
+     * description when the type's view needs the activity to exist.
+     *
+     * @param array $found What activity_preview_lookup found.
+     * @return activity_preview
+     */
+    public static function for_found(array $found): activity_preview {
+        $modname = (string) $found['modname'];
+        $parameters = (array) $found['parameters'];
+        if (!empty($found['moldless']) && !moldless_activity::can_draw($modname)) {
+            return new intro_preview($parameters, 0);
+        }
+        return self::for_activity($modname, $parameters, (int) $found['cmid']);
+    }
+
+    /**
      * Whether this type is drawn from its own view rather than the fallback.
      *
      * @param string $modname

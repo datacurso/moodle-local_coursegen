@@ -2,11 +2,23 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
-## [2.0.16] - 2026112700
+## [2.0.16] - 2026112701
 
 ### Added
 - **The optional block marker**  
   Templates can wrap part of a text in `[[coursegen:optional: <condition>]] … [[/coursegen:optional]]` (or `⟦ ⟧`), a block that appears once when the source material meets the condition and is removed when it does not. The plugin counts its opener as a placeholder, reports an optional block without its closer, a closer without its opener, a marker without a condition or a block that crosses a repeat block, and keeps the template's own text when the block is there once or not at all.
+
+## [2.0.16] - 2026112700
+
+### Fixed
+- **The preview opens for activities the AI writes without a mold**  
+  Activities the AI writes from the instruction alone, with no template activity behind them, failed to open in the preview with an outdated-result error and a blank tab. They are now drawn from what the AI wrote, and the lookup of the template course no longer depends on the old record.
+- **The unit copies of the plan keep their order and their activities**  
+  Subsections now sit right after their own unit, and the activities that an instruction keeps out of the first unit (for example "only in the first unit") no longer appear there.
+
+### Added
+- **Warnings for activities left out and spread markers**  
+  The review tells when an activity could not be generated and was left out of the course, and when the markers of an image hotspots activity could not be located and were spread evenly over the picture.
 
 ## [2.0.16] - 2026112021
 

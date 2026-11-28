@@ -43,6 +43,8 @@ class course_review_service {
         'guideline_lock_skipped' => 'courseai_review_warning_guideline_lock_skipped',
         'section_names_fallback' => 'courseai_review_warning_section_names_fallback',
         'h5p_degraded_fallback' => 'courseai_review_warning_h5p_degraded_fallback',
+        'image_hotspots_spread_placement' => 'courseai_review_warning_image_hotspots_spread_placement',
+        'activity_skipped' => 'courseai_review_warning_activity_skipped',
     ];
 
     /**

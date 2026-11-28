@@ -93,6 +93,55 @@ final class result_activity_check_test extends \basic_testcase {
     }
 
     /**
+     * A finished activity of a run that wrote it from nothing, as the service returns it: no mould, no tree.
+     *
+     * @param string $modname
+     * @param array $modsettings
+     * @return array
+     */
+    private function moldless(string $modname, array $modsettings = []): array {
+        return [
+            'uid' => 'moldless-uid',
+            'resource_type' => $modname,
+            'template_behavior' => ['action' => 'instance', 'template_source_cmid' => 0],
+            'parameters' => ['name' => 'Written alone', 'mod_settings' => $modsettings],
+        ];
+    }
+
+    /**
+     * An activity with no mould never carried a tree, so having none is not being outdated.
+     */
+    public function test_an_activity_without_a_mould_needs_no_tree(): void {
+        result_activity_check::assert_current($this->moldless('page'));
+        result_activity_check::assert_current($this->moldless('book', ['chapters' => [['source_id' => null, 'title' => 'One']]]));
+
+        $this->assertTrue(true);
+    }
+
+    /**
+     * An activity that does name a mould and has no tree is still a result of before the tree travelled.
+     */
+    public function test_an_activity_with_a_mould_and_no_tree_is_outdated(): void {
+        $activity = $this->moldless('page');
+        $activity['template_behavior']['template_source_cmid'] = 12;
+
+        $exception = $this->refusal_of($activity);
+
+        $this->assertSame('courseai_preview_result_outdated', $exception->errorcode);
+    }
+
+    /**
+     * Having no mould does not excuse a record that names a row nothing holds.
+     */
+    public function test_a_record_of_an_activity_without_a_mould_must_still_name_a_known_row(): void {
+        $activity = $this->moldless('book', ['chapters' => [['source_id' => '99', 'title' => 'One']]]);
+
+        $exception = $this->refusal_of($activity);
+
+        $this->assertSame('courseai_preview_record_unknown', $exception->errorcode);
+    }
+
+    /**
      * A record that does not say where it came from is a result of before record ids existed.
      */
     public function test_a_record_without_source_id_is_outdated(): void {
